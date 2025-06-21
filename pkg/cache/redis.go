@@ -3,6 +3,7 @@ package cache
 import (
 	"bytes"
 	"encoding/gob"
+	"github.com/cloudreve/Cloudreve/v4/pkg/conf"
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 	"strconv"
 	"time"
@@ -44,7 +45,8 @@ func deserializer(value []byte) (any, error) {
 }
 
 // NewRedisStore 创建新的redis存储
-func NewRedisStore(l logging.Logger, size int, network, address, user, password, database string) *RedisStore {
+func NewRedisStore(l logging.Logger, size int, configProvider conf.ConfigProvider) *RedisStore {
+	redisConfig := configProvider.Redis()
 	return &RedisStore{
 		pool: &redis.Pool{
 			MaxIdle:     size,
@@ -54,17 +56,19 @@ func NewRedisStore(l logging.Logger, size int, network, address, user, password,
 				return err
 			},
 			Dial: func() (redis.Conn, error) {
-				db, err := strconv.Atoi(database)
+				db, err := strconv.Atoi(redisConfig.DB)
 				if err != nil {
 					return nil, err
 				}
 
 				c, err := redis.Dial(
-					network,
-					address,
+					redisConfig.Network,
+					redisConfig.Server,
 					redis.DialDatabase(db),
-					redis.DialPassword(password),
-					redis.DialUsername(user),
+					redis.DialPassword(redisConfig.Password),
+					redis.DialUsername(redisConfig.User),
+					redis.DialUseTLS(redisConfig.UseSSL),
+					redis.DialTLSSkipVerify(redisConfig.TLSSkipVerify),
 				)
 				if err != nil {
 					l.Panic("Failed to create Redis connection: %s", err)

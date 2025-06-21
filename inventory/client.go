@@ -58,45 +58,56 @@ func NewRawEntClient(l logging.Logger, config conf.ConfigProvider) (*ent.Client,
 		client *sql.Driver
 	)
 
-	switch confDBType {
-	case conf.SQLiteDB:
-		dbFile := util.RelativePath(dbConfig.DBFile)
-		l.Info("Connect to SQLite database %q.", dbFile)
-		client, err = sql.Open("sqlite3", util.RelativePath(dbConfig.DBFile))
-	case conf.PostgresDB:
-		l.Info("Connect to Postgres database %q.", dbConfig.Host)
-		client, err = sql.Open("postgres", fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable",
-			dbConfig.Host,
-			dbConfig.User,
-			dbConfig.Password,
-			dbConfig.Name,
-			dbConfig.Port))
-	case conf.MySqlDB, conf.MsSqlDB:
-		l.Info("Connect to MySQL/SQLServer database %q.", dbConfig.Host)
-		var host string
-		if dbConfig.UnixSocket {
-			host = fmt.Sprintf("unix(%s)",
-				dbConfig.Host)
-		} else {
-			host = fmt.Sprintf("(%s:%d)",
+	// Check if the database type is supported.
+	if confDBType != conf.SQLiteDB && confDBType != conf.MySqlDB && confDBType != conf.PostgresDB {
+		return nil, fmt.Errorf("unsupported database type: %s", confDBType)
+	}
+	// If Database connection string provided, use it directly.
+	if dbConfig.DatabaseURL != "" {
+		l.Info("Connect to database with connection string %q.", dbConfig.DatabaseURL)
+		client, err = sql.Open(string(confDBType), dbConfig.DatabaseURL)
+	} else {
+
+		switch confDBType {
+		case conf.SQLiteDB:
+			dbFile := util.RelativePath(dbConfig.DBFile)
+			l.Info("Connect to SQLite database %q.", dbFile)
+			client, err = sql.Open("sqlite3", util.RelativePath(dbConfig.DBFile))
+		case conf.PostgresDB:
+			l.Info("Connect to Postgres database %q.", dbConfig.Host)
+			client, err = sql.Open("postgres", fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=allow",
 				dbConfig.Host,
-				dbConfig.Port)
+				dbConfig.User,
+				dbConfig.Password,
+				dbConfig.Name,
+				dbConfig.Port))
+		case conf.MySqlDB, conf.MsSqlDB:
+			l.Info("Connect to MySQL/SQLServer database %q.", dbConfig.Host)
+			var host string
+			if dbConfig.UnixSocket {
+				host = fmt.Sprintf("unix(%s)",
+					dbConfig.Host)
+			} else {
+				host = fmt.Sprintf("(%s:%d)",
+					dbConfig.Host,
+					dbConfig.Port)
+			}
+
+			client, err = sql.Open(string(confDBType), fmt.Sprintf("%s:%s@%s/%s?charset=%s&parseTime=True&loc=Local",
+				dbConfig.User,
+				dbConfig.Password,
+				host,
+				dbConfig.Name,
+				dbConfig.Charset))
+		default:
+			return nil, fmt.Errorf("unsupported database type %q", confDBType)
 		}
 
-		client, err = sql.Open(string(confDBType), fmt.Sprintf("%s:%s@%s/%s?charset=%s&parseTime=True&loc=Local",
-			dbConfig.User,
-			dbConfig.Password,
-			host,
-			dbConfig.Name,
-			dbConfig.Charset))
-	default:
-		return nil, fmt.Errorf("unsupported database type %q", confDBType)
-	}
+		if err != nil {
+			return nil, fmt.Errorf("failed to open database: %w", err)
+		}
 
-	if err != nil {
-		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
-
 	// Set connection pool
 	db := client.DB()
 	db.SetMaxIdleConns(50)
