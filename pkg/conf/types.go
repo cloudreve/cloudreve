@@ -105,8 +105,7 @@ var DatabaseConfig = &Database{
 	DBFile:      util.DataPath("cloudreve.db"),
 	Port:        3306,
 	UnixSocket:  false,
-	DatabaseURL: util.DataPath(""),
-	SSLMode:     "allow",
+	DatabaseURL: "",
 }
 
 // SystemConfig 系统公用配置
