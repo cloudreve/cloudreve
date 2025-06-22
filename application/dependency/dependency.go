@@ -329,11 +329,7 @@ func (d *dependency) KV() cache.Driver {
 		d.kv = cache.NewRedisStore(
 			d.Logger(),
 			10,
-			config.Network,
-			config.Server,
-			config.User,
-			config.Password,
-			config.DB,
+			config,
 		)
 	} else {
 		d.kv = cache.NewMemoStore(util.DataPath(cache.DefaultCacheFile), d.Logger())

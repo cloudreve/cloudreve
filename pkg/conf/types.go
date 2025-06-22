@@ -74,7 +74,7 @@ type Redis struct {
 	User          string
 	Password      string
 	DB            string
-	UseSSL        bool
+	UseTLS        bool
 	TLSSkipVerify bool
 }
 
@@ -95,7 +95,7 @@ var RedisConfig = &Redis{
 	Server:        "",
 	Password:      "",
 	DB:            "0",
-	UseSSL:        false,
+	UseTLS:        false,
 	TLSSkipVerify: true,
 }
 

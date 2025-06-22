@@ -3,10 +3,11 @@ package cache
 import (
 	"bytes"
 	"encoding/gob"
-	"github.com/cloudreve/Cloudreve/v4/pkg/conf"
-	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 	"strconv"
 	"time"
+
+	"github.com/cloudreve/Cloudreve/v4/pkg/conf"
+	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 
 	"github.com/gomodule/redigo/redis"
 )
@@ -45,8 +46,7 @@ func deserializer(value []byte) (any, error) {
 }
 
 // NewRedisStore 创建新的redis存储
-func NewRedisStore(l logging.Logger, size int, configProvider conf.ConfigProvider) *RedisStore {
-	redisConfig := configProvider.Redis()
+func NewRedisStore(l logging.Logger, size int, redisConfig *conf.Redis) *RedisStore {
 	return &RedisStore{
 		pool: &redis.Pool{
 			MaxIdle:     size,
@@ -67,7 +67,7 @@ func NewRedisStore(l logging.Logger, size int, configProvider conf.ConfigProvide
 					redis.DialDatabase(db),
 					redis.DialPassword(redisConfig.Password),
 					redis.DialUsername(redisConfig.User),
-					redis.DialUseTLS(redisConfig.UseSSL),
+					redis.DialUseTLS(redisConfig.UseTLS),
 					redis.DialTLSSkipVerify(redisConfig.TLSSkipVerify),
 				)
 				if err != nil {
