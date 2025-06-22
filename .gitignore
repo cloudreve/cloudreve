@@ -32,7 +32,5 @@ conf/conf.ini
 dist/
 data/
 tmp/
-.devcontainer/.env
-.devcontainer/devcontainer.json
-.devcontainer/docker-compose.yml
-.devcontainer/Dockerfile
+.devcontainer/
+cloudreve
