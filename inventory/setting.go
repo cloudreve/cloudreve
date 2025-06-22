@@ -82,7 +82,7 @@ func (c *settingClient) Set(ctx context.Context, settings map[string]string) err
 var (
 	defaultIcons = []types.FileTypeIconSetting{
 		{
-			Exts:  []string{"mp3", "flac", "ape", "wav", "acc", "ogg", "m4a"},
+			Exts:  []string{"mp3", "flac", "ape", "wav", "acc", "ogg", "m4a", "aac"},
 			Icon:  "audio",
 			Color: "#651fff",
 		},
@@ -122,7 +122,7 @@ var (
 			Icon:  "excel",
 		},
 		{
-			Exts:  []string{"txt", "html"},
+			Exts:  []string{"txt", "html", "ini", "env", "json", "log", "yml"},
 			Color: "#607d8b",
 			Icon:  "text",
 		},
@@ -132,7 +132,7 @@ var (
 			Icon:  "torrent",
 		},
 		{
-			Exts:  []string{"zip", "gz", "xz", "tar", "rar", "7z", "bz2", "z"},
+			Exts:  []string{"zip", "gz", "xz", "tar", "rar", "7z", "bz2", "z", "iso"},
 			Color: "#f9a825",
 			Icon:  "zip",
 		},
@@ -211,7 +211,7 @@ var (
 					ID:          "music",
 					Type:        types.ViewerTypeBuiltin,
 					DisplayName: "fileManager.musicPlayer",
-					Exts:        []string{"mp3", "ogg", "wav", "flac", "m4a"},
+					Exts:        []string{"mp3", "ogg", "wav", "flac", "m4a", "aac"},
 				},
 				{
 					ID:          "epub",
@@ -293,7 +293,7 @@ var (
 					Type:        types.ViewerTypeBuiltin,
 					Icon:        "/static/img/viewers/monaco.svg",
 					DisplayName: "fileManager.monacoEditor",
-					Exts:        []string{"md", "txt", "json", "php", "py", "bat", "c", "h", "cpp", "hpp", "cs", "css", "dockerfile", "go", "html", "htm", "ini", "java", "js", "jsx", "less", "lua", "sh", "sql", "xml", "yaml"},
+					Exts:        []string{"md", "txt", "json", "php", "py", "bat", "c", "h", "cpp", "hpp", "cs", "css", "dockerfile", "go", "html", "htm", "ini", "java", "js", "jsx", "less", "lua", "sh", "sql", "xml", "yaml", "ts", "tsx", "yml", "vue", "env", "log"},
 					Templates: []types.NewFileTemplate{
 						{
 							Ext:         "txt",
@@ -406,7 +406,7 @@ var DefaultSettings = map[string]string{
 	"thumb_builtin_max_size":                     "78643200", // 75 MB
 	"thumb_vips_max_size":                        "78643200", // 75 MB
 	"thumb_vips_enabled":                         "0",
-	"thumb_vips_exts":                            "3fr,ari,arw,bay,braw,crw,cr2,cr3,cap,data,dcs,dcr,dng,drf,eip,erf,fff,gpr,iiq,k25,kdc,mdc,mef,mos,mrw,nef,nrw,obm,orf,pef,ptx,pxn,r3d,raf,raw,rwl,rw2,rwz,sr2,srf,srw,tif,x3f,csv,mat,img,hdr,pbm,pgm,ppm,pfm,pnm,svg,svgz,j2k,jp2,jpt,j2c,jpc,gif,png,jpg,jpeg,jpe,webp,tif,tiff,fits,fit,fts,exr,jxl,pdf,heic,heif,avif,svs,vms,vmu,ndpi,scn,mrxs,svslide,bif,raw",
+	"thumb_vips_exts":                            "3fr,ari,arw,bay,braw,crw,cr2,cr3,cap,data,dcs,dcr,dng,drf,eip,erf,fff,gpr,iiq,k25,kdc,mdc,mef,mos,mrw,nef,nrw,obm,orf,pef,ptx,pxn,r3d,raf,raw,rwl,rw2,rwz,sr2,srf,srw,tif,x3f,csv,mat,img,hdr,pbm,pgm,ppm,pfm,pnm,svg,svgz,j2k,jp2,jpt,j2c,jpc,gif,png,jpg,jpeg,jpe,webp,tif,tiff,fits,fit,fts,exr,jxl,pdf,heic,heif,avif,svs,vms,vmu,ndpi,scn,mrxs,svslide,bif,raw,ico,icns",
 	"thumb_ffmpeg_enabled":                       "0",
 	"thumb_vips_path":                            "vips",
 	"thumb_ffmpeg_path":                          "ffmpeg",
