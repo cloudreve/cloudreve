@@ -52,6 +52,7 @@ type Cap struct {
 	InstanceURL string
 	SiteKey     string
 	SecretKey   string
+	Version     string // "1.x" or "2.x"
 }
 
 type SMTP struct {
