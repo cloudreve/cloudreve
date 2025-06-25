@@ -669,8 +669,8 @@ func (s *settingProvider) TurnstileCaptcha(ctx context.Context) *Turnstile {
 func (s *settingProvider) CapCaptcha(ctx context.Context) *Cap {
 	return &Cap{
 		InstanceURL: s.getString(ctx, "captcha_cap_instance_url", ""),
-		KeyID:       s.getString(ctx, "captcha_cap_key_id", ""),
-		KeySecret:   s.getString(ctx, "captcha_cap_key_secret", ""),
+		SiteKey:     s.getString(ctx, "captcha_cap_key_id", ""),
+		SecretKey:   s.getString(ctx, "captcha_cap_key_secret", ""),
 	}
 }
 

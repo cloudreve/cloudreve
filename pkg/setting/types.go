@@ -50,8 +50,8 @@ type Turnstile struct {
 
 type Cap struct {
 	InstanceURL string
-	KeyID       string
-	KeySecret   string
+	SiteKey     string
+	SecretKey   string
 }
 
 type SMTP struct {

@@ -3,6 +3,12 @@ package middleware
 import (
 	"bytes"
 	"encoding/json"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
+
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 	"github.com/cloudreve/Cloudreve/v4/pkg/recaptcha"
@@ -11,11 +17,6 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
 	"github.com/gin-gonic/gin"
 	"github.com/mojocn/base64Captcha"
-	"io"
-	"net/http"
-	"net/url"
-	"strings"
-	"time"
 )
 
 type req struct {
@@ -133,7 +134,7 @@ func CaptchaRequired(enabled func(c *gin.Context) bool) gin.HandlerFunc {
 				break
 			case setting.CaptchaCap:
 				captchaSetting := settings.CapCaptcha(c)
-				if captchaSetting.InstanceURL == "" || captchaSetting.KeyID == "" || captchaSetting.KeySecret == "" {
+				if captchaSetting.InstanceURL == "" || captchaSetting.SiteKey == "" || captchaSetting.SecretKey == "" {
 					l.Warning("Cap verification failed: missing configuration")
 					c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeCaptchaError, "Captcha configuration error", nil))
 					c.Abort()
@@ -146,9 +147,9 @@ func CaptchaRequired(enabled func(c *gin.Context) bool) gin.HandlerFunc {
 					request2.WithHeader(http.Header{"Content-Type": []string{"application/json"}}),
 				)
 
-				capEndpoint := strings.TrimSuffix(captchaSetting.InstanceURL, "/") + "/" + captchaSetting.KeyID + "/siteverify"
+				capEndpoint := strings.TrimSuffix(captchaSetting.InstanceURL, "/") + "/" + captchaSetting.SiteKey + "/siteverify"
 				requestBody := map[string]string{
-					"secret":   captchaSetting.KeySecret,
+					"secret":   captchaSetting.SecretKey,
 					"response": service.Ticket,
 				}
 				requestData, err := json.Marshal(requestBody)

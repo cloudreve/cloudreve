@@ -137,7 +137,7 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 		TurnstileSiteID: settings.TurnstileCaptcha(c).Key,
 		ReCaptchaKey:    reCaptcha.Key,
 		CapInstanceURL:  capCaptcha.InstanceURL,
-		CapKeyID:        capCaptcha.KeyID,
+		CapKeyID:        capCaptcha.SiteKey,
 		AppPromotion:    appSetting.Promotion,
 	}, nil
 }
