@@ -671,7 +671,6 @@ func (s *settingProvider) CapCaptcha(ctx context.Context) *Cap {
 		InstanceURL: s.getString(ctx, "captcha_cap_instance_url", ""),
 		SiteKey:     s.getString(ctx, "captcha_cap_key_id", ""),
 		SecretKey:   s.getString(ctx, "captcha_cap_key_secret", ""),
-		Version:     s.getString(ctx, "captcha_cap_version", "1.x"),
 	}
 }
 

@@ -147,24 +147,11 @@ func CaptchaRequired(enabled func(c *gin.Context) bool) gin.HandlerFunc {
 					request2.WithHeader(http.Header{"Content-Type": []string{"application/json"}}),
 				)
 
-				var capEndpoint string
-				var requestBody map[string]string
-
-				// Support both 1.x and 2.x API formats
-				if captchaSetting.Version == "1.x" {
-					// Version 1.x: /api/{keyID}/siteverify
-					capEndpoint = strings.TrimSuffix(captchaSetting.InstanceURL, "/") + "/api/" + captchaSetting.SiteKey + "/siteverify"
-					requestBody = map[string]string{
-						"secret":   captchaSetting.SecretKey,
-						"response": service.Ticket,
-					}
-				} else {
-					// Version 2.x (default): /{siteKey}/siteverify
-					capEndpoint = strings.TrimSuffix(captchaSetting.InstanceURL, "/") + "/" + captchaSetting.SiteKey + "/siteverify"
-					requestBody = map[string]string{
-						"secret":   captchaSetting.SecretKey,
-						"response": service.Ticket,
-					}
+				// Cap 2.0 API format: /{siteKey}/siteverify
+				capEndpoint := strings.TrimSuffix(captchaSetting.InstanceURL, "/") + "/" + captchaSetting.SiteKey + "/siteverify"
+				requestBody := map[string]string{
+					"secret":   captchaSetting.SecretKey,
+					"response": service.Ticket,
 				}
 				requestData, err := json.Marshal(requestBody)
 				if err != nil {
