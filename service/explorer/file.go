@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
+	"github.com/cloudreve/Cloudreve/v4/ent"
 	"net/http"
 	"time"
 
@@ -100,11 +101,14 @@ func (s *GetDirectLinkService) Get(c *gin.Context) ([]DirectLinkResponse, error)
 	dep := dependency.FromContext(c)
 	u := inventory.UserFromContext(c)
 
-	if u.Edges.Group.Settings.SourceBatchSize == 0 {
+	sourceBatchSize := lo.Max(lo.Map(u.Edges.Groups, func(item *ent.Group, index int) int {
+		return item.Settings.SourceBatchSize
+	}))
+	if sourceBatchSize == 0 {
 		return nil, serializer.NewError(serializer.CodeGroupNotAllowed, "", nil)
 	}
 
-	if len(s.Uris) > u.Edges.Group.Settings.SourceBatchSize {
+	if len(s.Uris) > sourceBatchSize {
 		return nil, serializer.NewError(serializer.CodeBatchSourceSize, "", nil)
 	}
 
@@ -369,7 +373,9 @@ func (s *FileURLService) GetArchiveDownloadSession(c *gin.Context) (*FileURLResp
 		return nil, serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
 	}
 
-	if !user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionArchiveDownload)) {
+	if !lo.ContainsBy(user.Edges.Groups, func(item *ent.Group) bool {
+		return item.Permissions.Enabled(int(types.GroupPermissionArchiveDownload))
+	}) {
 		return nil, serializer.NewError(serializer.CodeGroupNotAllowed, "", nil)
 	}
 
@@ -429,7 +435,9 @@ func (s *FileURLService) Get(c *gin.Context) (*FileURLResponse, error) {
 	}
 
 	res, earliestExpire, err := m.GetEntityUrls(ctx, urlReq,
-		fs.WithDownloadSpeed(int64(user.Edges.Group.SpeedLimit)),
+		fs.WithDownloadSpeed(int64(lo.Max(lo.Map(user.Edges.Groups, func(item *ent.Group, index int) int {
+			return item.SpeedLimit
+		})))),
 		fs.WithIsDownload(s.Download),
 		fs.WithNoCache(s.NoCache),
 		fs.WithUrlExpire(&expire),
@@ -522,7 +530,9 @@ func (s *DeleteFileService) Delete(c *gin.Context) error {
 		return serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
 	}
 
-	if s.UnlinkOnly && !user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionAdvanceDelete)) {
+	if s.UnlinkOnly && !lo.ContainsBy(user.Edges.Groups, func(item *ent.Group) bool {
+		return item.Permissions.Enabled(int(types.GroupPermissionAdvanceDelete))
+	}) {
 		return serializer.NewError(serializer.CodeNoPermissionErr, "advance delete permission is required", nil)
 	}
 

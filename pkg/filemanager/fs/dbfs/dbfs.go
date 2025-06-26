@@ -228,13 +228,15 @@ func (f *DBFS) Capacity(ctx context.Context, u *ent.User) (*fs.Capacity, error) 
 		res = &fs.Capacity{}
 	)
 
-	requesterGroup, err := u.Edges.GroupOrErr()
+	requesterGroup, err := u.Edges.GroupsOrErr()
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get user's group", err)
 	}
 
 	res.Used = f.user.Storage
-	res.Total = requesterGroup.MaxStorage
+	res.Total = lo.Max(lo.Map(requesterGroup, func(g *ent.Group, _ int) int64 {
+		return g.MaxStorage
+	}))
 	return res, nil
 }
 
@@ -416,7 +418,9 @@ func (f *DBFS) Get(ctx context.Context, path *fs.URI, opts ...fs.Option) (fs.Fil
 		}
 
 		target.FileExtendedInfo = extendedInfo
-		if target.OwnerID() == f.user.ID || f.user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+		if target.OwnerID() == f.user.ID || lo.ContainsBy(f.user.Edges.Groups, func(g *ent.Group) bool {
+			return g.Permissions.Enabled(int(types.GroupPermissionIsAdmin))
+		}) {
 			target.FileExtendedInfo.Shares = target.Model.Edges.Shares
 			if target.Model.Props != nil {
 				target.FileExtendedInfo.View = target.Model.Props.View
@@ -450,10 +454,12 @@ func (f *DBFS) Get(ctx context.Context, path *fs.URI, opts ...fs.Option) (fs.Fil
 		} else {
 			// cache miss, walk the folder to get the summary
 			newSummary := &fs.FolderSummary{Completed: true}
-			if f.user.Edges.Group == nil {
+			if len(f.user.Edges.Groups) == 0 {
 				return nil, fmt.Errorf("user group not loaded")
 			}
-			limit := max(f.user.Edges.Group.Settings.MaxWalkedFiles, 1)
+			limit := max(lo.Max(lo.Map(f.user.Edges.Groups, func(g *ent.Group, _ int) int {
+				return g.Settings.MaxWalkedFiles
+			})), 1)
 
 			// disable load metadata to speed up
 			ctxWalk := context.WithValue(ctx, inventory.LoadFilePublicMetadata{}, false)
@@ -539,10 +545,12 @@ func (f *DBFS) Walk(ctx context.Context, path *fs.URI, depth int, walk fs.WalkFu
 	}
 
 	// Walk
-	if f.user.Edges.Group == nil {
+	if len(f.user.Edges.Groups) == 0 {
 		return fmt.Errorf("user group not loaded")
 	}
-	limit := max(f.user.Edges.Group.Settings.MaxWalkedFiles, 1)
+	limit := max(lo.Max(lo.Map(f.user.Edges.Groups, func(g *ent.Group, _ int) int {
+		return g.Settings.MaxWalkedFiles
+	})), 1)
 
 	if err := navigator.Walk(ctx, []*File{target}, limit, depth, func(files []*File, l int) error {
 		for _, file := range files {
@@ -637,12 +645,12 @@ func (f *DBFS) createFile(ctx context.Context, parent *File, name string, fileTy
 
 // getPreferredPolicy tries to get the preferred storage policy for the given file.
 func (f *DBFS) getPreferredPolicy(ctx context.Context, file *File) (*ent.StoragePolicy, error) {
-	ownerGroup := file.Owner().Edges.Group
-	if ownerGroup == nil {
+	ownerGroup := file.Owner().Edges.Groups
+	if len(ownerGroup) == 0 {
 		return nil, fmt.Errorf("owner group not loaded")
 	}
 
-	groupPolicy, err := f.storagePolicyClient.GetByGroup(ctx, ownerGroup)
+	groupPolicy, err := f.storagePolicyClient.GetByGroup(ctx, ownerGroup[0])
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get available storage policies", err)
 	}

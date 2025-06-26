@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/samber/lo"
 	"io"
 	"os"
 	"path"
@@ -178,9 +179,12 @@ func (m *ExtractArchiveTask) createSlaveExtractTask(ctx context.Context, dep dep
 	}
 
 	// Validate file size
-	if user.Edges.Group.Settings.DecompressSize > 0 && archiveFile.Size() > user.Edges.Group.Settings.DecompressSize {
+	decompressSize := lo.Max(lo.Map(user.Edges.Groups, func(item *ent.Group, index int) int64 {
+		return item.Settings.DecompressSize
+	}))
+	if decompressSize > 0 && archiveFile.Size() > decompressSize {
 		return task.StatusError,
-			fmt.Errorf("file size %d exceeds the limit %d (%w)", archiveFile.Size(), user.Edges.Group.Settings.DecompressSize, queue.CriticalErr)
+			fmt.Errorf("file size %d exceeds the limit %d (%w)", archiveFile.Size(), decompressSize, queue.CriticalErr)
 	}
 
 	// Create slave task
@@ -263,9 +267,12 @@ func (m *ExtractArchiveTask) masterExtractArchive(ctx context.Context, dep depen
 	}
 
 	// Validate file size
-	if user.Edges.Group.Settings.DecompressSize > 0 && archiveFile.Size() > user.Edges.Group.Settings.DecompressSize {
+	decompressSize := lo.Max(lo.Map(user.Edges.Groups, func(item *ent.Group, index int) int64 {
+		return item.Settings.DecompressSize
+	}))
+	if decompressSize > 0 && archiveFile.Size() > decompressSize {
 		return task.StatusError,
-			fmt.Errorf("file size %d exceeds the limit %d (%w)", archiveFile.Size(), user.Edges.Group.Settings.DecompressSize, queue.CriticalErr)
+			fmt.Errorf("file size %d exceeds the limit %d (%w)", archiveFile.Size(), decompressSize, queue.CriticalErr)
 	}
 
 	es, err := fm.GetEntitySource(ctx, 0, fs.WithEntity(archiveFile.PrimaryEntity()))

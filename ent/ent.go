@@ -25,6 +25,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/storagepolicy"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
+	"github.com/cloudreve/Cloudreve/v4/ent/usergroup"
 )
 
 // ent aliases to avoid import conflicts in user's code.
@@ -98,6 +99,7 @@ func checkColumn(table, column string) error {
 			storagepolicy.Table: storagepolicy.ValidColumn,
 			task.Table:          task.ValidColumn,
 			user.Table:          user.ValidColumn,
+			usergroup.Table:     usergroup.ValidColumn,
 		})
 	})
 	return columnCheck(table, column)

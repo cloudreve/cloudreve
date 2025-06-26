@@ -71,7 +71,7 @@ func (m *Migrator) migrateUser() error {
 				SetNick(u.Nick).
 				SetStatus(userStatus).
 				SetStorage(int64(u.Storage)).
-				SetGroupID(int(u.GroupID)).
+				AddGroupIDs(int(u.GroupID)).
 				SetSettings(setting).
 				SetPassword(u.Password)
 

@@ -51,9 +51,11 @@ type GroupEdges struct {
 	Users []*User `json:"users,omitempty"`
 	// StoragePolicies holds the value of the storage_policies edge.
 	StoragePolicies *StoragePolicy `json:"storage_policies,omitempty"`
+	// UserGroup holds the value of the user_group edge.
+	UserGroup []*UserGroup `json:"user_group,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // UsersOrErr returns the Users value or an error if the edge
@@ -76,6 +78,15 @@ func (e GroupEdges) StoragePoliciesOrErr() (*StoragePolicy, error) {
 		return e.StoragePolicies, nil
 	}
 	return nil, &NotLoadedError{edge: "storage_policies"}
+}
+
+// UserGroupOrErr returns the UserGroup value or an error if the edge
+// was not loaded in eager-loading.
+func (e GroupEdges) UserGroupOrErr() ([]*UserGroup, error) {
+	if e.loadedTypes[2] {
+		return e.UserGroup, nil
+	}
+	return nil, &NotLoadedError{edge: "user_group"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -194,6 +205,11 @@ func (gr *Group) QueryStoragePolicies() *StoragePolicyQuery {
 	return NewGroupClient(gr.config).QueryStoragePolicies(gr)
 }
 
+// QueryUserGroup queries the "user_group" edge of the Group entity.
+func (gr *Group) QueryUserGroup() *UserGroupQuery {
+	return NewGroupClient(gr.config).QueryUserGroup(gr)
+}
+
 // Update returns a builder for updating this Group.
 // Note that you need to call Group.Unwrap() before calling this method if this Group
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -259,6 +275,12 @@ func (e *Group) SetUsers(v []*User) {
 func (e *Group) SetStoragePolicies(v *StoragePolicy) {
 	e.Edges.StoragePolicies = v
 	e.Edges.loadedTypes[1] = true
+}
+
+// SetUserGroup manually set the edge as loaded state.
+func (e *Group) SetUserGroup(v []*UserGroup) {
+	e.Edges.UserGroup = v
+	e.Edges.loadedTypes[2] = true
 }
 
 // Groups is a parsable slice of Group.

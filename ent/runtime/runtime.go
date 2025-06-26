@@ -19,6 +19,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/storagepolicy"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
+	"github.com/cloudreve/Cloudreve/v4/ent/usergroup"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 )
 
@@ -329,6 +330,12 @@ func init() {
 	userDescSettings := userFields[7].Descriptor()
 	// user.DefaultSettings holds the default value on creation for the settings field.
 	user.DefaultSettings = userDescSettings.Default.(*types.UserSetting)
+	usergroupFields := schema.UserGroup{}.Fields()
+	_ = usergroupFields
+	// usergroupDescIsPrimary is the schema descriptor for is_primary field.
+	usergroupDescIsPrimary := usergroupFields[2].Descriptor()
+	// usergroup.DefaultIsPrimary holds the default value on creation for the is_primary field.
+	usergroup.DefaultIsPrimary = usergroupDescIsPrimary.Default.(bool)
 }
 
 const (

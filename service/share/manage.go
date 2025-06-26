@@ -2,6 +2,7 @@ package share
 
 import (
 	"context"
+	"github.com/samber/lo"
 	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
@@ -36,7 +37,9 @@ func (service *ShareCreateService) Upsert(c *gin.Context, existed int) (string, 
 	defer m.Recycle()
 
 	// Check group permission for creating share link
-	if !user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionShare)) {
+	if !lo.ContainsBy(user.Edges.Groups, func(item *ent.Group) bool {
+		return item.Permissions.Enabled(int(types.GroupPermissionShare))
+	}) {
 		return "", serializer.NewError(serializer.CodeGroupNotAllowed, "Group permission denied", nil)
 	}
 
@@ -77,7 +80,10 @@ func DeleteShare(c *gin.Context, shareId int) error {
 		share *ent.Share
 		err   error
 	)
-	if user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+
+	if lo.ContainsBy(user.Edges.Groups, func(item *ent.Group) bool {
+		return item.Permissions.Enabled(int(types.GroupPermissionIsAdmin))
+	}) {
 		share, err = shareClient.GetByID(ctx, shareId)
 	} else {
 		share, err = shareClient.GetByIDUser(ctx, shareId, user.ID)

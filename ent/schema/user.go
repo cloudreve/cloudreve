@@ -35,17 +35,14 @@ func (User) Fields() []ent.Field {
 		field.JSON("settings", &types.UserSetting{}).
 			Default(&types.UserSetting{}).
 			Optional(),
-		field.Int("group_users"),
 	}
 }
 
 func (User) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("group", Group.Type).
+		edge.From("groups", Group.Type).
 			Ref("users").
-			Field("group_users").
-			Unique().
-			Required(),
+			Through("user_group", UserGroup.Type),
 		edge.To("files", File.Type),
 		edge.To("dav_accounts", DavAccount.Type),
 		edge.To("shares", Share.Type),

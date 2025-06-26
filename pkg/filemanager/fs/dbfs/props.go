@@ -3,6 +3,7 @@ package dbfs
 import (
 	"context"
 	"fmt"
+	"github.com/cloudreve/Cloudreve/v4/ent"
 
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
@@ -22,7 +23,9 @@ func (f *DBFS) PatchProps(ctx context.Context, uri *fs.URI, props *types.FilePro
 		return fmt.Errorf("failed to get target file: %w", err)
 	}
 
-	if target.OwnerID() != f.user.ID && !f.user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+	if target.OwnerID() != f.user.ID && !lo.ContainsBy(f.user.Edges.Groups, func(item *ent.Group) bool {
+		return item.Permissions.Enabled(int(types.GroupPermissionIsAdmin))
+	}) {
 		return fs.ErrOwnerOnly.WithError(fmt.Errorf("only file owner can modify file props"))
 	}
 

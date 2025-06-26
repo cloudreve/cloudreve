@@ -340,10 +340,14 @@ func handleGetHeadPost(c *gin.Context, user *ent.User, fm manager.FileManager) (
 
 	defer es.Close()
 
-	es.Apply(entitysource.WithSpeedLimit(int64(user.Edges.Group.SpeedLimit)))
+	es.Apply(entitysource.WithSpeedLimit(int64(lo.Max(lo.Map(user.Edges.Groups, func(item *ent.Group, index int) int {
+		return item.SpeedLimit
+	})))))
 	if es.ShouldInternalProxy() ||
 		(user.Edges.DavAccounts[0].Options.Enabled(int(types.DavAccountProxy)) &&
-			user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionWebDAVProxy))) {
+			lo.ContainsBy(user.Edges.Groups, func(item *ent.Group) bool {
+				return item.Permissions.Enabled(int(types.GroupPermissionWebDAVProxy))
+			})) {
 		es.Serve(c.Writer, c.Request)
 	} else {
 		settings := dependency.FromContext(c).SettingProvider()

@@ -154,10 +154,12 @@ func (s *UpsertUserService) Update(c *gin.Context) (*GetUserResponse, error) {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get user", err)
 	}
 
-	if s.User.ID == 1 && existing.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
-		if s.User.GroupUsers != existing.GroupUsers {
-			return nil, serializer.NewError(serializer.CodeInvalidActionOnDefaultUser, "Cannot change default user's group", nil)
-		}
+	if s.User.ID == 1 && lo.ContainsBy(existing.Edges.Groups, func(item *ent.Group) bool {
+		return item.Permissions.Enabled(int(types.GroupPermissionIsAdmin))
+	}) {
+		//if s.User.GroupUsers != existing.GroupUsers {
+		//	return nil, serializer.NewError(serializer.CodeInvalidActionOnDefaultUser, "Cannot change default user's group", nil)
+		//}
 
 		if s.User.Status != user.StatusActive {
 			return nil, serializer.NewError(serializer.CodeInvalidActionOnDefaultUser, "Cannot change default user's status", nil)

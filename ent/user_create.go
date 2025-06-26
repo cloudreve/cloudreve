@@ -19,6 +19,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/share"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
+	"github.com/cloudreve/Cloudreve/v4/ent/usergroup"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 )
 
@@ -160,21 +161,19 @@ func (uc *UserCreate) SetSettings(ts *types.UserSetting) *UserCreate {
 	return uc
 }
 
-// SetGroupUsers sets the "group_users" field.
-func (uc *UserCreate) SetGroupUsers(i int) *UserCreate {
-	uc.mutation.SetGroupUsers(i)
+// AddGroupIDs adds the "groups" edge to the Group entity by IDs.
+func (uc *UserCreate) AddGroupIDs(ids ...int) *UserCreate {
+	uc.mutation.AddGroupIDs(ids...)
 	return uc
 }
 
-// SetGroupID sets the "group" edge to the Group entity by ID.
-func (uc *UserCreate) SetGroupID(id int) *UserCreate {
-	uc.mutation.SetGroupID(id)
-	return uc
-}
-
-// SetGroup sets the "group" edge to the Group entity.
-func (uc *UserCreate) SetGroup(g *Group) *UserCreate {
-	return uc.SetGroupID(g.ID)
+// AddGroups adds the "groups" edges to the Group entity.
+func (uc *UserCreate) AddGroups(g ...*Group) *UserCreate {
+	ids := make([]int, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return uc.AddGroupIDs(ids...)
 }
 
 // AddFileIDs adds the "files" edge to the File entity by IDs.
@@ -265,6 +264,21 @@ func (uc *UserCreate) AddEntities(e ...*Entity) *UserCreate {
 		ids[i] = e[i].ID
 	}
 	return uc.AddEntityIDs(ids...)
+}
+
+// AddUserGroupIDs adds the "user_group" edge to the UserGroup entity by IDs.
+func (uc *UserCreate) AddUserGroupIDs(ids ...int) *UserCreate {
+	uc.mutation.AddUserGroupIDs(ids...)
+	return uc
+}
+
+// AddUserGroup adds the "user_group" edges to the UserGroup entity.
+func (uc *UserCreate) AddUserGroup(u ...*UserGroup) *UserCreate {
+	ids := make([]int, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return uc.AddUserGroupIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -368,12 +382,6 @@ func (uc *UserCreate) check() error {
 	if _, ok := uc.mutation.Storage(); !ok {
 		return &ValidationError{Name: "storage", err: errors.New(`ent: missing required field "User.storage"`)}
 	}
-	if _, ok := uc.mutation.GroupUsers(); !ok {
-		return &ValidationError{Name: "group_users", err: errors.New(`ent: missing required field "User.group_users"`)}
-	}
-	if _, ok := uc.mutation.GroupID(); !ok {
-		return &ValidationError{Name: "group", err: errors.New(`ent: missing required edge "User.group"`)}
-	}
 	return nil
 }
 
@@ -452,12 +460,12 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		_spec.SetField(user.FieldSettings, field.TypeJSON, value)
 		_node.Settings = value
 	}
-	if nodes := uc.mutation.GroupIDs(); len(nodes) > 0 {
+	if nodes := uc.mutation.GroupsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   user.GroupTable,
-			Columns: []string{user.GroupColumn},
+			Table:   user.GroupsTable,
+			Columns: user.GroupsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
@@ -466,7 +474,10 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.GroupUsers = nodes[0]
+		createE := &UserGroupCreate{config: uc.config, mutation: newUserGroupMutation(uc.config, OpCreate)}
+		createE.defaults()
+		_, specE := createE.createSpec()
+		edge.Target.Fields = specE.Fields
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := uc.mutation.FilesIDs(); len(nodes) > 0 {
@@ -558,6 +569,22 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(entity.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := uc.mutation.UserGroupIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   user.UserGroupTable,
+			Columns: []string{user.UserGroupColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usergroup.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -770,18 +797,6 @@ func (u *UserUpsert) UpdateSettings() *UserUpsert {
 // ClearSettings clears the value of the "settings" field.
 func (u *UserUpsert) ClearSettings() *UserUpsert {
 	u.SetNull(user.FieldSettings)
-	return u
-}
-
-// SetGroupUsers sets the "group_users" field.
-func (u *UserUpsert) SetGroupUsers(v int) *UserUpsert {
-	u.Set(user.FieldGroupUsers, v)
-	return u
-}
-
-// UpdateGroupUsers sets the "group_users" field to the value that was provided on create.
-func (u *UserUpsert) UpdateGroupUsers() *UserUpsert {
-	u.SetExcluded(user.FieldGroupUsers)
 	return u
 }
 
@@ -1009,20 +1024,6 @@ func (u *UserUpsertOne) UpdateSettings() *UserUpsertOne {
 func (u *UserUpsertOne) ClearSettings() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
 		s.ClearSettings()
-	})
-}
-
-// SetGroupUsers sets the "group_users" field.
-func (u *UserUpsertOne) SetGroupUsers(v int) *UserUpsertOne {
-	return u.Update(func(s *UserUpsert) {
-		s.SetGroupUsers(v)
-	})
-}
-
-// UpdateGroupUsers sets the "group_users" field to the value that was provided on create.
-func (u *UserUpsertOne) UpdateGroupUsers() *UserUpsertOne {
-	return u.Update(func(s *UserUpsert) {
-		s.UpdateGroupUsers()
 	})
 }
 
@@ -1421,20 +1422,6 @@ func (u *UserUpsertBulk) UpdateSettings() *UserUpsertBulk {
 func (u *UserUpsertBulk) ClearSettings() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
 		s.ClearSettings()
-	})
-}
-
-// SetGroupUsers sets the "group_users" field.
-func (u *UserUpsertBulk) SetGroupUsers(v int) *UserUpsertBulk {
-	return u.Update(func(s *UserUpsert) {
-		s.SetGroupUsers(v)
-	})
-}
-
-// UpdateGroupUsers sets the "group_users" field to the value that was provided on create.
-func (u *UserUpsertBulk) UpdateGroupUsers() *UserUpsertBulk {
-	return u.Update(func(s *UserUpsert) {
-		s.UpdateGroupUsers()
 	})
 }
 

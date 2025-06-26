@@ -7,16 +7,16 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/auth"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/oss"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager"
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 	"github.com/cloudreve/Cloudreve/v4/pkg/request"
-	"github.com/cloudreve/Cloudreve/v4/pkg/util"
-
-	"github.com/cloudreve/Cloudreve/v4/pkg/auth"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
+	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 	"github.com/gin-gonic/gin"
+	"github.com/samber/lo"
 )
 
 const (
@@ -144,7 +144,7 @@ func WebDAVAuth() gin.HandlerFunc {
 		}
 
 		// 用户组已启用WebDAV？
-		group, err := expectedUser.Edges.GroupOrErr()
+		groups, err := expectedUser.Edges.GroupsOrErr()
 		if err != nil {
 			l.Debug("WebDAVAuth: user group not found: %s", err)
 			c.Status(http.StatusInternalServerError)
@@ -152,7 +152,9 @@ func WebDAVAuth() gin.HandlerFunc {
 			return
 		}
 
-		if !group.Permissions.Enabled(int(types.GroupPermissionWebDAV)) {
+		if !lo.ContainsBy(groups, func(item *ent.Group) bool {
+			return item.Permissions.Enabled(int(types.GroupPermissionWebDAV))
+		}) {
 			c.Status(http.StatusForbidden)
 			l.Debug("WebDAVAuth: user %q does not have WebDAV permission.", expectedUser.Email)
 			c.Abort()
@@ -262,7 +264,9 @@ func OSSCallbackAuth() gin.HandlerFunc {
 func IsAdmin() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user := inventory.UserFromContext(c)
-		if !user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+		if !lo.ContainsBy(user.Edges.Groups, func(item *ent.Group) bool {
+			return item.Permissions.Enabled(int(types.GroupPermissionIsAdmin))
+		}) {
 			c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeNoPermissionErr, "", nil))
 			c.Abort()
 			return

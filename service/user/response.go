@@ -105,7 +105,7 @@ type User struct {
 	CreatedAt       time.Time         `json:"created_at"`
 	PreferredTheme  string            `json:"preferred_theme,omitempty"`
 	Anonymous       bool              `json:"anonymous,omitempty"`
-	Group           *Group            `json:"group,omitempty"`
+	Groups          []*Group          `json:"groups,omitempty"`
 	Pined           []types.PinedFile `json:"pined,omitempty"`
 	Language        string            `json:"language,omitempty"`
 	DisableViewSync bool              `json:"disable_view_sync,omitempty"`
@@ -153,15 +153,17 @@ func BuildWebAuthnList(credentials []webauthn.Credential) []WebAuthnCredentials 
 // BuildUser 序列化用户
 func BuildUser(user *ent.User, idEncoder hashid.Encoder) User {
 	return User{
-		ID:              hashid.EncodeUserID(idEncoder, user.ID),
-		Email:           user.Email,
-		Nickname:        user.Nick,
-		Status:          user.Status,
-		Avatar:          user.Avatar,
-		CreatedAt:       user.CreatedAt,
-		PreferredTheme:  user.Settings.PreferredTheme,
-		Anonymous:       user.ID == 0,
-		Group:           BuildGroup(user.Edges.Group, idEncoder),
+		ID:             hashid.EncodeUserID(idEncoder, user.ID),
+		Email:          user.Email,
+		Nickname:       user.Nick,
+		Status:         user.Status,
+		Avatar:         user.Avatar,
+		CreatedAt:      user.CreatedAt,
+		PreferredTheme: user.Settings.PreferredTheme,
+		Anonymous:      user.ID == 0,
+		Groups: lo.Map(user.Edges.Groups, func(item *ent.Group, index int) *Group {
+			return BuildGroup(item, idEncoder)
+		}),
 		Pined:           user.Settings.Pined,
 		Language:        user.Settings.Language,
 		DisableViewSync: user.Settings.DisableViewSync,
@@ -199,8 +201,10 @@ func BuildUserRedacted(u *ent.User, level int, idEncoder hashid.Encoder) User {
 		CreatedAt: userRaw.CreatedAt,
 	}
 
-	if userRaw.Group != nil {
-		user.Group = RedactedGroup(userRaw.Group)
+	if userRaw.Groups != nil {
+		user.Groups = lo.Map(userRaw.Groups, func(item *Group, index int) *Group {
+			return RedactedGroup(item)
+		})
 	}
 
 	if level == RedactLevelUser {

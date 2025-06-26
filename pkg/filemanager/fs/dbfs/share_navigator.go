@@ -3,6 +3,7 @@ package dbfs
 import (
 	"context"
 	"fmt"
+	"github.com/samber/lo"
 
 	"github.com/cloudreve/Cloudreve/v4/application/constants"
 	"github.com/cloudreve/Cloudreve/v4/ent"
@@ -156,7 +157,9 @@ func (n *shareNavigator) Root(ctx context.Context, path *fs.URI) (*File, error) 
 		return nil, ErrShareNotFound
 	}
 
-	if n.user.ID != n.owner.ID && !n.user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionShareDownload)) {
+	if n.user.ID != n.owner.ID && !lo.ContainsBy(n.user.Edges.Groups, func(item *ent.Group) bool {
+		return item.Permissions.Enabled(int(types.GroupPermissionShareDownload))
+	}) {
 		return nil, serializer.NewError(
 			serializer.CodeNoPermissionErr,
 			fmt.Sprintf("You don't have permission to access share links"),

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/samber/lo"
 
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
@@ -92,7 +93,9 @@ func (n *myNavigator) To(ctx context.Context, path *fs.URI) (*File, error) {
 			return nil, fs.ErrPathNotExist.WithError(fmt.Errorf("user not found: %w", err))
 		}
 
-		if targetUser.Status != user.StatusActive && !n.user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+		if targetUser.Status != user.StatusActive && !lo.ContainsBy(n.user.Edges.Groups, func(item *ent.Group) bool {
+			return item.Permissions.Enabled(int(types.GroupPermissionIsAdmin))
+		}) {
 			return nil, fs.ErrPathNotExist.WithError(fmt.Errorf("inactive user"))
 		}
 

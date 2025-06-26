@@ -16,6 +16,9 @@ type (
 )
 
 const (
+	AdminGroupID = 1
+	UserGroupID  = 2
+	// Deprecated: AnonymousGroupID is no longer used.
 	AnonymousGroupID = 3
 )
 
@@ -23,6 +26,7 @@ type (
 	GroupClient interface {
 		TxOperator
 		// AnonymousGroup returns the anonymous group.
+		// Deprecated: anonymous group is no longer used.
 		AnonymousGroup(ctx context.Context) (*ent.Group, error)
 		// ListAll returns all groups.
 		ListAll(ctx context.Context) ([]*ent.Group, error)

@@ -476,7 +476,7 @@ func HasUsers() predicate.Group {
 	return predicate.Group(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, UsersTable, UsersColumn),
+			sqlgraph.Edge(sqlgraph.M2M, false, UsersTable, UsersPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
@@ -509,6 +509,29 @@ func HasStoragePolicies() predicate.Group {
 func HasStoragePoliciesWith(preds ...predicate.StoragePolicy) predicate.Group {
 	return predicate.Group(func(s *sql.Selector) {
 		step := newStoragePoliciesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasUserGroup applies the HasEdge predicate on the "user_group" edge.
+func HasUserGroup() predicate.Group {
+	return predicate.Group(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, UserGroupTable, UserGroupColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasUserGroupWith applies the HasEdge predicate on the "user_group" edge with a given conditions (other predicates).
+func HasUserGroupWith(preds ...predicate.UserGroup) predicate.Group {
+	return predicate.Group(func(s *sql.Selector) {
+		step := newUserGroupStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

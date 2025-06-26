@@ -38,15 +38,15 @@ const (
 	EdgeUsers = "users"
 	// EdgeStoragePolicies holds the string denoting the storage_policies edge name in mutations.
 	EdgeStoragePolicies = "storage_policies"
+	// EdgeUserGroup holds the string denoting the user_group edge name in mutations.
+	EdgeUserGroup = "user_group"
 	// Table holds the table name of the group in the database.
 	Table = "groups"
-	// UsersTable is the table that holds the users relation/edge.
-	UsersTable = "users"
+	// UsersTable is the table that holds the users relation/edge. The primary key declared below.
+	UsersTable = "user_groups"
 	// UsersInverseTable is the table name for the User entity.
 	// It exists in this package in order to avoid circular dependency with the "user" package.
 	UsersInverseTable = "users"
-	// UsersColumn is the table column denoting the users relation/edge.
-	UsersColumn = "group_users"
 	// StoragePoliciesTable is the table that holds the storage_policies relation/edge.
 	StoragePoliciesTable = "groups"
 	// StoragePoliciesInverseTable is the table name for the StoragePolicy entity.
@@ -54,6 +54,13 @@ const (
 	StoragePoliciesInverseTable = "storage_policies"
 	// StoragePoliciesColumn is the table column denoting the storage_policies relation/edge.
 	StoragePoliciesColumn = "storage_policy_id"
+	// UserGroupTable is the table that holds the user_group relation/edge.
+	UserGroupTable = "user_groups"
+	// UserGroupInverseTable is the table name for the UserGroup entity.
+	// It exists in this package in order to avoid circular dependency with the "usergroup" package.
+	UserGroupInverseTable = "user_groups"
+	// UserGroupColumn is the table column denoting the user_group relation/edge.
+	UserGroupColumn = "group_id"
 )
 
 // Columns holds all SQL columns for group fields.
@@ -69,6 +76,12 @@ var Columns = []string{
 	FieldSettings,
 	FieldStoragePolicyID,
 }
+
+var (
+	// UsersPrimaryKey and UsersColumn2 are the table columns denoting the
+	// primary key for the users relation (M2M).
+	UsersPrimaryKey = []string{"group_id", "user_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -161,11 +174,25 @@ func ByStoragePoliciesField(field string, opts ...sql.OrderTermOption) OrderOpti
 		sqlgraph.OrderByNeighborTerms(s, newStoragePoliciesStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByUserGroupCount orders the results by user_group count.
+func ByUserGroupCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newUserGroupStep(), opts...)
+	}
+}
+
+// ByUserGroup orders the results by user_group terms.
+func ByUserGroup(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newUserGroupStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newUsersStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(UsersInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, UsersTable, UsersColumn),
+		sqlgraph.Edge(sqlgraph.M2M, false, UsersTable, UsersPrimaryKey...),
 	)
 }
 func newStoragePoliciesStep() *sqlgraph.Step {
@@ -173,5 +200,12 @@ func newStoragePoliciesStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(StoragePoliciesInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, StoragePoliciesTable, StoragePoliciesColumn),
+	)
+}
+func newUserGroupStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(UserGroupInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, UserGroupTable, UserGroupColumn),
 	)
 }

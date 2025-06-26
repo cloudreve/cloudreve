@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/samber/lo"
 	"io"
 	"os"
 	"path/filepath"
@@ -233,7 +234,9 @@ func (m *CreateArchiveTask) listEntitiesAndSendToSlave(ctx context.Context, dep 
 				}
 			}
 		}),
-		fs.WithMaxArchiveSize(user.Edges.Group.Settings.CompressSize),
+		fs.WithMaxArchiveSize(lo.Max(lo.Map(user.Edges.Groups, func(item *ent.Group, index int) int64 {
+			return item.Settings.CompressSize
+		}))),
 	)
 	if err != nil {
 		return task.StatusError, fmt.Errorf("failed to compress files: %w", err)
@@ -390,7 +393,9 @@ func (m *CreateArchiveTask) createArchiveFile(ctx context.Context, dep dependenc
 	m.Unlock()
 	failed, err := fm.CreateArchive(ctx, uris, zipFile,
 		fs.WithArchiveCompression(true),
-		fs.WithMaxArchiveSize(user.Edges.Group.Settings.CompressSize),
+		fs.WithMaxArchiveSize(lo.Max(lo.Map(user.Edges.Groups, func(item *ent.Group, index int) int64 {
+			return item.Settings.CompressSize
+		}))),
 		fs.WithProgressFunc(func(current, diff int64, total int64) {
 			atomic.AddInt64(&m.progress[ProgressTypeArchiveSize].Current, diff)
 			atomic.AddInt64(&m.progress[ProgressTypeArchiveCount].Current, 1)

@@ -20,6 +20,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/share"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
+	"github.com/cloudreve/Cloudreve/v4/ent/usergroup"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 )
 
@@ -197,29 +198,19 @@ func (uu *UserUpdate) ClearSettings() *UserUpdate {
 	return uu
 }
 
-// SetGroupUsers sets the "group_users" field.
-func (uu *UserUpdate) SetGroupUsers(i int) *UserUpdate {
-	uu.mutation.SetGroupUsers(i)
+// AddGroupIDs adds the "groups" edge to the Group entity by IDs.
+func (uu *UserUpdate) AddGroupIDs(ids ...int) *UserUpdate {
+	uu.mutation.AddGroupIDs(ids...)
 	return uu
 }
 
-// SetNillableGroupUsers sets the "group_users" field if the given value is not nil.
-func (uu *UserUpdate) SetNillableGroupUsers(i *int) *UserUpdate {
-	if i != nil {
-		uu.SetGroupUsers(*i)
+// AddGroups adds the "groups" edges to the Group entity.
+func (uu *UserUpdate) AddGroups(g ...*Group) *UserUpdate {
+	ids := make([]int, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
 	}
-	return uu
-}
-
-// SetGroupID sets the "group" edge to the Group entity by ID.
-func (uu *UserUpdate) SetGroupID(id int) *UserUpdate {
-	uu.mutation.SetGroupID(id)
-	return uu
-}
-
-// SetGroup sets the "group" edge to the Group entity.
-func (uu *UserUpdate) SetGroup(g *Group) *UserUpdate {
-	return uu.SetGroupID(g.ID)
+	return uu.AddGroupIDs(ids...)
 }
 
 // AddFileIDs adds the "files" edge to the File entity by IDs.
@@ -312,15 +303,45 @@ func (uu *UserUpdate) AddEntities(e ...*Entity) *UserUpdate {
 	return uu.AddEntityIDs(ids...)
 }
 
+// AddUserGroupIDs adds the "user_group" edge to the UserGroup entity by IDs.
+func (uu *UserUpdate) AddUserGroupIDs(ids ...int) *UserUpdate {
+	uu.mutation.AddUserGroupIDs(ids...)
+	return uu
+}
+
+// AddUserGroup adds the "user_group" edges to the UserGroup entity.
+func (uu *UserUpdate) AddUserGroup(u ...*UserGroup) *UserUpdate {
+	ids := make([]int, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return uu.AddUserGroupIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uu *UserUpdate) Mutation() *UserMutation {
 	return uu.mutation
 }
 
-// ClearGroup clears the "group" edge to the Group entity.
-func (uu *UserUpdate) ClearGroup() *UserUpdate {
-	uu.mutation.ClearGroup()
+// ClearGroups clears all "groups" edges to the Group entity.
+func (uu *UserUpdate) ClearGroups() *UserUpdate {
+	uu.mutation.ClearGroups()
 	return uu
+}
+
+// RemoveGroupIDs removes the "groups" edge to Group entities by IDs.
+func (uu *UserUpdate) RemoveGroupIDs(ids ...int) *UserUpdate {
+	uu.mutation.RemoveGroupIDs(ids...)
+	return uu
+}
+
+// RemoveGroups removes "groups" edges to Group entities.
+func (uu *UserUpdate) RemoveGroups(g ...*Group) *UserUpdate {
+	ids := make([]int, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return uu.RemoveGroupIDs(ids...)
 }
 
 // ClearFiles clears all "files" edges to the File entity.
@@ -449,6 +470,27 @@ func (uu *UserUpdate) RemoveEntities(e ...*Entity) *UserUpdate {
 	return uu.RemoveEntityIDs(ids...)
 }
 
+// ClearUserGroup clears all "user_group" edges to the UserGroup entity.
+func (uu *UserUpdate) ClearUserGroup() *UserUpdate {
+	uu.mutation.ClearUserGroup()
+	return uu
+}
+
+// RemoveUserGroupIDs removes the "user_group" edge to UserGroup entities by IDs.
+func (uu *UserUpdate) RemoveUserGroupIDs(ids ...int) *UserUpdate {
+	uu.mutation.RemoveUserGroupIDs(ids...)
+	return uu
+}
+
+// RemoveUserGroup removes "user_group" edges to UserGroup entities.
+func (uu *UserUpdate) RemoveUserGroup(u ...*UserGroup) *UserUpdate {
+	ids := make([]int, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return uu.RemoveUserGroupIDs(ids...)
+}
+
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (uu *UserUpdate) Save(ctx context.Context) (int, error) {
 	if err := uu.defaults(); err != nil {
@@ -507,9 +549,6 @@ func (uu *UserUpdate) check() error {
 		if err := user.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "User.status": %w`, err)}
 		}
-	}
-	if _, ok := uu.mutation.GroupID(); uu.mutation.GroupCleared() && !ok {
-		return errors.New(`ent: clearing a required unique edge "User.group"`)
 	}
 	return nil
 }
@@ -574,25 +613,29 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if uu.mutation.SettingsCleared() {
 		_spec.ClearField(user.FieldSettings, field.TypeJSON)
 	}
-	if uu.mutation.GroupCleared() {
+	if uu.mutation.GroupsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   user.GroupTable,
-			Columns: []string{user.GroupColumn},
+			Table:   user.GroupsTable,
+			Columns: user.GroupsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
 			},
 		}
+		createE := &UserGroupCreate{config: uu.config, mutation: newUserGroupMutation(uu.config, OpCreate)}
+		createE.defaults()
+		_, specE := createE.createSpec()
+		edge.Target.Fields = specE.Fields
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uu.mutation.GroupIDs(); len(nodes) > 0 {
+	if nodes := uu.mutation.RemovedGroupsIDs(); len(nodes) > 0 && !uu.mutation.GroupsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   user.GroupTable,
-			Columns: []string{user.GroupColumn},
+			Table:   user.GroupsTable,
+			Columns: user.GroupsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
@@ -601,6 +644,30 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		createE := &UserGroupCreate{config: uu.config, mutation: newUserGroupMutation(uu.config, OpCreate)}
+		createE.defaults()
+		_, specE := createE.createSpec()
+		edge.Target.Fields = specE.Fields
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.GroupsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   user.GroupsTable,
+			Columns: user.GroupsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		createE := &UserGroupCreate{config: uu.config, mutation: newUserGroupMutation(uu.config, OpCreate)}
+		createE.defaults()
+		_, specE := createE.createSpec()
+		edge.Target.Fields = specE.Fields
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if uu.mutation.FilesCleared() {
@@ -873,6 +940,51 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if uu.mutation.UserGroupCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   user.UserGroupTable,
+			Columns: []string{user.UserGroupColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usergroup.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.RemovedUserGroupIDs(); len(nodes) > 0 && !uu.mutation.UserGroupCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   user.UserGroupTable,
+			Columns: []string{user.UserGroupColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usergroup.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.UserGroupIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   user.UserGroupTable,
+			Columns: []string{user.UserGroupColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usergroup.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, uu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{user.Label}
@@ -1054,29 +1166,19 @@ func (uuo *UserUpdateOne) ClearSettings() *UserUpdateOne {
 	return uuo
 }
 
-// SetGroupUsers sets the "group_users" field.
-func (uuo *UserUpdateOne) SetGroupUsers(i int) *UserUpdateOne {
-	uuo.mutation.SetGroupUsers(i)
+// AddGroupIDs adds the "groups" edge to the Group entity by IDs.
+func (uuo *UserUpdateOne) AddGroupIDs(ids ...int) *UserUpdateOne {
+	uuo.mutation.AddGroupIDs(ids...)
 	return uuo
 }
 
-// SetNillableGroupUsers sets the "group_users" field if the given value is not nil.
-func (uuo *UserUpdateOne) SetNillableGroupUsers(i *int) *UserUpdateOne {
-	if i != nil {
-		uuo.SetGroupUsers(*i)
+// AddGroups adds the "groups" edges to the Group entity.
+func (uuo *UserUpdateOne) AddGroups(g ...*Group) *UserUpdateOne {
+	ids := make([]int, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
 	}
-	return uuo
-}
-
-// SetGroupID sets the "group" edge to the Group entity by ID.
-func (uuo *UserUpdateOne) SetGroupID(id int) *UserUpdateOne {
-	uuo.mutation.SetGroupID(id)
-	return uuo
-}
-
-// SetGroup sets the "group" edge to the Group entity.
-func (uuo *UserUpdateOne) SetGroup(g *Group) *UserUpdateOne {
-	return uuo.SetGroupID(g.ID)
+	return uuo.AddGroupIDs(ids...)
 }
 
 // AddFileIDs adds the "files" edge to the File entity by IDs.
@@ -1169,15 +1271,45 @@ func (uuo *UserUpdateOne) AddEntities(e ...*Entity) *UserUpdateOne {
 	return uuo.AddEntityIDs(ids...)
 }
 
+// AddUserGroupIDs adds the "user_group" edge to the UserGroup entity by IDs.
+func (uuo *UserUpdateOne) AddUserGroupIDs(ids ...int) *UserUpdateOne {
+	uuo.mutation.AddUserGroupIDs(ids...)
+	return uuo
+}
+
+// AddUserGroup adds the "user_group" edges to the UserGroup entity.
+func (uuo *UserUpdateOne) AddUserGroup(u ...*UserGroup) *UserUpdateOne {
+	ids := make([]int, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return uuo.AddUserGroupIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uuo *UserUpdateOne) Mutation() *UserMutation {
 	return uuo.mutation
 }
 
-// ClearGroup clears the "group" edge to the Group entity.
-func (uuo *UserUpdateOne) ClearGroup() *UserUpdateOne {
-	uuo.mutation.ClearGroup()
+// ClearGroups clears all "groups" edges to the Group entity.
+func (uuo *UserUpdateOne) ClearGroups() *UserUpdateOne {
+	uuo.mutation.ClearGroups()
 	return uuo
+}
+
+// RemoveGroupIDs removes the "groups" edge to Group entities by IDs.
+func (uuo *UserUpdateOne) RemoveGroupIDs(ids ...int) *UserUpdateOne {
+	uuo.mutation.RemoveGroupIDs(ids...)
+	return uuo
+}
+
+// RemoveGroups removes "groups" edges to Group entities.
+func (uuo *UserUpdateOne) RemoveGroups(g ...*Group) *UserUpdateOne {
+	ids := make([]int, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return uuo.RemoveGroupIDs(ids...)
 }
 
 // ClearFiles clears all "files" edges to the File entity.
@@ -1306,6 +1438,27 @@ func (uuo *UserUpdateOne) RemoveEntities(e ...*Entity) *UserUpdateOne {
 	return uuo.RemoveEntityIDs(ids...)
 }
 
+// ClearUserGroup clears all "user_group" edges to the UserGroup entity.
+func (uuo *UserUpdateOne) ClearUserGroup() *UserUpdateOne {
+	uuo.mutation.ClearUserGroup()
+	return uuo
+}
+
+// RemoveUserGroupIDs removes the "user_group" edge to UserGroup entities by IDs.
+func (uuo *UserUpdateOne) RemoveUserGroupIDs(ids ...int) *UserUpdateOne {
+	uuo.mutation.RemoveUserGroupIDs(ids...)
+	return uuo
+}
+
+// RemoveUserGroup removes "user_group" edges to UserGroup entities.
+func (uuo *UserUpdateOne) RemoveUserGroup(u ...*UserGroup) *UserUpdateOne {
+	ids := make([]int, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return uuo.RemoveUserGroupIDs(ids...)
+}
+
 // Where appends a list predicates to the UserUpdate builder.
 func (uuo *UserUpdateOne) Where(ps ...predicate.User) *UserUpdateOne {
 	uuo.mutation.Where(ps...)
@@ -1377,9 +1530,6 @@ func (uuo *UserUpdateOne) check() error {
 		if err := user.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "User.status": %w`, err)}
 		}
-	}
-	if _, ok := uuo.mutation.GroupID(); uuo.mutation.GroupCleared() && !ok {
-		return errors.New(`ent: clearing a required unique edge "User.group"`)
 	}
 	return nil
 }
@@ -1461,25 +1611,29 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 	if uuo.mutation.SettingsCleared() {
 		_spec.ClearField(user.FieldSettings, field.TypeJSON)
 	}
-	if uuo.mutation.GroupCleared() {
+	if uuo.mutation.GroupsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   user.GroupTable,
-			Columns: []string{user.GroupColumn},
+			Table:   user.GroupsTable,
+			Columns: user.GroupsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
 			},
 		}
+		createE := &UserGroupCreate{config: uuo.config, mutation: newUserGroupMutation(uuo.config, OpCreate)}
+		createE.defaults()
+		_, specE := createE.createSpec()
+		edge.Target.Fields = specE.Fields
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uuo.mutation.GroupIDs(); len(nodes) > 0 {
+	if nodes := uuo.mutation.RemovedGroupsIDs(); len(nodes) > 0 && !uuo.mutation.GroupsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   user.GroupTable,
-			Columns: []string{user.GroupColumn},
+			Table:   user.GroupsTable,
+			Columns: user.GroupsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
@@ -1488,6 +1642,30 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		createE := &UserGroupCreate{config: uuo.config, mutation: newUserGroupMutation(uuo.config, OpCreate)}
+		createE.defaults()
+		_, specE := createE.createSpec()
+		edge.Target.Fields = specE.Fields
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.GroupsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   user.GroupsTable,
+			Columns: user.GroupsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		createE := &UserGroupCreate{config: uuo.config, mutation: newUserGroupMutation(uuo.config, OpCreate)}
+		createE.defaults()
+		_, specE := createE.createSpec()
+		edge.Target.Fields = specE.Fields
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if uuo.mutation.FilesCleared() {
@@ -1753,6 +1931,51 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(entity.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uuo.mutation.UserGroupCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   user.UserGroupTable,
+			Columns: []string{user.UserGroupColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usergroup.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.RemovedUserGroupIDs(); len(nodes) > 0 && !uuo.mutation.UserGroupCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   user.UserGroupTable,
+			Columns: []string{user.UserGroupColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usergroup.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.UserGroupIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   user.UserGroupTable,
+			Columns: []string{user.UserGroupColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usergroup.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
