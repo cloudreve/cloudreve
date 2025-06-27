@@ -31,6 +31,7 @@ type SiteConfig struct {
 	TurnstileSiteID  string              `json:"turnstile_site_id,omitempty"`
 	CapInstanceURL   string              `json:"captcha_cap_instance_url,omitempty"`
 	CapSiteKey       string              `json:"captcha_cap_site_key,omitempty"`
+	CapAssetServer   string              `json:"captcha_cap_asset_server,omitempty"`
 	RegisterEnabled  bool                `json:"register_enabled,omitempty"`
 	TosUrl           string              `json:"tos_url,omitempty"`
 	PrivacyPolicyUrl string              `json:"privacy_policy_url,omitempty"`
@@ -138,6 +139,7 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 		ReCaptchaKey:    reCaptcha.Key,
 		CapInstanceURL:  capCaptcha.InstanceURL,
 		CapSiteKey:      capCaptcha.SiteKey,
+		CapAssetServer:  capCaptcha.AssetServer,
 		AppPromotion:    appSetting.Promotion,
 	}, nil
 }

@@ -395,6 +395,7 @@ var DefaultSettings = map[string]string{
 	"captcha_cap_instance_url":                   "",
 	"captcha_cap_site_key":                       "",
 	"captcha_cap_secret_key":                     "",
+	"captcha_cap_asset_server":                   "cdn",
 	"thumb_width":                                "400",
 	"thumb_height":                               "300",
 	"thumb_entity_suffix":                        "._thumb",
