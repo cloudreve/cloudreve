@@ -10,6 +10,7 @@ var (
 	MySqlDB    DBType = "mysql"
 	MsSqlDB    DBType = "mssql"
 	PostgresDB DBType = "postgres"
+	MariaDB    DBType = "mariadb"
 )
 
 // Database 数据库
