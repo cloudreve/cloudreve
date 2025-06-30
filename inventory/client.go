@@ -52,7 +52,7 @@ func NewRawEntClient(l logging.Logger, config conf.ConfigProvider) (*ent.Client,
 	if confDBType == conf.SQLite3DB || confDBType == "" {
 		confDBType = conf.SQLiteDB
 	}
-	if confDBType == "mariadb" {
+	if confDBType == conf.MariaDB {
 		confDBType = conf.MySqlDB
 	}
 
