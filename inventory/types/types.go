@@ -286,6 +286,7 @@ type Viewer struct {
 	MaxSize     int64                              `json:"max_size,omitempty"`
 	Disabled    bool                               `json:"disabled,omitempty"`
 	Templates   []NewFileTemplate                  `json:"templates,omitempty"`
+	Platform    string                             `json:"platform,omitempty"`
 }
 
 type ViewerGroup struct {
