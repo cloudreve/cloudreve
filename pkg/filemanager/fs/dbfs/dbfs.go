@@ -384,6 +384,10 @@ func (f *DBFS) Get(ctx context.Context, path *fs.URI, opts ...fs.Option) (fs.Fil
 		ctx = context.WithValue(ctx, inventory.LoadFileEntity{}, true)
 	}
 
+	if o.extendedInfo {
+		ctx = context.WithValue(ctx, inventory.LoadFileDirectLink{}, true)
+	}
+
 	if o.loadFileShareIfOwned {
 		ctx = context.WithValue(ctx, inventory.LoadFileShare{}, true)
 	}
@@ -407,6 +411,11 @@ func (f *DBFS) Get(ctx context.Context, path *fs.URI, opts ...fs.Option) (fs.Fil
 			StorageUsed:           target.SizeUsed(),
 			EntityStoragePolicies: make(map[int]*ent.StoragePolicy),
 		}
+
+		if f.user.ID == target.OwnerID() {
+			extendedInfo.DirectLinks = target.Model.Edges.DirectLinks
+		}
+
 		policyID := target.PolicyID()
 		if policyID > 0 {
 			policy, err := f.storagePolicyClient.GetPolicyByID(ctx, policyID)

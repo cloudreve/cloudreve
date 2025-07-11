@@ -120,6 +120,31 @@ func (s *GetDirectLinkService) Get(c *gin.Context) ([]DirectLinkResponse, error)
 	return BuildDirectLinkResponse(res), err
 }
 
+func DeleteDirectLink(c *gin.Context) error {
+	dep := dependency.FromContext(c)
+	user := inventory.UserFromContext(c)
+	m := manager.NewFileManager(dep, user)
+	defer m.Recycle()
+
+	linkId := hashid.FromContext(c)
+	linkClient := dep.DirectLinkClient()
+	ctx := context.WithValue(c, inventory.LoadDirectLinkFile{}, true)
+	link, err := linkClient.GetByID(ctx, linkId)
+	if err != nil || link.Edges.File == nil {
+		return serializer.NewError(serializer.CodeNotFound, "Direct link not found", err)
+	}
+
+	if link.Edges.File.OwnerID != user.ID {
+		return serializer.NewError(serializer.CodeNotFound, "Direct link not found", err)
+	}
+
+	if err := linkClient.Delete(c, link.ID); err != nil {
+		return serializer.NewError(serializer.CodeDBError, "Failed to delete direct link", err)
+	}
+
+	return nil
+}
+
 type (
 	// ListFileParameterCtx define key fore ListFileService
 	ListFileParameterCtx struct{}

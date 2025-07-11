@@ -3,7 +3,7 @@ package constants
 // These values will be injected at build time, DO NOT EDIT.
 
 // BackendVersion 当前后端版本号
-var BackendVersion = "4.0.0-alpha.1"
+var BackendVersion = "4.1.0"
 
 // IsPro 是否为Pro版本
 var IsPro = "false"

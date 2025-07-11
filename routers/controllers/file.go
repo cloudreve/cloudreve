@@ -116,6 +116,16 @@ func GetSource(c *gin.Context) {
 	c.JSON(200, serializer.Response{Data: res})
 }
 
+func DeleteDirectLink(c *gin.Context) {
+	err := explorer.DeleteDirectLink(c)
+	if err != nil {
+		c.JSON(200, serializer.Err(c, err))
+		return
+	}
+
+	c.JSON(200, serializer.Response{})
+}
+
 // Thumb 获取文件缩略图
 func Thumb(c *gin.Context) {
 	service := ParametersFromContext[*explorer.FileThumbService](c, explorer.FileThumbParameterCtx{})

@@ -2,9 +2,9 @@ package middleware
 
 import (
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
-	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 	"github.com/cloudreve/Cloudreve/v4/pkg/wopi"
 	"github.com/gin-gonic/gin"
@@ -67,7 +67,7 @@ func ViewerSessionValidation() gin.HandlerFunc {
 
 		// Check if the viewer is still available
 		viewers := settings.FileViewers(c)
-		var v *setting.Viewer
+		var v *types.Viewer
 		for _, group := range viewers {
 			for _, viewer := range group.Viewers {
 				if viewer.ID == session.ViewerID && !viewer.Disabled {

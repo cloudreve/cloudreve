@@ -697,10 +697,18 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 			)
 
 			// 取得文件外链
-			file.PUT("source",
-				controllers.FromJSON[explorer.GetDirectLinkService](explorer.GetDirectLinkParamCtx{}),
-				middleware.ValidateBatchFileCount(dep, explorer.GetDirectLinkParamCtx{}),
-				controllers.GetSource)
+			source := file.Group("source")
+			{
+				source.PUT("",
+					controllers.FromJSON[explorer.GetDirectLinkService](explorer.GetDirectLinkParamCtx{}),
+					middleware.ValidateBatchFileCount(dep, explorer.GetDirectLinkParamCtx{}),
+					controllers.GetSource,
+				)
+				source.DELETE(":id",
+					middleware.HashID(hashid.SourceLinkID),
+					controllers.DeleteDirectLink,
+				)
+			}
 			// Patch view
 			file.PATCH("view",
 				controllers.FromJSON[explorer.PatchViewService](explorer.PatchViewParameterCtx{}),
@@ -845,6 +853,11 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					queue.POST("batch/delete",
 						controllers.FromJSON[adminsvc.BatchTaskService](adminsvc.BatchTaskParamCtx{}),
 						controllers.AdminBatchDeleteTask,
+					)
+					// Cleanup tasks
+					queue.POST("cleanup",
+						controllers.FromJSON[adminsvc.CleanupTaskService](adminsvc.CleanupTaskParameterCtx{}),
+						controllers.AdminCleanupTask,
 					)
 					// // 列出任务
 					// queue.POST("list", controllers.AdminListTask)

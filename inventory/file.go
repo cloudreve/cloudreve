@@ -192,7 +192,7 @@ type FileClient interface {
 	// UnlinkEntity unlinks an entity from a file
 	UnlinkEntity(ctx context.Context, entity *ent.Entity, file *ent.File, owner *ent.User) (StorageDiff, error)
 	// CreateDirectLink creates a direct link for a file
-	CreateDirectLink(ctx context.Context, fileID int, name string, speed int) (*ent.DirectLink, error)
+	CreateDirectLink(ctx context.Context, fileID int, name string, speed int, reuse bool) (*ent.DirectLink, error)
 	// CountByTimeRange counts files created in a given time range
 	CountByTimeRange(ctx context.Context, start, end *time.Time) (int, error)
 	// CountEntityByTimeRange counts entities created in a given time range
@@ -322,13 +322,15 @@ func (f *fileClient) CountEntityByStoragePolicyID(ctx context.Context, storagePo
 	return v[0].Count, v[0].Sum, nil
 }
 
-func (f *fileClient) CreateDirectLink(ctx context.Context, file int, name string, speed int) (*ent.DirectLink, error) {
-	// Find existed
-	existed, err := f.client.DirectLink.
-		Query().
-		Where(directlink.FileID(file), directlink.Name(name), directlink.Speed(speed)).First(ctx)
-	if err == nil {
-		return existed, nil
+func (f *fileClient) CreateDirectLink(ctx context.Context, file int, name string, speed int, reuse bool) (*ent.DirectLink, error) {
+	if reuse {
+		// Find existed
+		existed, err := f.client.DirectLink.
+			Query().
+			Where(directlink.FileID(file), directlink.Name(name), directlink.Speed(speed)).First(ctx)
+		if err == nil {
+			return existed, nil
+		}
 	}
 
 	return f.client.DirectLink.

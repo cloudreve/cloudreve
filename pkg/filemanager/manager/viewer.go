@@ -9,7 +9,6 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs/dbfs"
-	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 	"github.com/gofrs/uuid"
 )
@@ -44,7 +43,7 @@ func init() {
 	gob.Register(ViewerSessionCache{})
 }
 
-func (m *manager) CreateViewerSession(ctx context.Context, uri *fs.URI, version string, viewer *setting.Viewer) (*ViewerSession, error) {
+func (m *manager) CreateViewerSession(ctx context.Context, uri *fs.URI, version string, viewer *types.Viewer) (*ViewerSession, error) {
 	file, err := m.fs.Get(ctx, uri, dbfs.WithFileEntities(), dbfs.WithNotRoot())
 	if err != nil {
 		return nil, err
@@ -88,6 +87,6 @@ func ViewerSessionFromContext(ctx context.Context) *ViewerSessionCache {
 	return ctx.Value(ViewerSessionCacheCtx{}).(*ViewerSessionCache)
 }
 
-func ViewerFromContext(ctx context.Context) *setting.Viewer {
-	return ctx.Value(ViewerCtx{}).(*setting.Viewer)
+func ViewerFromContext(ctx context.Context) *types.Viewer {
+	return ctx.Value(ViewerCtx{}).(*types.Viewer)
 }

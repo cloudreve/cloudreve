@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"strconv"
+	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/ent"
@@ -247,6 +248,34 @@ func (s *BatchTaskService) Delete(c *gin.Context) error {
 	err := taskClient.DeleteByIDs(c, s.IDs...)
 	if err != nil {
 		return serializer.NewError(serializer.CodeDBError, "Failed to delete tasks", err)
+	}
+
+	return nil
+}
+
+type (
+	CleanupTaskService struct {
+		NotAfter time.Time     `json:"not_after" binding:"required"`
+		Types    []string      `json:"types"`
+		Status   []task.Status `json:"status"`
+	}
+	CleanupTaskParameterCtx struct{}
+)
+
+func (s *CleanupTaskService) CleanupTask(c *gin.Context) error {
+	dep := dependency.FromContext(c)
+	taskClient := dep.TaskClient()
+
+	if len(s.Status) == 0 {
+		s.Status = []task.Status{task.StatusCanceled, task.StatusCompleted, task.StatusError}
+	}
+
+	if err := taskClient.DeleteBy(c, &inventory.DeleteTaskArgs{
+		NotAfter: s.NotAfter,
+		Types:    s.Types,
+		Status:   s.Status,
+	}); err != nil {
+		return serializer.NewError(serializer.CodeDBError, "Failed to cleanup tasks", err)
 	}
 
 	return nil

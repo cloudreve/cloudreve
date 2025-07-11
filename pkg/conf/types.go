@@ -10,6 +10,7 @@ var (
 	MySqlDB    DBType = "mysql"
 	MsSqlDB    DBType = "mssql"
 	PostgresDB DBType = "postgres"
+	MariaDB    DBType = "mariadb"
 )
 
 // Database 数据库
@@ -24,6 +25,10 @@ type Database struct {
 	Port        int
 	Charset     string
 	UnixSocket  bool
+	// 允许直接使用DATABASE_URL来配置数据库连接
+	DatabaseURL string
+	// SSLMode 允许使用SSL连接数据库, 用户可以在sslmode string中添加证书等配置
+	SSLMode string
 }
 
 type SysMode string
@@ -65,11 +70,13 @@ type Slave struct {
 
 // Redis 配置
 type Redis struct {
-	Network  string
-	Server   string
-	User     string
-	Password string
-	DB       string
+	Network       string
+	Server        string
+	User          string
+	Password      string
+	DB            string
+	UseTLS        bool
+	TLSSkipVerify bool
 }
 
 // 跨域配置
@@ -85,18 +92,21 @@ type Cors struct {
 
 // RedisConfig Redis服务器配置
 var RedisConfig = &Redis{
-	Network:  "tcp",
-	Server:   "",
-	Password: "",
-	DB:       "0",
+	Network:       "tcp",
+	Server:        "",
+	Password:      "",
+	DB:            "0",
+	UseTLS:        false,
+	TLSSkipVerify: true,
 }
 
 // DatabaseConfig 数据库配置
 var DatabaseConfig = &Database{
-	Charset:    "utf8mb4",
-	DBFile:     util.DataPath("cloudreve.db"),
-	Port:       3306,
-	UnixSocket: false,
+	Charset:     "utf8mb4",
+	DBFile:      util.DataPath("cloudreve.db"),
+	Port:        3306,
+	UnixSocket:  false,
+	DatabaseURL: "",
 }
 
 // SystemConfig 系统公用配置

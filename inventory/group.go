@@ -77,27 +77,34 @@ func (c *groupClient) ListAll(ctx context.Context) ([]*ent.Group, error) {
 }
 
 func (c *groupClient) Upsert(ctx context.Context, group *ent.Group) (*ent.Group, error) {
-
 	if group.ID == 0 {
-		return c.client.Group.Create().
+		stm := c.client.Group.Create().
 			SetName(group.Name).
 			SetMaxStorage(group.MaxStorage).
 			SetSpeedLimit(group.SpeedLimit).
 			SetPermissions(group.Permissions).
-			SetSettings(group.Settings).
-			SetStoragePoliciesID(group.Edges.StoragePolicies.ID).
-			Save(ctx)
+			SetSettings(group.Settings)
+
+		if group.Edges.StoragePolicies != nil && group.Edges.StoragePolicies.ID > 0 {
+			stm.SetStoragePolicyID(group.Edges.StoragePolicies.ID)
+		}
+
+		return stm.Save(ctx)
 	}
 
-	res, err := c.client.Group.UpdateOne(group).
+	stm := c.client.Group.UpdateOne(group).
 		SetName(group.Name).
 		SetMaxStorage(group.MaxStorage).
 		SetSpeedLimit(group.SpeedLimit).
 		SetPermissions(group.Permissions).
 		SetSettings(group.Settings).
-		ClearStoragePolicies().
-		SetStoragePoliciesID(group.Edges.StoragePolicies.ID).
-		Save(ctx)
+		ClearStoragePolicies()
+
+	if group.Edges.StoragePolicies != nil && group.Edges.StoragePolicies.ID > 0 {
+		stm.SetStoragePolicyID(group.Edges.StoragePolicies.ID)
+	}
+
+	res, err := stm.Save(ctx)
 	if err != nil {
 		return nil, err
 	}

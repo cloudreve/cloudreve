@@ -27,6 +27,7 @@ type (
 	SkipStoragePolicyCache struct{}
 
 	StoragePolicyClient interface {
+		TxOperator
 		// GetByGroup returns the storage policies of the group.
 		GetByGroup(ctx context.Context, group *ent.Group) (*ent.StoragePolicy, error)
 		// GetPolicyByID returns the storage policy by id.
@@ -62,6 +63,14 @@ func NewStoragePolicyClient(client *ent.Client, cache cache.Driver) StoragePolic
 type storagePolicyClient struct {
 	client *ent.Client
 	cache  cache.Driver
+}
+
+func (c *storagePolicyClient) SetClient(newClient *ent.Client) TxOperator {
+	return &storagePolicyClient{client: newClient, cache: c.cache}
+}
+
+func (c *storagePolicyClient) GetClient() *ent.Client {
+	return c.client
 }
 
 func (c *storagePolicyClient) Delete(ctx context.Context, policy *ent.StoragePolicy) error {

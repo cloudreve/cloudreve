@@ -67,7 +67,10 @@ func New(ctx context.Context, policy *ent.StoragePolicy, settings setting.Provid
 	}
 
 	mac := qbox.NewMac(policy.AccessKey, policy.SecretKey)
-	cfg := &storage.Config{UseHTTPS: true}
+	cfg := &storage.Config{
+		UseHTTPS:      true,
+		UseCdnDomains: policy.Settings.QiniuUploadCdn,
+	}
 
 	driver := &Driver{
 		policy:     policy,

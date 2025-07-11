@@ -191,6 +191,7 @@ type (
 		Shares                []*ent.Share
 		EntityStoragePolicies map[int]*ent.StoragePolicy
 		View                  *types.ExplorerView
+		DirectLinks           []*ent.DirectLink
 	}
 
 	FolderSummary struct {

@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+
 	"github.com/cloudreve/Cloudreve/v4/pkg/auth/requestinfo"
 	"github.com/cloudreve/Cloudreve/v4/pkg/boolset"
 )
@@ -38,6 +40,8 @@ type (
 		TcCaptcha(ctx context.Context) *TcCaptcha
 		// TurnstileCaptcha returns the Cloudflare Turnstile settings.
 		TurnstileCaptcha(ctx context.Context) *Turnstile
+		// CapCaptcha returns the Cap settings.
+		CapCaptcha(ctx context.Context) *Cap
 		// EmailActivationEnabled returns true if email activation is required.
 		EmailActivationEnabled(ctx context.Context) bool
 		// DefaultGroup returns the default group ID for new users.
@@ -167,7 +171,7 @@ type (
 		// FolderPropsCacheTTL returns the cache TTL of folder summary.
 		FolderPropsCacheTTL(ctx context.Context) int
 		// FileViewers returns the file viewers settings.
-		FileViewers(ctx context.Context) []ViewerGroup
+		FileViewers(ctx context.Context) []types.ViewerGroup
 		// ViewerSessionTTL returns the TTL of viewer session.
 		ViewerSessionTTL(ctx context.Context) int
 		// MimeMapping returns the extension to MIME mapping settings.
@@ -184,6 +188,14 @@ type (
 		AvatarProcess(ctx context.Context) *AvatarProcess
 		// UseFirstSiteUrl returns the first site URL.
 		AllSiteURLs(ctx context.Context) []*url.URL
+		// LibRawThumbGeneratorEnabled returns true if libraw thumb generator is enabled.
+		LibRawThumbGeneratorEnabled(ctx context.Context) bool
+		// LibRawThumbMaxSize returns the maximum size of libraw thumb generator.
+		LibRawThumbMaxSize(ctx context.Context) int64
+		// LibRawThumbExts returns the supported extensions of libraw thumb generator.
+		LibRawThumbExts(ctx context.Context) []string
+		// LibRawThumbPath returns the path of libraw executable.
+		LibRawThumbPath(ctx context.Context) string
 	}
 	UseFirstSiteUrlCtxKey = struct{}
 )
@@ -230,11 +242,11 @@ func (s *settingProvider) Avatar(ctx context.Context) *Avatar {
 	}
 }
 
-func (s *settingProvider) FileViewers(ctx context.Context) []ViewerGroup {
+func (s *settingProvider) FileViewers(ctx context.Context) []types.ViewerGroup {
 	raw := s.getString(ctx, "file_viewers", "[]")
-	var viewers []ViewerGroup
+	var viewers []types.ViewerGroup
 	if err := json.Unmarshal([]byte(raw), &viewers); err != nil {
-		return []ViewerGroup{}
+		return []types.ViewerGroup{}
 	}
 
 	return viewers
@@ -382,6 +394,22 @@ func (s *settingProvider) VipsThumbExts(ctx context.Context) []string {
 
 func (s *settingProvider) VipsPath(ctx context.Context) string {
 	return s.getString(ctx, "thumb_vips_path", "vips")
+}
+
+func (s *settingProvider) LibRawThumbGeneratorEnabled(ctx context.Context) bool {
+	return s.getBoolean(ctx, "thumb_libraw_enabled", false)
+}
+
+func (s *settingProvider) LibRawThumbMaxSize(ctx context.Context) int64 {
+	return s.getInt64(ctx, "thumb_libraw_max_size", 78643200)
+}
+
+func (s *settingProvider) LibRawThumbExts(ctx context.Context) []string {
+	return s.getStringList(ctx, "thumb_libraw_exts", []string{})
+}
+
+func (s *settingProvider) LibRawThumbPath(ctx context.Context) string {
+	return s.getString(ctx, "thumb_libraw_path", "simple_dcraw")
 }
 
 func (s *settingProvider) LibreOfficeThumbGeneratorEnabled(ctx context.Context) bool {
@@ -635,6 +663,15 @@ func (s *settingProvider) TurnstileCaptcha(ctx context.Context) *Turnstile {
 	return &Turnstile{
 		Secret: s.getString(ctx, "captcha_turnstile_site_secret", ""),
 		Key:    s.getString(ctx, "captcha_turnstile_site_key", ""),
+	}
+}
+
+func (s *settingProvider) CapCaptcha(ctx context.Context) *Cap {
+	return &Cap{
+		InstanceURL: s.getString(ctx, "captcha_cap_instance_url", ""),
+		SiteKey:     s.getString(ctx, "captcha_cap_site_key", ""),
+		SecretKey:   s.getString(ctx, "captcha_cap_secret_key", ""),
+		AssetServer: s.getString(ctx, "captcha_cap_asset_server", "jsdelivr"),
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -127,11 +128,11 @@ func (t *SlaveUploadTask) Do(ctx context.Context) (task.Status, error) {
 		t.progress[progressKey] = &queue.Progress{Identifier: file.Uri.String(), Total: file.Size}
 		t.Unlock()
 
-		handle, err := os.Open(file.Src)
+		handle, err := os.Open(filepath.FromSlash(file.Src))
 		if err != nil {
 			t.l.Warning("Failed to open file %s: %s", file.Src, err.Error())
 			atomic.AddInt64(&t.progress[ProgressTypeUpload].Current, file.Size)
-			ae.Add(filepath.Base(file.Src), fmt.Errorf("failed to open file: %w", err))
+			ae.Add(path.Base(file.Src), fmt.Errorf("failed to open file: %w", err))
 			return
 		}
 
@@ -140,7 +141,7 @@ func (t *SlaveUploadTask) Do(ctx context.Context) (task.Status, error) {
 			t.l.Warning("Failed to get file stat for %s: %s", file.Src, err.Error())
 			handle.Close()
 			atomic.AddInt64(&t.progress[ProgressTypeUpload].Current, file.Size)
-			ae.Add(filepath.Base(file.Src), fmt.Errorf("failed to get file stat: %w", err))
+			ae.Add(path.Base(file.Src), fmt.Errorf("failed to get file stat: %w", err))
 			return
 		}
 
@@ -163,7 +164,7 @@ func (t *SlaveUploadTask) Do(ctx context.Context) (task.Status, error) {
 			handle.Close()
 			t.l.Warning("Failed to upload file %s: %s", file.Src, err.Error())
 			atomic.AddInt64(&t.progress[ProgressTypeUpload].Current, file.Size)
-			ae.Add(filepath.Base(file.Src), fmt.Errorf("failed to upload file: %w", err))
+			ae.Add(path.Base(file.Src), fmt.Errorf("failed to upload file: %w", err))
 			return
 		}
 

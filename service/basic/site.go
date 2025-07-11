@@ -3,6 +3,7 @@ package basic
 import (
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
 	"github.com/cloudreve/Cloudreve/v4/service/user"
 	"github.com/gin-gonic/gin"
@@ -28,6 +29,9 @@ type SiteConfig struct {
 	ReCaptchaKey     string              `json:"captcha_ReCaptchaKey,omitempty"`
 	CaptchaType      setting.CaptchaType `json:"captcha_type,omitempty"`
 	TurnstileSiteID  string              `json:"turnstile_site_id,omitempty"`
+	CapInstanceURL   string              `json:"captcha_cap_instance_url,omitempty"`
+	CapSiteKey       string              `json:"captcha_cap_site_key,omitempty"`
+	CapAssetServer   string              `json:"captcha_cap_asset_server,omitempty"`
 	RegisterEnabled  bool                `json:"register_enabled,omitempty"`
 	TosUrl           string              `json:"tos_url,omitempty"`
 	PrivacyPolicyUrl string              `json:"privacy_policy_url,omitempty"`
@@ -37,7 +41,7 @@ type SiteConfig struct {
 	EmojiPreset       string                    `json:"emoji_preset,omitempty"`
 	MapProvider       setting.MapProvider       `json:"map_provider,omitempty"`
 	GoogleMapTileType setting.MapGoogleTileType `json:"google_map_tile_type,omitempty"`
-	FileViewers       []setting.ViewerGroup     `json:"file_viewers,omitempty"`
+	FileViewers       []types.ViewerGroup       `json:"file_viewers,omitempty"`
 	MaxBatchSize      int                       `json:"max_batch_size,omitempty"`
 	ThumbnailWidth    int                       `json:"thumbnail_width,omitempty"`
 	ThumbnailHeight   int                       `json:"thumbnail_height,omitempty"`
@@ -119,6 +123,7 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 	userRes := user.BuildUser(u, dep.HashIDEncoder())
 	logo := settings.Logo(c)
 	reCaptcha := settings.ReCaptcha(c)
+	capCaptcha := settings.CapCaptcha(c)
 	appSetting := settings.AppSetting(c)
 
 	return &SiteConfig{
@@ -132,6 +137,9 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 		CaptchaType:     settings.CaptchaType(c),
 		TurnstileSiteID: settings.TurnstileCaptcha(c).Key,
 		ReCaptchaKey:    reCaptcha.Key,
+		CapInstanceURL:  capCaptcha.InstanceURL,
+		CapSiteKey:      capCaptcha.SiteKey,
+		CapAssetServer:  capCaptcha.AssetServer,
 		AppPromotion:    appSetting.Promotion,
 	}, nil
 }

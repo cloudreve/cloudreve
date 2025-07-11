@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"reflect"
+	"sort"
+
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager/entitysource"
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
-	"io"
-	"reflect"
-	"sort"
 )
 
 type (
@@ -71,6 +72,7 @@ func NewPipeline(settings setting.Provider, l logging.Logger) Generator {
 		NewVipsGenerator(l, settings),
 		NewLibreOfficeGenerator(l, settings),
 		NewMusicCoverGenerator(l, settings),
+		NewLibRawGenerator(l, settings),
 	)
 	sort.Sort(generators)
 

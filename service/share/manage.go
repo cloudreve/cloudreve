@@ -24,6 +24,7 @@ type (
 		RemainDownloads int    `json:"downloads"`
 		Expire          int    `json:"expire"`
 		ShareView       bool   `json:"share_view"`
+		ShowReadMe      bool   `json:"show_readme"`
 	}
 	ShareCreateParamCtx struct{}
 )
@@ -58,6 +59,7 @@ func (service *ShareCreateService) Upsert(c *gin.Context, existed int) (string, 
 		Expire:          expires,
 		ExistedShareID:  existed,
 		ShareView:       service.ShareView,
+		ShowReadMe:      service.ShowReadMe,
 	})
 	if err != nil {
 		return "", err

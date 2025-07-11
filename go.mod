@@ -4,6 +4,7 @@ go 1.23.0
 
 require (
 	entgo.io/ent v0.13.0
+	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/abslant/gzip v0.0.9
 	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible
 	github.com/aws/aws-sdk-go v1.31.5
@@ -15,7 +16,7 @@ require (
 	github.com/dsoprea/go-png-image-structure v0.0.0-20210512210324-29b889a6093d
 	github.com/dsoprea/go-tiff-image-structure v0.0.0-20221003165014-8ecc4f52edca
 	github.com/dsoprea/go-utility v0.0.0-20200711062821-fab8125e9bdf
-	github.com/fatih/color v1.9.0
+	github.com/fatih/color v1.18.0
 	github.com/gin-contrib/cors v1.3.0
 	github.com/gin-contrib/sessions v1.0.2
 	github.com/gin-contrib/static v0.0.0-20191128031702-f81c604d8ac2
@@ -115,7 +116,7 @@ require (
 	github.com/klauspost/pgzip v1.2.5 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
-	github.com/mattn/go-colorable v0.1.6 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/go-wordwrap v0.0.0-20150314170334-ad45545899c7 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect

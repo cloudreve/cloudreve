@@ -3,6 +3,12 @@ package middleware
 import (
 	"bytes"
 	"encoding/json"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
+
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 	"github.com/cloudreve/Cloudreve/v4/pkg/recaptcha"
@@ -11,11 +17,6 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
 	"github.com/gin-gonic/gin"
 	"github.com/mojocn/base64Captcha"
-	"io"
-	"net/http"
-	"net/url"
-	"strings"
-	"time"
 )
 
 type req struct {
@@ -36,6 +37,9 @@ const (
 type (
 	CaptchaIDCtx      struct{}
 	turnstileResponse struct {
+		Success bool `json:"success"`
+	}
+	capResponse struct {
 		Success bool `json:"success"`
 	}
 )
@@ -123,6 +127,62 @@ func CaptchaRequired(enabled func(c *gin.Context) bool) gin.HandlerFunc {
 
 				if !trunstileRes.Success {
 					c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeCaptchaError, "Captcha validation failed", err))
+					c.Abort()
+					return
+				}
+
+				break
+			case setting.CaptchaCap:
+				captchaSetting := settings.CapCaptcha(c)
+				if captchaSetting.InstanceURL == "" || captchaSetting.SiteKey == "" || captchaSetting.SecretKey == "" {
+					l.Warning("Cap verification failed: missing configuration")
+					c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeCaptchaError, "Captcha configuration error", nil))
+					c.Abort()
+					return
+				}
+
+				r := dep.RequestClient(
+					request2.WithContext(c),
+					request2.WithLogger(logging.FromContext(c)),
+					request2.WithHeader(http.Header{"Content-Type": []string{"application/json"}}),
+				)
+
+				// Cap 2.0 API format: /{siteKey}/siteverify
+				capEndpoint := strings.TrimSuffix(captchaSetting.InstanceURL, "/") + "/" + captchaSetting.SiteKey + "/siteverify"
+				requestBody := map[string]string{
+					"secret":   captchaSetting.SecretKey,
+					"response": service.Ticket,
+				}
+				requestData, err := json.Marshal(requestBody)
+				if err != nil {
+					l.Warning("Cap verification failed: %s", err)
+					c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeCaptchaError, "Captcha validation failed", err))
+					c.Abort()
+					return
+				}
+
+				res, err := r.Request("POST", capEndpoint, strings.NewReader(string(requestData))).
+					CheckHTTPResponse(http.StatusOK).
+					GetResponse()
+				if err != nil {
+					l.Warning("Cap verification failed: %s", err)
+					c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeCaptchaError, "Captcha validation failed", err))
+					c.Abort()
+					return
+				}
+
+				var capRes capResponse
+				err = json.Unmarshal([]byte(res), &capRes)
+				if err != nil {
+					l.Warning("Cap verification failed: %s", err)
+					c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeCaptchaError, "Captcha validation failed", err))
+					c.Abort()
+					return
+				}
+
+				if !capRes.Success {
+					l.Warning("Cap verification failed: validation returned false")
+					c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeCaptchaError, "Captcha validation failed", nil))
 					c.Abort()
 					return
 				}

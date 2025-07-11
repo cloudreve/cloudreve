@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"net/url"
 	"strings"
 	"time"
@@ -56,7 +57,7 @@ const (
 	LockDuration = time.Duration(30) * time.Minute
 )
 
-func GenerateWopiSrc(ctx context.Context, action setting.ViewerAction, viewer *setting.Viewer, viewerSession *manager.ViewerSession) (*url.URL, error) {
+func GenerateWopiSrc(ctx context.Context, action types.ViewerAction, viewer *types.Viewer, viewerSession *manager.ViewerSession) (*url.URL, error) {
 	dep := dependency.FromContext(ctx)
 	base := dep.SettingProvider().SiteURL(setting.UseFirstSiteUrl(ctx))
 	hasher := dep.HashIDEncoder()
@@ -69,7 +70,7 @@ func GenerateWopiSrc(ctx context.Context, action setting.ViewerAction, viewer *s
 	var (
 		src string
 	)
-	fallbackOrder := []setting.ViewerAction{action, setting.ViewerActionView, setting.ViewerActionEdit}
+	fallbackOrder := []types.ViewerAction{action, types.ViewerActionView, types.ViewerActionEdit}
 	for _, a := range fallbackOrder {
 		if src, ok = availableActions[a]; ok {
 			break

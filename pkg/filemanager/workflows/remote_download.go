@@ -319,7 +319,7 @@ func (m *RemoteDownloadTask) slaveTransfer(ctx context.Context, dep dependency.D
 			}
 
 			dst := dstUri.JoinRaw(f.Name)
-			src := filepath.FromSlash(path.Join(m.state.Status.SavePath, f.Name))
+			src := path.Join(m.state.Status.SavePath, f.Name)
 			payload.Files = append(payload.Files, SlaveUploadEntity{
 				Src:   src,
 				Uri:   dst,

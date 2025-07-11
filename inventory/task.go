@@ -3,6 +3,7 @@ package inventory
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/cloudreve/Cloudreve/v4/ent"
@@ -44,6 +45,8 @@ type TaskClient interface {
 	List(ctx context.Context, args *ListTaskArgs) (*ListTaskResult, error)
 	// DeleteByIDs deletes the tasks with the given IDs.
 	DeleteByIDs(ctx context.Context, ids ...int) error
+	// DeleteBy deletes the tasks with the given args.
+	DeleteBy(ctx context.Context, args *DeleteTaskArgs) error
 }
 
 type (
@@ -58,6 +61,12 @@ type (
 	ListTaskResult struct {
 		*PaginationResults
 		Tasks []*ent.Task
+	}
+
+	DeleteTaskArgs struct {
+		NotAfter time.Time
+		Types    []string
+		Status   []task.Status
 	}
 )
 
@@ -110,6 +119,23 @@ func (c *taskClient) New(ctx context.Context, task *TaskArgs) (*ent.Task, error)
 
 func (c *taskClient) DeleteByIDs(ctx context.Context, ids ...int) error {
 	_, err := c.client.Task.Delete().Where(task.IDIn(ids...)).Exec(ctx)
+	return err
+}
+
+func (c *taskClient) DeleteBy(ctx context.Context, args *DeleteTaskArgs) error {
+	query := c.client.Task.
+		Delete().
+		Where(task.CreatedAtLTE(args.NotAfter))
+
+	if len(args.Status) > 0 {
+		query.Where(task.StatusIn(args.Status...))
+	}
+
+	if len(args.Types) > 0 {
+		query.Where(task.TypeIn(args.Types...))
+	}
+
+	_, err := query.Exec(ctx)
 	return err
 }
 

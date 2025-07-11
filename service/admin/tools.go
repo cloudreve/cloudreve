@@ -12,6 +12,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
 	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
 	"github.com/cloudreve/Cloudreve/v4/pkg/wopi"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/gin-gonic/gin"
 	"github.com/go-mail/mail"
 )
@@ -107,7 +108,7 @@ type (
 	FetchWOPIDiscoveryParamCtx struct{}
 )
 
-func (s *FetchWOPIDiscoveryService) Fetch(c *gin.Context) (*setting.ViewerGroup, error) {
+func (s *FetchWOPIDiscoveryService) Fetch(c *gin.Context) (*types.ViewerGroup, error) {
 	dep := dependency.FromContext(c)
 	requestClient := dep.RequestClient(request2.WithContext(c), request2.WithLogger(dep.Logger()))
 	content, err := requestClient.Request("GET", s.Endpoint, nil).CheckHTTPResponse(http.StatusOK).GetResponse()

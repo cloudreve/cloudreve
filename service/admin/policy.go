@@ -294,9 +294,20 @@ func (service *UpdateStoragePolicyService) Update(c *gin.Context) (*GetStoragePo
 	}
 
 	service.Policy.ID = idInt
-	_, err = storagePolicyClient.Upsert(c, service.Policy)
+
+	sc, tx, ctx, err := inventory.WithTx(c, storagePolicyClient)
 	if err != nil {
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to create transaction", err)
+	}
+
+	_, err = sc.Upsert(ctx, service.Policy)
+	if err != nil {
+		_ = inventory.Rollback(tx)
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to update policy", err)
+	}
+
+	if err := inventory.Commit(tx); err != nil {
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to commit transaction", err)
 	}
 
 	_ = dep.KV().Delete(manager.EntityUrlCacheKeyPrefix)

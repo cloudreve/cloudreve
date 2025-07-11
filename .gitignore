@@ -32,3 +32,5 @@ conf/conf.ini
 dist/
 data/
 tmp/
+.devcontainer/
+cloudreve

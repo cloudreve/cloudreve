@@ -220,5 +220,8 @@ func getUrlSignContent(ctx context.Context, url *url.URL) string {
 	// host = strings.TrimSuffix(host, "/")
 	// // remove port if it exists
 	// host = strings.Split(host, ":")[0]
+	if url.Path == "" {
+		return "/"
+	}
 	return url.Path
 }

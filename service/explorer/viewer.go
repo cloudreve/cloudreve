@@ -21,7 +21,6 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager/entitysource"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
-	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
 	"github.com/cloudreve/Cloudreve/v4/pkg/wopi"
 	"github.com/gin-gonic/gin"
 )
@@ -371,7 +370,7 @@ type (
 		Uri             string               `json:"uri" form:"uri" binding:"required"`
 		Version         string               `json:"version" form:"version"`
 		ViewerID        string               `json:"viewer_id" form:"viewer_id" binding:"required"`
-		PreferredAction setting.ViewerAction `json:"preferred_action" form:"preferred_action" binding:"required"`
+		PreferredAction types.ViewerAction `json:"preferred_action" form:"preferred_action" binding:"required"`
 	}
 	CreateViewerSessionParamCtx struct{}
 )
@@ -389,7 +388,7 @@ func (s *CreateViewerSessionService) Create(c *gin.Context) (*ViewerSessionRespo
 
 	// Find the given viewer
 	viewers := dep.SettingProvider().FileViewers(c)
-	var targetViewer *setting.Viewer
+	var targetViewer *types.Viewer
 	for _, group := range viewers {
 		for _, viewer := range group.Viewers {
 			if viewer.ID == s.ViewerID && !viewer.Disabled {
@@ -413,7 +412,7 @@ func (s *CreateViewerSessionService) Create(c *gin.Context) (*ViewerSessionRespo
 	}
 
 	res := &ViewerSessionResponse{Session: viewerSession}
-	if targetViewer.Type == setting.ViewerTypeWopi {
+	if targetViewer.Type == types.ViewerTypeWopi {
 		// For WOPI viewer, generate WOPI src
 		wopiSrc, err := wopi.GenerateWopiSrc(c, s.PreferredAction, targetViewer, viewerSession)
 		if err != nil {

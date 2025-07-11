@@ -518,6 +518,17 @@ func AdminBatchDeleteEntity(c *gin.Context) {
 	}
 }
 
+func AdminCleanupTask(c *gin.Context) {
+	service := ParametersFromContext[*admin.CleanupTaskService](c, admin.CleanupTaskParameterCtx{})
+	err := service.CleanupTask(c)
+	if err != nil {
+		c.JSON(200, serializer.Err(c, err))
+		return
+	}
+
+	c.JSON(200, serializer.Response{})
+}
+
 func AdminListTasks(c *gin.Context) {
 	service := ParametersFromContext[*admin.AdminListService](c, admin.AdminListServiceParamsCtx{})
 	res, err := service.Tasks(c)

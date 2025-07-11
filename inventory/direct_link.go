@@ -5,6 +5,7 @@ import (
 
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/directlink"
+	"github.com/cloudreve/Cloudreve/v4/ent/schema"
 	"github.com/cloudreve/Cloudreve/v4/pkg/conf"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 )
@@ -16,6 +17,8 @@ type (
 		GetByNameID(ctx context.Context, id int, name string) (*ent.DirectLink, error)
 		// GetByID get direct link by id
 		GetByID(ctx context.Context, id int) (*ent.DirectLink, error)
+		// Delete delete direct link by id
+		Delete(ctx context.Context, id int) error
 	}
 	LoadDirectLinkFile struct{}
 )
@@ -58,6 +61,12 @@ func (d *directLinkClient) GetByNameID(ctx context.Context, id int, name string)
 	_, _ = d.client.DirectLink.Update().Where(directlink.ID(res.ID)).SetDownloads(res.Downloads + 1).Save(ctx)
 
 	return res, nil
+}
+
+func (d *directLinkClient) Delete(ctx context.Context, id int) error {
+	ctx = schema.SkipSoftDelete(ctx)
+	_, err := d.client.DirectLink.Delete().Where(directlink.ID(id)).Exec(ctx)
+	return err
 }
 
 func withDirectLinkEagerLoading(ctx context.Context, q *ent.DirectLinkQuery) *ent.DirectLinkQuery {

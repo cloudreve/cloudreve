@@ -3,7 +3,7 @@ package wopi
 import (
 	"encoding/xml"
 	"fmt"
-	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/gofrs/uuid"
 	"github.com/samber/lo"
 )
@@ -16,23 +16,23 @@ var (
 	ActionEdit            = ActonType("edit")
 )
 
-func DiscoveryXmlToViewerGroup(xmlStr string) (*setting.ViewerGroup, error) {
+func DiscoveryXmlToViewerGroup(xmlStr string) (*types.ViewerGroup, error) {
 	var discovery WopiDiscovery
 	if err := xml.Unmarshal([]byte(xmlStr), &discovery); err != nil {
 		return nil, fmt.Errorf("failed to parse WOPI discovery XML: %w", err)
 	}
 
-	group := &setting.ViewerGroup{
-		Viewers: make([]setting.Viewer, 0, len(discovery.NetZone.App)),
+	group := &types.ViewerGroup{
+		Viewers: make([]types.Viewer, 0, len(discovery.NetZone.App)),
 	}
 
 	for _, app := range discovery.NetZone.App {
-		viewer := setting.Viewer{
+		viewer := types.Viewer{
 			ID:          uuid.Must(uuid.NewV4()).String(),
 			DisplayName: app.Name,
-			Type:        setting.ViewerTypeWopi,
+			Type:        types.ViewerTypeWopi,
 			Icon:        app.FavIconUrl,
-			WopiActions: make(map[string]map[setting.ViewerAction]string),
+			WopiActions: make(map[string]map[types.ViewerAction]string),
 		}
 
 		for _, action := range app.Action {
@@ -41,21 +41,21 @@ func DiscoveryXmlToViewerGroup(xmlStr string) (*setting.ViewerGroup, error) {
 			}
 
 			if _, ok := viewer.WopiActions[action.Ext]; !ok {
-				viewer.WopiActions[action.Ext] = make(map[setting.ViewerAction]string)
+				viewer.WopiActions[action.Ext] = make(map[types.ViewerAction]string)
 			}
 
 			if action.Name == string(ActionPreview) {
-				viewer.WopiActions[action.Ext][setting.ViewerActionView] = action.Urlsrc
+				viewer.WopiActions[action.Ext][types.ViewerActionView] = action.Urlsrc
 			} else if action.Name == string(ActionPreviewFallback) {
-				viewer.WopiActions[action.Ext][setting.ViewerActionView] = action.Urlsrc
+				viewer.WopiActions[action.Ext][types.ViewerActionView] = action.Urlsrc
 			} else if action.Name == string(ActionEdit) {
-				viewer.WopiActions[action.Ext][setting.ViewerActionEdit] = action.Urlsrc
+				viewer.WopiActions[action.Ext][types.ViewerActionEdit] = action.Urlsrc
 			} else if len(viewer.WopiActions[action.Ext]) == 0 {
 				delete(viewer.WopiActions, action.Ext)
 			}
 		}
 
-		viewer.Exts = lo.MapToSlice(viewer.WopiActions, func(key string, value map[setting.ViewerAction]string) string {
+		viewer.Exts = lo.MapToSlice(viewer.WopiActions, func(key string, value map[types.ViewerAction]string) string {
 			return key
 		})
 
