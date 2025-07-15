@@ -17,6 +17,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/cluster/routes"
 	"github.com/cloudreve/Cloudreve/v4/pkg/credmanager"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/cos"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/ks3"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/obs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/onedrive"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/oss"
@@ -362,6 +363,17 @@ func (service *CreateStoragePolicyCorsService) Create(c *gin.Context) error {
 
 		return nil
 
+	case types.PolicyTypeKs3:
+		handler, err := ks3.New(c, service.Policy, dep.SettingProvider(), dep.ConfigProvider(), dep.Logger(), dep.MimeDetector(c))
+		if err != nil {
+			return serializer.NewError(serializer.CodeDBError, "Failed to create ks3 driver", err)
+		}
+
+		if err := handler.CORS(); err != nil {
+			return serializer.NewError(serializer.CodeInternalSetting, "Failed to create cors: "+err.Error(), err)
+		}
+
+		return nil
 	case types.PolicyTypeObs:
 		handler, err := obs.New(c, service.Policy, dep.SettingProvider(), dep.ConfigProvider(), dep.Logger(), dep.MimeDetector(c))
 		if err != nil {

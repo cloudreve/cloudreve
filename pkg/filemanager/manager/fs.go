@@ -8,6 +8,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/cluster"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/cos"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/ks3"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/local"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/obs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/onedrive"
@@ -73,6 +74,8 @@ func (m *manager) GetStorageDriver(ctx context.Context, policy *ent.StoragePolic
 		return cos.New(ctx, policy, m.settings, m.config, m.l, m.dep.MimeDetector(ctx))
 	case types.PolicyTypeS3:
 		return s3.New(ctx, policy, m.settings, m.config, m.l, m.dep.MimeDetector(ctx))
+	case types.PolicyTypeKs3:
+		return ks3.New(ctx, policy, m.settings, m.config, m.l, m.dep.MimeDetector(ctx))
 	case types.PolicyTypeObs:
 		return obs.New(ctx, policy, m.settings, m.config, m.l, m.dep.MimeDetector(ctx))
 	case types.PolicyTypeQiniu:
