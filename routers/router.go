@@ -492,6 +492,12 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				middleware.UseUploadSession(types.PolicyTypeS3),
 				controllers.ProcessCallback(http.StatusBadRequest, false),
 			)
+			// 金山 ks3策略上传回调
+			callback.GET(
+				"ks3/:sessionID/:key",
+				middleware.UseUploadSession(types.PolicyTypeKs3),
+				controllers.ProcessCallback(http.StatusBadRequest, false),
+			)
 			// Huawei OBS upload callback
 			callback.POST(
 				"obs/:sessionID/:key",

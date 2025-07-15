@@ -38,6 +38,7 @@ require (
 	github.com/jinzhu/gorm v1.9.11
 	github.com/jpillora/backoff v1.0.0
 	github.com/juju/ratelimit v1.0.1
+	github.com/ks3sdklib/aws-sdk-go v1.6.2
 	github.com/lib/pq v1.10.9
 	github.com/mholt/archiver/v4 v4.0.0-alpha.6
 	github.com/mojocn/base64Captcha v0.0.0-20190801020520-752b1cd608b2

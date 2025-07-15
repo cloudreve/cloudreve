@@ -255,6 +255,7 @@ const (
 	PolicyTypeOss    = "oss"
 	PolicyTypeCos    = "cos"
 	PolicyTypeS3     = "s3"
+	PolicyTypeKs3    = "ks3"
 	PolicyTypeOd     = "onedrive"
 	PolicyTypeRemote = "remote"
 	PolicyTypeObs    = "obs"
