@@ -306,17 +306,20 @@ func (handler *Driver) Source(ctx context.Context, e fs.Entity, args *driver.Get
 	var contentDescription *string
 	if args.IsDownload {
 		encodedFilename := url.PathEscape(args.DisplayName)
-		contentDescription = aws.String(fmt.Sprintf(`attachment; filename="%s"`,
-			encodedFilename))
+		contentDescription = aws.String(fmt.Sprintf(`attachment; filename="%s"`, encodedFilename))
 	}
 
 	downloadUrl, err := handler.svc.GeneratePresignedUrl(&s3.GeneratePresignedUrlInput{
-		HTTPMethod:                 s3.GET,                     // 请求方法
-		Bucket:                     &handler.policy.BucketName, // 存储空间名称
-		Key:                        aws.String(e.Source()),     // 对象的key
-		Expires:                    604800,                     // 过期时间，7 days
-		ResponseContentDisposition: contentDescription,         // 设置响应头部 Content-Disposition
+		HTTPMethod:                 s3.GET,                                    // 请求方法
+		Bucket:                     &handler.policy.BucketName,                // 存储空间名称
+		Key:                        aws.String(e.Source()),                    // 对象的key
+		Expires:                    int64(time.Until(*args.Expire).Seconds()), // 过期时间，转换为秒数
+		ResponseContentDisposition: contentDescription,                        // 设置响应头部 Content-Disposition
 	})
+
+	if err != nil {
+		return "", err
+	}
 
 	// 将最终生成的签名URL域名换成用户自定义的加速域名（如果有）
 	finalURL, err := url.Parse(downloadUrl)
@@ -385,7 +388,7 @@ func (handler *Driver) Token(ctx context.Context, uploadSession *fs.UploadSessio
 				ContentType: aws.String("application/octet-stream"),
 			})
 			if err != nil {
-				return fmt.Errorf("生成分片%d预签名URL失败: %w", partNumber, err)
+				return fmt.Errorf("failed to generate presigned upload url for chunk %d: %w", partNumber, err)
 			}
 			urls[c.Index()] = signedURL
 			return nil
