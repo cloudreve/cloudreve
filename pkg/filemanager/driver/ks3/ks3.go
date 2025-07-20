@@ -309,12 +309,20 @@ func (handler *Driver) Source(ctx context.Context, e fs.Entity, args *driver.Get
 		contentDescription = aws.String(fmt.Sprintf(`attachment; filename="%s"`, encodedFilename))
 	}
 
+	// 确保过期时间不小于 0 ，如果小于则设置为 7 天
+	var ttl int64
+	if args.Expire != nil {
+		ttl = int64(time.Until(*args.Expire).Seconds())
+	} else {
+		ttl = 604800
+	}
+
 	downloadUrl, err := handler.svc.GeneratePresignedUrl(&s3.GeneratePresignedUrlInput{
-		HTTPMethod:                 s3.GET,                                    // 请求方法
-		Bucket:                     &handler.policy.BucketName,                // 存储空间名称
-		Key:                        aws.String(e.Source()),                    // 对象的key
-		Expires:                    int64(time.Until(*args.Expire).Seconds()), // 过期时间，转换为秒数
-		ResponseContentDisposition: contentDescription,                        // 设置响应头部 Content-Disposition
+		HTTPMethod:                 s3.GET,                     // 请求方法
+		Bucket:                     &handler.policy.BucketName, // 存储空间名称
+		Key:                        aws.String(e.Source()),     // 对象的key
+		Expires:                    ttl,                        // 过期时间，转换为秒数
+		ResponseContentDisposition: contentDescription,         // 设置响应头部 Content-Disposition
 	})
 
 	if err != nil {
