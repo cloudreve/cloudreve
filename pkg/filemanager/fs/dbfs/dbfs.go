@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -765,15 +766,9 @@ func (f *DBFS) navigatorId(path *fs.URI) string {
 
 // generateSavePath generates the physical save path for the upload request.
 func generateSavePath(policy *ent.StoragePolicy, req *fs.UploadRequest, user *ent.User) string {
-	baseTable := map[string]string{
-		"{randomkey16}":    util.RandStringRunes(16),
-		"{randomkey8}":     util.RandStringRunes(8),
+	fixedBaseTable := map[string]string{
 		"{timestamp}":      strconv.FormatInt(time.Now().Unix(), 10),
 		"{timestamp_nano}": strconv.FormatInt(time.Now().UnixNano(), 10),
-		"{randomnum2}":     strconv.Itoa(rand.Intn(2)),
-		"{randomnum3}":     strconv.Itoa(rand.Intn(3)),
-		"{randomnum4}":     strconv.Itoa(rand.Intn(4)),
-		"{randomnum8}":     strconv.Itoa(rand.Intn(8)),
 		"{uid}":            strconv.Itoa(user.ID),
 		"{datetime}":       time.Now().Format("20060102150405"),
 		"{date}":           time.Now().Format("20060102"),
@@ -785,24 +780,50 @@ func generateSavePath(policy *ent.StoragePolicy, req *fs.UploadRequest, user *en
 		"{second}":         time.Now().Format("05"),
 	}
 
+	dynamicReplace := func(regPattern string, rule string) string {
+		re := regexp.MustCompile(regPattern)
+		return re.ReplaceAllStringFunc(rule, func(match string) string {
+			switch match {
+			case "{randomkey16}":
+				return util.RandStringRunes(16)
+			case "{randomkey8}":
+				return util.RandStringRunes(8)
+			case "{randomnum8}":
+				return strconv.Itoa(rand.Intn(8))
+			case "{randomnum4}":
+				return strconv.Itoa(rand.Intn(4))
+			case "{randomnum3}":
+				return strconv.Itoa(rand.Intn(3))
+			case "{randomnum2}":
+				return strconv.Itoa(rand.Intn(2))
+			case "{uuid}":
+				return uuid.Must(uuid.NewV4()).String()
+			default:
+				return match
+			}
+		})
+	}
+
 	dirRule := policy.DirNameRule
 	dirRule = filepath.ToSlash(dirRule)
-	dirRule = util.Replace(baseTable, dirRule)
+	dirRule = util.Replace(fixedBaseTable, dirRule)
 	dirRule = util.Replace(map[string]string{
 		"{path}": req.Props.Uri.Dir() + fs.Separator,
 	}, dirRule)
+	dirRule = dynamicReplace(`\{randomkey16\}|\{randomkey8\}|\{randomnum8\}|\{randomnum4\}|\{randomnum3\}|\{randomnum2\}`, dirRule)
 
 	originName := req.Props.Uri.Name()
-	nameTable := map[string]string{
+	fixedNameTable := map[string]string{
 		"{originname}":             originName,
 		"{ext}":                    filepath.Ext(originName),
 		"{originname_without_ext}": strings.TrimSuffix(originName, filepath.Ext(originName)),
-		"{uuid}":                   uuid.Must(uuid.NewV4()).String(),
 	}
 
 	nameRule := policy.FileNameRule
-	nameRule = util.Replace(baseTable, nameRule)
-	nameRule = util.Replace(nameTable, nameRule)
+	nameRule = filepath.ToSlash(nameRule)
+	nameRule = util.Replace(fixedBaseTable, nameRule)
+	nameRule = util.Replace(fixedNameTable, nameRule)
+	nameRule = dynamicReplace(`\{randomkey16\}|\{randomkey8\}|\{randomnum8\}|\{randomnum4\}|\{randomnum3\}|\{randomnum2\}|\{uuid\}`, nameRule)
 
 	return path.Join(path.Clean(dirRule), nameRule)
 }
