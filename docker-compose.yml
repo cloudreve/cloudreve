@@ -19,7 +19,10 @@ services:
       - backend_data:/cloudreve/data
 
   postgresql:
-    image: postgres:latest
+    # Best practice: Pin to major version. 
+    # NOTE: For major version jumps:
+    # backup & consult https://www.postgresql.org/docs/current/pgupgrade.html 
+    image: postgres:17    
     container_name: postgresql
     environment:
       - POSTGRES_USER=cloudreve

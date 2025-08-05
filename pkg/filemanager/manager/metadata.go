@@ -43,6 +43,8 @@ var (
 	// validateColor validates a color value
 	validateColor = func(optional bool) metadataValidator {
 		return func(ctx context.Context, m *manager, patch *fs.MetadataPatch) error {
+			patch.UpdateModifiedAt = true
+
 			if patch.Remove {
 				return nil
 			}
@@ -66,6 +68,8 @@ var (
 				if patch.Remove {
 					return fmt.Errorf("cannot remove system metadata")
 				}
+
+				patch.UpdateModifiedAt = true
 
 				dep := dependency.FromContext(ctx)
 				// Validate share owner is valid hashid
@@ -96,6 +100,8 @@ var (
 		customizeMetadataSuffix: {
 			iconColorMetadataKey: validateColor(false),
 			emojiIconMetadataKey: func(ctx context.Context, m *manager, patch *fs.MetadataPatch) error {
+				patch.UpdateModifiedAt = true
+
 				if patch.Remove {
 					return nil
 				}
@@ -125,6 +131,8 @@ var (
 		},
 		tagMetadataSuffix: {
 			wildcardMetadataKey: func(ctx context.Context, m *manager, patch *fs.MetadataPatch) error {
+				patch.UpdateModifiedAt = true
+
 				if err := validateColor(true)(ctx, m, patch); err != nil {
 					return err
 				}
@@ -138,6 +146,8 @@ var (
 		},
 		customPropsMetadataSuffix: {
 			wildcardMetadataKey: func(ctx context.Context, m *manager, patch *fs.MetadataPatch) error {
+				patch.UpdateModifiedAt = true
+
 				if patch.Remove {
 					return nil
 				}
@@ -260,40 +270,44 @@ var (
 )
 
 func (m *manager) PatchMedata(ctx context.Context, path []*fs.URI, data ...fs.MetadataPatch) error {
-	if err := m.validateMetadata(ctx, data...); err != nil {
+	data, err := m.validateMetadata(ctx, data...)
+	if err != nil {
 		return err
 	}
 
 	return m.fs.PatchMetadata(ctx, path, data...)
 }
 
-func (m *manager) validateMetadata(ctx context.Context, data ...fs.MetadataPatch) error {
+func (m *manager) validateMetadata(ctx context.Context, data ...fs.MetadataPatch) ([]fs.MetadataPatch, error) {
+	validated := make([]fs.MetadataPatch, 0, len(data))
 	for _, patch := range data {
 		category := strings.Split(patch.Key, ":")
 		if len(category) < 2 {
-			return serializer.NewError(serializer.CodeParamErr, "Invalid metadata key", nil)
+			return validated, serializer.NewError(serializer.CodeParamErr, "Invalid metadata key", nil)
 		}
 
 		categoryValidators, ok := validators[category[0]]
 		if !ok {
-			return serializer.NewError(serializer.CodeParamErr, "Invalid metadata key",
+			return validated, serializer.NewError(serializer.CodeParamErr, "Invalid metadata key",
 				fmt.Errorf("unknown category: %s", category[0]))
 		}
 
 		// Explicit validators
 		if v, ok := categoryValidators[patch.Key]; ok {
 			if err := v(ctx, m, &patch); err != nil {
-				return serializer.NewError(serializer.CodeParamErr, "Invalid metadata patch", err)
+				return validated, serializer.NewError(serializer.CodeParamErr, "Invalid metadata patch", err)
 			}
 		}
 
 		// Wildcard validators
 		if v, ok := categoryValidators[wildcardMetadataKey]; ok {
 			if err := v(ctx, m, &patch); err != nil {
-				return serializer.NewError(serializer.CodeParamErr, "Invalid metadata patch", err)
+				return validated, serializer.NewError(serializer.CodeParamErr, "Invalid metadata patch", err)
 			}
 		}
+
+		validated = append(validated, patch)
 	}
 
-	return nil
+	return validated, nil
 }

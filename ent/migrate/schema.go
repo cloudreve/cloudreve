@@ -107,7 +107,6 @@ var (
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
-		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"mysql": "datetime"}},
 		{Name: "type", Type: field.TypeInt},
 		{Name: "name", Type: field.TypeString},
 		{Name: "size", Type: field.TypeInt64, Default: 0},
@@ -126,19 +125,19 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "files_files_children",
-				Columns:    []*schema.Column{FilesColumns[10]},
+				Columns:    []*schema.Column{FilesColumns[9]},
 				RefColumns: []*schema.Column{FilesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "files_storage_policies_files",
-				Columns:    []*schema.Column{FilesColumns[11]},
+				Columns:    []*schema.Column{FilesColumns[10]},
 				RefColumns: []*schema.Column{StoragePoliciesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "files_users_files",
-				Columns:    []*schema.Column{FilesColumns[12]},
+				Columns:    []*schema.Column{FilesColumns[11]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -147,17 +146,17 @@ var (
 			{
 				Name:    "file_file_children_name",
 				Unique:  true,
-				Columns: []*schema.Column{FilesColumns[10], FilesColumns[5]},
+				Columns: []*schema.Column{FilesColumns[9], FilesColumns[4]},
 			},
 			{
 				Name:    "file_file_children_type_updated_at",
 				Unique:  false,
-				Columns: []*schema.Column{FilesColumns[10], FilesColumns[4], FilesColumns[2]},
+				Columns: []*schema.Column{FilesColumns[9], FilesColumns[3], FilesColumns[2]},
 			},
 			{
 				Name:    "file_file_children_type_size",
 				Unique:  false,
-				Columns: []*schema.Column{FilesColumns[10], FilesColumns[4], FilesColumns[6]},
+				Columns: []*schema.Column{FilesColumns[9], FilesColumns[3], FilesColumns[5]},
 			},
 		},
 	}

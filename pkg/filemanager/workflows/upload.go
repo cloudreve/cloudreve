@@ -115,23 +115,26 @@ func (t *SlaveUploadTask) Do(ctx context.Context) (task.Status, error) {
 	atomic.StoreInt64(&t.progress[ProgressTypeUpload].Total, totalSize)
 	ae := serializer.NewAggregateError()
 	transferFunc := func(workerId, fileId int, file SlaveUploadEntity) {
-		defer func() {
-			atomic.AddInt64(&t.progress[ProgressTypeUploadCount].Current, 1)
-			worker <- workerId
-			wg.Done()
-		}()
-
 		t.l.Info("Uploading file %s to %s...", file.Src, file.Uri.String())
 
 		progressKey := fmt.Sprintf("%s%d", ProgressTypeUploadSinglePrefix, workerId)
 		t.Lock()
 		t.progress[progressKey] = &queue.Progress{Identifier: file.Uri.String(), Total: file.Size}
+		fileProgress := t.progress[progressKey]
+		uploadProgress := t.progress[ProgressTypeUpload]
+		uploadCountProgress := t.progress[ProgressTypeUploadCount]
 		t.Unlock()
+
+		defer func() {
+			atomic.AddInt64(&uploadCountProgress.Current, 1)
+			worker <- workerId
+			wg.Done()
+		}()
 
 		handle, err := os.Open(filepath.FromSlash(file.Src))
 		if err != nil {
 			t.l.Warning("Failed to open file %s: %s", file.Src, err.Error())
-			atomic.AddInt64(&t.progress[ProgressTypeUpload].Current, file.Size)
+			atomic.AddInt64(&fileProgress.Current, file.Size)
 			ae.Add(path.Base(file.Src), fmt.Errorf("failed to open file: %w", err))
 			return
 		}
@@ -140,7 +143,7 @@ func (t *SlaveUploadTask) Do(ctx context.Context) (task.Status, error) {
 		if err != nil {
 			t.l.Warning("Failed to get file stat for %s: %s", file.Src, err.Error())
 			handle.Close()
-			atomic.AddInt64(&t.progress[ProgressTypeUpload].Current, file.Size)
+			atomic.AddInt64(&fileProgress.Current, file.Size)
 			ae.Add(path.Base(file.Src), fmt.Errorf("failed to get file stat: %w", err))
 			return
 		}
@@ -151,9 +154,9 @@ func (t *SlaveUploadTask) Do(ctx context.Context) (task.Status, error) {
 				Size: stat.Size(),
 			},
 			ProgressFunc: func(current, diff int64, total int64) {
-				atomic.AddInt64(&t.progress[progressKey].Current, diff)
-				atomic.AddInt64(&t.progress[ProgressTypeUpload].Current, diff)
-				atomic.StoreInt64(&t.progress[progressKey].Total, total)
+				atomic.AddInt64(&fileProgress.Current, diff)
+				atomic.AddInt64(&uploadCountProgress.Current, 1)
+				atomic.StoreInt64(&fileProgress.Total, total)
 			},
 			File:   handle,
 			Seeker: handle,
@@ -163,7 +166,7 @@ func (t *SlaveUploadTask) Do(ctx context.Context) (task.Status, error) {
 		if err != nil {
 			handle.Close()
 			t.l.Warning("Failed to upload file %s: %s", file.Src, err.Error())
-			atomic.AddInt64(&t.progress[ProgressTypeUpload].Current, file.Size)
+			atomic.AddInt64(&uploadProgress.Current, file.Size)
 			ae.Add(path.Base(file.Src), fmt.Errorf("failed to upload file: %w", err))
 			return
 		}
@@ -179,8 +182,10 @@ func (t *SlaveUploadTask) Do(ctx context.Context) (task.Status, error) {
 		// Check if file is already transferred
 		if _, ok := t.state.Transferred[fileId]; ok {
 			t.l.Info("File %s already transferred, skipping...", file.Src)
+			t.Lock()
 			atomic.AddInt64(&t.progress[ProgressTypeUpload].Current, file.Size)
 			atomic.AddInt64(&t.progress[ProgressTypeUploadCount].Current, 1)
+			t.Unlock()
 			continue
 		}
 
@@ -221,5 +226,9 @@ func (m *SlaveUploadTask) Progress(ctx context.Context) queue.Progresses {
 	m.Lock()
 	defer m.Unlock()
 
-	return m.progress
+	res := make(queue.Progresses)
+	for k, v := range m.progress {
+		res[k] = v
+	}
+	return res
 }

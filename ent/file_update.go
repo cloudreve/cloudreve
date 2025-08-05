@@ -41,23 +41,11 @@ func (fu *FileUpdate) SetUpdatedAt(t time.Time) *FileUpdate {
 	return fu
 }
 
-// SetDeletedAt sets the "deleted_at" field.
-func (fu *FileUpdate) SetDeletedAt(t time.Time) *FileUpdate {
-	fu.mutation.SetDeletedAt(t)
-	return fu
-}
-
-// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
-func (fu *FileUpdate) SetNillableDeletedAt(t *time.Time) *FileUpdate {
+// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
+func (fu *FileUpdate) SetNillableUpdatedAt(t *time.Time) *FileUpdate {
 	if t != nil {
-		fu.SetDeletedAt(*t)
+		fu.SetUpdatedAt(*t)
 	}
-	return fu
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (fu *FileUpdate) ClearDeletedAt() *FileUpdate {
-	fu.mutation.ClearDeletedAt()
 	return fu
 }
 
@@ -472,9 +460,6 @@ func (fu *FileUpdate) RemoveDirectLinks(d ...*DirectLink) *FileUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (fu *FileUpdate) Save(ctx context.Context) (int, error) {
-	if err := fu.defaults(); err != nil {
-		return 0, err
-	}
 	return withHooks(ctx, fu.sqlSave, fu.mutation, fu.hooks)
 }
 
@@ -500,18 +485,6 @@ func (fu *FileUpdate) ExecX(ctx context.Context) {
 	}
 }
 
-// defaults sets the default values of the builder before save.
-func (fu *FileUpdate) defaults() error {
-	if _, ok := fu.mutation.UpdatedAt(); !ok {
-		if file.UpdateDefaultUpdatedAt == nil {
-			return fmt.Errorf("ent: uninitialized file.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
-		}
-		v := file.UpdateDefaultUpdatedAt()
-		fu.mutation.SetUpdatedAt(v)
-	}
-	return nil
-}
-
 // check runs all checks and user-defined validators on the builder.
 func (fu *FileUpdate) check() error {
 	if _, ok := fu.mutation.OwnerID(); fu.mutation.OwnerCleared() && !ok {
@@ -534,12 +507,6 @@ func (fu *FileUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := fu.mutation.UpdatedAt(); ok {
 		_spec.SetField(file.FieldUpdatedAt, field.TypeTime, value)
-	}
-	if value, ok := fu.mutation.DeletedAt(); ok {
-		_spec.SetField(file.FieldDeletedAt, field.TypeTime, value)
-	}
-	if fu.mutation.DeletedAtCleared() {
-		_spec.ClearField(file.FieldDeletedAt, field.TypeTime)
 	}
 	if value, ok := fu.mutation.GetType(); ok {
 		_spec.SetField(file.FieldType, field.TypeInt, value)
@@ -912,23 +879,11 @@ func (fuo *FileUpdateOne) SetUpdatedAt(t time.Time) *FileUpdateOne {
 	return fuo
 }
 
-// SetDeletedAt sets the "deleted_at" field.
-func (fuo *FileUpdateOne) SetDeletedAt(t time.Time) *FileUpdateOne {
-	fuo.mutation.SetDeletedAt(t)
-	return fuo
-}
-
-// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
-func (fuo *FileUpdateOne) SetNillableDeletedAt(t *time.Time) *FileUpdateOne {
+// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
+func (fuo *FileUpdateOne) SetNillableUpdatedAt(t *time.Time) *FileUpdateOne {
 	if t != nil {
-		fuo.SetDeletedAt(*t)
+		fuo.SetUpdatedAt(*t)
 	}
-	return fuo
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (fuo *FileUpdateOne) ClearDeletedAt() *FileUpdateOne {
-	fuo.mutation.ClearDeletedAt()
 	return fuo
 }
 
@@ -1356,9 +1311,6 @@ func (fuo *FileUpdateOne) Select(field string, fields ...string) *FileUpdateOne 
 
 // Save executes the query and returns the updated File entity.
 func (fuo *FileUpdateOne) Save(ctx context.Context) (*File, error) {
-	if err := fuo.defaults(); err != nil {
-		return nil, err
-	}
 	return withHooks(ctx, fuo.sqlSave, fuo.mutation, fuo.hooks)
 }
 
@@ -1382,18 +1334,6 @@ func (fuo *FileUpdateOne) ExecX(ctx context.Context) {
 	if err := fuo.Exec(ctx); err != nil {
 		panic(err)
 	}
-}
-
-// defaults sets the default values of the builder before save.
-func (fuo *FileUpdateOne) defaults() error {
-	if _, ok := fuo.mutation.UpdatedAt(); !ok {
-		if file.UpdateDefaultUpdatedAt == nil {
-			return fmt.Errorf("ent: uninitialized file.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
-		}
-		v := file.UpdateDefaultUpdatedAt()
-		fuo.mutation.SetUpdatedAt(v)
-	}
-	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -1435,12 +1375,6 @@ func (fuo *FileUpdateOne) sqlSave(ctx context.Context) (_node *File, err error) 
 	}
 	if value, ok := fuo.mutation.UpdatedAt(); ok {
 		_spec.SetField(file.FieldUpdatedAt, field.TypeTime, value)
-	}
-	if value, ok := fuo.mutation.DeletedAt(); ok {
-		_spec.SetField(file.FieldDeletedAt, field.TypeTime, value)
-	}
-	if fuo.mutation.DeletedAtCleared() {
-		_spec.ClearField(file.FieldDeletedAt, field.TypeTime)
 	}
 	if value, ok := fuo.mutation.GetType(); ok {
 		_spec.SetField(file.FieldType, field.TypeInt, value)

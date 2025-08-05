@@ -203,10 +203,11 @@ type (
 	}
 
 	MetadataPatch struct {
-		Key     string `json:"key" binding:"required"`
-		Value   string `json:"value"`
-		Private bool   `json:"private" binding:"ne=true"`
-		Remove  bool   `json:"remove"`
+		Key              string `json:"key" binding:"required"`
+		Value            string `json:"value"`
+		Private          bool   `json:"private" binding:"ne=true"`
+		Remove           bool   `json:"remove"`
+		UpdateModifiedAt bool   `json:"-"`
 	}
 
 	// ListFileResult result of listing files.

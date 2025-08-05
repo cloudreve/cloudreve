@@ -55,7 +55,7 @@ func (m *manager) CreateUploadSession(ctx context.Context, req *fs.UploadRequest
 
 	// Validate metadata
 	if req.Props.Metadata != nil {
-		if err := m.validateMetadata(ctx, lo.MapToSlice(req.Props.Metadata, func(key string, value string) fs.MetadataPatch {
+		if _, err := m.validateMetadata(ctx, lo.MapToSlice(req.Props.Metadata, func(key string, value string) fs.MetadataPatch {
 			return fs.MetadataPatch{
 				Key:   key,
 				Value: value,

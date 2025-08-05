@@ -57,20 +57,6 @@ func (fc *FileCreate) SetNillableUpdatedAt(t *time.Time) *FileCreate {
 	return fc
 }
 
-// SetDeletedAt sets the "deleted_at" field.
-func (fc *FileCreate) SetDeletedAt(t time.Time) *FileCreate {
-	fc.mutation.SetDeletedAt(t)
-	return fc
-}
-
-// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
-func (fc *FileCreate) SetNillableDeletedAt(t *time.Time) *FileCreate {
-	if t != nil {
-		fc.SetDeletedAt(*t)
-	}
-	return fc
-}
-
 // SetType sets the "type" field.
 func (fc *FileCreate) SetType(i int) *FileCreate {
 	fc.mutation.SetType(i)
@@ -413,10 +399,6 @@ func (fc *FileCreate) createSpec() (*File, *sqlgraph.CreateSpec) {
 		_spec.SetField(file.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if value, ok := fc.mutation.DeletedAt(); ok {
-		_spec.SetField(file.FieldDeletedAt, field.TypeTime, value)
-		_node.DeletedAt = &value
-	}
 	if value, ok := fc.mutation.GetType(); ok {
 		_spec.SetField(file.FieldType, field.TypeInt, value)
 		_node.Type = value
@@ -636,24 +618,6 @@ func (u *FileUpsert) UpdateUpdatedAt() *FileUpsert {
 	return u
 }
 
-// SetDeletedAt sets the "deleted_at" field.
-func (u *FileUpsert) SetDeletedAt(v time.Time) *FileUpsert {
-	u.Set(file.FieldDeletedAt, v)
-	return u
-}
-
-// UpdateDeletedAt sets the "deleted_at" field to the value that was provided on create.
-func (u *FileUpsert) UpdateDeletedAt() *FileUpsert {
-	u.SetExcluded(file.FieldDeletedAt)
-	return u
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (u *FileUpsert) ClearDeletedAt() *FileUpsert {
-	u.SetNull(file.FieldDeletedAt)
-	return u
-}
-
 // SetType sets the "type" field.
 func (u *FileUpsert) SetType(v int) *FileUpsert {
 	u.Set(file.FieldType, v)
@@ -860,27 +824,6 @@ func (u *FileUpsertOne) SetUpdatedAt(v time.Time) *FileUpsertOne {
 func (u *FileUpsertOne) UpdateUpdatedAt() *FileUpsertOne {
 	return u.Update(func(s *FileUpsert) {
 		s.UpdateUpdatedAt()
-	})
-}
-
-// SetDeletedAt sets the "deleted_at" field.
-func (u *FileUpsertOne) SetDeletedAt(v time.Time) *FileUpsertOne {
-	return u.Update(func(s *FileUpsert) {
-		s.SetDeletedAt(v)
-	})
-}
-
-// UpdateDeletedAt sets the "deleted_at" field to the value that was provided on create.
-func (u *FileUpsertOne) UpdateDeletedAt() *FileUpsertOne {
-	return u.Update(func(s *FileUpsert) {
-		s.UpdateDeletedAt()
-	})
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (u *FileUpsertOne) ClearDeletedAt() *FileUpsertOne {
-	return u.Update(func(s *FileUpsert) {
-		s.ClearDeletedAt()
 	})
 }
 
@@ -1286,27 +1229,6 @@ func (u *FileUpsertBulk) SetUpdatedAt(v time.Time) *FileUpsertBulk {
 func (u *FileUpsertBulk) UpdateUpdatedAt() *FileUpsertBulk {
 	return u.Update(func(s *FileUpsert) {
 		s.UpdateUpdatedAt()
-	})
-}
-
-// SetDeletedAt sets the "deleted_at" field.
-func (u *FileUpsertBulk) SetDeletedAt(v time.Time) *FileUpsertBulk {
-	return u.Update(func(s *FileUpsert) {
-		s.SetDeletedAt(v)
-	})
-}
-
-// UpdateDeletedAt sets the "deleted_at" field to the value that was provided on create.
-func (u *FileUpsertBulk) UpdateDeletedAt() *FileUpsertBulk {
-	return u.Update(func(s *FileUpsert) {
-		s.UpdateDeletedAt()
-	})
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (u *FileUpsertBulk) ClearDeletedAt() *FileUpsertBulk {
-	return u.Update(func(s *FileUpsert) {
-		s.ClearDeletedAt()
 	})
 }
 

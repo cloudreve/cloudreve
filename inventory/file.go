@@ -217,6 +217,8 @@ type FileClient interface {
 	ListEntities(ctx context.Context, args *ListEntityParameters) (*ListEntityResult, error)
 	// UpdateProps updates props of a file
 	UpdateProps(ctx context.Context, file *ent.File, props *types.FileProps) (*ent.File, error)
+	// UpdateModifiedAt updates modified at of a file
+	UpdateModifiedAt(ctx context.Context, file *ent.File, modifiedAt time.Time) error
 }
 
 func NewFileClient(client *ent.Client, dbType conf.DBType, hasher hashid.Encoder) FileClient {
@@ -646,6 +648,10 @@ func (f *fileClient) Copy(ctx context.Context, files []*ent.File, dstMap map[int
 	return newDstMap, map[int]int64{dstMap[files[0].FileChildren][0].OwnerID: sizeDiff}, nil
 }
 
+func (f *fileClient) UpdateModifiedAt(ctx context.Context, file *ent.File, modifiedAt time.Time) error {
+	return f.client.File.UpdateOne(file).SetUpdatedAt(modifiedAt).Exec(ctx)
+}
+
 func (f *fileClient) UpsertMetadata(ctx context.Context, file *ent.File, data map[string]string, privateMask map[string]bool) error {
 	// Validate value length
 	for key, value := range data {
@@ -718,10 +724,15 @@ func (f *fileClient) UpgradePlaceholder(ctx context.Context, file *ent.File, mod
 	}
 
 	if entityType == types.EntityTypeVersion {
-		if err := f.client.File.UpdateOne(file).
+		stm := f.client.File.UpdateOne(file).
 			SetSize(placeholder.Size).
-			SetPrimaryEntity(placeholder.ID).
-			Exec(ctx); err != nil {
+			SetPrimaryEntity(placeholder.ID)
+
+		if modifiedAt != nil {
+			stm.SetUpdatedAt(*modifiedAt)
+		}
+
+		if err := stm.Exec(ctx); err != nil {
 			return fmt.Errorf("failed to upgrade file primary entity: %v", err)
 		}
 	}

@@ -2972,7 +2972,6 @@ type FileMutation struct {
 	id                      *int
 	created_at              *time.Time
 	updated_at              *time.Time
-	deleted_at              *time.Time
 	_type                   *int
 	add_type                *int
 	name                    *string
@@ -3177,55 +3176,6 @@ func (m *FileMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error
 // ResetUpdatedAt resets all changes to the "updated_at" field.
 func (m *FileMutation) ResetUpdatedAt() {
 	m.updated_at = nil
-}
-
-// SetDeletedAt sets the "deleted_at" field.
-func (m *FileMutation) SetDeletedAt(t time.Time) {
-	m.deleted_at = &t
-}
-
-// DeletedAt returns the value of the "deleted_at" field in the mutation.
-func (m *FileMutation) DeletedAt() (r time.Time, exists bool) {
-	v := m.deleted_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldDeletedAt returns the old "deleted_at" field's value of the File entity.
-// If the File object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *FileMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
-	}
-	return oldValue.DeletedAt, nil
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (m *FileMutation) ClearDeletedAt() {
-	m.deleted_at = nil
-	m.clearedFields[file.FieldDeletedAt] = struct{}{}
-}
-
-// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
-func (m *FileMutation) DeletedAtCleared() bool {
-	_, ok := m.clearedFields[file.FieldDeletedAt]
-	return ok
-}
-
-// ResetDeletedAt resets all changes to the "deleted_at" field.
-func (m *FileMutation) ResetDeletedAt() {
-	m.deleted_at = nil
-	delete(m.clearedFields, file.FieldDeletedAt)
 }
 
 // SetType sets the "type" field.
@@ -4076,15 +4026,12 @@ func (m *FileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *FileMutation) Fields() []string {
-	fields := make([]string, 0, 12)
+	fields := make([]string, 0, 11)
 	if m.created_at != nil {
 		fields = append(fields, file.FieldCreatedAt)
 	}
 	if m.updated_at != nil {
 		fields = append(fields, file.FieldUpdatedAt)
-	}
-	if m.deleted_at != nil {
-		fields = append(fields, file.FieldDeletedAt)
 	}
 	if m._type != nil {
 		fields = append(fields, file.FieldType)
@@ -4125,8 +4072,6 @@ func (m *FileMutation) Field(name string) (ent.Value, bool) {
 		return m.CreatedAt()
 	case file.FieldUpdatedAt:
 		return m.UpdatedAt()
-	case file.FieldDeletedAt:
-		return m.DeletedAt()
 	case file.FieldType:
 		return m.GetType()
 	case file.FieldName:
@@ -4158,8 +4103,6 @@ func (m *FileMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldCreatedAt(ctx)
 	case file.FieldUpdatedAt:
 		return m.OldUpdatedAt(ctx)
-	case file.FieldDeletedAt:
-		return m.OldDeletedAt(ctx)
 	case file.FieldType:
 		return m.OldType(ctx)
 	case file.FieldName:
@@ -4200,13 +4143,6 @@ func (m *FileMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetUpdatedAt(v)
-		return nil
-	case file.FieldDeletedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetDeletedAt(v)
 		return nil
 	case file.FieldType:
 		v, ok := value.(int)
@@ -4340,9 +4276,6 @@ func (m *FileMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *FileMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(file.FieldDeletedAt) {
-		fields = append(fields, file.FieldDeletedAt)
-	}
 	if m.FieldCleared(file.FieldPrimaryEntity) {
 		fields = append(fields, file.FieldPrimaryEntity)
 	}
@@ -4369,9 +4302,6 @@ func (m *FileMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *FileMutation) ClearField(name string) error {
 	switch name {
-	case file.FieldDeletedAt:
-		m.ClearDeletedAt()
-		return nil
 	case file.FieldPrimaryEntity:
 		m.ClearPrimaryEntity()
 		return nil
@@ -4397,9 +4327,6 @@ func (m *FileMutation) ResetField(name string) error {
 		return nil
 	case file.FieldUpdatedAt:
 		m.ResetUpdatedAt()
-		return nil
-	case file.FieldDeletedAt:
-		m.ResetDeletedAt()
 		return nil
 	case file.FieldType:
 		m.ResetType()

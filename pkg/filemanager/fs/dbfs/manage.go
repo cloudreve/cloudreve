@@ -121,7 +121,7 @@ func (f *DBFS) Create(ctx context.Context, path *fs.URI, fileType types.FileType
 			ancestor = newFile(ancestor, newFolder)
 		} else {
 			// valide file name
-			policy, err := f.getPreferredPolicy(ctx, ancestor, 0)
+			policy, err := f.getPreferredPolicy(ctx, ancestor)
 			if err != nil {
 				return nil, err
 			}

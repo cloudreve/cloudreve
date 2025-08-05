@@ -432,12 +432,6 @@ func (m *RemoteDownloadTask) masterTransfer(ctx context.Context, dep dependency.
 	ae := serializer.NewAggregateError()
 
 	transferFunc := func(workerId int, file downloader.TaskFile) {
-		defer func() {
-			atomic.AddInt64(&m.progress[ProgressTypeUploadCount].Current, 1)
-			worker <- workerId
-			wg.Done()
-		}()
-
 		sanitizedName := sanitizeFileName(file.Name)
 		dst := dstUri.JoinRaw(sanitizedName)
 		src := filepath.FromSlash(path.Join(m.state.Status.SavePath, file.Name))
@@ -446,12 +440,21 @@ func (m *RemoteDownloadTask) masterTransfer(ctx context.Context, dep dependency.
 		progressKey := fmt.Sprintf("%s%d", ProgressTypeUploadSinglePrefix, workerId)
 		m.Lock()
 		m.progress[progressKey] = &queue.Progress{Identifier: dst.String(), Total: file.Size}
+		fileProgress := m.progress[progressKey]
+		uploadProgress := m.progress[ProgressTypeUpload]
+		uploadCountProgress := m.progress[ProgressTypeUploadCount]
 		m.Unlock()
+
+		defer func() {
+			atomic.AddInt64(&uploadCountProgress.Current, 1)
+			worker <- workerId
+			wg.Done()
+		}()
 
 		fileStream, err := os.Open(src)
 		if err != nil {
 			m.l.Warning("Failed to open file %s: %s", src, err.Error())
-			atomic.AddInt64(&m.progress[ProgressTypeUpload].Current, file.Size)
+			atomic.AddInt64(&uploadProgress.Current, file.Size)
 			atomic.AddInt64(&failed, 1)
 			ae.Add(file.Name, fmt.Errorf("failed to open file: %w", err))
 			return
@@ -465,8 +468,8 @@ func (m *RemoteDownloadTask) masterTransfer(ctx context.Context, dep dependency.
 				Size: file.Size,
 			},
 			ProgressFunc: func(current, diff int64, total int64) {
-				atomic.AddInt64(&m.progress[progressKey].Current, diff)
-				atomic.AddInt64(&m.progress[ProgressTypeUpload].Current, diff)
+				atomic.AddInt64(&fileProgress.Current, diff)
+				atomic.AddInt64(&uploadProgress.Current, diff)
 			},
 			File: fileStream,
 		}
@@ -475,7 +478,7 @@ func (m *RemoteDownloadTask) masterTransfer(ctx context.Context, dep dependency.
 		if err != nil {
 			m.l.Warning("Failed to upload file %s: %s", src, err.Error())
 			atomic.AddInt64(&failed, 1)
-			atomic.AddInt64(&m.progress[ProgressTypeUpload].Current, file.Size)
+			atomic.AddInt64(&uploadProgress.Current, file.Size)
 			ae.Add(file.Name, fmt.Errorf("failed to upload file: %w", err))
 			return
 		}
@@ -490,8 +493,10 @@ func (m *RemoteDownloadTask) masterTransfer(ctx context.Context, dep dependency.
 		// Check if file is already transferred
 		if _, ok := m.state.Transferred[file.Index]; ok {
 			m.l.Info("File %s already transferred, skipping...", file.Name)
+			m.Lock()
 			atomic.AddInt64(&m.progress[ProgressTypeUpload].Current, file.Size)
 			atomic.AddInt64(&m.progress[ProgressTypeUploadCount].Current, 1)
+			m.Unlock()
 			continue
 		}
 
@@ -625,19 +630,18 @@ func (m *RemoteDownloadTask) Progress(ctx context.Context) queue.Progresses {
 	m.Lock()
 	defer m.Unlock()
 
-	if m.state.NodeState.progress != nil {
-		merged := make(queue.Progresses)
-		for k, v := range m.progress {
-			merged[k] = v
-		}
+	merged := make(queue.Progresses)
+	for k, v := range m.progress {
+		merged[k] = v
+	}
 
+	if m.state.NodeState.progress != nil {
 		for k, v := range m.state.NodeState.progress {
 			merged[k] = v
 		}
-
-		return merged
 	}
-	return m.progress
+
+	return merged
 }
 
 func sanitizeFileName(name string) string {

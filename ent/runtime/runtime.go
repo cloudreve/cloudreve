@@ -87,31 +87,24 @@ func init() {
 	entityDescReferenceCount := entityFields[3].Descriptor()
 	// entity.DefaultReferenceCount holds the default value on creation for the reference_count field.
 	entity.DefaultReferenceCount = entityDescReferenceCount.Default.(int)
-	fileMixin := schema.File{}.Mixin()
-	fileMixinHooks0 := fileMixin[0].Hooks()
-	file.Hooks[0] = fileMixinHooks0[0]
-	fileMixinInters0 := fileMixin[0].Interceptors()
-	file.Interceptors[0] = fileMixinInters0[0]
-	fileMixinFields0 := fileMixin[0].Fields()
-	_ = fileMixinFields0
+	fileHooks := schema.File{}.Hooks()
+	file.Hooks[0] = fileHooks[0]
 	fileFields := schema.File{}.Fields()
 	_ = fileFields
 	// fileDescCreatedAt is the schema descriptor for created_at field.
-	fileDescCreatedAt := fileMixinFields0[0].Descriptor()
+	fileDescCreatedAt := fileFields[0].Descriptor()
 	// file.DefaultCreatedAt holds the default value on creation for the created_at field.
 	file.DefaultCreatedAt = fileDescCreatedAt.Default.(func() time.Time)
 	// fileDescUpdatedAt is the schema descriptor for updated_at field.
-	fileDescUpdatedAt := fileMixinFields0[1].Descriptor()
+	fileDescUpdatedAt := fileFields[1].Descriptor()
 	// file.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	file.DefaultUpdatedAt = fileDescUpdatedAt.Default.(func() time.Time)
-	// file.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	file.UpdateDefaultUpdatedAt = fileDescUpdatedAt.UpdateDefault.(func() time.Time)
 	// fileDescSize is the schema descriptor for size field.
-	fileDescSize := fileFields[3].Descriptor()
+	fileDescSize := fileFields[5].Descriptor()
 	// file.DefaultSize holds the default value on creation for the size field.
 	file.DefaultSize = fileDescSize.Default.(int64)
 	// fileDescIsSymbolic is the schema descriptor for is_symbolic field.
-	fileDescIsSymbolic := fileFields[6].Descriptor()
+	fileDescIsSymbolic := fileFields[8].Descriptor()
 	// file.DefaultIsSymbolic holds the default value on creation for the is_symbolic field.
 	file.DefaultIsSymbolic = fileDescIsSymbolic.Default.(bool)
 	groupMixin := schema.Group{}.Mixin()
