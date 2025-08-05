@@ -766,64 +766,69 @@ func (f *DBFS) navigatorId(path *fs.URI) string {
 
 // generateSavePath generates the physical save path for the upload request.
 func generateSavePath(policy *ent.StoragePolicy, req *fs.UploadRequest, user *ent.User) string {
-	fixedBaseTable := map[string]string{
-		"{timestamp}":      strconv.FormatInt(time.Now().Unix(), 10),
-		"{timestamp_nano}": strconv.FormatInt(time.Now().UnixNano(), 10),
-		"{uid}":            strconv.Itoa(user.ID),
-		"{datetime}":       time.Now().Format("20060102150405"),
-		"{date}":           time.Now().Format("20060102"),
-		"{year}":           time.Now().Format("2006"),
-		"{month}":          time.Now().Format("01"),
-		"{day}":            time.Now().Format("02"),
-		"{hour}":           time.Now().Format("15"),
-		"{minute}":         time.Now().Format("04"),
-		"{second}":         time.Now().Format("05"),
-	}
+	currentTime := time.Now()
+	originName := req.Props.Uri.Name()
 
 	dynamicReplace := func(regPattern string, rule string) string {
 		re := regexp.MustCompile(regPattern)
 		return re.ReplaceAllStringFunc(rule, func(match string) string {
 			switch match {
-			case "{randomkey16}":
-				return util.RandStringRunes(16)
-			case "{randomkey8}":
-				return util.RandStringRunes(8)
-			case "{randomnum8}":
-				return strconv.Itoa(rand.Intn(8))
-			case "{randomnum4}":
-				return strconv.Itoa(rand.Intn(4))
-			case "{randomnum3}":
-				return strconv.Itoa(rand.Intn(3))
-			case "{randomnum2}":
-				return strconv.Itoa(rand.Intn(2))
-			case "{uuid}":
-				return uuid.Must(uuid.NewV4()).String()
-			default:
-				return match
+				case "{timestamp}":
+					return strconv.FormatInt(currentTime.Unix(), 10)
+				case "{timestamp_nano}":
+					return strconv.FormatInt(currentTime.UnixNano(), 10)
+				case "{datetime}":
+					return currentTime.Format("20060102150405")
+				case "{date}":
+					return currentTime.Format("20060102")
+				case "{year}":
+					return currentTime.Format("2006")
+				case "{month}":
+					return currentTime.Format("01")
+				case "{day}":
+					return currentTime.Format("02")
+				case "{hour}":
+					return currentTime.Format("15")
+				case "{minute}":
+					return currentTime.Format("04")
+				case "{second}":
+					return currentTime.Format("05")
+				case "{uid}":
+					return strconv.Itoa(user.ID)
+				case "{randomkey16}":
+					return util.RandStringRunes(16)
+				case "{randomkey8}":
+					return util.RandStringRunes(8)
+				case "{randomnum8}":
+					return strconv.Itoa(rand.Intn(8))
+				case "{randomnum4}":
+					return strconv.Itoa(rand.Intn(4))
+				case "{randomnum3}":
+					return strconv.Itoa(rand.Intn(3))
+				case "{randomnum2}":
+					return strconv.Itoa(rand.Intn(2))
+				case "{uuid}":
+					return uuid.Must(uuid.NewV4()).String()
+				case "{path}":
+					return req.Props.Uri.Dir() + fs.Separator
+				case "{originname}":
+					return originName
+				case "{ext}":
+					return filepath.Ext(originName)
+				case "{originname_without_ext}":
+					return strings.TrimSuffix(originName, filepath.Ext(originName))
+				default:
+					return match
 			}
 		})
 	}
 
 	dirRule := policy.DirNameRule
 	dirRule = filepath.ToSlash(dirRule)
-	dirRule = util.Replace(fixedBaseTable, dirRule)
-	dirRule = util.Replace(map[string]string{
-		"{path}": req.Props.Uri.Dir() + fs.Separator,
-	}, dirRule)
-	dirRule = dynamicReplace(`\{randomkey16\}|\{randomkey8\}|\{randomnum8\}|\{randomnum4\}|\{randomnum3\}|\{randomnum2\}`, dirRule)
-
-	originName := req.Props.Uri.Name()
-	fixedNameTable := map[string]string{
-		"{originname}":             originName,
-		"{ext}":                    filepath.Ext(originName),
-		"{originname_without_ext}": strings.TrimSuffix(originName, filepath.Ext(originName)),
-	}
+	dirRule = dynamicReplace(`\{[^{}]+\}`, dirRule)
 
 	nameRule := policy.FileNameRule
-	nameRule = filepath.ToSlash(nameRule)
-	nameRule = util.Replace(fixedBaseTable, nameRule)
-	nameRule = util.Replace(fixedNameTable, nameRule)
-	nameRule = dynamicReplace(`\{randomkey16\}|\{randomkey8\}|\{randomnum8\}|\{randomnum4\}|\{randomnum3\}|\{randomnum2\}|\{uuid\}`, nameRule)
+	nameRule = dynamicReplace(`\{[^{}]+\}`, nameRule)
 
 	return path.Join(path.Clean(dirRule), nameRule)
 }
