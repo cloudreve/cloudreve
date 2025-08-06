@@ -367,7 +367,9 @@ func (m *manager) updateStateless(ctx context.Context, req *fs.UploadRequest, o 
 		return nil, fmt.Errorf("faield to prepare uplaod: %w", err)
 	}
 
-	req.Props = res.Req.Props
+	if res.Req != nil {
+		req.Props = res.Req.Props
+	}
 	if err := m.Upload(ctx, req, res.Session.Policy); err != nil {
 		if err := o.Node.OnUploadFailed(ctx, &fs.StatelessOnUploadFailedService{
 			UploadSession: res.Session,
