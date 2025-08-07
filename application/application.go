@@ -17,6 +17,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/crontab"
 	"github.com/cloudreve/Cloudreve/v4/pkg/email"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/onedrive"
+	"github.com/cloudreve/Cloudreve/v4/pkg/h3"
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
@@ -46,6 +47,7 @@ type server struct {
 	dbClient  *ent.Client
 	config    conf.ConfigProvider
 	server    *http.Server
+	h3Server  *h3.H3Server
 	kv        cache.Driver
 	mailQueue email.Driver
 }
@@ -125,7 +127,16 @@ func (s *server) Start() error {
 
 	api := routers.InitRouter(s.dep)
 	api.TrustedPlatform = s.config.System().ProxyHeader
-	s.server = &http.Server{Handler: api}
+
+	s.server = &http.Server{
+		Handler: api,
+	}
+	h3Server, err := h3.NewH3Server("0.0.0.0:5212")
+	if err != nil {
+		return err
+	}
+	h3Server.Handler = api
+	s.h3Server = h3Server
 
 	// 如果启用了SSL
 	if s.config.SSL().CertPath != "" {
@@ -155,6 +166,15 @@ func (s *server) Start() error {
 		return nil
 	}
 
+	api.POST("/api/v4/p2p/signal", s.handleSignal)
+
+	go func() {
+		s.logger.Info("Listening HTTP/3 to : \"%v\"", h3Server.Addr)
+		if err := s.h3Server.Serve(); err != nil {
+			s.logger.Error("run h3 server error:%v", err)
+		}
+	}()
+
 	s.logger.Info("Listening to %q", s.config.System().Listen)
 	s.server.Addr = s.config.System().Listen
 	if err := s.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -183,6 +203,12 @@ func (s *server) Close() {
 		err := s.server.Shutdown(ctx)
 		if err != nil {
 			s.logger.Error("Failed to shutdown server: %s", err)
+		}
+	}
+	if s.h3Server != nil {
+		err := s.h3Server.Shutdown(ctx)
+		if err != nil {
+			s.logger.Error("Failed to shutdown h3 server: %s", err)
 		}
 	}
 
@@ -219,4 +245,18 @@ func (s *server) runUnix(server *http.Server) error {
 	}
 
 	return server.Serve(listener)
+}
+
+func (s *server) handleSignal(c *gin.Context) {
+	var req struct {
+		Addr string `json:"addr"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.Status(400)
+		s.logger.Error("bind req error:%v", err)
+		return
+	}
+	localAddr, pubAddr := s.h3Server.GetAddrs()
+	c.String(http.StatusOK, pubAddr)
+	go h3.PunchHole(localAddr, req.Addr)
 }
