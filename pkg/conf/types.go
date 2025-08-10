@@ -114,7 +114,7 @@ var SystemConfig = &System{
 	Debug:       false,
 	Mode:        MasterMode,
 	Listen:      ":5212",
-	ProxyHeader: "X-Forwarded-For",
+	ProxyHeader: "",
 	LogLevel:    "info",
 }
 

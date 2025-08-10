@@ -22,7 +22,7 @@ var SystemConfig = &system{
 	Debug:       false,
 	Mode:        "master",
 	Listen:      ":5212",
-	ProxyHeader: "X-Forwarded-For",
+	ProxyHeader: "",
 }
 
 // CORSConfig 跨域配置
