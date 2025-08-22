@@ -674,7 +674,7 @@ func init() {
 	for _, langContents := range mailTemplateContents {
 		activeMails = append(activeMails, map[string]string{
 			"language": langContents.Language,
-			"title":    langContents.ActiveTitle,
+			"title":    "[{{ .CommonContext.SiteBasic.Name }}] " + langContents.ActiveTitle,
 			"body":     util.Replace(map[string]string{
 				"[[ .Language ]]":        langContents.Language,
 				"[[ .ActiveTitle ]]":     langContents.ActiveTitle,
@@ -694,7 +694,7 @@ func init() {
 	for _, langContents := range mailTemplateContents {
 		resetMails = append(resetMails, map[string]string{
 			"language": langContents.Language,
-			"title":    langContents.ResetTitle,
+			"title":    "[{{ .CommonContext.SiteBasic.Name }}] " + langContents.ResetTitle,
 			"body":     util.Replace(map[string]string{
 				"[[ .Language ]]":        langContents.Language,
 				"[[ .ResetTitle ]]":      langContents.ResetTitle,
