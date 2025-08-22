@@ -38,18 +38,29 @@ func NewResetEmail(ctx context.Context, settings setting.Provider, user *ent.Use
 		Url:           url,
 	}
 
-	tmpl, err := template.New("reset").Parse(selected.Body)
+	tmplTitle, err := template.New("resetTitle").Parse(selected.Title)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to parse email title: %w", err)
+	}
+
+	var resTitle strings.Builder
+	err = tmplTitle.Execute(&resTitle, resetCtx)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to execute email title: %w", err)
+	}
+
+	tmplBody, err := template.New("resetBody").Parse(selected.Body)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to parse email template: %w", err)
 	}
 
-	var res strings.Builder
-	err = tmpl.Execute(&res, resetCtx)
+	var resBody strings.Builder
+	err = tmplBody.Execute(&resBody, resetCtx)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to execute email template: %w", err)
 	}
 
-	return fmt.Sprintf("[%s] %s", resetCtx.SiteBasic.Name, selected.Title), res.String(), nil
+	return resTitle.String(), resBody.String(), nil
 }
 
 // ActivationContext used for variables in activation email
@@ -73,18 +84,29 @@ func NewActivationEmail(ctx context.Context, settings setting.Provider, user *en
 		Url:           url,
 	}
 
-	tmpl, err := template.New("activation").Parse(selected.Body)
+	tmplTitle, err := template.New("activationTitle").Parse(selected.Title)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to parse email title: %w", err)
+	}
+
+	var resTitle strings.Builder
+	err = tmplTitle.Execute(&resTitle, activationCtx)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to execute email title: %w", err)
+	}
+
+	tmplBody, err := template.New("activationBody").Parse(selected.Body)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to parse email template: %w", err)
 	}
 
-	var res strings.Builder
-	err = tmpl.Execute(&res, activationCtx)
+	var resBody strings.Builder
+	err = tmplBody.Execute(&resBody, activationCtx)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to execute email template: %w", err)
 	}
 
-	return fmt.Sprintf("[%s] %s", activationCtx.SiteBasic.Name, selected.Title), res.String(), nil
+	return resTitle.String(), resBody.String(), nil
 }
 
 func commonContext(ctx context.Context, settings setting.Provider) *CommonContext {
