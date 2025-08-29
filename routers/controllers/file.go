@@ -436,17 +436,3 @@ func ResetThumb(c *gin.Context) {
     c.JSON(200, serializer.Response{Data: resp})
 }
 
-// ThumbExts gets supported thumbnail extensions
-func ThumbExts(c *gin.Context) {
-    service := ParametersFromContext[*explorer.ThumbExtsService](c, explorer.ThumbExtsParamCtx{})
-    resp, err := service.Get(c)
-    if err != nil {
-        c.JSON(200, serializer.Err(c, err))
-        c.Abort()
-        return
-    }
-
-    c.JSON(200, serializer.Response{
-        Data: resp,
-    })
-}

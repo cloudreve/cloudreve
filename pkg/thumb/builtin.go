@@ -19,6 +19,10 @@ import (
 
 const thumbTempFolder = "thumb"
 
+// BuiltinSupportedExts lists file extensions supported by the built-in
+// thumbnail generator. Extensions are lowercased and do not include the dot.
+var BuiltinSupportedExts = []string{"jpg", "jpeg", "png", "gif"}
+
 // Thumb 缩略图
 type Thumb struct {
 	src image.Image

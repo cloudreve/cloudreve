@@ -4,8 +4,6 @@ import (
     "context"
     "errors"
     "fmt"
-    "sort"
-    "strings"
 
     "github.com/cloudreve/Cloudreve/v4/application/dependency"
     "github.com/cloudreve/Cloudreve/v4/inventory"
@@ -113,76 +111,4 @@ func (s *ResetThumbService) Reset(c context.Context) (*ResetThumbResponse, error
 	return &ResetThumbResponse{}, nil
 }
 
-type (
-	// ThumbExtsParamCtx defines context for ThumbExtsService
-	ThumbExtsParamCtx struct{}
-
-	// ThumbExtsService handles getting supported thumbnail extensions
-	ThumbExtsService struct{}
-
-	// ThumbExtsResponse represents the response for supported extensions
-	ThumbExtsResponse struct {
-		Exts []string `json:"exts"`
-	}
-)
-
-// Get returns all supported thumbnail extensions from enabled generators
-func (s *ThumbExtsService) Get(c context.Context) (*ThumbExtsResponse, error) {
-    dep := dependency.FromContext(c)
-    settings := dep.SettingProvider()
-
-    extensions := make(map[string]bool)
-
-	// Built-in generator (always supports these if enabled)
-	if settings.BuiltinThumbGeneratorEnabled(c) {
-		for _, ext := range []string{"jpg", "jpeg", "png", "gif"} {
-			extensions[ext] = true
-		}
-	}
-
-    // FFMpeg generator
-    if settings.FFMpegThumbGeneratorEnabled(c) {
-        for _, ext := range settings.FFMpegThumbExts(c) {
-            extensions[strings.ToLower(ext)] = true
-        }
-    }
-
-    // Vips generator
-    if settings.VipsThumbGeneratorEnabled(c) {
-        for _, ext := range settings.VipsThumbExts(c) {
-            extensions[strings.ToLower(ext)] = true
-        }
-    }
-
-    // LibreOffice generator
-    if settings.LibreOfficeThumbGeneratorEnabled(c) {
-        for _, ext := range settings.LibreOfficeThumbExts(c) {
-            extensions[strings.ToLower(ext)] = true
-        }
-    }
-
-    // Music cover generator
-    if settings.MusicCoverThumbGeneratorEnabled(c) {
-        for _, ext := range settings.MusicCoverThumbExts(c) {
-            extensions[strings.ToLower(ext)] = true
-        }
-    }
-
-    // LibRaw generator
-    if settings.LibRawThumbGeneratorEnabled(c) {
-        for _, ext := range settings.LibRawThumbExts(c) {
-            extensions[strings.ToLower(ext)] = true
-        }
-    }
-
-	// Convert map to sorted slice
-	result := make([]string, 0, len(extensions))
-	for ext := range extensions {
-		result = append(result, ext)
-	}
-
-	// Sort extensions alphabetically using Go's built-in sort
-	sort.Strings(result)
-
-	return &ThumbExtsResponse{Exts: result}, nil
-}
+// (Thumb ext list API removed; use site config section "thumb")

@@ -614,22 +614,17 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					controllers.ServeEntity,
 				)
 			}
-			// 获取缩略图
+			// get thumb
 			file.GET("thumb",
 				middleware.ContextHint(),
 				controllers.FromQuery[explorer.FileThumbService](explorer.FileThumbParameterCtx{}),
 				controllers.Thumb,
 			)
-            // 重置缩略图
-            file.POST("thumb/reset",
-                controllers.FromJSON[explorer.ResetThumbService](explorer.ResetThumbParamCtx{}),
-                middleware.ValidateBatchFileCount(dep, explorer.ResetThumbParamCtx{}),
-                controllers.ResetThumb,
-            )
-			// 获取支持的缩略图扩展名
-			file.GET("thumb/exts",
-				controllers.FromQuery[explorer.ThumbExtsService](explorer.ThumbExtsParamCtx{}),
-				controllers.ThumbExts,
+			// reset thumb
+			file.POST("thumb/reset",
+				controllers.FromJSON[explorer.ResetThumbService](explorer.ResetThumbParamCtx{}),
+				middleware.ValidateBatchFileCount(dep, explorer.ResetThumbParamCtx{}),
+				controllers.ResetThumb,
 			)
 			// Delete files
 			file.DELETE("",
