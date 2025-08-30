@@ -412,27 +412,3 @@ func PatchView(c *gin.Context) {
 
 	c.JSON(200, serializer.Response{})
 }
-
-// ResetThumb resets thumbnail generation for files
-func ResetThumb(c *gin.Context) {
-    service := ParametersFromContext[*explorer.ResetThumbService](c, explorer.ResetThumbParamCtx{})
-    resp, err := service.Reset(c)
-    if err != nil {
-        c.JSON(200, serializer.Err(c, err))
-        c.Abort()
-        return
-    }
-
-    if resp != nil && len(resp.Errors) > 0 {
-        // Return error response with detailed errors
-        c.JSON(200, serializer.Response{
-            Code: -1,
-            Msg:  "Reset thumbnail error",
-            Data: resp,
-        })
-        return
-    }
-
-    c.JSON(200, serializer.Response{Data: resp})
-}
-
