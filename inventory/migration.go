@@ -370,6 +370,69 @@ var patches = []Patch{
 			return nil
 		},
 	},
+	{
+		Name:       "apply_email_title_magic_var",
+		EndVersion: "4.7.0",
+		Func: func(l logging.Logger, client *ent.Client, ctx context.Context) error {
+			// 1. Activate Template
+			mailActivationTemplateSetting, err := client.Setting.Query().Where(setting.Name("mail_activation_template")).First(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to query mail_activation_template setting: %w", err)
+			}
+
+			var mailActivationTemplate []struct {
+				Title    string `json:"title"`
+				Body     string `json:"body"`
+				Language string `json:"language"`
+			}
+			if err := json.Unmarshal([]byte(mailActivationTemplateSetting.Value), &mailActivationTemplate); err != nil {
+				return fmt.Errorf("failed to unmarshal mail_activation_template setting: %w", err)
+			}
+
+			for i, t := range mailActivationTemplate {
+				mailActivationTemplate[i].Title = fmt.Sprintf("[{{ .CommonContext.SiteBasic.Name }}] %s", t.Title)
+			}
+
+			newMailActivationTemplate, err := json.Marshal(mailActivationTemplate)
+			if err != nil {
+				return fmt.Errorf("failed to marshal mail_activation_template setting: %w", err)
+			}
+
+			if _, err := client.Setting.UpdateOne(mailActivationTemplateSetting).SetValue(string(newMailActivationTemplate)).Save(ctx); err != nil {
+				return fmt.Errorf("failed to update mail_activation_template setting: %w", err)
+			}
+
+			// 2. Reset Password Template
+			mailResetTemplateSetting, err := client.Setting.Query().Where(setting.Name("mail_reset_template")).First(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to query mail_reset_template setting: %w", err)
+			}
+
+			var mailResetTemplate []struct {
+				Title    string `json:"title"`
+				Body     string `json:"body"`
+				Language string `json:"language"`
+			}
+			if err := json.Unmarshal([]byte(mailResetTemplateSetting.Value), &mailResetTemplate); err != nil {
+				return fmt.Errorf("failed to unmarshal mail_reset_template setting: %w", err)
+			}
+
+			for i, t := range mailResetTemplate {
+				mailResetTemplate[i].Title = fmt.Sprintf("[{{ .CommonContext.SiteBasic.Name }}] %s", t.Title)
+			}
+			
+			newMailResetTemplate, err := json.Marshal(mailResetTemplate)
+			if err != nil {
+				return fmt.Errorf("failed to marshal mail_reset_template setting: %w", err)
+			}
+
+			if _, err := client.Setting.UpdateOne(mailResetTemplateSetting).SetValue(string(newMailResetTemplate)).Save(ctx); err != nil {
+				return fmt.Errorf("failed to update mail_reset_template setting: %w", err)
+			}
+
+			return nil
+		},
+	},
 }
 
 func applyPatches(l logging.Logger, client *ent.Client, ctx context.Context, requiredDbVersion string) error {
