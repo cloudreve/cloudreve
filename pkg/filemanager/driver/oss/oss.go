@@ -334,6 +334,15 @@ func (handler *Driver) Thumb(ctx context.Context, expire *time.Time, ext string,
 
 	w, h := handler.settings.ThumbSize(ctx)
 	thumbParam := fmt.Sprintf("image/resize,m_lfit,h_%d,w_%d", h, w)
+
+	enco := handler.settings.ThumbEncode(ctx)
+	switch enco.Format {
+	case "jpg", "webp":
+		thumbParam += fmt.Sprintf("/format,%s/quality,q_%d", enco.Format, enco.Quality)
+	case "png":
+		thumbParam += fmt.Sprintf("/format,%s", enco.Format)
+	}
+
 	thumbOption := []oss.Option{oss.Process(thumbParam)}
 	thumbURL, err := handler.signSourceURL(
 		ctx,

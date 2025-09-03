@@ -203,8 +203,16 @@ func (handler *Driver) Delete(ctx context.Context, files ...string) ([]string, e
 // Thumb 获取文件缩略图
 func (handler *Driver) Thumb(ctx context.Context, expire *time.Time, ext string, e fs.Entity) (string, error) {
 	w, h := handler.settings.ThumbSize(ctx)
-
 	thumbParam := fmt.Sprintf("!/fwfh/%dx%d", w, h)
+
+	enco := handler.settings.ThumbEncode(ctx)
+	switch enco.Format {
+	case "jpg", "webp":
+		thumbParam += fmt.Sprintf("/format/%s/quality/%d", enco.Format, enco.Quality)
+	case "png":
+		thumbParam += fmt.Sprintf("/format/%s", enco.Format)
+	}
+
 	thumbURL, err := handler.signURL(ctx, e.Source()+thumbParam, nil, expire)
 	if err != nil {
 		return "", err

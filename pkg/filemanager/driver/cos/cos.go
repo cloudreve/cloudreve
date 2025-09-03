@@ -352,6 +352,14 @@ func (handler Driver) Thumb(ctx context.Context, expire *time.Time, ext string, 
 	w, h := handler.settings.ThumbSize(ctx)
 	thumbParam := fmt.Sprintf("imageMogr2/thumbnail/%dx%d", w, h)
 
+	enco := handler.settings.ThumbEncode(ctx)
+	switch enco.Format {
+	case "jpg", "webp":
+		thumbParam += fmt.Sprintf("/format/%s/rquality/%d", enco.Format, enco.Quality)
+	case "png":
+		thumbParam += fmt.Sprintf("/format/%s", enco.Format)
+	}
+
 	source, err := handler.signSourceURL(
 		ctx,
 		e.Source(),

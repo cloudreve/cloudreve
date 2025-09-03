@@ -298,7 +298,48 @@ func (handler *Driver) Delete(ctx context.Context, files ...string) ([]string, e
 
 // Thumb 获取缩略图URL
 func (handler *Driver) Thumb(ctx context.Context, expire *time.Time, ext string, e fs.Entity) (string, error) {
-	return "", errors.New("not implemented")
+	w, h := handler.settings.ThumbSize(ctx)
+	thumbParam := fmt.Sprintf("@base@tag=imgScale&m=0&w=%d&h=%d", w, h)
+
+	enco := handler.settings.ThumbEncode(ctx)
+	switch enco.Format {
+	case "jpg", "webp":
+		thumbParam += fmt.Sprintf("&q=%d&F=%s", enco.Quality, enco.Format)
+	case "png":
+	    thumbParam += fmt.Sprintf("&F=%s", enco.Format)
+	}
+
+	// 确保过期时间不小于 0 ，如果小于则设置为 7 天
+	var ttl int64
+	if expire != nil {
+		ttl = int64(time.Until(*expire).Seconds())
+	} else {
+		ttl = 604800
+	}
+
+	thumbUrl, err := handler.svc.GeneratePresignedUrl(&s3.GeneratePresignedUrlInput{
+		HTTPMethod: s3.GET,                            // 请求方法
+		Bucket:     &handler.policy.BucketName,        // 存储空间名称
+		Key:        aws.String(e.Source()+thumbParam), // 对象的key
+		Expires:    ttl,                               // 过期时间，转换为秒数
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	// 将最终生成的签名URL域名换成用户自定义的加速域名（如果有）
+	finalThumbURL, err := url.Parse(thumbUrl)
+	if err != nil {
+		return "", err
+	}
+
+	// 公有空间替换掉Key及不支持的头
+	if !handler.policy.IsPrivate {
+		finalThumbURL.RawQuery = ""
+	}
+
+	return finalThumbURL.String(), nil
 }
 
 // Source 获取文件外链
