@@ -185,9 +185,8 @@ func (m *manager) generateThumb(ctx context.Context, uri *fs.URI, ext string, es
 				Uri:  uri,
 				Size: fileInfo.Size(),
 				SavePath: fmt.Sprintf(
-					"%s.%s%s",
+					"%s%s",
 					es.Entity().Source(),
-					util.RandStringRunes(16),
 					m.settings.ThumbEntitySuffix(ctx),
 				),
 				MimeType:   m.dep.MimeDetector(ctx).TypeByName("thumb.jpg"),
