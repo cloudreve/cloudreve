@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/bodgit/sevenzip"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
@@ -17,6 +18,9 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs/dbfs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager/entitysource"
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
+	"golang.org/x/text/encoding/charmap"
+	"golang.org/x/text/encoding/simplifiedchinese"
+	"golang.org/x/text/transform"
 	"golang.org/x/tools/container/intsets"
 )
 
@@ -35,6 +39,30 @@ const (
 
 func init() {
 	gob.Register([]ArchivedFile{})
+}
+
+func normalizeArchiveName(rawString string) string {
+	// 1. 有效 UTF-8
+	if utf8.ValidString(rawString) {
+		return rawString
+	}
+
+	// 2. 尝试 GB18030（GBK 的超集）
+	if dec, _, err := transform.String(simplifiedchinese.GB18030.NewDecoder(), rawString); err == nil && utf8.ValidString(dec) {
+		return dec
+	}
+
+	// 3. 尝试 GBK
+	if dec, _, err := transform.String(simplifiedchinese.GBK.NewDecoder(), rawString); err == nil && utf8.ValidString(dec) {
+		return dec
+	}
+
+	// 4. 尝试 CP437（ZIP 规范默认）
+	if dec, _, err := transform.String(charmap.CodePage437.NewDecoder(), rawString); err == nil && utf8.ValidString(dec) {
+		return dec
+	}
+
+	return rawString
 }
 
 func (m *manager) ListArchiveFiles(ctx context.Context, uri *fs.URI, entity string) ([]ArchivedFile, error) {
@@ -86,6 +114,10 @@ func (m *manager) ListArchiveFiles(ctx context.Context, uri *fs.URI, entity stri
 	fileList, err := readerFunc(ctx, sr, targetEntity.Size())
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file list: %w", err)
+	}
+
+	for i := range fileList {
+		fileList[i].Name = normalizeArchiveName(fileList[i].Name)
 	}
 
 	kv.Set(cacheKey, fileList, ArchiveListCacheTTL)
