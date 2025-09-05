@@ -341,7 +341,6 @@ func (d *Driver) Thumb(ctx context.Context, expire *time.Time, ext string, e fs.
 	switch enco.Format {
 	case "jpg", "webp":
 		thumbParam += fmt.Sprintf("/format,%s/quality,q_%d", enco.Format, enco.Quality)
-		thumbParam += fmt.Sprintf("/format,%s/quality,q_%d", enco.Format, enco.Quality)
 	case "png":
 		thumbParam += fmt.Sprintf("/format,%s", enco.Format)
 	}
