@@ -125,6 +125,9 @@ func (m *Migrator) migratePolicy() (map[int]bool, error) {
 			}
 		}
 		if !hasRandomElement {
+			if policy.DirNameRule == "" {
+				policy.DirNameRule = "uploads/{uid}/{path}"
+			}
 			policy.FileNameRule = "{uid}_{randomkey8}_{originname}"
 			m.l.Warning("Storage policy %q has no random element in file name rule, using default file name rule.", policy.Name)
 		}
