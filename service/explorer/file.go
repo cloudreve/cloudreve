@@ -26,7 +26,7 @@ import (
 	"github.com/samber/lo"
 )
 
-// SingleFileService 对单文件进行操作的五福，path为文件完整路径
+// SingleFileService 对单文件进行操作的服务，path为文件完整路径
 type SingleFileService struct {
 	Path string `uri:"path" json:"path" binding:"required,min=1,max=65535"`
 }

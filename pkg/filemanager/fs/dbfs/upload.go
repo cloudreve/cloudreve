@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/ent"
@@ -139,7 +140,27 @@ func (f *DBFS) PrepareUpload(ctx context.Context, req *fs.UploadRequest, opts ..
 		return nil, err
 	}
 
-	// Generate save path by storage policy
+	// Check and generate save path by storage policy
+	mustContain := []string{"{randomkey16}", "{randomkey8}", "{uuid}"}
+	hasRandomElement := false
+	for _, c := range mustContain {
+		if strings.Contains(policy.FileNameRule, c) {
+			hasRandomElement = true
+			break
+		}
+
+		if strings.Contains(policy.DirNameRule, c) {
+			hasRandomElement = true
+			break
+		}
+	}
+	if !hasRandomElement {
+		if policy.DirNameRule == "" {
+			policy.DirNameRule = "uploads/{uid}/{path}"
+		}
+		policy.FileNameRule = "{uid}_{randomkey8}_{originname}"
+	}
+
 	isThumbnailAndPolicyNotAvailable := policy.ID != ancestor.Model.StoragePolicyFiles &&
 		(req.Props.EntityType != nil && *req.Props.EntityType == types.EntityTypeThumbnail) &&
 		req.ImportFrom == nil
@@ -147,9 +168,8 @@ func (f *DBFS) PrepareUpload(ctx context.Context, req *fs.UploadRequest, opts ..
 		req.Props.SavePath = generateSavePath(policy, req, f.user)
 		if isThumbnailAndPolicyNotAvailable {
 			req.Props.SavePath = fmt.Sprintf(
-				"%s.%s%s",
+				"%s%s",
 				req.Props.SavePath,
-				util.RandStringRunes(16),
 				f.settingClient.ThumbEntitySuffix(ctx))
 		}
 	}
