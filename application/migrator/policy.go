@@ -103,10 +103,6 @@ func (m *Migrator) migratePolicy() (map[int]bool, error) {
 			settings.ProxyServer = policy.OptionsSerialized.OdProxy
 		}
 
-		if policy.DirNameRule == "" {
-			policy.DirNameRule = "uploads/{uid}/{path}"
-		}
-
 		if policy.Type == types.PolicyTypeCos {
 			settings.ChunkSize = 1024 * 1024 * 25
 		}
@@ -119,6 +115,11 @@ func (m *Migrator) migratePolicy() (map[int]bool, error) {
 		hasRandomElement := false
 		for _, c := range mustContain {
 			if strings.Contains(policy.FileNameRule, c) {
+				hasRandomElement = true
+				break
+			}
+
+			if strings.Contains(policy.DirNameRule, c) {
 				hasRandomElement = true
 				break
 			}
