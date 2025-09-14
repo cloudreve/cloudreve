@@ -292,7 +292,7 @@ func (m *ExtractArchiveTask) masterExtractArchive(ctx context.Context, dep depen
 
 	extractor, ok := format.(archives.Extractor)
 	if !ok {
-		return task.StatusError, fmt.Errorf("format not an extractor %s")
+		return task.StatusError, fmt.Errorf("format not an extractor %s", format.Extension())
 	}
 
 	formatExt := format.Extension()
@@ -409,6 +409,10 @@ func (m *ExtractArchiveTask) masterExtractArchive(ctx context.Context, dep depen
 			Props: &fs.UploadProps{
 				Uri:  savePath,
 				Size: f.Size(),
+				LastModified: func() *time.Time {
+					t := f.FileInfo.ModTime().Local()
+					return &t
+				}(),
 			},
 			ProgressFunc: func(current, diff int64, total int64) {
 				atomic.AddInt64(&m.progress[ProgressTypeExtractSize].Current, diff)
@@ -779,6 +783,10 @@ func (m *SlaveExtractArchiveTask) Do(ctx context.Context) (task.Status, error) {
 			Props: &fs.UploadProps{
 				Uri:  savePath,
 				Size: f.Size(),
+				LastModified: func() *time.Time {
+					t := f.FileInfo.ModTime().Local()
+					return &t
+				}(),
 			},
 			ProgressFunc: func(current, diff int64, total int64) {
 				atomic.AddInt64(&m.progress[ProgressTypeExtractSize].Current, diff)
