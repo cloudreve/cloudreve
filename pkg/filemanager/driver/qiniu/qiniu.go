@@ -223,7 +223,7 @@ func (handler *Driver) Put(ctx context.Context, file *fs.UploadRequest) error {
 
 	mimeType := file.Props.MimeType
 	if mimeType == "" {
-		handler.mime.TypeByName(file.Props.Uri.Name())
+		mimeType = handler.mime.TypeByName(file.Props.Uri.Name())
 	}
 
 	err = resumeUploader.CompleteParts(ctx, upToken, upHost, nil, handler.policy.BucketName,
@@ -389,7 +389,7 @@ func (handler *Driver) Token(ctx context.Context, uploadSession *fs.UploadSessio
 
 	mimeType := file.Props.MimeType
 	if mimeType == "" {
-		handler.mime.TypeByName(file.Props.Uri.Name())
+		mimeType = handler.mime.TypeByName(file.Props.Uri.Name())
 	}
 
 	uploadSession.UploadID = ret.UploadID

@@ -161,7 +161,7 @@ func (handler *Driver) Put(ctx context.Context, file *fs.UploadRequest) error {
 
 	mimeType := file.Props.MimeType
 	if mimeType == "" {
-		handler.mime.TypeByName(file.Props.Uri.Name())
+		mimeType = handler.mime.TypeByName(file.Props.Uri.Name())
 	}
 
 	err := handler.up.Put(&upyun.PutObjectConfig{
@@ -309,7 +309,7 @@ func (handler *Driver) Token(ctx context.Context, uploadSession *fs.UploadSessio
 
 	mimeType := file.Props.MimeType
 	if mimeType == "" {
-		handler.mime.TypeByName(file.Props.Uri.Name())
+		mimeType = handler.mime.TypeByName(file.Props.Uri.Name())
 	}
 
 	return &fs.UploadCredential{

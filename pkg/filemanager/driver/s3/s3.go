@@ -207,7 +207,7 @@ func (handler *Driver) Put(ctx context.Context, file *fs.UploadRequest) error {
 
 	mimeType := file.Props.MimeType
 	if mimeType == "" {
-		handler.mime.TypeByName(file.Props.Uri.Name())
+		mimeType = handler.mime.TypeByName(file.Props.Uri.Name())
 	}
 
 	_, err := uploader.UploadWithContext(ctx, &s3manager.UploadInput{
@@ -344,7 +344,7 @@ func (handler *Driver) Token(ctx context.Context, uploadSession *fs.UploadSessio
 
 	mimeType := file.Props.MimeType
 	if mimeType == "" {
-		handler.mime.TypeByName(file.Props.Uri.Name())
+		mimeType = handler.mime.TypeByName(file.Props.Uri.Name())
 	}
 
 	// 创建分片上传
