@@ -146,10 +146,7 @@ func (f *DBFS) PrepareUpload(ctx context.Context, req *fs.UploadRequest, opts ..
 	if req.Props.SavePath == "" || isThumbnailAndPolicyNotAvailable {
 		req.Props.SavePath = generateSavePath(policy, req, f.user)
 		if isThumbnailAndPolicyNotAvailable {
-			req.Props.SavePath = fmt.Sprintf(
-				"%s%s",
-				req.Props.SavePath,
-				f.settingClient.ThumbEntitySuffix(ctx))
+			req.Props.SavePath = req.Props.SavePath + f.settingClient.ThumbEntitySuffix(ctx)
 		}
 	}
 
