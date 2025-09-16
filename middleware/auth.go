@@ -144,15 +144,7 @@ func WebDAVAuth() gin.HandlerFunc {
 		}
 
 		// 用户组已启用WebDAV？
-		group, err := expectedUser.Edges.GroupOrErr()
-		if err != nil {
-			l.Debug("WebDAVAuth: user group not found: %s", err)
-			c.Status(http.StatusInternalServerError)
-			c.Abort()
-			return
-		}
-
-		if !group.Permissions.Enabled(int(types.GroupPermissionWebDAV)) {
+		if !expectedUser.EnforceGroupPermission(types.GroupPermissionWebDAV) {
 			c.Status(http.StatusForbidden)
 			l.Debug("WebDAVAuth: user %q does not have WebDAV permission.", expectedUser.Email)
 			c.Abort()
@@ -262,7 +254,7 @@ func OSSCallbackAuth() gin.HandlerFunc {
 func IsAdmin() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user := inventory.UserFromContext(c)
-		if !user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+		if !user.EnforceGroupPermission(types.GroupPermissionIsAdmin) {
 			c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeNoPermissionErr, "", nil))
 			c.Abort()
 			return

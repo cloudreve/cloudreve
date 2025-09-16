@@ -156,7 +156,7 @@ func (n *shareNavigator) Root(ctx context.Context, path *fs.URI) (*File, error) 
 		return nil, ErrShareNotFound
 	}
 
-	if n.user.ID != n.owner.ID && !n.user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionShareDownload)) {
+	if n.user.ID != n.owner.ID && !n.user.EnforceGroupPermission(types.GroupPermissionShareDownload) {
 		if inventory.IsAnonymousUser(n.user) {
 			return nil, serializer.NewError(
 				serializer.CodeAnonymouseAccessDenied,

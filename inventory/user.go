@@ -16,6 +16,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/davaccount"
 	"github.com/cloudreve/Cloudreve/v4/ent/file"
+	"github.com/cloudreve/Cloudreve/v4/ent/group"
 	"github.com/cloudreve/Cloudreve/v4/ent/passkey"
 	"github.com/cloudreve/Cloudreve/v4/ent/schema"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
@@ -309,7 +310,7 @@ func (c *userClient) Create(ctx context.Context, args *NewUserArgs) (*ent.User, 
 		SetEmail(args.Email).
 		SetNick(nick).
 		SetStatus(args.Status).
-		SetGroupID(args.GroupID).
+		AddGroupIDs(args.GroupID).
 		SetAvatar(args.Avatar)
 
 	if args.PlainPassword != "" {
@@ -334,7 +335,7 @@ func (c *userClient) Create(ctx context.Context, args *NewUserArgs) (*ent.User, 
 
 	if newUser.ID == 1 {
 		// For the first user registered, elevate it to admin group.
-		if _, err := newUser.Update().SetGroupID(1).Save(ctx); err != nil {
+		if _, err := newUser.Update().AddGroupIDs(1).Save(ctx); err != nil {
 			return newUser, fmt.Errorf("failed to elevate user to admin: %w", err)
 		}
 	}
@@ -434,14 +435,14 @@ func (c *userClient) AnonymousUser(ctx context.Context) (*ent.User, error) {
 	anonymous := &ent.User{
 		Settings: &types.UserSetting{},
 	}
-	anonymous.SetGroup(anonymousGroup)
+	anonymous.SetGroup([]*ent.Group{anonymousGroup})
 	return anonymous, nil
 }
 
 func (c *userClient) ListUsers(ctx context.Context, args *ListUserParameters) (*ListUserResult, error) {
 	query := c.client.User.Query()
 	if args.GroupID != 0 {
-		query = query.Where(user.GroupUsers(args.GroupID))
+		query = query.Where(user.HasGroupWith(group.ID(args.GroupID)))
 	}
 	if args.Status != "" {
 		query = query.Where(user.StatusEQ(args.Status))
@@ -482,7 +483,7 @@ func (c *userClient) Upsert(ctx context.Context, u *ent.User, password, twoFa st
 			SetNick(u.Nick).
 			SetAvatar(u.Avatar).
 			SetStatus(u.Status).
-			SetGroupID(u.GroupUsers).
+			AddGroup(u.Edges.Group...).
 			SetPassword(u.Password).
 			SetSettings(&types.UserSetting{})
 
@@ -502,7 +503,7 @@ func (c *userClient) Upsert(ctx context.Context, u *ent.User, password, twoFa st
 		SetNick(u.Nick).
 		SetAvatar(u.Avatar).
 		SetStatus(u.Status).
-		SetGroupID(u.GroupUsers)
+		AddGroup(u.Edges.Group...)
 
 	if password != "" {
 		pwdDigest, err := digestPassword(password)

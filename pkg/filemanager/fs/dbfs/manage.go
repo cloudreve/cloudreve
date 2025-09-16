@@ -290,7 +290,7 @@ func (f *DBFS) SoftDelete(ctx context.Context, path ...*fs.URI) error {
 		if err := fc.UpsertMetadata(ctx, target.Model, map[string]string{
 			MetadataRestoreUri: target.Uri(true).String(),
 			MetadataExpectedCollectTime: strconv.FormatInt(
-				time.Now().Add(time.Duration(target.Owner().Edges.Group.Settings.TrashRetention)*time.Second).Unix(),
+				time.Now().Add(time.Duration(target.Owner().GroupMaxTrashRetention())*time.Second).Unix(),
 				10),
 		}, nil); err != nil {
 			_ = inventory.Rollback(tx)
@@ -665,7 +665,7 @@ func (f *DBFS) TraverseFile(ctx context.Context, fileID int) (fs.File, error) {
 		return nil, err
 	}
 
-	if fileModel.OwnerID != f.user.ID && !f.user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+	if fileModel.OwnerID != f.user.ID && !f.user.EnforceGroupPermission(types.GroupPermissionIsAdmin) {
 		return nil, fs.ErrOwnerOnly.WithError(fmt.Errorf("only file owner can traverse file's uri"))
 	}
 
@@ -800,7 +800,7 @@ func (f *DBFS) copyFiles(ctx context.Context, targets map[Navigator][]*File, des
 	if f.user.Edges.Group == nil {
 		return nil, nil, fmt.Errorf("user group not loaded")
 	}
-	limit := max(f.user.Edges.Group.Settings.MaxWalkedFiles, 1)
+	limit := f.user.GroupMaxWalkedFiles()
 	capacity, err := f.Capacity(ctx, destination.Owner())
 	if err != nil {
 		return nil, nil, fmt.Errorf("copy files: failed to destination owner capacity: %w", err)
