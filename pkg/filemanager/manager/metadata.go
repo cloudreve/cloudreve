@@ -97,6 +97,15 @@ var (
 			},
 		},
 		"dav": {},
+		// Allow manipulating thumbnail metadata via public PatchMetadata API
+		"thumb": {
+			// Only supported thumb metadata currently is thumb:disabled
+			dbfs.ThumbDisabledKey: func(ctx context.Context, m *manager, patch *fs.MetadataPatch) error {
+				// Presence of this key disables thumbnails; value is ignored.
+				// We allow both setting and removing this key.
+				return nil
+			},
+		},
 		customizeMetadataSuffix: {
 			iconColorMetadataKey: validateColor(false),
 			emojiIconMetadataKey: func(ctx context.Context, m *manager, patch *fs.MetadataPatch) error {
