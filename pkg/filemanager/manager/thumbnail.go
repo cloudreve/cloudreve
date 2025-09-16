@@ -182,13 +182,9 @@ func (m *manager) generateThumb(ctx context.Context, uri *fs.URI, ext string, es
 		entityType := types.EntityTypeThumbnail
 		req := &fs.UploadRequest{
 			Props: &fs.UploadProps{
-				Uri:  uri,
-				Size: fileInfo.Size(),
-				SavePath: fmt.Sprintf(
-					"%s%s",
-					es.Entity().Source(),
-					m.settings.ThumbEntitySuffix(ctx),
-				),
+				Uri:        uri,
+				Size:       fileInfo.Size(),
+				SavePath:   es.Entity().Source() + m.settings.ThumbEntitySuffix(ctx),
 				MimeType:   m.dep.MimeDetector(ctx).TypeByName("thumb.jpg"),
 				EntityType: &entityType,
 			},
