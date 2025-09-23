@@ -620,7 +620,6 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				controllers.FromQuery[explorer.FileThumbService](explorer.FileThumbParameterCtx{}),
 				controllers.Thumb,
 			)
-			// reset thumb removed; use metadata patch to re-enable thumbnails
 			// Delete files
 			file.DELETE("",
 				controllers.FromJSON[explorer.DeleteFileService](explorer.DeleteFileParameterCtx{}),
