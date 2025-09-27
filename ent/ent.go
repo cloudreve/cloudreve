@@ -17,6 +17,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/entity"
 	"github.com/cloudreve/Cloudreve/v4/ent/file"
 	"github.com/cloudreve/Cloudreve/v4/ent/group"
+	"github.com/cloudreve/Cloudreve/v4/ent/membership"
 	"github.com/cloudreve/Cloudreve/v4/ent/metadata"
 	"github.com/cloudreve/Cloudreve/v4/ent/node"
 	"github.com/cloudreve/Cloudreve/v4/ent/passkey"
@@ -90,6 +91,7 @@ func checkColumn(table, column string) error {
 			entity.Table:        entity.ValidColumn,
 			file.Table:          file.ValidColumn,
 			group.Table:         group.ValidColumn,
+			membership.Table:    membership.ValidColumn,
 			metadata.Table:      metadata.ValidColumn,
 			node.Table:          node.ValidColumn,
 			passkey.Table:       passkey.ValidColumn,

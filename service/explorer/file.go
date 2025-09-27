@@ -100,11 +100,11 @@ func (s *GetDirectLinkService) Get(c *gin.Context) ([]DirectLinkResponse, error)
 	dep := dependency.FromContext(c)
 	u := inventory.UserFromContext(c)
 
-	if u.Edges.Group.Settings.SourceBatchSize == 0 {
+	if u.GroupMaxSourceBatchSize() == 0 {
 		return nil, serializer.NewError(serializer.CodeGroupNotAllowed, "", nil)
 	}
 
-	if len(s.Uris) > u.Edges.Group.Settings.SourceBatchSize {
+	if len(s.Uris) > u.GroupMaxSourceBatchSize() {
 		return nil, serializer.NewError(serializer.CodeBatchSourceSize, "", nil)
 	}
 
@@ -394,7 +394,7 @@ func (s *FileURLService) GetArchiveDownloadSession(c *gin.Context) (*FileURLResp
 		return nil, serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
 	}
 
-	if !user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionArchiveDownload)) {
+	if !user.EnforceGroupPermission(types.GroupPermissionArchiveDownload) {
 		return nil, serializer.NewError(serializer.CodeGroupNotAllowed, "", nil)
 	}
 
@@ -454,7 +454,7 @@ func (s *FileURLService) Get(c *gin.Context) (*FileURLResponse, error) {
 	}
 
 	res, earliestExpire, err := m.GetEntityUrls(ctx, urlReq,
-		fs.WithDownloadSpeed(int64(user.Edges.Group.SpeedLimit)),
+		fs.WithDownloadSpeed(int64(user.GroupMaxSpeedLimit())),
 		fs.WithIsDownload(s.Download),
 		fs.WithNoCache(s.NoCache),
 		fs.WithUrlExpire(&expire),
@@ -547,7 +547,7 @@ func (s *DeleteFileService) Delete(c *gin.Context) error {
 		return serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
 	}
 
-	if s.UnlinkOnly && !user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionAdvanceDelete)) {
+	if s.UnlinkOnly && !user.EnforceGroupPermission(types.GroupPermissionAdvanceDelete) {
 		return serializer.NewError(serializer.CodeNoPermissionErr, "advance delete permission is required", nil)
 	}
 
@@ -731,7 +731,7 @@ func (s *ArchiveListFilesService) List(c *gin.Context) (*ArchiveListFilesRespons
 	user := inventory.UserFromContext(c)
 	m := manager.NewFileManager(dep, user)
 	defer m.Recycle()
-	if !user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionArchiveTask)) {
+	if !user.EnforceGroupPermission(types.GroupPermissionArchiveTask) {
 		return nil, serializer.NewError(serializer.CodeGroupNotAllowed, "Group not allowed to extract archive files", nil)
 	}
 

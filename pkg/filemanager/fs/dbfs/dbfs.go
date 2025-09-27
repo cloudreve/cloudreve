@@ -229,13 +229,8 @@ func (f *DBFS) Capacity(ctx context.Context, u *ent.User) (*fs.Capacity, error) 
 		res = &fs.Capacity{}
 	)
 
-	requesterGroup, err := u.Edges.GroupOrErr()
-	if err != nil {
-		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get user's group", err)
-	}
-
 	res.Used = f.user.Storage
-	res.Total = requesterGroup.MaxStorage
+	res.Total = f.user.GroupMaxStorage()
 	return res, nil
 }
 
@@ -426,7 +421,7 @@ func (f *DBFS) Get(ctx context.Context, path *fs.URI, opts ...fs.Option) (fs.Fil
 		}
 
 		target.FileExtendedInfo = extendedInfo
-		if target.OwnerID() == f.user.ID || f.user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+		if target.OwnerID() == f.user.ID || f.user.EnforceGroupPermission(types.GroupPermissionIsAdmin) {
 			target.FileExtendedInfo.Shares = target.Model.Edges.Shares
 			if target.Model.Props != nil {
 				target.FileExtendedInfo.View = target.Model.Props.View
@@ -463,7 +458,7 @@ func (f *DBFS) Get(ctx context.Context, path *fs.URI, opts ...fs.Option) (fs.Fil
 			if f.user.Edges.Group == nil {
 				return nil, fmt.Errorf("user group not loaded")
 			}
-			limit := max(f.user.Edges.Group.Settings.MaxWalkedFiles, 1)
+			limit := f.user.GroupMaxWalkedFiles()
 
 			// disable load metadata to speed up
 			ctxWalk := context.WithValue(ctx, inventory.LoadFilePublicMetadata{}, false)
@@ -552,7 +547,7 @@ func (f *DBFS) Walk(ctx context.Context, path *fs.URI, depth int, walk fs.WalkFu
 	if f.user.Edges.Group == nil {
 		return fmt.Errorf("user group not loaded")
 	}
-	limit := max(f.user.Edges.Group.Settings.MaxWalkedFiles, 1)
+	limit := f.user.GroupMaxWalkedFiles()
 
 	if err := navigator.Walk(ctx, []*File{target}, limit, depth, func(files []*File, l int) error {
 		for _, file := range files {
@@ -647,7 +642,7 @@ func (f *DBFS) createFile(ctx context.Context, parent *File, name string, fileTy
 
 // getPreferredPolicy tries to get the preferred storage policy for the given file.
 func (f *DBFS) getPreferredPolicy(ctx context.Context, file *File) (*ent.StoragePolicy, error) {
-	ownerGroup := file.Owner().Edges.Group
+	ownerGroup := file.Owner().GetPrimaryGroup()
 	if ownerGroup == nil {
 		return nil, fmt.Errorf("owner group not loaded")
 	}

@@ -2,7 +2,9 @@ package admin
 
 import (
 	"context"
+	"slices"
 	"strconv"
+	"unicode/utf8"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/ent"
@@ -154,8 +156,10 @@ func (s *UpsertUserService) Update(c *gin.Context) (*GetUserResponse, error) {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get user", err)
 	}
 
-	if s.User.ID == 1 && existing.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
-		if s.User.GroupUsers != existing.GroupUsers {
+	if s.User.ID == 1 && existing.EnforceGroupPermission(types.GroupPermissionIsAdmin) {
+		if !slices.EqualFunc(s.User.Edges.Group, existing.Edges.Group, func(a *ent.Group, b *ent.Group) bool {
+			return a.ID == b.ID
+		}) {
 			return nil, serializer.NewError(serializer.CodeInvalidActionOnDefaultUser, "Cannot change default user's group", nil)
 		}
 
@@ -165,7 +169,7 @@ func (s *UpsertUserService) Update(c *gin.Context) (*GetUserResponse, error) {
 
 	}
 
-	if s.Password != "" && len(s.Password) > 128 {
+	if s.Password != "" && utf8.RuneCountInString(s.Password) > 128 {
 		return nil, serializer.NewError(serializer.CodeParamErr, "Password too long", nil)
 	}
 

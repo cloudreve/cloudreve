@@ -39,8 +39,6 @@ const (
 	FieldAvatar = "avatar"
 	// FieldSettings holds the string denoting the settings field in the database.
 	FieldSettings = "settings"
-	// FieldGroupUsers holds the string denoting the group_users field in the database.
-	FieldGroupUsers = "group_users"
 	// EdgeGroup holds the string denoting the group edge name in mutations.
 	EdgeGroup = "group"
 	// EdgeFiles holds the string denoting the files edge name in mutations.
@@ -55,15 +53,15 @@ const (
 	EdgeTasks = "tasks"
 	// EdgeEntities holds the string denoting the entities edge name in mutations.
 	EdgeEntities = "entities"
+	// EdgeMembership holds the string denoting the membership edge name in mutations.
+	EdgeMembership = "membership"
 	// Table holds the table name of the user in the database.
 	Table = "users"
-	// GroupTable is the table that holds the group relation/edge.
-	GroupTable = "users"
+	// GroupTable is the table that holds the group relation/edge. The primary key declared below.
+	GroupTable = "memberships"
 	// GroupInverseTable is the table name for the Group entity.
 	// It exists in this package in order to avoid circular dependency with the "group" package.
 	GroupInverseTable = "groups"
-	// GroupColumn is the table column denoting the group relation/edge.
-	GroupColumn = "group_users"
 	// FilesTable is the table that holds the files relation/edge.
 	FilesTable = "files"
 	// FilesInverseTable is the table name for the File entity.
@@ -106,6 +104,13 @@ const (
 	EntitiesInverseTable = "entities"
 	// EntitiesColumn is the table column denoting the entities relation/edge.
 	EntitiesColumn = "created_by"
+	// MembershipTable is the table that holds the membership relation/edge.
+	MembershipTable = "memberships"
+	// MembershipInverseTable is the table name for the Membership entity.
+	// It exists in this package in order to avoid circular dependency with the "membership" package.
+	MembershipInverseTable = "memberships"
+	// MembershipColumn is the table column denoting the membership relation/edge.
+	MembershipColumn = "user_id"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -122,8 +127,13 @@ var Columns = []string{
 	FieldTwoFactorSecret,
 	FieldAvatar,
 	FieldSettings,
-	FieldGroupUsers,
 }
+
+var (
+	// GroupPrimaryKey and GroupColumn2 are the table columns denoting the
+	// primary key for the group relation (M2M).
+	GroupPrimaryKey = []string{"group_id", "user_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -245,15 +255,17 @@ func ByAvatar(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAvatar, opts...).ToFunc()
 }
 
-// ByGroupUsers orders the results by the group_users field.
-func ByGroupUsers(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldGroupUsers, opts...).ToFunc()
+// ByGroupCount orders the results by group count.
+func ByGroupCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newGroupStep(), opts...)
+	}
 }
 
-// ByGroupField orders the results by group field.
-func ByGroupField(field string, opts ...sql.OrderTermOption) OrderOption {
+// ByGroup orders the results by group terms.
+func ByGroup(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newGroupStep(), sql.OrderByField(field, opts...))
+		sqlgraph.OrderByNeighborTerms(s, newGroupStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 
@@ -340,11 +352,25 @@ func ByEntities(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newEntitiesStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByMembershipCount orders the results by membership count.
+func ByMembershipCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newMembershipStep(), opts...)
+	}
+}
+
+// ByMembership orders the results by membership terms.
+func ByMembership(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newMembershipStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newGroupStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(GroupInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, true, GroupTable, GroupColumn),
+		sqlgraph.Edge(sqlgraph.M2M, true, GroupTable, GroupPrimaryKey...),
 	)
 }
 func newFilesStep() *sqlgraph.Step {
@@ -387,5 +413,12 @@ func newEntitiesStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(EntitiesInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, EntitiesTable, EntitiesColumn),
+	)
+}
+func newMembershipStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(MembershipInverseTable, MembershipColumn),
+		sqlgraph.Edge(sqlgraph.O2M, true, MembershipTable, MembershipColumn),
 	)
 }
