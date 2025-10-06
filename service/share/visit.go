@@ -2,6 +2,7 @@ package share
 
 import (
 	"context"
+	"strings"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/ent"
@@ -25,7 +26,26 @@ type (
 )
 
 func (s *ShortLinkRedirectService) RedirectTo(c *gin.Context) string {
-	return routes.MasterShareLongUrl(s.ID, s.Password).String()
+	shareLongUrl := routes.MasterShareLongUrl(s.ID, s.Password)
+
+	shortLinkQuery := c.Request.URL.Query() // Query in ShortLink, adapt to Cloudreve V3
+	shareLongUrlQuery := shareLongUrl.Query()
+
+	userSpecifiedPath := shortLinkQuery.Get("path")
+	if userSpecifiedPath != "" {
+		masterPath := shareLongUrlQuery.Get("path")
+		masterPath += "/" + strings.TrimPrefix(userSpecifiedPath, "/")
+
+		shareLongUrlQuery.Set("path", masterPath)
+	}
+
+	shortLinkQuery.Del("path") // 防止用户指定的 Path 就是空字符串
+	for k, vals := range shortLinkQuery {
+		shareLongUrlQuery[k] = append(shareLongUrlQuery[k], vals...)
+	}
+
+	shareLongUrl.RawQuery = shareLongUrlQuery.Encode()
+	return shareLongUrl.String()
 }
 
 type (
