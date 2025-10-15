@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aliyun/alibabacloud-oss-go-sdk-v2/oss"
+	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver"
 	"github.com/cloudreve/Cloudreve/v4/pkg/mediameta"
 	"github.com/cloudreve/Cloudreve/v4/pkg/request"
@@ -266,14 +266,13 @@ func (handler *Driver) extractImageMeta(ctx context.Context, path string) ([]dri
 
 // extractMediaInfo Sends API calls to OSS IMM service to extract media info.
 func (handler *Driver) extractMediaInfo(ctx context.Context, path string, category string, forceSign bool) (string, error) {
+	mediaOption := []oss.Option{oss.Process(category)}
 	mediaInfoExpire := time.Now().Add(mediaInfoTTL)
 	thumbURL, err := handler.signSourceURL(
 		ctx,
 		path,
 		&mediaInfoExpire,
-		&oss.GetObjectRequest{
-			Process: oss.Ptr(category),
-		},
+		mediaOption,
 		forceSign,
 	)
 	if err != nil {

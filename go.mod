@@ -6,7 +6,7 @@ require (
 	entgo.io/ent v0.13.0
 	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/abslant/gzip v0.0.9
-	github.com/aliyun/alibabacloud-oss-go-sdk-v2 v1.3.0
+	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible
 	github.com/aws/aws-sdk-go v1.31.5
 	github.com/bodgit/sevenzip v1.6.0
 	github.com/cloudflare/cfssl v1.6.1
