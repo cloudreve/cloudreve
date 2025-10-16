@@ -439,7 +439,7 @@ func (handler *Driver) Source(ctx context.Context, e fs.Entity, args *driver.Get
 }
 
 func (handler *Driver) signSourceURL(ctx context.Context, path string, expire *time.Time, req *oss.GetObjectRequest, forceSign bool) (string, error) {
-	ttl := time.Duration(24) * time.Hour * 365 * 20
+	ttl := time.Duration(24) * time.Hour * 7 // V4 Sign 最大过期时间为7天
 	if expire != nil {
 		ttl = time.Until(*expire)
 	}
@@ -466,10 +466,15 @@ func (handler *Driver) signSourceURL(ctx context.Context, path string, expire *t
 	// 公有空间替换掉Key及不支持的头
 	if !handler.policy.IsPrivate && !forceSign {
 		query := finalURL.Query()
-		query.Del("OSSAccessKeyId")
-		query.Del("Signature")
+		query.Del("x-oss-credential")
+		query.Del("x-oss-date")
+		query.Del("x-oss-expires")
+		query.Del("x-oss-signature")
+		query.Del("x-oss-signature-version")
 		query.Del("response-content-disposition")
-		query.Del(trafficLimitHeader)
+		// 阿里云 OSS 已支持在公有空间使用限速下载，使用公有空间时可以在 iOS / iPad 客户端等内置下载时实现限速
+		// https://help.aliyun.com/zh/oss/single-connection-bandwidth-throttling-4#section-zka-umg-7dx
+		// query.Del(trafficLimitHeader)
 		finalURL.RawQuery = query.Encode()
 	}
 	return finalURL.String(), nil
