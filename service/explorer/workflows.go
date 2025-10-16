@@ -2,8 +2,9 @@ package explorer
 
 import (
 	"encoding/gob"
-	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 	"time"
+
+	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/ent"
@@ -85,7 +86,7 @@ func (service *DownloadWorkflowService) CreateDownloadTask(c *gin.Context) ([]*T
 	m := manager.NewFileManager(dep, user)
 	defer m.Recycle()
 
-	if !user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionRemoteDownload)) {
+	if !user.EnforceGroupPermission(types.GroupPermissionRemoteDownload) {
 		return nil, serializer.NewError(serializer.CodeGroupNotAllowed, "Group not allowed to download files", nil)
 	}
 
@@ -111,7 +112,7 @@ func (service *DownloadWorkflowService) CreateDownloadTask(c *gin.Context) ([]*T
 	}
 
 	// 检查批量任务数量
-	limit := user.Edges.Group.Settings.Aria2BatchSize
+	limit := user.GroupMaxAria2BatchSize()
 	if limit > 0 && len(service.Src) > limit {
 		return nil, serializer.NewError(serializer.CodeBatchAria2Size, "", nil)
 	}
@@ -186,7 +187,7 @@ func (service *ArchiveWorkflowService) CreateExtractTask(c *gin.Context) (*TaskR
 	m := manager.NewFileManager(dep, user)
 	defer m.Recycle()
 
-	if !user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionArchiveTask)) {
+	if !user.EnforceGroupPermission(types.GroupPermissionArchiveTask) {
 		return nil, serializer.NewError(serializer.CodeGroupNotAllowed, "Group not allowed to compress files", nil)
 	}
 
@@ -225,7 +226,7 @@ func (service *ArchiveWorkflowService) CreateCompressTask(c *gin.Context) (*Task
 	m := manager.NewFileManager(dep, user)
 	defer m.Recycle()
 
-	if !user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionArchiveTask)) {
+	if !user.EnforceGroupPermission(types.GroupPermissionArchiveTask) {
 		return nil, serializer.NewError(serializer.CodeGroupNotAllowed, "Group not allowed to compress files", nil)
 	}
 
@@ -280,7 +281,7 @@ func (service *ImportWorkflowService) CreateImportTask(c *gin.Context) (*TaskRes
 	m := manager.NewFileManager(dep, user)
 	defer m.Recycle()
 
-	if !user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+	if !user.EnforceGroupPermission(types.GroupPermissionIsAdmin) {
 		return nil, serializer.NewError(serializer.CodeGroupNotAllowed, "Only admin can import files", nil)
 	}
 
@@ -388,7 +389,7 @@ func TaskPhaseProgress(c *gin.Context, taskID int) (queue.Progresses, error) {
 	u := inventory.UserFromContext(c)
 	r := dep.TaskRegistry()
 	t, found := r.Get(taskID)
-	if !found || (t.Owner().ID != u.ID && !u.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin))) {
+	if !found || (t.Owner().ID != u.ID && !u.EnforceGroupPermission(types.GroupPermissionIsAdmin)) {
 		return queue.Progresses{}, nil
 	}
 

@@ -61,7 +61,7 @@ type (
 func (m *manager) GetDirectLink(ctx context.Context, urls ...*fs.URI) ([]DirectLink, error) {
 	ae := serializer.NewAggregateError()
 	res := make([]DirectLink, 0, len(urls))
-	useRedirect := m.user.Edges.Group.Settings.RedirectedSource
+	useRedirect := m.user.GetPrimaryGroup().Settings.RedirectedSource
 	fileClient := m.dep.FileClient()
 	siteUrl := m.settings.SiteURL(ctx)
 
@@ -76,7 +76,7 @@ func (m *manager) GetDirectLink(ctx context.Context, urls ...*fs.URI) ([]DirectL
 			continue
 		}
 
-		if file.OwnerID() != m.user.ID && !m.user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+		if file.OwnerID() != m.user.ID && !m.user.EnforceGroupPermission(types.GroupPermissionIsAdmin) {
 			ae.Add(url.String(), fs.ErrOwnerOnly)
 			continue
 		}
@@ -98,9 +98,9 @@ func (m *manager) GetDirectLink(ctx context.Context, urls ...*fs.URI) ([]DirectL
 		}
 
 		if useRedirect {
-			reuseExisting := !m.user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionUniqueRedirectDirectLink))
+			reuseExisting := !m.user.EnforceGroupPermission(types.GroupPermissionUniqueRedirectDirectLink)
 			// Use redirect source
-			link, err := fileClient.CreateDirectLink(ctx, file.ID(), file.Name(), m.user.Edges.Group.SpeedLimit, reuseExisting)
+			link, err := fileClient.CreateDirectLink(ctx, file.ID(), file.Name(), m.user.GroupMaxSpeedLimit(), reuseExisting)
 			if err != nil {
 				ae.Add(url.String(), err)
 				continue
@@ -122,7 +122,7 @@ func (m *manager) GetDirectLink(ctx context.Context, urls ...*fs.URI) ([]DirectL
 			source := entitysource.NewEntitySource(target, d, policy, m.auth, m.settings, m.hasher, m.dep.RequestClient(),
 				m.l, m.config, m.dep.MimeDetector(ctx))
 			sourceUrl, err := source.Url(ctx,
-				entitysource.WithSpeedLimit(int64(m.user.Edges.Group.SpeedLimit)),
+				entitysource.WithSpeedLimit(int64(m.user.GroupMaxSpeedLimit())),
 				entitysource.WithDisplayName(file.Name()),
 			)
 			if err != nil {

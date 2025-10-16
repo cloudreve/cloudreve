@@ -95,8 +95,8 @@ func (m *manager) ListArchiveFiles(ctx context.Context, uri *fs.URI, entity, zip
 	}
 
 	// Validate file size
-	if m.user.Edges.Group.Settings.DecompressSize > 0 && file.Size() > m.user.Edges.Group.Settings.DecompressSize {
-		return nil, fs.ErrFileSizeTooBig.WithError(fmt.Errorf("file size %d exceeds the limit %d", file.Size(), m.user.Edges.Group.Settings.DecompressSize))
+	if m.user.GroupMaxDecompressSize() > 0 && file.Size() > m.user.GroupMaxDecompressSize() {
+		return nil, fs.ErrFileSizeTooBig.WithError(fmt.Errorf("file size %d exceeds the limit %d", file.Size(), m.user.GroupMaxDecompressSize()))
 	}
 
 	found, targetEntity := fs.FindDesiredEntity(file, entity, m.hasher, nil)

@@ -51,9 +51,11 @@ type GroupEdges struct {
 	Users []*User `json:"users,omitempty"`
 	// StoragePolicies holds the value of the storage_policies edge.
 	StoragePolicies *StoragePolicy `json:"storage_policies,omitempty"`
+	// Membership holds the value of the membership edge.
+	Membership []*Membership `json:"membership,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // UsersOrErr returns the Users value or an error if the edge
@@ -76,6 +78,15 @@ func (e GroupEdges) StoragePoliciesOrErr() (*StoragePolicy, error) {
 		return e.StoragePolicies, nil
 	}
 	return nil, &NotLoadedError{edge: "storage_policies"}
+}
+
+// MembershipOrErr returns the Membership value or an error if the edge
+// was not loaded in eager-loading.
+func (e GroupEdges) MembershipOrErr() ([]*Membership, error) {
+	if e.loadedTypes[2] {
+		return e.Membership, nil
+	}
+	return nil, &NotLoadedError{edge: "membership"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -194,6 +205,11 @@ func (gr *Group) QueryStoragePolicies() *StoragePolicyQuery {
 	return NewGroupClient(gr.config).QueryStoragePolicies(gr)
 }
 
+// QueryMembership queries the "membership" edge of the Group entity.
+func (gr *Group) QueryMembership() *MembershipQuery {
+	return NewGroupClient(gr.config).QueryMembership(gr)
+}
+
 // Update returns a builder for updating this Group.
 // Note that you need to call Group.Unwrap() before calling this method if this Group
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -259,6 +275,12 @@ func (e *Group) SetUsers(v []*User) {
 func (e *Group) SetStoragePolicies(v *StoragePolicy) {
 	e.Edges.StoragePolicies = v
 	e.Edges.loadedTypes[1] = true
+}
+
+// SetMembership manually set the edge as loaded state.
+func (e *Group) SetMembership(v []*Membership) {
+	e.Edges.Membership = v
+	e.Edges.loadedTypes[2] = true
 }
 
 // Groups is a parsable slice of Group.

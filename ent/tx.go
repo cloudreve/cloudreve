@@ -24,6 +24,8 @@ type Tx struct {
 	File *FileClient
 	// Group is the client for interacting with the Group builders.
 	Group *GroupClient
+	// Membership is the client for interacting with the Membership builders.
+	Membership *MembershipClient
 	// Metadata is the client for interacting with the Metadata builders.
 	Metadata *MetadataClient
 	// Node is the client for interacting with the Node builders.
@@ -176,6 +178,7 @@ func (tx *Tx) init() {
 	tx.Entity = NewEntityClient(tx.config)
 	tx.File = NewFileClient(tx.config)
 	tx.Group = NewGroupClient(tx.config)
+	tx.Membership = NewMembershipClient(tx.config)
 	tx.Metadata = NewMetadataClient(tx.config)
 	tx.Node = NewNodeClient(tx.config)
 	tx.Passkey = NewPasskeyClient(tx.config)

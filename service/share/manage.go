@@ -37,7 +37,7 @@ func (service *ShareCreateService) Upsert(c *gin.Context, existed int) (string, 
 	defer m.Recycle()
 
 	// Check group permission for creating share link
-	if !user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionShare)) {
+	if !user.EnforceGroupPermission(types.GroupPermissionShare) {
 		return "", serializer.NewError(serializer.CodeGroupNotAllowed, "Group permission denied", nil)
 	}
 
@@ -79,7 +79,7 @@ func DeleteShare(c *gin.Context, shareId int) error {
 		share *ent.Share
 		err   error
 	)
-	if user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+	if user.EnforceGroupPermission(types.GroupPermissionIsAdmin) {
 		share, err = shareClient.GetByID(ctx, shareId)
 	} else {
 		share, err = shareClient.GetByIDUser(ctx, shareId, user.ID)

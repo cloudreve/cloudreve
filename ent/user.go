@@ -10,7 +10,6 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/cloudreve/Cloudreve/v4/ent/group"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 )
@@ -42,8 +41,6 @@ type User struct {
 	Avatar string `json:"avatar,omitempty"`
 	// Settings holds the value of the "settings" field.
 	Settings *types.UserSetting `json:"settings,omitempty"`
-	// GroupUsers holds the value of the "group_users" field.
-	GroupUsers int `json:"group_users,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the UserQuery when eager-loading is set.
 	Edges        UserEdges `json:"edges"`
@@ -53,7 +50,7 @@ type User struct {
 // UserEdges holds the relations/edges for other nodes in the graph.
 type UserEdges struct {
 	// Group holds the value of the group edge.
-	Group *Group `json:"group,omitempty"`
+	Group []*Group `json:"group,omitempty"`
 	// Files holds the value of the files edge.
 	Files []*File `json:"files,omitempty"`
 	// DavAccounts holds the value of the dav_accounts edge.
@@ -66,19 +63,17 @@ type UserEdges struct {
 	Tasks []*Task `json:"tasks,omitempty"`
 	// Entities holds the value of the entities edge.
 	Entities []*Entity `json:"entities,omitempty"`
+	// Membership holds the value of the membership edge.
+	Membership []*Membership `json:"membership,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [7]bool
+	loadedTypes [8]bool
 }
 
 // GroupOrErr returns the Group value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e UserEdges) GroupOrErr() (*Group, error) {
+// was not loaded in eager-loading.
+func (e UserEdges) GroupOrErr() ([]*Group, error) {
 	if e.loadedTypes[0] {
-		if e.Group == nil {
-			// Edge was loaded but was not found.
-			return nil, &NotFoundError{label: group.Label}
-		}
 		return e.Group, nil
 	}
 	return nil, &NotLoadedError{edge: "group"}
@@ -138,6 +133,15 @@ func (e UserEdges) EntitiesOrErr() ([]*Entity, error) {
 	return nil, &NotLoadedError{edge: "entities"}
 }
 
+// MembershipOrErr returns the Membership value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) MembershipOrErr() ([]*Membership, error) {
+	if e.loadedTypes[7] {
+		return e.Membership, nil
+	}
+	return nil, &NotLoadedError{edge: "membership"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*User) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -145,7 +149,7 @@ func (*User) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case user.FieldSettings:
 			values[i] = new([]byte)
-		case user.FieldID, user.FieldStorage, user.FieldGroupUsers:
+		case user.FieldID, user.FieldStorage:
 			values[i] = new(sql.NullInt64)
 		case user.FieldEmail, user.FieldNick, user.FieldPassword, user.FieldStatus, user.FieldTwoFactorSecret, user.FieldAvatar:
 			values[i] = new(sql.NullString)
@@ -241,12 +245,6 @@ func (u *User) assignValues(columns []string, values []any) error {
 					return fmt.Errorf("unmarshal field settings: %w", err)
 				}
 			}
-		case user.FieldGroupUsers:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field group_users", values[i])
-			} else if value.Valid {
-				u.GroupUsers = int(value.Int64)
-			}
 		default:
 			u.selectValues.Set(columns[i], values[i])
 		}
@@ -293,6 +291,11 @@ func (u *User) QueryTasks() *TaskQuery {
 // QueryEntities queries the "entities" edge of the User entity.
 func (u *User) QueryEntities() *EntityQuery {
 	return NewUserClient(u.config).QueryEntities(u)
+}
+
+// QueryMembership queries the "membership" edge of the User entity.
+func (u *User) QueryMembership() *MembershipQuery {
+	return NewUserClient(u.config).QueryMembership(u)
 }
 
 // Update returns a builder for updating this User.
@@ -350,15 +353,12 @@ func (u *User) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("settings=")
 	builder.WriteString(fmt.Sprintf("%v", u.Settings))
-	builder.WriteString(", ")
-	builder.WriteString("group_users=")
-	builder.WriteString(fmt.Sprintf("%v", u.GroupUsers))
 	builder.WriteByte(')')
 	return builder.String()
 }
 
 // SetGroup manually set the edge as loaded state.
-func (e *User) SetGroup(v *Group) {
+func (e *User) SetGroup(v []*Group) {
 	e.Edges.Group = v
 	e.Edges.loadedTypes[0] = true
 }
@@ -397,6 +397,12 @@ func (e *User) SetTasks(v []*Task) {
 func (e *User) SetEntities(v []*Entity) {
 	e.Edges.Entities = v
 	e.Edges.loadedTypes[6] = true
+}
+
+// SetMembership manually set the edge as loaded state.
+func (e *User) SetMembership(v []*Membership) {
+	e.Edges.Membership = v
+	e.Edges.loadedTypes[7] = true
 }
 
 // Users is a parsable slice of User.

@@ -10,6 +10,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/entity"
 	"github.com/cloudreve/Cloudreve/v4/ent/file"
 	"github.com/cloudreve/Cloudreve/v4/ent/group"
+	"github.com/cloudreve/Cloudreve/v4/ent/membership"
 	"github.com/cloudreve/Cloudreve/v4/ent/metadata"
 	"github.com/cloudreve/Cloudreve/v4/ent/node"
 	"github.com/cloudreve/Cloudreve/v4/ent/passkey"
@@ -130,6 +131,16 @@ func init() {
 	groupDescSettings := groupFields[4].Descriptor()
 	// group.DefaultSettings holds the default value on creation for the settings field.
 	group.DefaultSettings = groupDescSettings.Default.(*types.GroupSetting)
+	membershipFields := schema.Membership{}.Fields()
+	_ = membershipFields
+	// membershipDescIsPrimary is the schema descriptor for is_primary field.
+	membershipDescIsPrimary := membershipFields[2].Descriptor()
+	// membership.DefaultIsPrimary holds the default value on creation for the is_primary field.
+	membership.DefaultIsPrimary = membershipDescIsPrimary.Default.(bool)
+	// membershipDescCreatedAt is the schema descriptor for created_at field.
+	membershipDescCreatedAt := membershipFields[3].Descriptor()
+	// membership.DefaultCreatedAt holds the default value on creation for the created_at field.
+	membership.DefaultCreatedAt = membershipDescCreatedAt.Default.(func() time.Time)
 	metadataMixin := schema.Metadata{}.Mixin()
 	metadataMixinHooks0 := metadataMixin[0].Hooks()
 	metadata.Hooks[0] = metadataMixinHooks0[0]

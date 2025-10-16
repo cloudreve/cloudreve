@@ -199,7 +199,7 @@ func (m *RemoteDownloadTask) createDownloadTask(ctx context.Context, dep depende
 	}
 
 	// Create download task
-	handle, err := m.d.CreateTask(ctx, torrentUrl, user.Edges.Group.Settings.RemoteDownloadOptions)
+	handle, err := m.d.CreateTask(ctx, torrentUrl, user.GetPrimaryGroup().Settings.RemoteDownloadOptions)
 	if err != nil {
 		return task.StatusError, fmt.Errorf("failed to create download task: %w", err)
 	}

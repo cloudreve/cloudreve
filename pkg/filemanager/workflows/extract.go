@@ -182,9 +182,9 @@ func (m *ExtractArchiveTask) createSlaveExtractTask(ctx context.Context, dep dep
 	}
 
 	// Validate file size
-	if user.Edges.Group.Settings.DecompressSize > 0 && archiveFile.Size() > user.Edges.Group.Settings.DecompressSize {
+	if user.GroupMaxDecompressSize() > 0 && archiveFile.Size() > user.GroupMaxDecompressSize() {
 		return task.StatusError,
-			fmt.Errorf("file size %d exceeds the limit %d (%w)", archiveFile.Size(), user.Edges.Group.Settings.DecompressSize, queue.CriticalErr)
+			fmt.Errorf("file size %d exceeds the limit %d (%w)", archiveFile.Size(), user.GroupMaxDecompressSize(), queue.CriticalErr)
 	}
 
 	// Create slave task
@@ -269,9 +269,9 @@ func (m *ExtractArchiveTask) masterExtractArchive(ctx context.Context, dep depen
 	}
 
 	// Validate file size
-	if user.Edges.Group.Settings.DecompressSize > 0 && archiveFile.Size() > user.Edges.Group.Settings.DecompressSize {
+	if user.GroupMaxDecompressSize() > 0 && archiveFile.Size() > user.GroupMaxDecompressSize() {
 		return task.StatusError,
-			fmt.Errorf("file size %d exceeds the limit %d (%w)", archiveFile.Size(), user.Edges.Group.Settings.DecompressSize, queue.CriticalErr)
+			fmt.Errorf("file size %d exceeds the limit %d (%w)", archiveFile.Size(), user.GroupMaxDecompressSize(), queue.CriticalErr)
 	}
 
 	es, err := fm.GetEntitySource(ctx, 0, fs.WithEntity(archiveFile.PrimaryEntity()))

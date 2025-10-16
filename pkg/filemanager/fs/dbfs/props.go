@@ -23,7 +23,7 @@ func (f *DBFS) PatchProps(ctx context.Context, uri *fs.URI, props *types.FilePro
 		return fmt.Errorf("failed to get target file: %w", err)
 	}
 
-	if target.OwnerID() != f.user.ID && !f.user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+	if target.OwnerID() != f.user.ID && !f.user.EnforceGroupPermission(types.GroupPermissionIsAdmin) {
 		return fs.ErrOwnerOnly.WithError(fmt.Errorf("only file owner can modify file props"))
 	}
 

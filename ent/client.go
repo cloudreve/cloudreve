@@ -20,6 +20,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/entity"
 	"github.com/cloudreve/Cloudreve/v4/ent/file"
 	"github.com/cloudreve/Cloudreve/v4/ent/group"
+	"github.com/cloudreve/Cloudreve/v4/ent/membership"
 	"github.com/cloudreve/Cloudreve/v4/ent/metadata"
 	"github.com/cloudreve/Cloudreve/v4/ent/node"
 	"github.com/cloudreve/Cloudreve/v4/ent/passkey"
@@ -47,6 +48,8 @@ type Client struct {
 	File *FileClient
 	// Group is the client for interacting with the Group builders.
 	Group *GroupClient
+	// Membership is the client for interacting with the Membership builders.
+	Membership *MembershipClient
 	// Metadata is the client for interacting with the Metadata builders.
 	Metadata *MetadataClient
 	// Node is the client for interacting with the Node builders.
@@ -79,6 +82,7 @@ func (c *Client) init() {
 	c.Entity = NewEntityClient(c.config)
 	c.File = NewFileClient(c.config)
 	c.Group = NewGroupClient(c.config)
+	c.Membership = NewMembershipClient(c.config)
 	c.Metadata = NewMetadataClient(c.config)
 	c.Node = NewNodeClient(c.config)
 	c.Passkey = NewPasskeyClient(c.config)
@@ -184,6 +188,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Entity:        NewEntityClient(cfg),
 		File:          NewFileClient(cfg),
 		Group:         NewGroupClient(cfg),
+		Membership:    NewMembershipClient(cfg),
 		Metadata:      NewMetadataClient(cfg),
 		Node:          NewNodeClient(cfg),
 		Passkey:       NewPasskeyClient(cfg),
@@ -216,6 +221,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Entity:        NewEntityClient(cfg),
 		File:          NewFileClient(cfg),
 		Group:         NewGroupClient(cfg),
+		Membership:    NewMembershipClient(cfg),
 		Metadata:      NewMetadataClient(cfg),
 		Node:          NewNodeClient(cfg),
 		Passkey:       NewPasskeyClient(cfg),
@@ -253,8 +259,8 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.DavAccount, c.DirectLink, c.Entity, c.File, c.Group, c.Metadata, c.Node,
-		c.Passkey, c.Setting, c.Share, c.StoragePolicy, c.Task, c.User,
+		c.DavAccount, c.DirectLink, c.Entity, c.File, c.Group, c.Membership, c.Metadata,
+		c.Node, c.Passkey, c.Setting, c.Share, c.StoragePolicy, c.Task, c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -264,8 +270,8 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.DavAccount, c.DirectLink, c.Entity, c.File, c.Group, c.Metadata, c.Node,
-		c.Passkey, c.Setting, c.Share, c.StoragePolicy, c.Task, c.User,
+		c.DavAccount, c.DirectLink, c.Entity, c.File, c.Group, c.Membership, c.Metadata,
+		c.Node, c.Passkey, c.Setting, c.Share, c.StoragePolicy, c.Task, c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -284,6 +290,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.File.mutate(ctx, m)
 	case *GroupMutation:
 		return c.Group.mutate(ctx, m)
+	case *MembershipMutation:
+		return c.Membership.mutate(ctx, m)
 	case *MetadataMutation:
 		return c.Metadata.mutate(ctx, m)
 	case *NodeMutation:
@@ -1168,7 +1176,7 @@ func (c *GroupClient) QueryUsers(gr *Group) *UserQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(group.Table, group.FieldID, id),
 			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, group.UsersTable, group.UsersColumn),
+			sqlgraph.Edge(sqlgraph.M2M, false, group.UsersTable, group.UsersPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(gr.driver.Dialect(), step)
 		return fromV, nil
@@ -1185,6 +1193,22 @@ func (c *GroupClient) QueryStoragePolicies(gr *Group) *StoragePolicyQuery {
 			sqlgraph.From(group.Table, group.FieldID, id),
 			sqlgraph.To(storagepolicy.Table, storagepolicy.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, group.StoragePoliciesTable, group.StoragePoliciesColumn),
+		)
+		fromV = sqlgraph.Neighbors(gr.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryMembership queries the membership edge of a Group.
+func (c *GroupClient) QueryMembership(gr *Group) *MembershipQuery {
+	query := (&MembershipClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := gr.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(group.Table, group.FieldID, id),
+			sqlgraph.To(membership.Table, membership.GroupColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, group.MembershipTable, group.MembershipColumn),
 		)
 		fromV = sqlgraph.Neighbors(gr.driver.Dialect(), step)
 		return fromV, nil
@@ -1216,6 +1240,122 @@ func (c *GroupClient) mutate(ctx context.Context, m *GroupMutation) (Value, erro
 		return (&GroupDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Group mutation op: %q", m.Op())
+	}
+}
+
+// MembershipClient is a client for the Membership schema.
+type MembershipClient struct {
+	config
+}
+
+// NewMembershipClient returns a client for the Membership from the given config.
+func NewMembershipClient(c config) *MembershipClient {
+	return &MembershipClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `membership.Hooks(f(g(h())))`.
+func (c *MembershipClient) Use(hooks ...Hook) {
+	c.hooks.Membership = append(c.hooks.Membership, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `membership.Intercept(f(g(h())))`.
+func (c *MembershipClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Membership = append(c.inters.Membership, interceptors...)
+}
+
+// Create returns a builder for creating a Membership entity.
+func (c *MembershipClient) Create() *MembershipCreate {
+	mutation := newMembershipMutation(c.config, OpCreate)
+	return &MembershipCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Membership entities.
+func (c *MembershipClient) CreateBulk(builders ...*MembershipCreate) *MembershipCreateBulk {
+	return &MembershipCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *MembershipClient) MapCreateBulk(slice any, setFunc func(*MembershipCreate, int)) *MembershipCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &MembershipCreateBulk{err: fmt.Errorf("calling to MembershipClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*MembershipCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &MembershipCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Membership.
+func (c *MembershipClient) Update() *MembershipUpdate {
+	mutation := newMembershipMutation(c.config, OpUpdate)
+	return &MembershipUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *MembershipClient) UpdateOne(m *Membership) *MembershipUpdateOne {
+	mutation := newMembershipMutation(c.config, OpUpdateOne)
+	mutation.group = &m.GroupID
+	mutation.user = &m.UserID
+	return &MembershipUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Membership.
+func (c *MembershipClient) Delete() *MembershipDelete {
+	mutation := newMembershipMutation(c.config, OpDelete)
+	return &MembershipDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Query returns a query builder for Membership.
+func (c *MembershipClient) Query() *MembershipQuery {
+	return &MembershipQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeMembership},
+		inters: c.Interceptors(),
+	}
+}
+
+// QueryUser queries the user edge of a Membership.
+func (c *MembershipClient) QueryUser(m *Membership) *UserQuery {
+	return c.Query().
+		Where(membership.GroupID(m.GroupID), membership.UserID(m.UserID)).
+		QueryUser()
+}
+
+// QueryGroup queries the group edge of a Membership.
+func (c *MembershipClient) QueryGroup(m *Membership) *GroupQuery {
+	return c.Query().
+		Where(membership.GroupID(m.GroupID), membership.UserID(m.UserID)).
+		QueryGroup()
+}
+
+// Hooks returns the client hooks.
+func (c *MembershipClient) Hooks() []Hook {
+	return c.hooks.Membership
+}
+
+// Interceptors returns the client interceptors.
+func (c *MembershipClient) Interceptors() []Interceptor {
+	return c.inters.Membership
+}
+
+func (c *MembershipClient) mutate(ctx context.Context, m *MembershipMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&MembershipCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&MembershipUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&MembershipUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&MembershipDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Membership mutation op: %q", m.Op())
 	}
 }
 
@@ -2440,7 +2580,7 @@ func (c *UserClient) QueryGroup(u *User) *GroupQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(group.Table, group.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, user.GroupTable, user.GroupColumn),
+			sqlgraph.Edge(sqlgraph.M2M, true, user.GroupTable, user.GroupPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
 		return fromV, nil
@@ -2544,6 +2684,22 @@ func (c *UserClient) QueryEntities(u *User) *EntityQuery {
 	return query
 }
 
+// QueryMembership queries the membership edge of a User.
+func (c *UserClient) QueryMembership(u *User) *MembershipQuery {
+	query := (&MembershipClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := u.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(membership.Table, membership.UserColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, user.MembershipTable, user.MembershipColumn),
+		)
+		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *UserClient) Hooks() []Hook {
 	hooks := c.hooks.User
@@ -2574,12 +2730,12 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		DavAccount, DirectLink, Entity, File, Group, Metadata, Node, Passkey, Setting,
-		Share, StoragePolicy, Task, User []ent.Hook
+		DavAccount, DirectLink, Entity, File, Group, Membership, Metadata, Node,
+		Passkey, Setting, Share, StoragePolicy, Task, User []ent.Hook
 	}
 	inters struct {
-		DavAccount, DirectLink, Entity, File, Group, Metadata, Node, Passkey, Setting,
-		Share, StoragePolicy, Task, User []ent.Interceptor
+		DavAccount, DirectLink, Entity, File, Group, Membership, Metadata, Node,
+		Passkey, Setting, Share, StoragePolicy, Task, User []ent.Interceptor
 	}
 )
 
