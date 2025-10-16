@@ -67,6 +67,7 @@ type key int
 const (
 	chunkRetrySleep       = time.Duration(5) * time.Second
 	maxDeleteBatch        = 1000
+	maxSignTTL            = time.Duration(24) * time.Hour * 7
 	completeAllHeader     = "x-oss-complete-all"
 	forbidOverwriteHeader = "x-oss-forbid-overwrite"
 	trafficLimitHeader    = "x-oss-traffic-limit"
@@ -439,9 +440,13 @@ func (handler *Driver) Source(ctx context.Context, e fs.Entity, args *driver.Get
 }
 
 func (handler *Driver) signSourceURL(ctx context.Context, path string, expire *time.Time, req *oss.GetObjectRequest, forceSign bool) (string, error) {
-	ttl := time.Duration(24) * time.Hour * 7 // V4 Sign 最大过期时间为7天
+	// V4 Sign 最大过期时间为7天
+	ttl := maxSignTTL
 	if expire != nil {
 		ttl = time.Until(*expire)
+		if ttl > maxSignTTL {
+			ttl = maxSignTTL
+		}
 	}
 
 	if req == nil {
@@ -472,9 +477,6 @@ func (handler *Driver) signSourceURL(ctx context.Context, path string, expire *t
 		query.Del("x-oss-signature")
 		query.Del("x-oss-signature-version")
 		query.Del("response-content-disposition")
-		// 阿里云 OSS 已支持在公有空间使用限速下载，使用公有空间时可以在 iOS / iPad 客户端等内置下载时实现限速
-		// https://help.aliyun.com/zh/oss/single-connection-bandwidth-throttling-4#section-zka-umg-7dx
-		// query.Del(trafficLimitHeader)
 		finalURL.RawQuery = query.Encode()
 	}
 	return finalURL.String(), nil
