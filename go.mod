@@ -58,7 +58,7 @@ require (
 	github.com/upyun/go-sdk v2.1.0+incompatible
 	github.com/wneessen/go-mail v0.7.1
 	golang.org/x/exp v0.0.0-20240904232852-e7e105dedf7e
-	golang.org/x/image v0.0.0-20211028202545-6944b10bf410
+	golang.org/x/image v0.18.0
 	golang.org/x/text v0.30.0
 	golang.org/x/time v0.5.0
 	golang.org/x/tools v0.38.0
