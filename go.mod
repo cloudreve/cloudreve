@@ -19,7 +19,7 @@ require (
 	github.com/dsoprea/go-tiff-image-structure v0.0.0-20221003165014-8ecc4f52edca
 	github.com/dsoprea/go-utility v0.0.0-20200711062821-fab8125e9bdf
 	github.com/fatih/color v1.18.0
-	github.com/gin-contrib/cors v1.3.0
+	github.com/gin-contrib/cors v1.6.0
 	github.com/gin-contrib/gzip v1.2.4
 	github.com/gin-contrib/sessions v1.0.2
 	github.com/gin-contrib/static v0.0.0-20191128031702-f81c604d8ac2
