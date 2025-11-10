@@ -38,12 +38,12 @@
 
 ## :sparkles: Features
 
-- :cloud: Support storing files into Local, Remote node, OneDrive, S3 compatible API, Qiniu, Aliyun OSS, Tencent COS, Upyun.
+- :cloud: Support storing files into Local, Remote node, OneDrive, S3 compatible API, Qiniu Kodo, Aliyun OSS, Tencent COS, Huawei Cloud OBS, Kingsoft Cloud KS3, Upyun.
 - :outbox_tray: Upload/Download in directly transmission from client to storage providers.
 - 💾 Integrate with Aria2/qBittorrent to download files in background, use multiple download nodes to share the load.
-- 📚 Compress/Extract files, download files in batch.
+- 📚 Compress/Extract files, online compression package preview, download files in batch.
 - 💻 WebDAV support covering all storage providers.
-- :zap:Drag&Drop to upload files or folders, with resumable upload support.
+- :zap:Drag&Drop to upload files or folders, with parallel resumable upload support.
 - :card_file_box: Extract media metadata from files, search files by metadata or tags.
 - :family_woman_girl_boy: Multi-users with multi-groups.
 - :link: Create share links for files and folders with expiration date.
