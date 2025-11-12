@@ -510,7 +510,7 @@ func (s *settingProvider) ThumbEncode(ctx context.Context) *ThumbEncode {
 }
 
 func (s *settingProvider) ThumbEntitySuffix(ctx context.Context) string {
-	return s.getString(ctx, "thumb_entity_suffix", "._thumb")
+	return s.getString(ctx, "thumb_entity_suffix", "{blob_path}/{blob_name}._thumb")
 }
 
 func (s *settingProvider) ThumbSlaveSidecarSuffix(ctx context.Context) string {

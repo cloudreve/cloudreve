@@ -555,7 +555,7 @@ var DefaultSettings = map[string]string{
 	"captcha_cap_asset_server":                   "jsdelivr",
 	"thumb_width":                                "400",
 	"thumb_height":                               "300",
-	"thumb_entity_suffix":                        "._thumb",
+	"thumb_entity_suffix":                        "{blob_path}/{blob_name}._thumb",
 	"thumb_slave_sidecar_suffix":                 "._thumb_sidecar",
 	"thumb_encode_method":                        "png",
 	"thumb_gc_after_gen":                         "0",

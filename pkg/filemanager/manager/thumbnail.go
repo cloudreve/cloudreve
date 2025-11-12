@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/cloudreve/Cloudreve/v4/pkg/thumb"
 	"os"
+	"path"
 	"runtime"
 	"time"
 
@@ -18,6 +18,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager/entitysource"
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 	"github.com/cloudreve/Cloudreve/v4/pkg/queue"
+	"github.com/cloudreve/Cloudreve/v4/pkg/thumb"
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 	"github.com/samber/lo"
 )
@@ -185,7 +186,7 @@ func (m *manager) generateThumb(ctx context.Context, uri *fs.URI, ext string, es
 			Props: &fs.UploadProps{
 				Uri:        uri,
 				Size:       fileInfo.Size(),
-				SavePath:   es.Entity().Source() + m.settings.ThumbEntitySuffix(ctx),
+				SavePath:   path.Clean(util.ReplaceMagicVar(m.settings.ThumbEntitySuffix(ctx), fs.Separator, true, true, time.Now(), m.user.ID, uri.Name(), uri.Path(), es.Entity().Source())),
 				MimeType:   m.dep.MimeDetector(ctx).TypeByName("thumb.jpg"),
 				EntityType: &entityType,
 			},

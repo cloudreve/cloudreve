@@ -480,6 +480,23 @@ var patches = []Patch{
 			return nil
 		},
 	},
+	{
+		Name:       "apply_thumb_path_magic_var",
+		EndVersion: "4.10.0",
+		Func: func(l logging.Logger, client *ent.Client, ctx context.Context) error {
+			thumbSuffixSetting, err := client.Setting.Query().Where(setting.Name("thumb_entity_suffix")).First(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to query thumb_entity_suffix setting: %w", err)
+			}
+
+			newThumbSuffix := fmt.Sprintf("{blob_path}/{blob_name}%s", thumbSuffixSetting.Value)
+			if _, err := client.Setting.UpdateOne(thumbSuffixSetting).SetValue(newThumbSuffix).Save(ctx); err != nil {
+				return fmt.Errorf("failed to update thumb_entity_suffix setting: %w", err)
+			}
+
+			return nil
+		},
+	},
 }
 
 func applyPatches(l logging.Logger, client *ent.Client, ctx context.Context, requiredDbVersion string) error {
