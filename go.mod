@@ -42,10 +42,13 @@ require (
 	github.com/juju/ratelimit v1.0.1
 	github.com/ks3sdklib/aws-sdk-go v1.6.2
 	github.com/lib/pq v1.10.9
+	github.com/libp2p/go-reuseport v0.4.0
 	github.com/mholt/archives v0.1.3
 	github.com/mojocn/base64Captcha v0.0.0-20190801020520-752b1cd608b2
+	github.com/pion/stun/v3 v3.0.0
 	github.com/pquerna/otp v1.2.0
 	github.com/qiniu/go-sdk/v7 v7.19.0
+	github.com/quic-go/quic-go v0.55.0
 	github.com/rafaeljusto/redigomock v0.0.0-20191117212112-00b2509252a1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/samber/lo v1.38.1
@@ -59,6 +62,7 @@ require (
 	github.com/wneessen/go-mail v0.7.1
 	golang.org/x/exp v0.0.0-20240904232852-e7e105dedf7e
 	golang.org/x/image v0.18.0
+	golang.org/x/sync v0.17.0
 	golang.org/x/text v0.30.0
 	golang.org/x/time v0.5.0
 	golang.org/x/tools v0.38.0
@@ -132,15 +136,18 @@ require (
 	github.com/nwaples/rardecode/v2 v2.1.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
+	github.com/pion/dtls/v3 v3.0.1 // indirect
+	github.com/pion/logging v0.2.2 // indirect
+	github.com/pion/transport/v3 v3.0.7 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect
-	github.com/quic-go/quic-go v0.55.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/sorairolake/lzip-go v0.3.5 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.3.0 // indirect
 	github.com/ulikunitz/xz v0.5.12 // indirect
+	github.com/wlynxg/anet v0.0.3 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/zclconf/go-cty v1.8.0 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
@@ -148,7 +155,6 @@ require (
 	golang.org/x/crypto v0.43.0 // indirect
 	golang.org/x/mod v0.29.0 // indirect
 	golang.org/x/net v0.46.0 // indirect
-	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/sys v0.37.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
