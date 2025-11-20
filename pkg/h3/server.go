@@ -19,8 +19,9 @@ type H3Server struct {
 	incoming chan string
 }
 
-func NewH3Server(localAddr string) (*H3Server, error) {
-	localAddr, pulocalAddr, err := GetPublicAddrWithFallback(localAddr)
+func NewH3Server() (*H3Server, error) {
+	localAddr := "0.0.0.0:0"
+	localAddr, pubLocalAddr, err := GetPublicAddrWithFallback(localAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +47,7 @@ func NewH3Server(localAddr string) (*H3Server, error) {
 
 	return &H3Server{
 		localAddr: localAddr,
-		pubAddr:   pulocalAddr,
+		pubAddr:   pubLocalAddr,
 		conn:      conn,
 		Server:    server,
 		incoming:  make(chan string, 1),
@@ -58,17 +59,6 @@ func (s *H3Server) GetAddrs() (string, string) {
 }
 
 func (s *H3Server) Serve() error {
-	go func() {
-		tk := time.NewTicker(15 * time.Second)
-		defer tk.Stop()
-		for range tk.C {
-			_, pubAddr, err := GetPublicAddrWithFallback(s.localAddr)
-			if err != nil {
-				continue
-			}
-			s.pubAddr = pubAddr
-		}
-	}()
 	return s.Server.Serve(s.conn)
 }
 func (s *H3Server) Close() error {

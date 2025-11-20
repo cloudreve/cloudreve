@@ -47,7 +47,7 @@ type server struct {
 	dbClient  *ent.Client
 	config    conf.ConfigProvider
 	server    *http.Server
-	h3Server  *h3.H3Server
+	h3Servers map[string]*h3.H3Server
 	kv        cache.Driver
 	mailQueue email.Driver
 }
@@ -131,12 +131,8 @@ func (s *server) Start() error {
 	s.server = &http.Server{
 		Handler: api,
 	}
-	h3Server, err := h3.NewH3Server("0.0.0.0:5212")
-	if err != nil {
-		return err
-	}
-	h3Server.Handler = api
-	s.h3Server = h3Server
+
+	s.h3Servers = make(map[string]*h3.H3Server)
 
 	// 如果启用了SSL
 	if s.config.SSL().CertPath != "" {
@@ -168,13 +164,6 @@ func (s *server) Start() error {
 
 	api.POST("/api/v4/p2p/signal", s.handleSignal)
 
-	go func() {
-		s.logger.Info("Listening HTTP/3 to : \"%v\"", h3Server.Addr)
-		if err := s.h3Server.Serve(); err != nil {
-			s.logger.Error("run h3 server error:%v", err)
-		}
-	}()
-
 	s.logger.Info("Listening to %q", s.config.System().Listen)
 	s.server.Addr = s.config.System().Listen
 	if err := s.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -205,10 +194,10 @@ func (s *server) Close() {
 			s.logger.Error("Failed to shutdown server: %s", err)
 		}
 	}
-	if s.h3Server != nil {
-		err := s.h3Server.Shutdown(ctx)
+	for laddr, hs := range s.h3Servers {
+		err := hs.Shutdown(ctx)
 		if err != nil {
-			s.logger.Error("Failed to shutdown h3 server: %s", err)
+			s.logger.Error("Failed to shutdown h3 server: %s %s", laddr, err)
 		}
 	}
 
@@ -256,7 +245,28 @@ func (s *server) handleSignal(c *gin.Context) {
 		s.logger.Error("bind req error:%v", err)
 		return
 	}
-	localAddr, pubAddr := s.h3Server.GetAddrs()
+	hs, err := h3.NewH3Server()
+	if err != nil {
+		c.Status(500)
+		s.logger.Error("create h3 server error:%v", err)
+		return
+	}
+	hs.Handler = s.server.Handler
+
+	localAddr, pubAddr := hs.GetAddrs()
 	c.String(http.StatusOK, pubAddr)
-	go h3.PunchHole(localAddr, req.Addr)
+	go func() {
+		err := h3.PunchHole(localAddr, req.Addr)
+		if err != nil {
+			s.logger.Error("punch h3 server error:%v", err)
+			return
+		}
+		s.h3Servers[localAddr] = hs
+		err = hs.Serve()
+		if err != nil {
+			s.logger.Error("punch h3 server error:%v", err)
+		}
+		delete(s.h3Servers, localAddr)
+	}()
+
 }
