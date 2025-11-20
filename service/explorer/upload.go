@@ -3,6 +3,9 @@ package explorer
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"time"
+
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
@@ -13,21 +16,20 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/request"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
 	"github.com/gin-gonic/gin"
-	"strconv"
-	"time"
 )
 
 // CreateUploadSessionService 获取上传凭证服务
 type (
 	CreateUploadSessionParameterCtx struct{}
 	CreateUploadSessionService      struct {
-		Uri          string            `json:"uri" binding:"required"`
-		Size         int64             `json:"size" binding:"min=0"`
-		LastModified int64             `json:"last_modified"`
-		MimeType     string            `json:"mime_type"`
-		PolicyID     string            `json:"policy_id"`
-		Metadata     map[string]string `json:"metadata" binding:"max=256"`
-		EntityType   string            `json:"entity_type" binding:"eq=|eq=live_photo|eq=version"`
+		Uri                 string            `json:"uri" binding:"required"`
+		Size                int64             `json:"size" binding:"min=0"`
+		LastModified        int64             `json:"last_modified"`
+		MimeType            string            `json:"mime_type"`
+		PolicyID            string            `json:"policy_id"`
+		Metadata            map[string]string `json:"metadata" binding:"max=256"`
+		EntityType          string            `json:"entity_type" binding:"eq=|eq=live_photo|eq=version"`
+		EncryptionSupported []types.Cipher    `json:"encryption_supported"`
 	}
 )
 
@@ -68,6 +70,8 @@ func (service *CreateUploadSessionService) Create(c context.Context) (*UploadSes
 			Metadata:               service.Metadata,
 			EntityType:             entityType,
 			PreferredStoragePolicy: policyId,
+			EncryptionSupported:    service.EncryptionSupported,
+			ClientSideEncrypted:    len(service.EncryptionSupported) > 0,
 		},
 	}
 
@@ -133,6 +137,7 @@ func (service *UploadService) SlaveUpload(c *gin.Context) error {
 	}
 
 	uploadSession := uploadSessionRaw.(fs.UploadSession)
+	uploadSession.Props.ClientSideEncrypted = true
 
 	// Parse chunk index from query
 	service.Index, _ = strconv.Atoi(c.Query("chunk"))
@@ -175,7 +180,7 @@ func processChunkUpload(c *gin.Context, m manager.FileManager, session *fs.Uploa
 
 	// 执行上传
 	ctx := context.WithValue(c, cluster.SlaveNodeIDCtx{}, strconv.Itoa(session.Policy.NodeID))
-	err = m.Upload(ctx, req, session.Policy)
+	err = m.Upload(ctx, req, session.Policy, session)
 	if err != nil {
 		return err
 	}

@@ -3,6 +3,10 @@ package middleware
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
 	"github.com/cloudreve/Cloudreve/v4/application/constants"
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/pkg/auth/requestinfo"
@@ -14,8 +18,6 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 	"github.com/gin-gonic/gin"
 	"github.com/gofrs/uuid"
-	"net/http"
-	"time"
 )
 
 // HashID 将给定对象的HashID转换为真实ID
@@ -92,8 +94,13 @@ func MobileRequestOnly() gin.HandlerFunc {
 // 2. Generate and inject correlation ID for diagnostic.
 func InitializeHandling(dep dependency.Dep) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		clientIp := c.ClientIP()
+		if idx := strings.Index(clientIp, ","); idx > 0 {
+			clientIp = clientIp[:idx]
+		}
+
 		reqInfo := &requestinfo.RequestInfo{
-			IP:        c.ClientIP(),
+			IP:        clientIp,
 			Host:      c.Request.Host,
 			UserAgent: c.Request.UserAgent(),
 		}

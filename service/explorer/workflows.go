@@ -173,6 +173,8 @@ type (
 		Src      []string `json:"src" binding:"required"`
 		Dst      string   `json:"dst" binding:"required"`
 		Encoding string   `json:"encoding"`
+		Password string   `json:"password"`
+		FileMask []string `json:"file_mask"`
 	}
 	CreateArchiveParamCtx struct{}
 )
@@ -203,7 +205,7 @@ func (service *ArchiveWorkflowService) CreateExtractTask(c *gin.Context) (*TaskR
 	}
 
 	// Create task
-	t, err := workflows.NewExtractArchiveTask(c, service.Src[0], service.Dst, service.Encoding)
+	t, err := workflows.NewExtractArchiveTask(c, service.Src[0], service.Dst, service.Encoding, service.Password, service.FileMask)
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeCreateTaskError, "Failed to create task", err)
 	}

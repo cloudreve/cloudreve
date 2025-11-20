@@ -18,6 +18,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cluster"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/encrypt"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager/entitysource"
@@ -217,11 +218,18 @@ func (m *CreateArchiveTask) listEntitiesAndSendToSlave(ctx context.Context, dep 
 	user := inventory.UserFromContext(ctx)
 	fm := manager.NewFileManager(dep, user)
 	storagePolicyClient := dep.StoragePolicyClient()
+	masterKey, _ := dep.MasterEncryptKeyVault(ctx).GetMasterKey(ctx)
 
 	failed, err := fm.CreateArchive(ctx, uris, io.Discard,
 		fs.WithDryRun(func(name string, e fs.Entity) {
+			entityModel, err := decryptEntityKeyIfNeeded(masterKey, e.Model())
+			if err != nil {
+				m.l.Warning("Failed to decrypt entity key for %q: %s", name, err)
+				return
+			}
+
 			payload.Entities = append(payload.Entities, SlaveCreateArchiveEntity{
-				Entity: e.Model(),
+				Entity: entityModel,
 				Path:   name,
 			})
 			if _, ok := payload.Policies[e.PolicyID()]; !ok {
@@ -679,4 +687,19 @@ func (m *SlaveCreateArchiveTask) Progress(ctx context.Context) queue.Progresses 
 	defer m.Unlock()
 
 	return m.progress
+}
+
+func decryptEntityKeyIfNeeded(masterKey []byte, entity *ent.Entity) (*ent.Entity, error) {
+	if entity.Props == nil || entity.Props.EncryptMetadata == nil || entity.Props.EncryptMetadata.KeyPlainText != nil {
+		return entity, nil
+	}
+
+	decryptedKey, err := encrypt.DecryptWithMasterKey(masterKey, entity.Props.EncryptMetadata.Key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt entity key: %w", err)
+	}
+
+	entity.Props.EncryptMetadata.KeyPlainText = decryptedKey
+	entity.Props.EncryptMetadata.Key = nil
+	return entity, nil
 }

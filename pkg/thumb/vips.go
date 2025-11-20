@@ -38,15 +38,15 @@ func (v *VipsGenerator) Generate(ctx context.Context, es entitysource.EntitySour
 
 	outputOpt := ".png"
 	encode := v.settings.ThumbEncode(ctx)
-	if encode.Format == "jpg" {
-		outputOpt = fmt.Sprintf(".jpg[Q=%d]", encode.Quality)
+	if encode.Format == "jpg" || encode.Format == "webp" {
+		outputOpt = fmt.Sprintf(".%s[Q=%d]", encode.Format, encode.Quality)
 	}
 
 	input := "[descriptor=0]"
 	usePipe := true
 	if runtime.GOOS == "windows" {
 		// Pipe IO is not working on Windows for VIPS
-		if es.IsLocal() {
+		if es.IsLocal() && !es.Entity().Encrypted() {
 			// escape [ and ] in file name
 			input = fmt.Sprintf("[filename=\"%s\"]", es.LocalPath(ctx))
 			usePipe = false

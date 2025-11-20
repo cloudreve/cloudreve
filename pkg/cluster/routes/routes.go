@@ -180,9 +180,9 @@ func SlaveFileContentUrl(base *url.URL, srcPath, name string, download bool, spe
 	return base
 }
 
-func SlaveMediaMetaRoute(src, ext string) string {
+func SlaveMediaMetaRoute(src, ext, language string) string {
 	src = url.PathEscape(base64.URLEncoding.EncodeToString([]byte(src)))
-	return fmt.Sprintf("file/meta/%s/%s", src, url.PathEscape(ext))
+	return fmt.Sprintf("file/meta/%s/%s?language=%s", src, url.PathEscape(ext), language)
 }
 
 func SlaveFileListRoute(srcPath string, recursive bool) string {

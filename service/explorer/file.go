@@ -659,7 +659,7 @@ func (s *GetFileInfoService) Get(c *gin.Context) (*FileResponse, error) {
 	return BuildFileResponse(c, user, file, dep.HashIDEncoder(), nil), nil
 }
 
-func RedirectDirectLink(c *gin.Context, name string) error {
+func RedirectDirectLink(c *gin.Context, name string, download bool) error {
 	dep := dependency.FromContext(c)
 	settings := dep.SettingProvider()
 
@@ -680,6 +680,7 @@ func RedirectDirectLink(c *gin.Context, name string) error {
 	expire := time.Now().Add(settings.EntityUrlValidDuration(c))
 	res, earliestExpire, err := m.GetUrlForRedirectedDirectLink(c, dl,
 		fs.WithUrlExpire(&expire),
+		fs.WithIsDownload(download),
 	)
 	if err != nil {
 		return err
@@ -714,4 +715,35 @@ func (s *PatchViewService) Patch(c *gin.Context) error {
 	}
 
 	return nil
+}
+
+type (
+	ArchiveListFilesParamCtx struct{}
+	ArchiveListFilesService  struct {
+		Uri          string `form:"uri" binding:"required"`
+		Entity       string `form:"entity"`
+		TextEncoding string `form:"text_encoding"`
+	}
+)
+
+func (s *ArchiveListFilesService) List(c *gin.Context) (*ArchiveListFilesResponse, error) {
+	dep := dependency.FromContext(c)
+	user := inventory.UserFromContext(c)
+	m := manager.NewFileManager(dep, user)
+	defer m.Recycle()
+	if !user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionArchiveTask)) {
+		return nil, serializer.NewError(serializer.CodeGroupNotAllowed, "Group not allowed to extract archive files", nil)
+	}
+
+	uri, err := fs.NewUriFromString(s.Uri)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
+	}
+
+	files, err := m.ListArchiveFiles(c, uri, s.Entity, s.TextEncoding)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list archive files: %w", err)
+	}
+
+	return BuildArchiveListFilesResponse(files), nil
 }

@@ -17,7 +17,7 @@ import (
 	"github.com/samber/lo"
 )
 
-func (d *Driver) MediaMeta(ctx context.Context, path, ext string) ([]driver.MediaMeta, error) {
+func (d *Driver) MediaMeta(ctx context.Context, path, ext, language string) ([]driver.MediaMeta, error) {
 	thumbURL, err := d.signSourceURL(&obs.CreateSignedUrlInput{
 		Method:  obs.HttpMethodGet,
 		Bucket:  d.policy.BucketName,

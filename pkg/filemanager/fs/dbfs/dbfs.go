@@ -4,11 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand"
 	"path"
 	"path/filepath"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -17,6 +14,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cache"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/encrypt"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/lock"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
@@ -46,7 +44,7 @@ type (
 func NewDatabaseFS(u *ent.User, fileClient inventory.FileClient, shareClient inventory.ShareClient,
 	l logging.Logger, ls lock.LockSystem, settingClient setting.Provider,
 	storagePolicyClient inventory.StoragePolicyClient, hasher hashid.Encoder, userClient inventory.UserClient,
-	cache, stateKv cache.Driver, directLinkClient inventory.DirectLinkClient) fs.FileSystem {
+	cache, stateKv cache.Driver, directLinkClient inventory.DirectLinkClient, encryptorFactory encrypt.CryptorFactory) fs.FileSystem {
 	return &DBFS{
 		user:                u,
 		navigators:          make(map[string]Navigator),
@@ -61,6 +59,7 @@ func NewDatabaseFS(u *ent.User, fileClient inventory.FileClient, shareClient inv
 		cache:               cache,
 		stateKv:             stateKv,
 		directLinkClient:    directLinkClient,
+		encryptorFactory:    encryptorFactory,
 	}
 }
 
@@ -79,6 +78,7 @@ type DBFS struct {
 	cache               cache.Driver
 	stateKv             cache.Driver
 	mu                  sync.Mutex
+	encryptorFactory    encrypt.CryptorFactory
 }
 
 func (f *DBFS) Recycle() {
@@ -122,7 +122,7 @@ func (f *DBFS) List(ctx context.Context, path *fs.URI, opts ...fs.Option) (fs.Fi
 
 	parent, err := f.getFileByPath(ctx, navigator, path)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Parent not exist: %w", err)
+		return nil, nil, fmt.Errorf("parent not exist: %w", err)
 	}
 
 	pageSize := 0
@@ -286,6 +286,7 @@ func (f *DBFS) CreateEntity(ctx context.Context, file fs.File, policy *ent.Stora
 		Source:          req.Props.SavePath,
 		Size:            req.Props.Size,
 		UploadSessionID: uuid.FromStringOrNil(o.UploadRequest.Props.UploadSessionID),
+		EncryptMetadata: o.encryptMetadata,
 	})
 	if err != nil {
 		_ = inventory.Rollback(tx)
@@ -616,6 +617,7 @@ func (f *DBFS) createFile(ctx context.Context, parent *File, name string, fileTy
 			ModifiedAt:      o.UploadRequest.Props.LastModified,
 			UploadSessionID: uuid.FromStringOrNil(o.UploadRequest.Props.UploadSessionID),
 			Importing:       o.UploadRequest.ImportFrom != nil,
+			EncryptMetadata: o.encryptMetadata,
 		}
 	}
 
@@ -644,6 +646,20 @@ func (f *DBFS) createFile(ctx context.Context, parent *File, name string, fileTy
 	return newFile(parent, file), nil
 }
 
+func (f *DBFS) generateEncryptMetadata(ctx context.Context, uploadRequest *fs.UploadRequest, policy *ent.StoragePolicy) (*types.EncryptMetadata, error) {
+	relayEnabled := policy.Settings != nil && policy.Settings.Relay
+	if (len(uploadRequest.Props.EncryptionSupported) > 0 && uploadRequest.Props.EncryptionSupported[0] == types.CipherAES256CTR) || relayEnabled {
+		encryptor, err := f.encryptorFactory(types.CipherAES256CTR)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get encryptor: %w", err)
+		}
+
+		return encryptor.GenerateMetadata(ctx)
+	}
+
+	return nil, nil
+}
+
 // getPreferredPolicy tries to get the preferred storage policy for the given file.
 func (f *DBFS) getPreferredPolicy(ctx context.Context, file *File) (*ent.StoragePolicy, error) {
 	ownerGroup := file.Owner().Edges.Group
@@ -651,7 +667,8 @@ func (f *DBFS) getPreferredPolicy(ctx context.Context, file *File) (*ent.Storage
 		return nil, fmt.Errorf("owner group not loaded")
 	}
 
-	groupPolicy, err := f.storagePolicyClient.GetByGroup(ctx, ownerGroup)
+	sc, _ := inventory.InheritTx(ctx, f.storagePolicyClient)
+	groupPolicy, err := sc.GetByGroup(ctx, ownerGroup)
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get available storage policies", err)
 	}
@@ -765,44 +782,17 @@ func (f *DBFS) navigatorId(path *fs.URI) string {
 
 // generateSavePath generates the physical save path for the upload request.
 func generateSavePath(policy *ent.StoragePolicy, req *fs.UploadRequest, user *ent.User) string {
-	baseTable := map[string]string{
-		"{randomkey16}":    util.RandStringRunes(16),
-		"{randomkey8}":     util.RandStringRunes(8),
-		"{timestamp}":      strconv.FormatInt(time.Now().Unix(), 10),
-		"{timestamp_nano}": strconv.FormatInt(time.Now().UnixNano(), 10),
-		"{randomnum2}":     strconv.Itoa(rand.Intn(2)),
-		"{randomnum3}":     strconv.Itoa(rand.Intn(3)),
-		"{randomnum4}":     strconv.Itoa(rand.Intn(4)),
-		"{randomnum8}":     strconv.Itoa(rand.Intn(8)),
-		"{uid}":            strconv.Itoa(user.ID),
-		"{datetime}":       time.Now().Format("20060102150405"),
-		"{date}":           time.Now().Format("20060102"),
-		"{year}":           time.Now().Format("2006"),
-		"{month}":          time.Now().Format("01"),
-		"{day}":            time.Now().Format("02"),
-		"{hour}":           time.Now().Format("15"),
-		"{minute}":         time.Now().Format("04"),
-		"{second}":         time.Now().Format("05"),
+	currentTime := time.Now()
+	dynamicReplace := func(rule string, pathAvailable bool) string {
+		return util.ReplaceMagicVar(rule, fs.Separator, pathAvailable, false, currentTime, user.ID, req.Props.Uri.Name(), req.Props.Uri.Dir(), "")
 	}
 
 	dirRule := policy.DirNameRule
 	dirRule = filepath.ToSlash(dirRule)
-	dirRule = util.Replace(baseTable, dirRule)
-	dirRule = util.Replace(map[string]string{
-		"{path}": req.Props.Uri.Dir() + fs.Separator,
-	}, dirRule)
-
-	originName := req.Props.Uri.Name()
-	nameTable := map[string]string{
-		"{originname}":             originName,
-		"{ext}":                    filepath.Ext(originName),
-		"{originname_without_ext}": strings.TrimSuffix(originName, filepath.Ext(originName)),
-		"{uuid}":                   uuid.Must(uuid.NewV4()).String(),
-	}
+	dirRule = dynamicReplace(dirRule, true)
 
 	nameRule := policy.FileNameRule
-	nameRule = util.Replace(baseTable, nameRule)
-	nameRule = util.Replace(nameTable, nameRule)
+	nameRule = dynamicReplace(nameRule, false)
 
 	return path.Join(path.Clean(dirRule), nameRule)
 }

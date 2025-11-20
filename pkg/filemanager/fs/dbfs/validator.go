@@ -3,10 +3,12 @@ package dbfs
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strings"
+
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
-	"strings"
 )
 
 const MaxFileNameLength = 256
@@ -30,13 +32,30 @@ func validateFileName(name string) error {
 
 // validateExtension validates the file extension.
 func validateExtension(name string, policy *ent.StoragePolicy) error {
-	// 不需要验证
 	if len(policy.Settings.FileType) == 0 {
 		return nil
 	}
 
-	if !util.IsInExtensionList(policy.Settings.FileType, name) {
+	inList := util.IsInExtensionList(policy.Settings.FileType, name)
+	if (policy.Settings.IsFileTypeDenyList && inList) || (!policy.Settings.IsFileTypeDenyList && !inList) {
 		return fmt.Errorf("file extension is not allowed")
+	}
+
+	return nil
+}
+
+func validateFileNameRegexp(name string, policy *ent.StoragePolicy) error {
+	if policy.Settings.NameRegexp == "" {
+		return nil
+	}
+
+	match, err := regexp.MatchString(policy.Settings.NameRegexp, name)
+	if err != nil {
+		return fmt.Errorf("invalid file name regexp: %s", err)
+	}
+
+	if (policy.Settings.IsNameRegexpDenyList && match) || (!policy.Settings.IsNameRegexpDenyList && !match) {
+		return fmt.Errorf("file name is not allowed by regexp")
 	}
 
 	return nil
@@ -56,11 +75,15 @@ func validateFileSize(size int64, policy *ent.StoragePolicy) error {
 // validateNewFile validates the upload request.
 func validateNewFile(fileName string, size int64, policy *ent.StoragePolicy) error {
 	if err := validateFileName(fileName); err != nil {
-		return err
+		return fs.ErrIllegalObjectName.WithError(err)
 	}
 
 	if err := validateExtension(fileName, policy); err != nil {
-		return err
+		return fs.ErrIllegalObjectName.WithError(err)
+	}
+
+	if err := validateFileNameRegexp(fileName, policy); err != nil {
+		return fs.ErrIllegalObjectName.WithError(err)
 	}
 
 	if err := validateFileSize(size, policy); err != nil {

@@ -145,7 +145,12 @@ func (e *exifExtractor) Exts() []string {
 }
 
 // Reference: https://github.com/photoprism/photoprism/blob/602097635f1c84d91f2d919f7aedaef7a07fc458/internal/meta/exif.go
-func (e *exifExtractor) Extract(ctx context.Context, ext string, source entitysource.EntitySource) ([]driver.MediaMeta, error) {
+func (e *exifExtractor) Extract(ctx context.Context, ext string, source entitysource.EntitySource, opts ...optionFunc) ([]driver.MediaMeta, error) {
+	option := &option{}
+	for _, opt := range opts {
+		opt.apply(option)
+	}
+
 	localLimit, remoteLimit := e.settings.MediaMetaExifSizeLimit(ctx)
 	if err := checkFileSize(localLimit, remoteLimit, source); err != nil {
 		return nil, err

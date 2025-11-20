@@ -16,6 +16,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager/entitysource"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
+	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
 	"github.com/gin-gonic/gin"
 	"github.com/samber/lo"
 )
@@ -150,9 +151,12 @@ func (service *FileBatchService) Delete(c *gin.Context) serializer.Response {
 }
 
 const (
-	fileNameCondition   = "file_name"
-	fileUserCondition   = "file_user"
-	filePolicyCondition = "file_policy"
+	fileNameCondition       = "file_name"
+	fileUserCondition       = "file_user"
+	filePolicyCondition     = "file_policy"
+	fileMetadataCondition   = "file_metadata"
+	fileSharedCondition     = "file_shared"
+	fileDirectLinkCondition = "file_direct_link"
 )
 
 func (service *AdminListService) Files(c *gin.Context) (*ListFileResponse, error) {
@@ -167,9 +171,12 @@ func (service *AdminListService) Files(c *gin.Context) (*ListFileResponse, error
 	ctx = context.WithValue(ctx, inventory.LoadFileDirectLink{}, true)
 
 	var (
-		err      error
-		userID   int
-		policyID int
+		err        error
+		userID     int
+		policyID   int
+		metadata   string
+		shared     bool
+		directLink bool
 	)
 
 	if service.Conditions[fileUserCondition] != "" {
@@ -186,6 +193,18 @@ func (service *AdminListService) Files(c *gin.Context) (*ListFileResponse, error
 		}
 	}
 
+	if service.Conditions[fileMetadataCondition] != "" {
+		metadata = service.Conditions[fileMetadataCondition]
+	}
+
+	if service.Conditions[fileSharedCondition] != "" && setting.IsTrueValue(service.Conditions[fileSharedCondition]) {
+		shared = true
+	}
+
+	if service.Conditions[fileDirectLinkCondition] != "" && setting.IsTrueValue(service.Conditions[fileDirectLinkCondition]) {
+		directLink = true
+	}
+
 	res, err := fileClient.FlattenListFiles(ctx, &inventory.FlattenListFileParameters{
 		PaginationArgs: &inventory.PaginationArgs{
 			Page:     service.Page - 1,
@@ -196,6 +215,9 @@ func (service *AdminListService) Files(c *gin.Context) (*ListFileResponse, error
 		UserID:          userID,
 		StoragePolicyID: policyID,
 		Name:            service.Conditions[fileNameCondition],
+		HasMetadata:     metadata,
+		Shared:          shared,
+		HasDirectLink:   directLink,
 	})
 
 	if err != nil {
@@ -325,7 +347,7 @@ func (s *SingleFileService) Url(c *gin.Context) (string, error) {
 	}
 
 	es := entitysource.NewEntitySource(fs.NewEntity(primaryEntity), driver, policy, dep.GeneralAuth(),
-		dep.SettingProvider(), dep.HashIDEncoder(), dep.RequestClient(), dep.Logger(), dep.ConfigProvider(), dep.MimeDetector(ctx))
+		dep.SettingProvider(), dep.HashIDEncoder(), dep.RequestClient(), dep.Logger(), dep.ConfigProvider(), dep.MimeDetector(ctx), dep.EncryptorFactory(ctx))
 
 	expire := time.Now().Add(time.Hour * 1)
 	url, err := es.Url(ctx, entitysource.WithExpire(&expire), entitysource.WithDisplayName(file.Name))
@@ -525,7 +547,7 @@ func (s *SingleEntityService) Url(c *gin.Context) (string, error) {
 	}
 
 	es := entitysource.NewEntitySource(fs.NewEntity(entity), driver, policy, dep.GeneralAuth(),
-		dep.SettingProvider(), dep.HashIDEncoder(), dep.RequestClient(), dep.Logger(), dep.ConfigProvider(), dep.MimeDetector(c))
+		dep.SettingProvider(), dep.HashIDEncoder(), dep.RequestClient(), dep.Logger(), dep.ConfigProvider(), dep.MimeDetector(c), dep.EncryptorFactory(c))
 
 	expire := time.Now().Add(time.Hour * 1)
 	url, err := es.Url(c, entitysource.WithDownload(true), entitysource.WithExpire(&expire), entitysource.WithDisplayName(path.Base(entity.Source)))

@@ -190,15 +190,15 @@ func (eu *EntityUpdate) ClearUploadSessionID() *EntityUpdate {
 	return eu
 }
 
-// SetRecycleOptions sets the "recycle_options" field.
-func (eu *EntityUpdate) SetRecycleOptions(tro *types.EntityRecycleOption) *EntityUpdate {
-	eu.mutation.SetRecycleOptions(tro)
+// SetProps sets the "props" field.
+func (eu *EntityUpdate) SetProps(tp *types.EntityProps) *EntityUpdate {
+	eu.mutation.SetProps(tp)
 	return eu
 }
 
-// ClearRecycleOptions clears the value of the "recycle_options" field.
-func (eu *EntityUpdate) ClearRecycleOptions() *EntityUpdate {
-	eu.mutation.ClearRecycleOptions()
+// ClearProps clears the value of the "props" field.
+func (eu *EntityUpdate) ClearProps() *EntityUpdate {
+	eu.mutation.ClearProps()
 	return eu
 }
 
@@ -383,11 +383,11 @@ func (eu *EntityUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if eu.mutation.UploadSessionIDCleared() {
 		_spec.ClearField(entity.FieldUploadSessionID, field.TypeUUID)
 	}
-	if value, ok := eu.mutation.RecycleOptions(); ok {
-		_spec.SetField(entity.FieldRecycleOptions, field.TypeJSON, value)
+	if value, ok := eu.mutation.Props(); ok {
+		_spec.SetField(entity.FieldProps, field.TypeJSON, value)
 	}
-	if eu.mutation.RecycleOptionsCleared() {
-		_spec.ClearField(entity.FieldRecycleOptions, field.TypeJSON)
+	if eu.mutation.PropsCleared() {
+		_spec.ClearField(entity.FieldProps, field.TypeJSON)
 	}
 	if eu.mutation.FileCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -669,15 +669,15 @@ func (euo *EntityUpdateOne) ClearUploadSessionID() *EntityUpdateOne {
 	return euo
 }
 
-// SetRecycleOptions sets the "recycle_options" field.
-func (euo *EntityUpdateOne) SetRecycleOptions(tro *types.EntityRecycleOption) *EntityUpdateOne {
-	euo.mutation.SetRecycleOptions(tro)
+// SetProps sets the "props" field.
+func (euo *EntityUpdateOne) SetProps(tp *types.EntityProps) *EntityUpdateOne {
+	euo.mutation.SetProps(tp)
 	return euo
 }
 
-// ClearRecycleOptions clears the value of the "recycle_options" field.
-func (euo *EntityUpdateOne) ClearRecycleOptions() *EntityUpdateOne {
-	euo.mutation.ClearRecycleOptions()
+// ClearProps clears the value of the "props" field.
+func (euo *EntityUpdateOne) ClearProps() *EntityUpdateOne {
+	euo.mutation.ClearProps()
 	return euo
 }
 
@@ -892,11 +892,11 @@ func (euo *EntityUpdateOne) sqlSave(ctx context.Context) (_node *Entity, err err
 	if euo.mutation.UploadSessionIDCleared() {
 		_spec.ClearField(entity.FieldUploadSessionID, field.TypeUUID)
 	}
-	if value, ok := euo.mutation.RecycleOptions(); ok {
-		_spec.SetField(entity.FieldRecycleOptions, field.TypeJSON, value)
+	if value, ok := euo.mutation.Props(); ok {
+		_spec.SetField(entity.FieldProps, field.TypeJSON, value)
 	}
-	if euo.mutation.RecycleOptionsCleared() {
-		_spec.ClearField(entity.FieldRecycleOptions, field.TypeJSON)
+	if euo.mutation.PropsCleared() {
+		_spec.ClearField(entity.FieldProps, field.TypeJSON)
 	}
 	if euo.mutation.FileCleared() {
 		edge := &sqlgraph.EdgeSpec{

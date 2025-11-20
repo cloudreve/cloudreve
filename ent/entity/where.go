@@ -521,14 +521,14 @@ func UploadSessionIDNotNil() predicate.Entity {
 	return predicate.Entity(sql.FieldNotNull(FieldUploadSessionID))
 }
 
-// RecycleOptionsIsNil applies the IsNil predicate on the "recycle_options" field.
-func RecycleOptionsIsNil() predicate.Entity {
-	return predicate.Entity(sql.FieldIsNull(FieldRecycleOptions))
+// PropsIsNil applies the IsNil predicate on the "props" field.
+func PropsIsNil() predicate.Entity {
+	return predicate.Entity(sql.FieldIsNull(FieldProps))
 }
 
-// RecycleOptionsNotNil applies the NotNil predicate on the "recycle_options" field.
-func RecycleOptionsNotNil() predicate.Entity {
-	return predicate.Entity(sql.FieldNotNull(FieldRecycleOptions))
+// PropsNotNil applies the NotNil predicate on the "props" field.
+func PropsNotNil() predicate.Entity {
+	return predicate.Entity(sql.FieldNotNull(FieldProps))
 }
 
 // HasFile applies the HasEdge predicate on the "file" edge.

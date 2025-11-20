@@ -26,6 +26,16 @@ import (
 	"github.com/samber/lo"
 )
 
+type ArchiveListFilesResponse struct {
+	Files []manager.ArchivedFile `json:"files"`
+}
+
+func BuildArchiveListFilesResponse(files []manager.ArchivedFile) *ArchiveListFilesResponse {
+	return &ArchiveListFilesResponse{
+		Files: files,
+	}
+}
+
 type PutRelativeResponse struct {
 	Name string
 	Url  string
@@ -116,37 +126,49 @@ func BuildTaskResponse(task queue.Task, node *ent.Node, hasher hashid.Encoder) *
 }
 
 type UploadSessionResponse struct {
-	SessionID      string         `json:"session_id"`
-	UploadID       string         `json:"upload_id"`
-	ChunkSize      int64          `json:"chunk_size"` // 分块大小，0 为部分快
-	Expires        int64          `json:"expires"`    // 上传凭证过期时间， Unix 时间戳
-	UploadURLs     []string       `json:"upload_urls,omitempty"`
-	Credential     string         `json:"credential,omitempty"`
-	AccessKey      string         `json:"ak,omitempty"`
-	KeyTime        string         `json:"keyTime,omitempty"` // COS用有效期
-	CompleteURL    string         `json:"completeURL,omitempty"`
-	StoragePolicy  *StoragePolicy `json:"storage_policy,omitempty"`
-	Uri            string         `json:"uri"`
-	CallbackSecret string         `json:"callback_secret"`
-	MimeType       string         `json:"mime_type,omitempty"`
-	UploadPolicy   string         `json:"upload_policy,omitempty"`
+	SessionID       string                 `json:"session_id"`
+	UploadID        string                 `json:"upload_id"`
+	ChunkSize       int64                  `json:"chunk_size"` // 分块大小，0 为部分快
+	Expires         int64                  `json:"expires"`    // 上传凭证过期时间， Unix 时间戳
+	UploadURLs      []string               `json:"upload_urls,omitempty"`
+	Credential      string                 `json:"credential,omitempty"`
+	AccessKey       string                 `json:"ak,omitempty"`
+	KeyTime         string                 `json:"keyTime,omitempty"` // COS用有效期
+	CompleteURL     string                 `json:"completeURL,omitempty"`
+	StoragePolicy   *StoragePolicy         `json:"storage_policy,omitempty"`
+	Uri             string                 `json:"uri"`
+	CallbackSecret  string                 `json:"callback_secret"`
+	MimeType        string                 `json:"mime_type,omitempty"`
+	UploadPolicy    string                 `json:"upload_policy,omitempty"`
+	EncryptMetadata *types.EncryptMetadata `json:"encrypt_metadata,omitempty"`
 }
 
 func BuildUploadSessionResponse(session *fs.UploadCredential, hasher hashid.Encoder) *UploadSessionResponse {
-	return &UploadSessionResponse{
-		SessionID:      session.SessionID,
-		ChunkSize:      session.ChunkSize,
-		Expires:        session.Expires,
-		UploadURLs:     session.UploadURLs,
-		Credential:     session.Credential,
-		CompleteURL:    session.CompleteURL,
-		Uri:            session.Uri,
-		UploadID:       session.UploadID,
-		StoragePolicy:  BuildStoragePolicy(session.StoragePolicy, hasher),
-		CallbackSecret: session.CallbackSecret,
-		MimeType:       session.MimeType,
-		UploadPolicy:   session.UploadPolicy,
+	res := &UploadSessionResponse{
+		SessionID:       session.SessionID,
+		ChunkSize:       session.ChunkSize,
+		Expires:         session.Expires,
+		UploadURLs:      session.UploadURLs,
+		Credential:      session.Credential,
+		CompleteURL:     session.CompleteURL,
+		Uri:             session.Uri,
+		UploadID:        session.UploadID,
+		StoragePolicy:   BuildStoragePolicy(session.StoragePolicy, hasher),
+		CallbackSecret:  session.CallbackSecret,
+		MimeType:        session.MimeType,
+		UploadPolicy:    session.UploadPolicy,
+		EncryptMetadata: session.EncryptMetadata,
 	}
+
+	if session.EncryptMetadata != nil {
+		res.EncryptMetadata = &types.EncryptMetadata{
+			Algorithm:    session.EncryptMetadata.Algorithm,
+			KeyPlainText: session.EncryptMetadata.KeyPlainText,
+			IV:           session.EncryptMetadata.IV,
+		}
+	}
+
+	return res
 }
 
 // WopiFileInfo Response for `CheckFileInfo`
@@ -250,12 +272,17 @@ type DirectLink struct {
 }
 
 type StoragePolicy struct {
-	ID            string           `json:"id"`
-	Name          string           `json:"name"`
-	AllowedSuffix []string         `json:"allowed_suffix,omitempty"`
-	Type          types.PolicyType `json:"type"`
-	MaxSize       int64            `json:"max_size"`
-	Relay         bool             `json:"relay,omitempty"`
+	ID                string           `json:"id"`
+	Name              string           `json:"name"`
+	AllowedSuffix     []string         `json:"allowed_suffix,omitempty"`
+	DeniedSuffix      []string         `json:"denied_suffix,omitempty"`
+	AllowedNameRegexp string           `json:"allowed_name_regexp,omitempty"`
+	DeniedNameRegexp  string           `json:"denied_name_regexp,omitempty"`
+	Type              types.PolicyType `json:"type"`
+	MaxSize           int64            `json:"max_size"`
+	Relay             bool             `json:"relay,omitempty"`
+	ChunkConcurrency  int              `json:"chunk_concurrency,omitempty"`
+	Encryption        bool             `json:"encryption,omitempty"`
 }
 
 type Entity struct {
@@ -265,22 +292,24 @@ type Entity struct {
 	CreatedAt     time.Time        `json:"created_at"`
 	StoragePolicy *StoragePolicy   `json:"storage_policy,omitempty"`
 	CreatedBy     *user.User       `json:"created_by,omitempty"`
+	EncryptedWith types.Cipher     `json:"encrypted_with,omitempty"`
 }
 
 type Share struct {
-	ID              string          `json:"id"`
-	Name            string          `json:"name,omitempty"`
-	RemainDownloads *int            `json:"remain_downloads,omitempty"`
-	Visited         int             `json:"visited"`
-	Downloaded      int             `json:"downloaded,omitempty"`
-	Expires         *time.Time      `json:"expires,omitempty"`
-	Unlocked        bool            `json:"unlocked"`
-	SourceType      *types.FileType `json:"source_type,omitempty"`
-	Owner           user.User       `json:"owner"`
-	CreatedAt       time.Time       `json:"created_at,omitempty"`
-	Expired         bool            `json:"expired"`
-	Url             string          `json:"url"`
-	ShowReadMe      bool            `json:"show_readme,omitempty"`
+	ID                string          `json:"id"`
+	Name              string          `json:"name,omitempty"`
+	RemainDownloads   *int            `json:"remain_downloads,omitempty"`
+	Visited           int             `json:"visited"`
+	Downloaded        int             `json:"downloaded,omitempty"`
+	Expires           *time.Time      `json:"expires,omitempty"`
+	Unlocked          bool            `json:"unlocked"`
+	PasswordProtected bool            `json:"password_protected,omitempty"`
+	SourceType        *types.FileType `json:"source_type,omitempty"`
+	Owner             user.User       `json:"owner"`
+	CreatedAt         time.Time       `json:"created_at,omitempty"`
+	Expired           bool            `json:"expired"`
+	Url               string          `json:"url"`
+	ShowReadMe        bool            `json:"show_readme,omitempty"`
 
 	// Only viewable by owner
 	IsPrivate bool   `json:"is_private,omitempty"`
@@ -298,15 +327,16 @@ func BuildShare(s *ent.Share, base *url.URL, hasher hashid.Encoder, requester *e
 		redactLevel = user.RedactLevelUser
 	}
 	res := Share{
-		Name:       name,
-		ID:         hashid.EncodeShareID(hasher, s.ID),
-		Unlocked:   unlocked,
-		Owner:      user.BuildUserRedacted(owner, redactLevel, hasher),
-		Expired:    inventory.IsShareExpired(s) != nil || expired,
-		Url:        BuildShareLink(s, hasher, base),
-		CreatedAt:  s.CreatedAt,
-		Visited:    s.Views,
-		SourceType: util.ToPtr(t),
+		Name:              name,
+		ID:                hashid.EncodeShareID(hasher, s.ID),
+		Unlocked:          unlocked,
+		Owner:             user.BuildUserRedacted(owner, redactLevel, hasher),
+		Expired:           inventory.IsShareExpired(s) != nil || expired,
+		Url:               BuildShareLink(s, hasher, base, unlocked),
+		CreatedAt:         s.CreatedAt,
+		Visited:           s.Views,
+		SourceType:        util.ToPtr(t),
+		PasswordProtected: s.Password != "",
 	}
 
 	if unlocked {
@@ -423,6 +453,12 @@ func BuildEntity(extendedInfo *fs.FileExtendedInfo, e fs.Entity, hasher hashid.E
 		userRedacted := user.BuildUserRedacted(e.CreatedBy(), user.RedactLevelAnonymous, hasher)
 		u = &userRedacted
 	}
+
+	encryptedWith := types.Cipher("")
+	if e.Encrypted() {
+		encryptedWith = e.Props().EncryptMetadata.Algorithm
+	}
+
 	return Entity{
 		ID:            hashid.EncodeEntityID(hasher, e.ID()),
 		Type:          e.Type(),
@@ -430,26 +466,48 @@ func BuildEntity(extendedInfo *fs.FileExtendedInfo, e fs.Entity, hasher hashid.E
 		StoragePolicy: BuildStoragePolicy(extendedInfo.EntityStoragePolicies[e.PolicyID()], hasher),
 		Size:          e.Size(),
 		CreatedBy:     u,
+		EncryptedWith: encryptedWith,
 	}
 }
 
-func BuildShareLink(s *ent.Share, hasher hashid.Encoder, base *url.URL) string {
+func BuildShareLink(s *ent.Share, hasher hashid.Encoder, base *url.URL, unlocked bool) string {
 	shareId := hashid.EncodeShareID(hasher, s.ID)
-	return routes.MasterShareUrl(base, shareId, s.Password).String()
+	if unlocked {
+		return routes.MasterShareUrl(base, shareId, s.Password).String()
+	}
+	return routes.MasterShareUrl(base, shareId, "").String()
 }
 
 func BuildStoragePolicy(sp *ent.StoragePolicy, hasher hashid.Encoder) *StoragePolicy {
 	if sp == nil {
 		return nil
 	}
-	return &StoragePolicy{
-		ID:            hashid.EncodePolicyID(hasher, sp.ID),
-		Name:          sp.Name,
-		Type:          types.PolicyType(sp.Type),
-		MaxSize:       sp.MaxSize,
-		AllowedSuffix: sp.Settings.FileType,
-		Relay:         sp.Settings.Relay,
+
+	res := &StoragePolicy{
+		ID:               hashid.EncodePolicyID(hasher, sp.ID),
+		Name:             sp.Name,
+		Type:             types.PolicyType(sp.Type),
+		MaxSize:          sp.MaxSize,
+		Relay:            sp.Settings.Relay,
+		ChunkConcurrency: sp.Settings.ChunkConcurrency,
+		Encryption:       sp.Settings.Encryption,
 	}
+
+	if sp.Settings.IsFileTypeDenyList {
+		res.DeniedSuffix = sp.Settings.FileType
+	} else {
+		res.AllowedSuffix = sp.Settings.FileType
+	}
+
+	if sp.Settings.NameRegexp != "" {
+		if sp.Settings.IsNameRegexpDenyList {
+			res.DeniedNameRegexp = sp.Settings.NameRegexp
+		} else {
+			res.AllowedNameRegexp = sp.Settings.NameRegexp
+		}
+	}
+
+	return res
 }
 
 func WriteEventSourceHeader(c *gin.Context) {

@@ -335,13 +335,23 @@ func (d *Driver) LocalPath(ctx context.Context, path string) string {
 
 func (d *Driver) Thumb(ctx context.Context, expire *time.Time, ext string, e fs.Entity) (string, error) {
 	w, h := d.settings.ThumbSize(ctx)
+	thumbParam := fmt.Sprintf("image/resize,m_lfit,w_%d,h_%d", w, h)
+
+	enco := d.settings.ThumbEncode(ctx)
+	switch enco.Format {
+	case "jpg", "webp":
+		thumbParam += fmt.Sprintf("/format,%s/quality,q_%d", enco.Format, enco.Quality)
+	case "png":
+		thumbParam += fmt.Sprintf("/format,%s", enco.Format)
+	}
+
 	thumbURL, err := d.signSourceURL(&obs.CreateSignedUrlInput{
 		Method:  obs.HttpMethodGet,
 		Bucket:  d.policy.BucketName,
 		Key:     e.Source(),
 		Expires: int(time.Until(*expire).Seconds()),
 		QueryParams: map[string]string{
-			imageProcessHeader: fmt.Sprintf("image/resize,m_lfit,w_%d,h_%d", w, h),
+			imageProcessHeader: thumbParam,
 		},
 	})
 

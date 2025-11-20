@@ -2,6 +2,7 @@ package setting
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -10,7 +11,6 @@ import (
 	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
-
 	"github.com/cloudreve/Cloudreve/v4/pkg/auth/requestinfo"
 	"github.com/cloudreve/Cloudreve/v4/pkg/boolset"
 )
@@ -102,6 +102,10 @@ type (
 		MediaMetaFFProbeSizeLimit(ctx context.Context) (int64, int64)
 		// MediaMetaFFProbePath returns the path of ffprobe executable.
 		MediaMetaFFProbePath(ctx context.Context) string
+		// MediaMetaGeocodingEnabled returns true if media meta geocoding is enabled.
+		MediaMetaGeocodingEnabled(ctx context.Context) bool
+		// MediaMetaGeocodingMapboxAK returns the Mapbox access token.
+		MediaMetaGeocodingMapboxAK(ctx context.Context) string
 		// ThumbSize returns the size limit of thumbnails.
 		ThumbSize(ctx context.Context) (int, int)
 		// ThumbEncode returns the thumbnail encoding settings.
@@ -196,6 +200,22 @@ type (
 		LibRawThumbExts(ctx context.Context) []string
 		// LibRawThumbPath returns the path of libraw executable.
 		LibRawThumbPath(ctx context.Context) string
+		// CustomProps returns the custom props settings.
+		CustomProps(ctx context.Context) []types.CustomProps
+		// CustomNavItems returns the custom nav items settings.
+		CustomNavItems(ctx context.Context) []CustomNavItem
+		// CustomHTML returns the custom HTML settings.
+		CustomHTML(ctx context.Context) *CustomHTML
+		// FFMpegExtraArgs returns the extra arguments of ffmpeg thumb generator.
+		FFMpegExtraArgs(ctx context.Context) string
+		// MasterEncryptKey returns the master encrypt key.
+		MasterEncryptKey(ctx context.Context) []byte
+		// MasterEncryptKeyVault returns the master encrypt key vault type.
+		MasterEncryptKeyVault(ctx context.Context) MasterEncryptKeyVaultType
+		// MasterEncryptKeyFile returns the master encrypt key file.
+		MasterEncryptKeyFile(ctx context.Context) string
+		// ShowEncryptionStatus returns true if encryption status is shown.
+		ShowEncryptionStatus(ctx context.Context) bool
 	}
 	UseFirstSiteUrlCtxKey = struct{}
 )
@@ -222,6 +242,51 @@ type (
 		adapterChain SettingStoreAdapter
 	}
 )
+
+func (s *settingProvider) ShowEncryptionStatus(ctx context.Context) bool {
+	return s.getBoolean(ctx, "show_encryption_status", true)
+}
+
+func (s *settingProvider) MasterEncryptKeyFile(ctx context.Context) string {
+	return s.getString(ctx, "encrypt_master_key_file", "")
+}
+
+func (s *settingProvider) MasterEncryptKeyVault(ctx context.Context) MasterEncryptKeyVaultType {
+	return MasterEncryptKeyVaultType(s.getString(ctx, "encrypt_master_key_vault", "setting"))
+}
+
+func (s *settingProvider) MasterEncryptKey(ctx context.Context) []byte {
+	encoded := s.getString(ctx, "encrypt_master_key", "")
+	key, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return nil
+	}
+	return key
+}
+
+func (s *settingProvider) CustomHTML(ctx context.Context) *CustomHTML {
+	return &CustomHTML{
+		HeadlessFooter: s.getString(ctx, "headless_footer_html", ""),
+		HeadlessBody:   s.getString(ctx, "headless_bottom_html", ""),
+		SidebarBottom:  s.getString(ctx, "sidebar_bottom_html", ""),
+	}
+}
+func (s *settingProvider) CustomNavItems(ctx context.Context) []CustomNavItem {
+	raw := s.getString(ctx, "custom_nav_items", "[]")
+	var items []CustomNavItem
+	if err := json.Unmarshal([]byte(raw), &items); err != nil {
+		return []CustomNavItem{}
+	}
+	return items
+}
+func (s *settingProvider) CustomProps(ctx context.Context) []types.CustomProps {
+	raw := s.getString(ctx, "custom_props", "[]")
+	var props []types.CustomProps
+	if err := json.Unmarshal([]byte(raw), &props); err != nil {
+		return []types.CustomProps{}
+	}
+	return props
+}
 
 func (s *settingProvider) License(ctx context.Context) string {
 	return s.getString(ctx, "license", "")
@@ -274,6 +339,7 @@ func (s *settingProvider) MapSetting(ctx context.Context) *MapSetting {
 	return &MapSetting{
 		Provider:       MapProvider(s.getString(ctx, "map_provider", "openstreetmap")),
 		GoogleTileType: MapGoogleTileType(s.getString(ctx, "map_google_tile_type", "roadmap")),
+		MapboxAK:       s.getString(ctx, "map_mapbox_ak", ""),
 	}
 }
 
@@ -376,6 +442,10 @@ func (s *settingProvider) FFMpegThumbSeek(ctx context.Context) string {
 	return s.getString(ctx, "thumb_ffmpeg_seek", "00:00:01.00")
 }
 
+func (s *settingProvider) FFMpegExtraArgs(ctx context.Context) string {
+	return s.getString(ctx, "thumb_ffmpeg_extra_args", "")
+}
+
 func (s *settingProvider) FFMpegThumbMaxSize(ctx context.Context) int64 {
 	return s.getInt64(ctx, "thumb_ffmpeg_max_size", 10737418240)
 }
@@ -440,7 +510,7 @@ func (s *settingProvider) ThumbEncode(ctx context.Context) *ThumbEncode {
 }
 
 func (s *settingProvider) ThumbEntitySuffix(ctx context.Context) string {
-	return s.getString(ctx, "thumb_entity_suffix", "._thumb")
+	return s.getString(ctx, "thumb_entity_suffix", "{blob_path}/{blob_name}._thumb")
 }
 
 func (s *settingProvider) ThumbSlaveSidecarSuffix(ctx context.Context) string {
@@ -489,6 +559,14 @@ func (s *settingProvider) MediaMetaExifEnabled(ctx context.Context) bool {
 
 func (s *settingProvider) MediaMetaEnabled(ctx context.Context) bool {
 	return s.getBoolean(ctx, "media_meta", true)
+}
+
+func (s *settingProvider) MediaMetaGeocodingEnabled(ctx context.Context) bool {
+	return s.getBoolean(ctx, "media_meta_geocoding", false)
+}
+
+func (s *settingProvider) MediaMetaGeocodingMapboxAK(ctx context.Context) string {
+	return s.getString(ctx, "media_meta_geocoding_mapbox_ak", "")
 }
 
 func (s *settingProvider) PublicResourceMaxAge(ctx context.Context) int {

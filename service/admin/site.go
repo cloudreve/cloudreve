@@ -193,7 +193,8 @@ type (
 func (s *GetSettingService) GetSetting(c *gin.Context) (map[string]string, error) {
 	dep := dependency.FromContext(c)
 	res, err := dep.SettingClient().Gets(c, lo.Filter(s.Keys, func(item string, index int) bool {
-		return item != "secret_key"
+		_, ok := inventory.RedactedSettings[strings.ToLower(item)]
+		return !ok
 	}))
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get settings", err)

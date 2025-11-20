@@ -83,7 +83,7 @@ type (
 		Capabilities() *Capabilities
 
 		// MediaMeta extracts media metadata from the given file.
-		MediaMeta(ctx context.Context, path, ext string) ([]MediaMeta, error)
+		MediaMeta(ctx context.Context, path, ext, language string) ([]MediaMeta, error)
 	}
 
 	Capabilities struct {
@@ -117,6 +117,7 @@ const (
 	MetaTypeExif        MetaType = "exif"
 	MediaTypeMusic      MetaType = "music"
 	MetaTypeStreamMedia MetaType = "stream"
+	MetaTypeGeocoding   MetaType = "geocoding"
 )
 
 type ForceUsePublicEndpointCtx struct{}

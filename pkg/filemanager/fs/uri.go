@@ -25,6 +25,7 @@ const (
 	QuerySearchNameOpOr       = "name_op_or"
 	QuerySearchUseOr          = "use_or"
 	QuerySearchMetadataPrefix = "meta_"
+	QuerySearchMetadataExact  = "exact_meta_"
 	QuerySearchCaseFolding    = "case_folding"
 	QuerySearchType           = "type"
 	QuerySearchTypeCategory   = "category"
@@ -218,7 +219,7 @@ func (u *URI) FileSystem() constants.FileSystemType {
 func (u *URI) SearchParameters() *inventory.SearchFileParameters {
 	q := u.U.Query()
 	res := &inventory.SearchFileParameters{
-		Metadata: make(map[string]string),
+		Metadata: make([]inventory.MetadataFilter, 0),
 	}
 	withSearch := false
 
@@ -252,7 +253,18 @@ func (u *URI) SearchParameters() *inventory.SearchFileParameters {
 
 	for k, v := range q {
 		if strings.HasPrefix(k, QuerySearchMetadataPrefix) {
-			res.Metadata[strings.TrimPrefix(k, QuerySearchMetadataPrefix)] = v[0]
+			res.Metadata = append(res.Metadata, inventory.MetadataFilter{
+				Key:   strings.TrimPrefix(k, QuerySearchMetadataPrefix),
+				Value: v[0],
+				Exact: false,
+			})
+			withSearch = true
+		} else if strings.HasPrefix(k, QuerySearchMetadataExact) {
+			res.Metadata = append(res.Metadata, inventory.MetadataFilter{
+				Key:   strings.TrimPrefix(k, QuerySearchMetadataExact),
+				Value: v[0],
+				Exact: true,
+			})
 			withSearch = true
 		}
 	}

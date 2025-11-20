@@ -2,13 +2,14 @@ package setting
 
 import (
 	"context"
+	"os"
+	"strings"
+
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cache"
 	"github.com/cloudreve/Cloudreve/v4/pkg/conf"
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 	"github.com/samber/lo"
-	"os"
-	"strings"
 )
 
 const (

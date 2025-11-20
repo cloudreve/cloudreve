@@ -48,7 +48,12 @@ func (a *musicExtractor) Exts() []string {
 	return audioExts
 }
 
-func (a *musicExtractor) Extract(ctx context.Context, ext string, source entitysource.EntitySource) ([]driver.MediaMeta, error) {
+func (a *musicExtractor) Extract(ctx context.Context, ext string, source entitysource.EntitySource, opts ...optionFunc) ([]driver.MediaMeta, error) {
+	option := &option{}
+	for _, opt := range opts {
+		opt.apply(option)
+	}
+
 	localLimit, remoteLimit := a.settings.MediaMetaMusicSizeLimit(ctx)
 	if err := checkFileSize(localLimit, remoteLimit, source); err != nil {
 		return nil, err

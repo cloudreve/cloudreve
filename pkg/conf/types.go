@@ -46,7 +46,7 @@ type System struct {
 	SessionSecret string
 	HashIDSalt    string // deprecated
 	GracePeriod   int    `validate:"gte=0"`
-	ProxyHeader   string `validate:"required_with=Listen"`
+	ProxyHeader   string
 	LogLevel      string `validate:"oneof=debug info warning error"`
 }
 
@@ -114,7 +114,7 @@ var SystemConfig = &System{
 	Debug:       false,
 	Mode:        MasterMode,
 	Listen:      ":5212",
-	ProxyHeader: "X-Forwarded-For",
+	ProxyHeader: "",
 	LogLevel:    "info",
 }
 

@@ -223,7 +223,7 @@ func (handler *Driver) Put(ctx context.Context, file *fs.UploadRequest) error {
 
 	mimeType := file.Props.MimeType
 	if mimeType == "" {
-		handler.mime.TypeByName(file.Props.Uri.Name())
+		mimeType = handler.mime.TypeByName(file.Props.Uri.Name())
 	}
 
 	err = resumeUploader.CompleteParts(ctx, upToken, upHost, nil, handler.policy.BucketName,
@@ -277,10 +277,20 @@ func (handler *Driver) Delete(ctx context.Context, files ...string) ([]string, e
 // Thumb 获取文件缩略图
 func (handler *Driver) Thumb(ctx context.Context, expire *time.Time, ext string, e fs.Entity) (string, error) {
 	w, h := handler.settings.ThumbSize(ctx)
+	thumbParam := fmt.Sprintf("imageView2/1/w/%d/h/%d", w, h)
+
+	enco := handler.settings.ThumbEncode(ctx)
+	switch enco.Format {
+	case "jpg", "webp":
+		thumbParam += fmt.Sprintf("/format/%s/q/%d", enco.Format, enco.Quality)
+	case "png":
+		thumbParam += fmt.Sprintf("/format/%s", enco.Format)
+	}
+
 	return handler.signSourceURL(
 		e.Source(),
 		url.Values{
-			fmt.Sprintf("imageView2/1/w/%d/h/%d", w, h): []string{},
+			thumbParam: []string{},
 		},
 		expire,
 	), nil
@@ -379,7 +389,7 @@ func (handler *Driver) Token(ctx context.Context, uploadSession *fs.UploadSessio
 
 	mimeType := file.Props.MimeType
 	if mimeType == "" {
-		handler.mime.TypeByName(file.Props.Uri.Name())
+		mimeType = handler.mime.TypeByName(file.Props.Uri.Name())
 	}
 
 	uploadSession.UploadID = ret.UploadID
@@ -423,7 +433,7 @@ func (handler *Driver) Capabilities() *driver.Capabilities {
 	}
 }
 
-func (handler *Driver) MediaMeta(ctx context.Context, path, ext string) ([]driver.MediaMeta, error) {
+func (handler *Driver) MediaMeta(ctx context.Context, path, ext, language string) ([]driver.MediaMeta, error) {
 	if util.ContainsString(supportedImageExt, ext) {
 		return handler.extractImageMeta(ctx, path)
 	}

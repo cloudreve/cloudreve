@@ -115,7 +115,7 @@ func (m *manager) Create(ctx context.Context, path *fs.URI, fileType types.FileT
 
 	isSymbolic := false
 	if o.Metadata != nil {
-		if err := m.validateMetadata(ctx, lo.MapToSlice(o.Metadata, func(key string, value string) fs.MetadataPatch {
+		_, err := m.validateMetadata(ctx, lo.MapToSlice(o.Metadata, func(key string, value string) fs.MetadataPatch {
 			if key == shareRedirectMetadataKey {
 				isSymbolic = true
 			}
@@ -124,7 +124,8 @@ func (m *manager) Create(ctx context.Context, path *fs.URI, fileType types.FileT
 				Key:   key,
 				Value: value,
 			}
-		})...); err != nil {
+		})...)
+		if err != nil {
 			return nil, err
 		}
 	}

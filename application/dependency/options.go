@@ -1,6 +1,8 @@
 package dependency
 
 import (
+	"io/fs"
+
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/pkg/auth"
@@ -11,7 +13,6 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
 	"github.com/gin-contrib/static"
-	"io/fs"
 )
 
 // Option 发送请求的额外设置
@@ -64,12 +65,6 @@ func WithServerStaticFS(c static.ServeFileSystem) Option {
 func WithProFlag(c bool) Option {
 	return optionFunc(func(o *dependency) {
 		o.isPro = c
-	})
-}
-
-func WithLicenseKey(c string) Option {
-	return optionFunc(func(o *dependency) {
-		o.licenseKey = c
 	})
 }
 

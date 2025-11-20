@@ -135,9 +135,9 @@ func (ec *EntityCreate) SetNillableUploadSessionID(u *uuid.UUID) *EntityCreate {
 	return ec
 }
 
-// SetRecycleOptions sets the "recycle_options" field.
-func (ec *EntityCreate) SetRecycleOptions(tro *types.EntityRecycleOption) *EntityCreate {
-	ec.mutation.SetRecycleOptions(tro)
+// SetProps sets the "props" field.
+func (ec *EntityCreate) SetProps(tp *types.EntityProps) *EntityCreate {
+	ec.mutation.SetProps(tp)
 	return ec
 }
 
@@ -336,9 +336,9 @@ func (ec *EntityCreate) createSpec() (*Entity, *sqlgraph.CreateSpec) {
 		_spec.SetField(entity.FieldUploadSessionID, field.TypeUUID, value)
 		_node.UploadSessionID = &value
 	}
-	if value, ok := ec.mutation.RecycleOptions(); ok {
-		_spec.SetField(entity.FieldRecycleOptions, field.TypeJSON, value)
-		_node.RecycleOptions = value
+	if value, ok := ec.mutation.Props(); ok {
+		_spec.SetField(entity.FieldProps, field.TypeJSON, value)
+		_node.Props = value
 	}
 	if nodes := ec.mutation.FileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -586,21 +586,21 @@ func (u *EntityUpsert) ClearUploadSessionID() *EntityUpsert {
 	return u
 }
 
-// SetRecycleOptions sets the "recycle_options" field.
-func (u *EntityUpsert) SetRecycleOptions(v *types.EntityRecycleOption) *EntityUpsert {
-	u.Set(entity.FieldRecycleOptions, v)
+// SetProps sets the "props" field.
+func (u *EntityUpsert) SetProps(v *types.EntityProps) *EntityUpsert {
+	u.Set(entity.FieldProps, v)
 	return u
 }
 
-// UpdateRecycleOptions sets the "recycle_options" field to the value that was provided on create.
-func (u *EntityUpsert) UpdateRecycleOptions() *EntityUpsert {
-	u.SetExcluded(entity.FieldRecycleOptions)
+// UpdateProps sets the "props" field to the value that was provided on create.
+func (u *EntityUpsert) UpdateProps() *EntityUpsert {
+	u.SetExcluded(entity.FieldProps)
 	return u
 }
 
-// ClearRecycleOptions clears the value of the "recycle_options" field.
-func (u *EntityUpsert) ClearRecycleOptions() *EntityUpsert {
-	u.SetNull(entity.FieldRecycleOptions)
+// ClearProps clears the value of the "props" field.
+func (u *EntityUpsert) ClearProps() *EntityUpsert {
+	u.SetNull(entity.FieldProps)
 	return u
 }
 
@@ -817,24 +817,24 @@ func (u *EntityUpsertOne) ClearUploadSessionID() *EntityUpsertOne {
 	})
 }
 
-// SetRecycleOptions sets the "recycle_options" field.
-func (u *EntityUpsertOne) SetRecycleOptions(v *types.EntityRecycleOption) *EntityUpsertOne {
+// SetProps sets the "props" field.
+func (u *EntityUpsertOne) SetProps(v *types.EntityProps) *EntityUpsertOne {
 	return u.Update(func(s *EntityUpsert) {
-		s.SetRecycleOptions(v)
+		s.SetProps(v)
 	})
 }
 
-// UpdateRecycleOptions sets the "recycle_options" field to the value that was provided on create.
-func (u *EntityUpsertOne) UpdateRecycleOptions() *EntityUpsertOne {
+// UpdateProps sets the "props" field to the value that was provided on create.
+func (u *EntityUpsertOne) UpdateProps() *EntityUpsertOne {
 	return u.Update(func(s *EntityUpsert) {
-		s.UpdateRecycleOptions()
+		s.UpdateProps()
 	})
 }
 
-// ClearRecycleOptions clears the value of the "recycle_options" field.
-func (u *EntityUpsertOne) ClearRecycleOptions() *EntityUpsertOne {
+// ClearProps clears the value of the "props" field.
+func (u *EntityUpsertOne) ClearProps() *EntityUpsertOne {
 	return u.Update(func(s *EntityUpsert) {
-		s.ClearRecycleOptions()
+		s.ClearProps()
 	})
 }
 
@@ -1222,24 +1222,24 @@ func (u *EntityUpsertBulk) ClearUploadSessionID() *EntityUpsertBulk {
 	})
 }
 
-// SetRecycleOptions sets the "recycle_options" field.
-func (u *EntityUpsertBulk) SetRecycleOptions(v *types.EntityRecycleOption) *EntityUpsertBulk {
+// SetProps sets the "props" field.
+func (u *EntityUpsertBulk) SetProps(v *types.EntityProps) *EntityUpsertBulk {
 	return u.Update(func(s *EntityUpsert) {
-		s.SetRecycleOptions(v)
+		s.SetProps(v)
 	})
 }
 
-// UpdateRecycleOptions sets the "recycle_options" field to the value that was provided on create.
-func (u *EntityUpsertBulk) UpdateRecycleOptions() *EntityUpsertBulk {
+// UpdateProps sets the "props" field to the value that was provided on create.
+func (u *EntityUpsertBulk) UpdateProps() *EntityUpsertBulk {
 	return u.Update(func(s *EntityUpsert) {
-		s.UpdateRecycleOptions()
+		s.UpdateProps()
 	})
 }
 
-// ClearRecycleOptions clears the value of the "recycle_options" field.
-func (u *EntityUpsertBulk) ClearRecycleOptions() *EntityUpsertBulk {
+// ClearProps clears the value of the "props" field.
+func (u *EntityUpsertBulk) ClearProps() *EntityUpsertBulk {
 	return u.Update(func(s *EntityUpsert) {
-		s.ClearRecycleOptions()
+		s.ClearProps()
 	})
 }
 

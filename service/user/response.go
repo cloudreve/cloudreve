@@ -29,6 +29,7 @@ type UserSettings struct {
 	TwoFAEnabled            bool      `json:"two_fa_enabled"`
 	Passkeys                []Passkey `json:"passkeys,omitempty"`
 	DisableViewSync         bool      `json:"disable_view_sync"`
+	ShareLinksInProfile     string    `json:"share_links_in_profile"`
 }
 
 func BuildUserSettings(u *ent.User, passkeys []*ent.Passkey, parser *uaparser.Parser) *UserSettings {
@@ -41,7 +42,8 @@ func BuildUserSettings(u *ent.User, passkeys []*ent.Passkey, parser *uaparser.Pa
 		Passkeys: lo.Map(passkeys, func(item *ent.Passkey, index int) Passkey {
 			return BuildPasskey(item)
 		}),
-		DisableViewSync: u.Settings.DisableViewSync,
+		DisableViewSync:     u.Settings.DisableViewSync,
+		ShareLinksInProfile: string(u.Settings.ShareLinksInProfile),
 	}
 }
 
@@ -97,18 +99,19 @@ type BuiltinLoginResponse struct {
 
 // User 用户序列化器
 type User struct {
-	ID              string            `json:"id"`
-	Email           string            `json:"email,omitempty"`
-	Nickname        string            `json:"nickname"`
-	Status          user.Status       `json:"status,omitempty"`
-	Avatar          string            `json:"avatar,omitempty"`
-	CreatedAt       time.Time         `json:"created_at"`
-	PreferredTheme  string            `json:"preferred_theme,omitempty"`
-	Anonymous       bool              `json:"anonymous,omitempty"`
-	Group           *Group            `json:"group,omitempty"`
-	Pined           []types.PinedFile `json:"pined,omitempty"`
-	Language        string            `json:"language,omitempty"`
-	DisableViewSync bool              `json:"disable_view_sync,omitempty"`
+	ID                  string                         `json:"id"`
+	Email               string                         `json:"email,omitempty"`
+	Nickname            string                         `json:"nickname"`
+	Status              user.Status                    `json:"status,omitempty"`
+	Avatar              string                         `json:"avatar,omitempty"`
+	CreatedAt           time.Time                      `json:"created_at"`
+	PreferredTheme      string                         `json:"preferred_theme,omitempty"`
+	Anonymous           bool                           `json:"anonymous,omitempty"`
+	Group               *Group                         `json:"group,omitempty"`
+	Pined               []types.PinedFile              `json:"pined,omitempty"`
+	Language            string                         `json:"language,omitempty"`
+	DisableViewSync     bool                           `json:"disable_view_sync,omitempty"`
+	ShareLinksInProfile types.ShareLinksInProfileLevel `json:"share_links_in_profile,omitempty"`
 }
 
 type Group struct {
@@ -153,18 +156,19 @@ func BuildWebAuthnList(credentials []webauthn.Credential) []WebAuthnCredentials 
 // BuildUser 序列化用户
 func BuildUser(user *ent.User, idEncoder hashid.Encoder) User {
 	return User{
-		ID:              hashid.EncodeUserID(idEncoder, user.ID),
-		Email:           user.Email,
-		Nickname:        user.Nick,
-		Status:          user.Status,
-		Avatar:          user.Avatar,
-		CreatedAt:       user.CreatedAt,
-		PreferredTheme:  user.Settings.PreferredTheme,
-		Anonymous:       user.ID == 0,
-		Group:           BuildGroup(user.Edges.Group, idEncoder),
-		Pined:           user.Settings.Pined,
-		Language:        user.Settings.Language,
-		DisableViewSync: user.Settings.DisableViewSync,
+		ID:                  hashid.EncodeUserID(idEncoder, user.ID),
+		Email:               user.Email,
+		Nickname:            user.Nick,
+		Status:              user.Status,
+		Avatar:              user.Avatar,
+		CreatedAt:           user.CreatedAt,
+		PreferredTheme:      user.Settings.PreferredTheme,
+		Anonymous:           user.ID == 0,
+		Group:               BuildGroup(user.Edges.Group, idEncoder),
+		Pined:               user.Settings.Pined,
+		Language:            user.Settings.Language,
+		DisableViewSync:     user.Settings.DisableViewSync,
+		ShareLinksInProfile: user.Settings.ShareLinksInProfile,
 	}
 }
 
@@ -193,10 +197,11 @@ func BuildUserRedacted(u *ent.User, level int, idEncoder hashid.Encoder) User {
 	userRaw := BuildUser(u, idEncoder)
 
 	user := User{
-		ID:        userRaw.ID,
-		Nickname:  userRaw.Nickname,
-		Avatar:    userRaw.Avatar,
-		CreatedAt: userRaw.CreatedAt,
+		ID:                  userRaw.ID,
+		Nickname:            userRaw.Nickname,
+		Avatar:              userRaw.Avatar,
+		CreatedAt:           userRaw.CreatedAt,
+		ShareLinksInProfile: userRaw.ShareLinksInProfile,
 	}
 
 	if userRaw.Group != nil {

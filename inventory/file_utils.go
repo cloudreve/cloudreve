@@ -16,6 +16,10 @@ import (
 	"github.com/samber/lo"
 )
 
+const (
+	metadataExactMatchPrefix = "!exact:"
+)
+
 func (f *fileClient) searchQuery(q *ent.FileQuery, args *SearchFileParameters, parents []*ent.File, ownerId int) *ent.FileQuery {
 	if len(parents) == 1 && parents[0] == nil {
 		q = q.Where(file.OwnerID(ownerId))
@@ -69,17 +73,22 @@ func (f *fileClient) searchQuery(q *ent.FileQuery, args *SearchFileParameters, p
 	}
 
 	if len(args.Metadata) > 0 {
-		metaPredicates := lo.MapToSlice(args.Metadata, func(name string, value string) predicate.Metadata {
-			nameEq := metadata.NameEQ(value)
-			if name == "" {
+		metaPredicates := lo.Map(args.Metadata, func(item MetadataFilter, index int) predicate.Metadata {
+			if item.Exact {
+				return metadata.And(metadata.NameEQ(item.Key), metadata.ValueEQ(item.Value))
+			}
+
+			nameEq := metadata.And(metadata.IsPublic(true), metadata.NameEQ(item.Key))
+			if item.Value == "" {
 				return nameEq
 			} else {
-				valueContain := metadata.ValueContainsFold(value)
-				return metadata.And(metadata.NameEQ(name), valueContain)
+				valueContain := metadata.ValueContainsFold(item.Value)
+				return metadata.And(nameEq, valueContain)
 			}
 		})
-		metaPredicates = append(metaPredicates, metadata.IsPublic(true))
-		q.Where(file.HasMetadataWith(metadata.And(metaPredicates...)))
+		q.Where(file.And(lo.Map(metaPredicates, func(item predicate.Metadata, index int) predicate.File {
+			return file.HasMetadataWith(item)
+		})...))
 	}
 
 	if args.SizeLte > 0 || args.SizeGte > 0 {

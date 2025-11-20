@@ -36,5 +36,11 @@ func (d *mimeDetector) TypeByName(p string) string {
 		return m
 	}
 
-	return mime.TypeByExtension(ext)
+	m := mime.TypeByExtension(ext)
+	if m != "" {
+		return m
+	}
+
+	// Fallback
+	return "application/octet-stream"
 }

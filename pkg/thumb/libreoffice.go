@@ -42,7 +42,7 @@ func (l *LibreOfficeGenerator) Generate(ctx context.Context, es entitysource.Ent
 	)
 
 	tempInputPath := ""
-	if es.IsLocal() {
+	if es.IsLocal() && !es.Entity().Encrypted() {
 		tempInputPath = es.LocalPath(ctx)
 	} else {
 		// If not local policy files, download to temp folder
@@ -69,10 +69,9 @@ func (l *LibreOfficeGenerator) Generate(ctx context.Context, es entitysource.Ent
 	}
 
 	// Convert the document to an image
-	encode := l.settings.ThumbEncode(ctx)
 	cmd := exec.CommandContext(ctx, l.settings.LibreOfficePath(ctx), "--headless",
 		"--nologo", "--nofirststartwizard", "--invisible", "--norestore", "--convert-to",
-		encode.Format, "--outdir", tempOutputPath, tempInputPath)
+		"png", "--outdir", tempOutputPath, tempInputPath)
 
 	// Redirect IO
 	var stdErr bytes.Buffer
@@ -86,7 +85,7 @@ func (l *LibreOfficeGenerator) Generate(ctx context.Context, es entitysource.Ent
 	return &Result{
 		Path: filepath.Join(
 			tempOutputPath,
-			strings.TrimSuffix(filepath.Base(tempInputPath), filepath.Ext(tempInputPath))+"."+encode.Format,
+			strings.TrimSuffix(filepath.Base(tempInputPath), filepath.Ext(tempInputPath))+".png",
 		),
 		Continue: true,
 		Cleanup:  []func(){func() { _ = os.RemoveAll(tempOutputPath) }},

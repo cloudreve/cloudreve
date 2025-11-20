@@ -3,7 +3,6 @@ package routers
 import (
 	"net/http"
 
-	"github.com/abslant/gzip"
 	"github.com/cloudreve/Cloudreve/v4/application/constants"
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
@@ -24,6 +23,7 @@ import (
 	sharesvc "github.com/cloudreve/Cloudreve/v4/service/share"
 	usersvc "github.com/cloudreve/Cloudreve/v4/service/user"
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 )
 
@@ -206,9 +206,9 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 	/*
 		静态资源
 	*/
-	r.Use(gzip.GzipHandler())                    // Done
-	r.Use(middleware.FrontendFileHandler(dep))   // Done
-	r.GET("manifest.json", controllers.Manifest) // Done
+	r.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedPaths([]string{"/api/"})))
+	r.Use(middleware.FrontendFileHandler(dep))
+	r.GET("manifest.json", controllers.Manifest)
 
 	noAuth := r.Group(constants.APIPrefix)
 	wopi := noAuth.Group("file/wopi", middleware.HashID(hashid.FileID), middleware.ViewerSessionValidation())
@@ -245,7 +245,10 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 		{
 			source.GET(":id/:name",
 				middleware.HashID(hashid.SourceLinkID),
-				controllers.AnonymousPermLink)
+				controllers.AnonymousPermLink(false))
+			source.GET("d/:id/:name",
+				middleware.HashID(hashid.SourceLinkID),
+				controllers.AnonymousPermLink(true))
 		}
 
 		shareShort := r.Group("s")
@@ -489,6 +492,12 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				middleware.UseUploadSession(types.PolicyTypeS3),
 				controllers.ProcessCallback(http.StatusBadRequest, false),
 			)
+			// 金山 ks3策略上传回调
+			callback.GET(
+				"ks3/:sessionID/:key",
+				middleware.UseUploadSession(types.PolicyTypeKs3),
+				controllers.ProcessCallback(http.StatusBadRequest, false),
+			)
 			// Huawei OBS upload callback
 			callback.POST(
 				"obs/:sessionID/:key",
@@ -557,6 +566,10 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				controllers.FromQuery[explorer.ListFileService](explorer.ListFileParameterCtx{}),
 				controllers.ListDirectory,
 			)
+			file.GET("archive",
+				controllers.FromQuery[explorer.ArchiveListFilesService](explorer.ArchiveListFilesParamCtx{}),
+				controllers.ListArchiveFiles,
+			)
 			// Create file
 			file.POST("create",
 				controllers.FromJSON[explorer.CreateFileService](explorer.CreateFileParameterCtx{}),
@@ -605,7 +618,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					controllers.ServeEntity,
 				)
 			}
-			// 获取缩略图
+			// get thumb
 			file.GET("thumb",
 				middleware.ContextHint(),
 				controllers.FromQuery[explorer.FileThumbService](explorer.FileThumbParameterCtx{}),

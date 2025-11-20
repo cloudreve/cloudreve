@@ -35,8 +35,8 @@ const (
 	FieldCreatedBy = "created_by"
 	// FieldUploadSessionID holds the string denoting the upload_session_id field in the database.
 	FieldUploadSessionID = "upload_session_id"
-	// FieldRecycleOptions holds the string denoting the recycle_options field in the database.
-	FieldRecycleOptions = "recycle_options"
+	// FieldProps holds the string denoting the props field in the database.
+	FieldProps = "recycle_options"
 	// EdgeFile holds the string denoting the file edge name in mutations.
 	EdgeFile = "file"
 	// EdgeUser holds the string denoting the user edge name in mutations.
@@ -79,7 +79,7 @@ var Columns = []string{
 	FieldStoragePolicyEntities,
 	FieldCreatedBy,
 	FieldUploadSessionID,
-	FieldRecycleOptions,
+	FieldProps,
 }
 
 var (

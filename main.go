@@ -1,8 +1,10 @@
+//go:debug rsa1024min=0
 package main
 
 import (
 	_ "embed"
 	"flag"
+
 	"github.com/cloudreve/Cloudreve/v4/cmd"
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 )

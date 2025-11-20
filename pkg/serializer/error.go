@@ -253,6 +253,8 @@ const (
 	CodeNodeUsedByStoragePolicy = 40086
 	// CodeDomainNotLicensed domain not licensed
 	CodeDomainNotLicensed = 40087
+	// CodeAnonymouseAccessDenied 匿名用户无法访问分享
+	CodeAnonymouseAccessDenied = 40088
 	// CodeDBError 数据库操作失败
 	CodeDBError = 50001
 	// CodeEncryptError 加密失败

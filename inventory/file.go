@@ -57,13 +57,22 @@ type (
 		UserID          int
 		Name            string
 		StoragePolicyID int
+		HasMetadata     string
+		Shared          bool
+		HasDirectLink   bool
+	}
+
+	MetadataFilter struct {
+		Key   string
+		Value string
+		Exact bool
 	}
 
 	SearchFileParameters struct {
 		Name []string
 		// NameOperatorOr is true if the name should match any of the given names, false if all of them
 		NameOperatorOr bool
-		Metadata       map[string]string
+		Metadata       []MetadataFilter
 		Type           *types.FileType
 		UseFullText    bool
 		CaseFolding    bool
@@ -121,6 +130,7 @@ type (
 		Size            int64
 		UploadSessionID uuid.UUID
 		Importing       bool
+		EncryptMetadata *types.EncryptMetadata
 	}
 
 	RelocateEntityParameter struct {
@@ -179,7 +189,7 @@ type FileClient interface {
 	// Copy copies a layer of file to its corresponding destination folder. dstMap is a map from src parent ID to dst parent Files.
 	Copy(ctx context.Context, files []*ent.File, dstMap map[int][]*ent.File) (map[int][]*ent.File, StorageDiff, error)
 	// Delete deletes a group of files (and related models) with given entity recycle option
-	Delete(ctx context.Context, files []*ent.File, options *types.EntityRecycleOption) ([]*ent.Entity, StorageDiff, error)
+	Delete(ctx context.Context, files []*ent.File, options *types.EntityProps) ([]*ent.Entity, StorageDiff, error)
 	// StaleEntities returns stale entities of a given file. If ID is not provided, all entities
 	// will be examined.
 	StaleEntities(ctx context.Context, ids ...int) ([]*ent.Entity, error)
@@ -211,6 +221,8 @@ type FileClient interface {
 	ListEntities(ctx context.Context, args *ListEntityParameters) (*ListEntityResult, error)
 	// UpdateProps updates props of a file
 	UpdateProps(ctx context.Context, file *ent.File, props *types.FileProps) (*ent.File, error)
+	// UpdateModifiedAt updates modified at of a file
+	UpdateModifiedAt(ctx context.Context, file *ent.File, modifiedAt time.Time) error
 }
 
 func NewFileClient(client *ent.Client, dbType conf.DBType, hasher hashid.Encoder) FileClient {
@@ -458,7 +470,7 @@ func (f *fileClient) DeleteByUser(ctx context.Context, uid int) error {
 	return nil
 }
 
-func (f *fileClient) Delete(ctx context.Context, files []*ent.File, options *types.EntityRecycleOption) ([]*ent.Entity, StorageDiff, error) {
+func (f *fileClient) Delete(ctx context.Context, files []*ent.File, options *types.EntityProps) ([]*ent.Entity, StorageDiff, error) {
 	// 1. Decrease reference count for all entities;
 	// entities stores the relation between its reference count in `files` and entity ID.
 	entities := make(map[int]int)
@@ -514,7 +526,7 @@ func (f *fileClient) Delete(ctx context.Context, files []*ent.File, options *typ
 	for _, chunk := range chunks {
 		if err := f.client.Entity.Update().
 			Where(entity.IDIn(chunk...)).
-			SetRecycleOptions(options).
+			SetProps(options).
 			Exec(ctx); err != nil {
 			return nil, nil, fmt.Errorf("failed to update recycle options for entities %v: %w", chunk, err)
 		}
@@ -640,6 +652,10 @@ func (f *fileClient) Copy(ctx context.Context, files []*ent.File, dstMap map[int
 	return newDstMap, map[int]int64{dstMap[files[0].FileChildren][0].OwnerID: sizeDiff}, nil
 }
 
+func (f *fileClient) UpdateModifiedAt(ctx context.Context, file *ent.File, modifiedAt time.Time) error {
+	return f.client.File.UpdateOne(file).SetUpdatedAt(modifiedAt).Exec(ctx)
+}
+
 func (f *fileClient) UpsertMetadata(ctx context.Context, file *ent.File, data map[string]string, privateMask map[string]bool) error {
 	// Validate value length
 	for key, value := range data {
@@ -712,10 +728,15 @@ func (f *fileClient) UpgradePlaceholder(ctx context.Context, file *ent.File, mod
 	}
 
 	if entityType == types.EntityTypeVersion {
-		if err := f.client.File.UpdateOne(file).
+		stm := f.client.File.UpdateOne(file).
 			SetSize(placeholder.Size).
-			SetPrimaryEntity(placeholder.ID).
-			Exec(ctx); err != nil {
+			SetPrimaryEntity(placeholder.ID)
+
+		if modifiedAt != nil {
+			stm.SetUpdatedAt(*modifiedAt)
+		}
+
+		if err := stm.Exec(ctx); err != nil {
 			return fmt.Errorf("failed to upgrade file primary entity: %v", err)
 		}
 	}
@@ -864,12 +885,27 @@ func (f *fileClient) RemoveStaleEntities(ctx context.Context, file *ent.File) (S
 
 func (f *fileClient) CreateEntity(ctx context.Context, file *ent.File, args *EntityParameters) (*ent.Entity, StorageDiff, error) {
 	createdBy := UserFromContext(ctx)
+	var opt *types.EntityProps
+	if args.EncryptMetadata != nil {
+		opt = &types.EntityProps{
+			EncryptMetadata: &types.EncryptMetadata{
+				Algorithm: args.EncryptMetadata.Algorithm,
+				Key:       args.EncryptMetadata.Key,
+				IV:        args.EncryptMetadata.IV,
+			},
+		}
+	}
+
 	stm := f.client.Entity.
 		Create().
 		SetType(int(args.EntityType)).
 		SetSource(args.Source).
 		SetSize(args.Size).
 		SetStoragePolicyID(args.StoragePolicyID)
+
+	if opt != nil {
+		stm.SetProps(opt)
+	}
 
 	if createdBy != nil && !IsAnonymousUser(createdBy) {
 		stm.SetUser(createdBy)
@@ -890,7 +926,7 @@ func (f *fileClient) CreateEntity(ctx context.Context, file *ent.File, args *Ent
 
 	diff := map[int]int64{file.OwnerID: created.Size}
 
-	if err := f.client.File.UpdateOne(file).AddEntities(created).Exec(ctx); err != nil {
+	if err := f.client.Entity.UpdateOne(created).AddFile(file).Exec(ctx); err != nil {
 		return nil, diff, fmt.Errorf("failed to add file entity: %v", err)
 	}
 
@@ -1079,6 +1115,18 @@ func (f *fileClient) FlattenListFiles(ctx context.Context, args *FlattenListFile
 
 	if args.Name != "" {
 		query = query.Where(file.NameContainsFold(args.Name))
+	}
+
+	if args.HasMetadata != "" {
+		query = query.Where(file.HasMetadataWith(metadata.Name(args.HasMetadata)))
+	}
+
+	if args.Shared {
+		query = query.Where(file.HasSharesWith(share.DeletedAtIsNil()))
+	}
+
+	if args.HasDirectLink {
+		query = query.Where(file.HasDirectLinksWith(directlink.DeletedAtIsNil()))
 	}
 
 	query.Order(getFileOrderOption(&ListFileParameters{

@@ -86,10 +86,11 @@ func (service *ListDavAccountsService) List(c *gin.Context) (*ListDavAccountResp
 
 type (
 	CreateDavAccountService struct {
-		Uri      string `json:"uri" binding:"required"`
-		Name     string `json:"name" binding:"required,min=1,max=255"`
-		Readonly bool   `json:"readonly"`
-		Proxy    bool   `json:"proxy"`
+		Uri             string `json:"uri" binding:"required"`
+		Name            string `json:"name" binding:"required,min=1,max=255"`
+		Readonly        bool   `json:"readonly"`
+		Proxy           bool   `json:"proxy"`
+		DisableSysFiles bool   `json:"disable_sys_files"`
 	}
 	CreateDavAccountParamCtx struct{}
 )
@@ -171,6 +172,10 @@ func (service *CreateDavAccountService) validateAndGetBs(user *ent.User) (*bools
 	bs := boolset.BooleanSet{}
 	if service.Readonly {
 		boolset.Set(types.DavAccountReadOnly, true, &bs)
+	}
+
+	if service.DisableSysFiles {
+		boolset.Set(types.DavAccountDisableSysFiles, true, &bs)
 	}
 
 	if service.Proxy && user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionWebDAVProxy)) {

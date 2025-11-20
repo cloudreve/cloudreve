@@ -25,8 +25,9 @@ func (Entity) Fields() []ent.Field {
 		field.UUID("upload_session_id", uuid.Must(uuid.NewV4())).
 			Optional().
 			Nillable(),
-		field.JSON("recycle_options", &types.EntityRecycleOption{}).
-			Optional(),
+		field.JSON("props", &types.EntityProps{}).
+			Optional().
+			StorageKey("recycle_options"),
 	}
 }
 

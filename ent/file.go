@@ -25,8 +25,6 @@ type File struct {
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
-	// DeletedAt holds the value of the "deleted_at" field.
-	DeletedAt *time.Time `json:"deleted_at,omitempty"`
 	// Type holds the value of the "type" field.
 	Type int `json:"type,omitempty"`
 	// Name holds the value of the "name" field.
@@ -171,7 +169,7 @@ func (*File) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case file.FieldName:
 			values[i] = new(sql.NullString)
-		case file.FieldCreatedAt, file.FieldUpdatedAt, file.FieldDeletedAt:
+		case file.FieldCreatedAt, file.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -205,13 +203,6 @@ func (f *File) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
 				f.UpdatedAt = value.Time
-			}
-		case file.FieldDeletedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field deleted_at", values[i])
-			} else if value.Valid {
-				f.DeletedAt = new(time.Time)
-				*f.DeletedAt = value.Time
 			}
 		case file.FieldType:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -350,11 +341,6 @@ func (f *File) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
 	builder.WriteString(f.UpdatedAt.Format(time.ANSIC))
-	builder.WriteString(", ")
-	if v := f.DeletedAt; v != nil {
-		builder.WriteString("deleted_at=")
-		builder.WriteString(v.Format(time.ANSIC))
-	}
 	builder.WriteString(", ")
 	builder.WriteString("type=")
 	builder.WriteString(fmt.Sprintf("%v", f.Type))

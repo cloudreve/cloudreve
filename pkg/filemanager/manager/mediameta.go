@@ -14,6 +14,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs/dbfs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
+	"github.com/cloudreve/Cloudreve/v4/pkg/mediameta"
 	"github.com/cloudreve/Cloudreve/v4/pkg/queue"
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 	"github.com/samber/lo"
@@ -106,6 +107,11 @@ func (m *manager) ExtractAndSaveMediaMeta(ctx context.Context, uri *fs.URI, enti
 		return nil
 	}
 
+	language := ""
+	if file.Owner().Settings != nil {
+		language = file.Owner().Settings.Language
+	}
+
 	var (
 		metas []driver.MediaMeta
 	)
@@ -117,7 +123,7 @@ func (m *manager) ExtractAndSaveMediaMeta(ctx context.Context, uri *fs.URI, enti
 	driverCaps := d.Capabilities()
 	if util.IsInExtensionList(driverCaps.MediaMetaSupportedExts, file.Name()) {
 		m.l.Debug("Using native driver to generate media meta.")
-		metas, err = d.MediaMeta(ctx, targetVersion.Source(), file.Ext())
+		metas, err = d.MediaMeta(ctx, targetVersion.Source(), file.Ext(), language)
 		if err != nil {
 			return fmt.Errorf("failed to get media meta using native driver: %w", err)
 		}
@@ -130,7 +136,7 @@ func (m *manager) ExtractAndSaveMediaMeta(ctx context.Context, uri *fs.URI, enti
 			return fmt.Errorf("failed to get entity source: %w", err)
 		}
 
-		metas, err = extractor.Extract(ctx, file.Ext(), source)
+		metas, err = extractor.Extract(ctx, file.Ext(), source, mediameta.WithLanguage(language))
 		if err != nil {
 			return fmt.Errorf("failed to extract media meta using local extractor: %w", err)
 		}

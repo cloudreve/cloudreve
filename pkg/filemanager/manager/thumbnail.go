@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/cloudreve/Cloudreve/v4/pkg/thumb"
 	"os"
+	"path"
 	"runtime"
 	"time"
 
@@ -18,6 +18,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager/entitysource"
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 	"github.com/cloudreve/Cloudreve/v4/pkg/queue"
+	"github.com/cloudreve/Cloudreve/v4/pkg/thumb"
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 	"github.com/samber/lo"
 )
@@ -64,7 +65,8 @@ func (m *manager) Thumbnail(ctx context.Context, uri *fs.URI) (entitysource.Enti
 	capabilities := handler.Capabilities()
 	// Check if file extension and size is supported by native policy generator.
 	if capabilities.ThumbSupportAllExts || util.IsInExtensionList(capabilities.ThumbSupportedExts, file.DisplayName()) &&
-		(capabilities.ThumbMaxSize == 0 || latest.Size() <= capabilities.ThumbMaxSize) {
+		(capabilities.ThumbMaxSize == 0 || latest.Size() <= capabilities.ThumbMaxSize) &&
+		!latest.Encrypted() {
 		thumbSource, err := m.GetEntitySource(ctx, 0, fs.WithEntity(latest), fs.WithUseThumb(true))
 		if err != nil {
 			return nil, fmt.Errorf("failed to get latest entity source: %w", err)
@@ -182,14 +184,9 @@ func (m *manager) generateThumb(ctx context.Context, uri *fs.URI, ext string, es
 		entityType := types.EntityTypeThumbnail
 		req := &fs.UploadRequest{
 			Props: &fs.UploadProps{
-				Uri:  uri,
-				Size: fileInfo.Size(),
-				SavePath: fmt.Sprintf(
-					"%s.%s%s",
-					es.Entity().Source(),
-					util.RandStringRunes(16),
-					m.settings.ThumbEntitySuffix(ctx),
-				),
+				Uri:        uri,
+				Size:       fileInfo.Size(),
+				SavePath:   path.Clean(util.ReplaceMagicVar(m.settings.ThumbEntitySuffix(ctx), fs.Separator, true, true, time.Now(), m.user.ID, uri.Name(), uri.Path(), es.Entity().Source())),
 				MimeType:   m.dep.MimeDetector(ctx).TypeByName("thumb.jpg"),
 				EntityType: &entityType,
 			},

@@ -88,14 +88,19 @@ func (f *ffprobeExtractor) Exts() []string {
 	return ffprobeExts
 }
 
-func (f *ffprobeExtractor) Extract(ctx context.Context, ext string, source entitysource.EntitySource) ([]driver.MediaMeta, error) {
+func (f *ffprobeExtractor) Extract(ctx context.Context, ext string, source entitysource.EntitySource, opts ...optionFunc) ([]driver.MediaMeta, error) {
+	option := &option{}
+	for _, opt := range opts {
+		opt.apply(option)
+	}
+
 	localLimit, remoteLimit := f.settings.MediaMetaFFProbeSizeLimit(ctx)
 	if err := checkFileSize(localLimit, remoteLimit, source); err != nil {
 		return nil, err
 	}
 
 	var input string
-	if source.IsLocal() {
+	if source.IsLocal() && !source.Entity().Encrypted() {
 		input = source.LocalPath(ctx)
 	} else {
 		expire := time.Now().Add(UrlExpire)

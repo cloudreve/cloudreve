@@ -2,8 +2,11 @@ package admin
 
 import (
 	"encoding/hex"
+	"errors"
 	"net/http"
 	"strconv"
+
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/pkg/boolset"
@@ -12,9 +15,8 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
 	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
 	"github.com/cloudreve/Cloudreve/v4/pkg/wopi"
-	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/gin-gonic/gin"
-	"github.com/go-mail/mail"
+	"github.com/wneessen/go-mail"
 )
 
 type (
@@ -138,27 +140,39 @@ func (s *TestSMTPService) Test(c *gin.Context) error {
 		return serializer.NewError(serializer.CodeParamErr, "Invalid SMTP port", err)
 	}
 
-	d := mail.NewDialer(s.Settings["smtpHost"], port, s.Settings["smtpUser"], s.Settings["smtpPass"])
-	d.SSL = false
+	opts := []mail.Option{
+		mail.WithPort(port),
+		mail.WithSMTPAuth(mail.SMTPAuthAutoDiscover), mail.WithTLSPortPolicy(mail.TLSOpportunistic),
+		mail.WithUsername(s.Settings["smtpUser"]), mail.WithPassword(s.Settings["smtpPass"]),
+	}
 	if setting.IsTrueValue(s.Settings["smtpEncryption"]) {
-		d.SSL = true
-	}
-	d.StartTLSPolicy = mail.OpportunisticStartTLS
-
-	sender, err := d.Dial()
-	if err != nil {
-		return serializer.NewError(serializer.CodeInternalSetting, "Failed to connect to SMTP server: "+err.Error(), err)
+		opts = append(opts, mail.WithSSL())
 	}
 
-	m := mail.NewMessage()
-	m.SetHeader("From", s.Settings["fromAdress"])
-	m.SetAddressHeader("Reply-To", s.Settings["replyTo"], s.Settings["fromName"])
-	m.SetHeader("To", s.To)
-	m.SetHeader("Subject", "Cloudreve SMTP Test")
-	m.SetBody("text/plain", "This is a test email from Cloudreve.")
+	d, diaErr := mail.NewClient(s.Settings["smtpHost"], opts...)
+	if diaErr != nil {
+		return serializer.NewError(serializer.CodeInternalSetting, "Failed to create SMTP client: "+diaErr.Error(), diaErr)
+	}
 
-	err = mail.Send(sender, m)
+	m := mail.NewMsg()
+	if err := m.FromFormat(s.Settings["fromName"], s.Settings["fromAdress"]); err != nil {
+		return serializer.NewError(serializer.CodeInternalSetting, "Failed to set FROM address: "+err.Error(), err)
+	}
+	m.ReplyToFormat(s.Settings["fromName"], s.Settings["replyTo"])
+	m.To(s.To)
+	m.Subject("Cloudreve SMTP Test")
+	m.SetMessageID()
+	m.SetBodyString(mail.TypeTextHTML, "This is a test email from Cloudreve.")
+
+	err = d.DialAndSendWithContext(c, m)
 	if err != nil {
+		// Check if this is an SMTP RESET error after successful delivery
+		var sendErr *mail.SendError
+		var errParsed = errors.As(err, &sendErr)
+		if errParsed && sendErr.Reason == mail.ErrSMTPReset {
+			return nil // Don't treat this as a delivery failure since mail was sent
+		}
+
 		return serializer.NewError(serializer.CodeInternalSetting, "Failed to send test email: "+err.Error(), err)
 	}
 

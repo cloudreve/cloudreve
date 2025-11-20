@@ -7,16 +7,19 @@ import (
 // UserSetting 用户其他配置
 type (
 	UserSetting struct {
-		ProfileOff          bool                    `json:"profile_off,omitempty"`
-		PreferredTheme      string                  `json:"preferred_theme,omitempty"`
-		VersionRetention    bool                    `json:"version_retention,omitempty"`
-		VersionRetentionExt []string                `json:"version_retention_ext,omitempty"`
-		VersionRetentionMax int                     `json:"version_retention_max,omitempty"`
-		Pined               []PinedFile             `json:"pined,omitempty"`
-		Language            string                  `json:"email_language,omitempty"`
-		DisableViewSync     bool                    `json:"disable_view_sync,omitempty"`
-		FsViewMap           map[string]ExplorerView `json:"fs_view_map,omitempty"`
+		ProfileOff          bool                     `json:"profile_off,omitempty"`
+		PreferredTheme      string                   `json:"preferred_theme,omitempty"`
+		VersionRetention    bool                     `json:"version_retention,omitempty"`
+		VersionRetentionExt []string                 `json:"version_retention_ext,omitempty"`
+		VersionRetentionMax int                      `json:"version_retention_max,omitempty"`
+		Pined               []PinedFile              `json:"pined,omitempty"`
+		Language            string                   `json:"email_language,omitempty"`
+		DisableViewSync     bool                     `json:"disable_view_sync,omitempty"`
+		FsViewMap           map[string]ExplorerView  `json:"fs_view_map,omitempty"`
+		ShareLinksInProfile ShareLinksInProfileLevel `json:"share_links_in_profile,omitempty"`
 	}
+
+	ShareLinksInProfileLevel string
 
 	PinedFile struct {
 		Uri  string `json:"uri"`
@@ -41,6 +44,12 @@ type (
 		Token string `json:"token"`
 		// 允许的文件扩展名
 		FileType []string `json:"file_type"`
+		// IsFileTypeDenyList Whether above list is a deny list.
+		IsFileTypeDenyList bool `json:"is_file_type_deny_list,omitempty"`
+		// FileRegexp 文件扩展名正则表达式
+		NameRegexp string `json:"file_regexp,omitempty"`
+		// IsNameRegexp Whether above regexp is a deny list.
+		IsNameRegexpDenyList bool `json:"is_name_regexp_deny_list,omitempty"`
 		// OauthRedirect Oauth 重定向地址
 		OauthRedirect string `json:"od_redirect,omitempty"`
 		// CustomProxy whether to use custom-proxy to get file content
@@ -92,6 +101,10 @@ type (
 		SourceAuth bool `json:"source_auth,omitempty"`
 		// QiniuUploadCdn whether to use CDN for Qiniu upload.
 		QiniuUploadCdn bool `json:"qiniu_upload_cdn,omitempty"`
+		// ChunkConcurrency the number of chunks to upload concurrently.
+		ChunkConcurrency int `json:"chunk_concurrency,omitempty"`
+		// Whether to enable file encryption.
+		Encryption bool `json:"encryption,omitempty"`
 	}
 
 	FileType         int
@@ -143,8 +156,18 @@ type (
 		MasterSiteVersion string `json:"master_site_version,omitempty"`
 	}
 
-	EntityRecycleOption struct {
-		UnlinkOnly bool `json:"unlink_only,omitempty"`
+	EntityProps struct {
+		UnlinkOnly      bool             `json:"unlink_only,omitempty"`
+		EncryptMetadata *EncryptMetadata `json:"encrypt_metadata,omitempty"`
+	}
+
+	Cipher string
+
+	EncryptMetadata struct {
+		Algorithm    Cipher `json:"algorithm"`
+		Key          []byte `json:"key"`
+		KeyPlainText []byte `json:"key_plain_text,omitempty"`
+		IV           []byte `json:"iv"`
 	}
 
 	DavAccountProps struct {
@@ -173,7 +196,8 @@ type (
 	}
 
 	ColumTypeProps struct {
-		MetadataKey string `json:"metadata_key,omitempty" binding:"max=255"`
+		MetadataKey   string `json:"metadata_key,omitempty" binding:"max=255"`
+		CustomPropsID string `json:"custom_props_id,omitempty" binding:"max=255"`
 	}
 
 	ShareProps struct {
@@ -245,6 +269,7 @@ func FileTypeFromString(s string) FileType {
 const (
 	DavAccountReadOnly DavAccountOption = iota
 	DavAccountProxy
+	DavAccountDisableSysFiles
 )
 
 const (
@@ -254,6 +279,7 @@ const (
 	PolicyTypeOss    = "oss"
 	PolicyTypeCos    = "cos"
 	PolicyTypeS3     = "s3"
+	PolicyTypeKs3    = "ks3"
 	PolicyTypeOd     = "onedrive"
 	PolicyTypeRemote = "remote"
 	PolicyTypeObs    = "obs"
@@ -278,26 +304,62 @@ const (
 	ViewerTypeCustom  = "custom"
 )
 
-type Viewer struct {
-	ID          string                             `json:"id"`
-	Type        ViewerType                         `json:"type"`
-	DisplayName string                             `json:"display_name"`
-	Exts        []string                           `json:"exts"`
-	Url         string                             `json:"url,omitempty"`
-	Icon        string                             `json:"icon,omitempty"`
-	WopiActions map[string]map[ViewerAction]string `json:"wopi_actions,omitempty"`
-	Props       map[string]string                  `json:"props,omitempty"`
-	MaxSize     int64                              `json:"max_size,omitempty"`
-	Disabled    bool                               `json:"disabled,omitempty"`
-	Templates   []NewFileTemplate                  `json:"templates,omitempty"`
-	Platform    string                             `json:"platform,omitempty"`
-}
+type (
+	Viewer struct {
+		ID                      string                             `json:"id"`
+		Type                    ViewerType                         `json:"type"`
+		DisplayName             string                             `json:"display_name"`
+		Exts                    []string                           `json:"exts"`
+		Url                     string                             `json:"url,omitempty"`
+		Icon                    string                             `json:"icon,omitempty"`
+		WopiActions             map[string]map[ViewerAction]string `json:"wopi_actions,omitempty"`
+		Props                   map[string]string                  `json:"props,omitempty"`
+		MaxSize                 int64                              `json:"max_size,omitempty"`
+		Disabled                bool                               `json:"disabled,omitempty"`
+		Templates               []NewFileTemplate                  `json:"templates,omitempty"`
+		Platform                string                             `json:"platform,omitempty"`
+		RequiredGroupPermission []GroupPermission                  `json:"required_group_permission,omitempty"`
+	}
+	ViewerGroup struct {
+		Viewers []Viewer `json:"viewers"`
+	}
 
-type ViewerGroup struct {
-	Viewers []Viewer `json:"viewers"`
-}
+	NewFileTemplate struct {
+		Ext         string `json:"ext"`
+		DisplayName string `json:"display_name"`
+	}
+)
 
-type NewFileTemplate struct {
-	Ext         string `json:"ext"`
-	DisplayName string `json:"display_name"`
-}
+type (
+	CustomPropsType string
+	CustomProps     struct {
+		ID      string          `json:"id"`
+		Name    string          `json:"name"`
+		Type    CustomPropsType `json:"type"`
+		Max     int             `json:"max,omitempty"`
+		Min     int             `json:"min,omitempty"`
+		Default string          `json:"default,omitempty"`
+		Options []string        `json:"options,omitempty"`
+		Icon    string          `json:"icon,omitempty"`
+	}
+)
+
+const (
+	CustomPropsTypeText        = "text"
+	CustomPropsTypeNumber      = "number"
+	CustomPropsTypeBoolean     = "boolean"
+	CustomPropsTypeSelect      = "select"
+	CustomPropsTypeMultiSelect = "multi_select"
+	CustomPropsTypeLink        = "link"
+	CustomPropsTypeRating      = "rating"
+)
+
+const (
+	ProfilePublicShareOnly = ShareLinksInProfileLevel("")
+	ProfileAllShare        = ShareLinksInProfileLevel("all_share")
+	ProfileHideShare       = ShareLinksInProfileLevel("hide_share")
+)
+
+const (
+	CipherAES256CTR Cipher = "aes-256-ctr"
+)

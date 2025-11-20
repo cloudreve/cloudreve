@@ -15,7 +15,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aliyun/aliyun-oss-go-sdk/oss"
+	"github.com/aliyun/alibabacloud-oss-go-sdk-v2/oss"
+	"github.com/aliyun/alibabacloud-oss-go-sdk-v2/oss/credentials"
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/boolset"
@@ -52,7 +53,6 @@ type Driver struct {
 	policy *ent.StoragePolicy
 
 	client     *oss.Client
-	bucket     *oss.Bucket
 	settings   setting.Provider
 	l          logging.Logger
 	config     conf.ConfigProvider
@@ -65,12 +65,12 @@ type Driver struct {
 type key int
 
 const (
-	chunkRetrySleep   = time.Duration(5) * time.Second
-	uploadIdParam     = "uploadId"
-	partNumberParam   = "partNumber"
-	callbackParam     = "callback"
-	completeAllHeader = "x-oss-complete-all"
-	maxDeleteBatch    = 1000
+	chunkRetrySleep       = time.Duration(5) * time.Second
+	maxDeleteBatch        = 1000
+	maxSignTTL            = time.Duration(24) * time.Hour * 7
+	completeAllHeader     = "x-oss-complete-all"
+	forbidOverwriteHeader = "x-oss-forbid-overwrite"
+	trafficLimitHeader    = "x-oss-traffic-limit"
 
 	// MultiPartUploadThreshold 服务端使用分片上传的阈值
 	MultiPartUploadThreshold int64 = 5 * (1 << 30) // 5GB
@@ -102,21 +102,27 @@ func New(ctx context.Context, policy *ent.StoragePolicy, settings setting.Provid
 
 // CORS 创建跨域策略
 func (handler *Driver) CORS() error {
-	return handler.client.SetBucketCORS(handler.policy.BucketName, []oss.CORSRule{
-		{
-			AllowedOrigin: []string{"*"},
-			AllowedMethod: []string{
-				"GET",
-				"POST",
-				"PUT",
-				"DELETE",
-				"HEAD",
+	_, err := handler.client.PutBucketCors(context.Background(), &oss.PutBucketCorsRequest{
+		Bucket: &handler.policy.BucketName,
+		CORSConfiguration: &oss.CORSConfiguration{
+			CORSRules: []oss.CORSRule{
+				{
+					AllowedOrigins: []string{"*"},
+					AllowedMethods: []string{
+						"GET",
+						"POST",
+						"PUT",
+						"DELETE",
+						"HEAD",
+					},
+					ExposeHeaders:  []string{},
+					AllowedHeaders: []string{"*"},
+					MaxAgeSeconds:  oss.Ptr(int64(3600)),
+				},
 			},
-			ExposeHeader:  []string{},
-			AllowedHeader: []string{"*"},
-			MaxAgeSeconds: 3600,
-		},
-	})
+		}})
+
+	return err
 }
 
 // InitOSSClient 初始化OSS鉴权客户端
@@ -125,34 +131,28 @@ func (handler *Driver) InitOSSClient(forceUsePublicEndpoint bool) error {
 		return errors.New("empty policy")
 	}
 
-	opt := make([]oss.ClientOption, 0)
-
 	// 决定是否使用内网 Endpoint
 	endpoint := handler.policy.Server
+	useCname := false
 	if handler.policy.Settings.ServerSideEndpoint != "" && !forceUsePublicEndpoint {
 		endpoint = handler.policy.Settings.ServerSideEndpoint
 	} else if handler.policy.Settings.UseCname {
-		opt = append(opt, oss.UseCname(true))
+		useCname = true
 	}
 
 	if !strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://") {
 		endpoint = "https://" + endpoint
 	}
 
+	cfg := oss.LoadDefaultConfig().
+		WithCredentialsProvider(credentials.NewStaticCredentialsProvider(handler.policy.AccessKey, handler.policy.SecretKey, "")).
+		WithEndpoint(endpoint).
+		WithRegion(handler.policy.Settings.Region).
+		WithUseCName(useCname)
+
 	// 初始化客户端
-	client, err := oss.New(endpoint, handler.policy.AccessKey, handler.policy.SecretKey, opt...)
-	if err != nil {
-		return err
-	}
+	client := oss.NewClient(cfg)
 	handler.client = client
-
-	// 初始化存储桶
-	bucket, err := client.Bucket(handler.policy.BucketName)
-	if err != nil {
-		return err
-	}
-	handler.bucket = bucket
-
 	return nil
 }
 
@@ -166,38 +166,40 @@ func (handler *Driver) List(ctx context.Context, base string, onProgress driver.
 
 	var (
 		delimiter string
-		marker    string
 		objects   []oss.ObjectProperties
-		commons   []string
+		commons   []oss.CommonPrefix
 	)
 	if !recursive {
 		delimiter = "/"
 	}
 
-	for {
-		subRes, err := handler.bucket.ListObjects(oss.Marker(marker), oss.Prefix(base),
-			oss.MaxKeys(1000), oss.Delimiter(delimiter))
+	p := handler.client.NewListObjectsPaginator(&oss.ListObjectsRequest{
+		Bucket:    &handler.policy.BucketName,
+		Prefix:    &base,
+		MaxKeys:   1000,
+		Delimiter: &delimiter,
+	})
+
+	for p.HasNext() {
+		page, err := p.NextPage(ctx)
 		if err != nil {
 			return nil, err
 		}
-		objects = append(objects, subRes.Objects...)
-		commons = append(commons, subRes.CommonPrefixes...)
-		marker = subRes.NextMarker
-		if marker == "" {
-			break
-		}
+
+		objects = append(objects, page.Contents...)
+		commons = append(commons, page.CommonPrefixes...)
 	}
 
 	// 处理列取结果
 	res := make([]fs.PhysicalObject, 0, len(objects)+len(commons))
 	// 处理目录
 	for _, object := range commons {
-		rel, err := filepath.Rel(base, object)
+		rel, err := filepath.Rel(base, *object.Prefix)
 		if err != nil {
 			continue
 		}
 		res = append(res, fs.PhysicalObject{
-			Name:         path.Base(object),
+			Name:         path.Base(*object.Prefix),
 			RelativePath: filepath.ToSlash(rel),
 			Size:         0,
 			IsDir:        true,
@@ -208,17 +210,17 @@ func (handler *Driver) List(ctx context.Context, base string, onProgress driver.
 
 	// 处理文件
 	for _, object := range objects {
-		rel, err := filepath.Rel(base, object.Key)
+		rel, err := filepath.Rel(base, *object.Key)
 		if err != nil {
 			continue
 		}
 		res = append(res, fs.PhysicalObject{
-			Name:         path.Base(object.Key),
-			Source:       object.Key,
+			Name:         path.Base(*object.Key),
+			Source:       *object.Key,
 			RelativePath: filepath.ToSlash(rel),
 			Size:         object.Size,
 			IsDir:        false,
-			LastModify:   object.LastModified,
+			LastModify:   *object.LastModified,
 		})
 	}
 	onProgress(len(res))
@@ -240,30 +242,39 @@ func (handler *Driver) Put(ctx context.Context, file *fs.UploadRequest) error {
 
 	mimeType := file.Props.MimeType
 	if mimeType == "" {
-		handler.mime.TypeByName(file.Props.Uri.Name())
+		mimeType = handler.mime.TypeByName(file.Props.Uri.Name())
 	}
 
 	// 是否允许覆盖
 	overwrite := file.Mode&fs.ModeOverwrite == fs.ModeOverwrite
-	options := []oss.Option{
-		oss.WithContext(ctx),
-		oss.Expires(time.Now().Add(credentialTTL * time.Second)),
-		oss.ForbidOverWrite(!overwrite),
-		oss.ContentType(mimeType),
-	}
+	forbidOverwrite := oss.Ptr(strconv.FormatBool(!overwrite))
+	exipires := oss.Ptr(time.Now().Add(credentialTTL * time.Second).Format(time.RFC3339))
 
 	// 小文件直接上传
 	if file.Props.Size < MultiPartUploadThreshold {
-		return handler.bucket.PutObject(file.Props.SavePath, file, options...)
+		_, err := handler.client.PutObject(ctx, &oss.PutObjectRequest{
+			Bucket:          &handler.policy.BucketName,
+			Key:             &file.Props.SavePath,
+			Body:            file,
+			ForbidOverwrite: forbidOverwrite,
+			ContentType:     oss.Ptr(mimeType),
+		})
+		return err
 	}
 
 	// 超过阈值时使用分片上传
-	imur, err := handler.bucket.InitiateMultipartUpload(file.Props.SavePath, options...)
+	imur, err := handler.client.InitiateMultipartUpload(ctx, &oss.InitiateMultipartUploadRequest{
+		Bucket:          &handler.policy.BucketName,
+		Key:             &file.Props.SavePath,
+		ContentType:     oss.Ptr(mimeType),
+		ForbidOverwrite: forbidOverwrite,
+		Expires:         exipires,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to initiate multipart upload: %w", err)
 	}
 
-	parts := make([]oss.UploadPart, 0)
+	parts := make([]*oss.UploadPartResult, 0)
 
 	chunks := chunk.NewChunkGroup(file, handler.chunkSize, &backoff.ConstantBackoff{
 		Max:   handler.settings.ChunkRetryLimit(ctx),
@@ -271,7 +282,13 @@ func (handler *Driver) Put(ctx context.Context, file *fs.UploadRequest) error {
 	}, handler.settings.UseChunkBuffer(ctx), handler.l, handler.settings.TempPath(ctx))
 
 	uploadFunc := func(current *chunk.ChunkGroup, content io.Reader) error {
-		part, err := handler.bucket.UploadPart(imur, content, current.Length(), current.Index()+1, oss.WithContext(ctx))
+		part, err := handler.client.UploadPart(ctx, &oss.UploadPartRequest{
+			Bucket:     &handler.policy.BucketName,
+			Key:        &file.Props.SavePath,
+			UploadId:   imur.UploadId,
+			PartNumber: int32(current.Index() + 1),
+			Body:       content,
+		})
 		if err == nil {
 			parts = append(parts, part)
 		}
@@ -280,14 +297,27 @@ func (handler *Driver) Put(ctx context.Context, file *fs.UploadRequest) error {
 
 	for chunks.Next() {
 		if err := chunks.Process(uploadFunc); err != nil {
-			handler.cancelUpload(imur)
+			handler.cancelUpload(*imur)
 			return fmt.Errorf("failed to upload chunk #%d: %w", chunks.Index(), err)
 		}
 	}
 
-	_, err = handler.bucket.CompleteMultipartUpload(imur, parts, oss.ForbidOverWrite(!overwrite), oss.WithContext(ctx))
+	_, err = handler.client.CompleteMultipartUpload(ctx, &oss.CompleteMultipartUploadRequest{
+		Bucket:   &handler.policy.BucketName,
+		Key:      imur.Key,
+		UploadId: imur.UploadId,
+		CompleteMultipartUpload: &oss.CompleteMultipartUpload{
+			Parts: lo.Map(parts, func(part *oss.UploadPartResult, i int) oss.UploadPart {
+				return oss.UploadPart{
+					PartNumber: int32(i + 1),
+					ETag:       part.ETag,
+				}
+			}),
+		},
+		ForbidOverwrite: oss.Ptr(strconv.FormatBool(!overwrite)),
+	})
 	if err != nil {
-		handler.cancelUpload(imur)
+		handler.cancelUpload(*imur)
 	}
 
 	return err
@@ -302,7 +332,12 @@ func (handler *Driver) Delete(ctx context.Context, files ...string) ([]string, e
 	for index, group := range groups {
 		handler.l.Debug("Process delete group #%d: %v", index, group)
 		// 删除文件
-		delRes, err := handler.bucket.DeleteObjects(group)
+		delRes, err := handler.client.DeleteMultipleObjects(ctx, &oss.DeleteMultipleObjectsRequest{
+			Bucket: &handler.policy.BucketName,
+			Objects: lo.Map(group, func(v string, i int) oss.DeleteObject {
+				return oss.DeleteObject{Key: &v}
+			}),
+		})
 		if err != nil {
 			failed = append(failed, group...)
 			lastError = err
@@ -310,7 +345,14 @@ func (handler *Driver) Delete(ctx context.Context, files ...string) ([]string, e
 		}
 
 		// 统计未删除的文件
-		failed = append(failed, util.SliceDifference(files, delRes.DeletedObjects)...)
+		failed = append(
+			failed,
+			util.SliceDifference(files,
+				lo.Map(delRes.DeletedObjects, func(v oss.DeletedInfo, i int) string {
+					return *v.Key
+				}),
+			)...,
+		)
 	}
 
 	if len(failed) > 0 && lastError == nil {
@@ -334,12 +376,23 @@ func (handler *Driver) Thumb(ctx context.Context, expire *time.Time, ext string,
 
 	w, h := handler.settings.ThumbSize(ctx)
 	thumbParam := fmt.Sprintf("image/resize,m_lfit,h_%d,w_%d", h, w)
-	thumbOption := []oss.Option{oss.Process(thumbParam)}
+
+	enco := handler.settings.ThumbEncode(ctx)
+	switch enco.Format {
+	case "jpg", "webp":
+		thumbParam += fmt.Sprintf("/format,%s/quality,q_%d", enco.Format, enco.Quality)
+	case "png":
+		thumbParam += fmt.Sprintf("/format,%s", enco.Format)
+	}
+
+	req := &oss.GetObjectRequest{
+		Process: oss.Ptr(thumbParam),
+	}
 	thumbURL, err := handler.signSourceURL(
 		ctx,
 		e.Source(),
 		expire,
-		thumbOption,
+		req,
 		false,
 	)
 	if err != nil {
@@ -361,11 +414,11 @@ func (handler *Driver) Source(ctx context.Context, e fs.Entity, args *driver.Get
 	}
 
 	// 添加各项设置
-	var signOptions = make([]oss.Option, 0, 2)
+	req := &oss.GetObjectRequest{}
 	if args.IsDownload {
 		encodedFilename := url.PathEscape(args.DisplayName)
-		signOptions = append(signOptions, oss.ResponseContentDisposition(fmt.Sprintf(`attachment; filename="%s"; filename*=UTF-8''%s`,
-			encodedFilename, encodedFilename)))
+		req.ResponseContentDisposition = oss.Ptr(fmt.Sprintf(`attachment; filename="%s"; filename*=UTF-8''%s`,
+			encodedFilename, encodedFilename))
 	}
 	if args.Speed > 0 {
 		// Byte 转换为 bit
@@ -378,25 +431,39 @@ func (handler *Driver) Source(ctx context.Context, e fs.Entity, args *driver.Get
 		if args.Speed > 838860800 {
 			args.Speed = 838860800
 		}
-		signOptions = append(signOptions, oss.TrafficLimitParam(args.Speed))
+		req.Parameters = map[string]string{
+			trafficLimitHeader: strconv.FormatInt(args.Speed, 10),
+		}
 	}
 
-	return handler.signSourceURL(ctx, e.Source(), args.Expire, signOptions, false)
+	return handler.signSourceURL(ctx, e.Source(), args.Expire, req, false)
 }
 
-func (handler *Driver) signSourceURL(ctx context.Context, path string, expire *time.Time, options []oss.Option, forceSign bool) (string, error) {
-	ttl := int64(86400 * 365 * 20)
+func (handler *Driver) signSourceURL(ctx context.Context, path string, expire *time.Time, req *oss.GetObjectRequest, forceSign bool) (string, error) {
+	// V4 Sign 最大过期时间为7天
+	ttl := maxSignTTL
 	if expire != nil {
-		ttl = int64(time.Until(*expire).Seconds())
+		ttl = time.Until(*expire)
+		if ttl > maxSignTTL {
+			ttl = maxSignTTL
+		}
 	}
 
-	signedURL, err := handler.bucket.SignURL(path, oss.HTTPGet, ttl, options...)
+	if req == nil {
+		req = &oss.GetObjectRequest{}
+	}
+
+	req.Bucket = &handler.policy.BucketName
+	req.Key = &path
+
+	// signedURL, err := handler.client.Presign(path, oss.HTTPGet, ttl, options...)
+	result, err := handler.client.Presign(ctx, req, oss.PresignExpires(ttl))
 	if err != nil {
 		return "", err
 	}
 
 	// 将最终生成的签名URL域名换成用户自定义的加速域名（如果有）
-	finalURL, err := url.Parse(signedURL)
+	finalURL, err := url.Parse(result.URL)
 	if err != nil {
 		return "", err
 	}
@@ -404,10 +471,12 @@ func (handler *Driver) signSourceURL(ctx context.Context, path string, expire *t
 	// 公有空间替换掉Key及不支持的头
 	if !handler.policy.IsPrivate && !forceSign {
 		query := finalURL.Query()
-		query.Del("OSSAccessKeyId")
-		query.Del("Signature")
+		query.Del("x-oss-credential")
+		query.Del("x-oss-date")
+		query.Del("x-oss-expires")
+		query.Del("x-oss-signature")
+		query.Del("x-oss-signature-version")
 		query.Del("response-content-disposition")
-		query.Del("x-oss-traffic-limit")
 		finalURL.RawQuery = query.Encode()
 	}
 	return finalURL.String(), nil
@@ -441,38 +510,45 @@ func (handler *Driver) Token(ctx context.Context, uploadSession *fs.UploadSessio
 
 	mimeType := file.Props.MimeType
 	if mimeType == "" {
-		handler.mime.TypeByName(file.Props.Uri.Name())
+		mimeType = handler.mime.TypeByName(file.Props.Uri.Name())
 	}
 
 	// 初始化分片上传
-	options := []oss.Option{
-		oss.WithContext(ctx),
-		oss.Expires(uploadSession.Props.ExpireAt),
-		oss.ForbidOverWrite(true),
-		oss.ContentType(mimeType),
-	}
-	imur, err := handler.bucket.InitiateMultipartUpload(file.Props.SavePath, options...)
+	imur, err := handler.client.InitiateMultipartUpload(ctx, &oss.InitiateMultipartUploadRequest{
+		Bucket:          &handler.policy.BucketName,
+		Key:             &file.Props.SavePath,
+		ContentType:     oss.Ptr(mimeType),
+		ForbidOverwrite: oss.Ptr(strconv.FormatBool(true)),
+		Expires:         oss.Ptr(uploadSession.Props.ExpireAt.Format(time.RFC3339)),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize multipart upload: %w", err)
 	}
-	uploadSession.UploadID = imur.UploadID
+	uploadSession.UploadID = *imur.UploadId
 
 	// 为每个分片签名上传 URL
 	chunks := chunk.NewChunkGroup(file, handler.chunkSize, &backoff.ConstantBackoff{}, false, handler.l, "")
 	urls := make([]string, chunks.Num())
-	ttl := int64(time.Until(uploadSession.Props.ExpireAt).Seconds())
+	ttl := time.Until(uploadSession.Props.ExpireAt)
 	for chunks.Next() {
 		err := chunks.Process(func(c *chunk.ChunkGroup, chunk io.Reader) error {
-			signedURL, err := handler.bucket.SignURL(file.Props.SavePath, oss.HTTPPut,
-				ttl,
-				oss.AddParam(partNumberParam, strconv.Itoa(c.Index()+1)),
-				oss.AddParam(uploadIdParam, imur.UploadID),
-				oss.ContentType("application/octet-stream"))
+			signedURL, err := handler.client.Presign(ctx, &oss.UploadPartRequest{
+				Bucket:     &handler.policy.BucketName,
+				Key:        &file.Props.SavePath,
+				UploadId:   imur.UploadId,
+				PartNumber: int32(c.Index() + 1),
+				Body:       chunk,
+				RequestCommon: oss.RequestCommon{
+					Headers: map[string]string{
+						"Content-Type": "application/octet-stream",
+					},
+				},
+			}, oss.PresignExpires(ttl))
 			if err != nil {
 				return err
 			}
 
-			urls[c.Index()] = signedURL
+			urls[c.Index()] = signedURL.URL
 			return nil
 		})
 		if err != nil {
@@ -481,29 +557,43 @@ func (handler *Driver) Token(ctx context.Context, uploadSession *fs.UploadSessio
 	}
 
 	// 签名完成分片上传的URL
-	completeURL, err := handler.bucket.SignURL(file.Props.SavePath, oss.HTTPPost, ttl,
-		oss.ContentType("application/octet-stream"),
-		oss.AddParam(uploadIdParam, imur.UploadID),
-		oss.Expires(time.Now().Add(time.Duration(ttl)*time.Second)),
-		oss.SetHeader(completeAllHeader, "yes"),
-		oss.ForbidOverWrite(true),
-		oss.AddParam(callbackParam, callbackPolicyEncoded))
+	completeURL, err := handler.client.Presign(ctx, &oss.CompleteMultipartUploadRequest{
+		Bucket:   &handler.policy.BucketName,
+		Key:      &file.Props.SavePath,
+		UploadId: imur.UploadId,
+		RequestCommon: oss.RequestCommon{
+			Parameters: map[string]string{
+				"callback": callbackPolicyEncoded,
+			},
+			Headers: map[string]string{
+				"Content-Type":        "application/octet-stream",
+				completeAllHeader:     "yes",
+				forbidOverwriteHeader: "true",
+			},
+		},
+	}, oss.PresignExpires(ttl))
 	if err != nil {
 		return nil, err
 	}
 
 	return &fs.UploadCredential{
-		UploadID:    imur.UploadID,
+		UploadID:    *imur.UploadId,
 		UploadURLs:  urls,
-		CompleteURL: completeURL,
+		CompleteURL: completeURL.URL,
 		SessionID:   uploadSession.Props.UploadSessionID,
 		ChunkSize:   handler.chunkSize,
+		Callback:    callbackPolicyEncoded,
 	}, nil
 }
 
 // 取消上传凭证
 func (handler *Driver) CancelToken(ctx context.Context, uploadSession *fs.UploadSession) error {
-	return handler.bucket.AbortMultipartUpload(oss.InitiateMultipartUploadResult{UploadID: uploadSession.UploadID, Key: uploadSession.Props.SavePath}, oss.WithContext(ctx))
+	_, err := handler.client.AbortMultipartUpload(ctx, &oss.AbortMultipartUploadRequest{
+		Bucket:   &handler.policy.BucketName,
+		Key:      &uploadSession.Props.SavePath,
+		UploadId: &uploadSession.UploadID,
+	})
+	return err
 }
 
 func (handler *Driver) CompleteUpload(ctx context.Context, session *fs.UploadSession) error {
@@ -526,7 +616,7 @@ func (handler *Driver) Capabilities() *driver.Capabilities {
 	}
 }
 
-func (handler *Driver) MediaMeta(ctx context.Context, path, ext string) ([]driver.MediaMeta, error) {
+func (handler *Driver) MediaMeta(ctx context.Context, path, ext, language string) ([]driver.MediaMeta, error) {
 	if util.ContainsString(supportedImageExt, ext) {
 		return handler.extractImageMeta(ctx, path)
 	}
@@ -547,7 +637,11 @@ func (handler *Driver) LocalPath(ctx context.Context, path string) string {
 }
 
 func (handler *Driver) cancelUpload(imur oss.InitiateMultipartUploadResult) {
-	if err := handler.bucket.AbortMultipartUpload(imur); err != nil {
+	if _, err := handler.client.AbortMultipartUpload(context.Background(), &oss.AbortMultipartUploadRequest{
+		Bucket:   &handler.policy.BucketName,
+		Key:      imur.Key,
+		UploadId: imur.UploadId,
+	}); err != nil {
 		handler.l.Warning("failed to abort multipart upload: %s", err)
 	}
 }

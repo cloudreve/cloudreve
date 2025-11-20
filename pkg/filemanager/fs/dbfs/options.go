@@ -2,6 +2,7 @@ package dbfs
 
 import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 )
 
@@ -26,6 +27,7 @@ type dbfsOption struct {
 	streamListResponseCallback func(parent fs.File, file []fs.File)
 	ancestor                   *File
 	notRoot                    bool
+	encryptMetadata            *types.EncryptMetadata
 }
 
 func newDbfsOption() *dbfsOption {
@@ -48,6 +50,13 @@ func (f optionFunc) Apply(o any) {
 	if dbfsO, ok := o.(*dbfsOption); ok {
 		f(dbfsO)
 	}
+}
+
+// WithEncryptMetadata sets the encrypt metadata for the upload operation.
+func WithEncryptMetadata(encryptMetadata *types.EncryptMetadata) fs.Option {
+	return optionFunc(func(o *dbfsOption) {
+		o.encryptMetadata = encryptMetadata
+	})
 }
 
 // WithFilePublicMetadata enables loading file public metadata.

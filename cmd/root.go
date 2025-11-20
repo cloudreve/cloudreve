@@ -2,14 +2,16 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"os"
 )
 
 var (
-	confPath string
+	confPath   string
+	licenseKey string
 )
 
 func init() {

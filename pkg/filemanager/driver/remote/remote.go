@@ -179,6 +179,6 @@ func (handler *Driver) Capabilities() *driver.Capabilities {
 	}
 }
 
-func (handler *Driver) MediaMeta(ctx context.Context, path, ext string) ([]driver.MediaMeta, error) {
-	return handler.uploadClient.MediaMeta(ctx, path, ext)
+func (handler *Driver) MediaMeta(ctx context.Context, path, ext, language string) ([]driver.MediaMeta, error) {
+	return handler.uploadClient.MediaMeta(ctx, path, ext, language)
 }

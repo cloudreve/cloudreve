@@ -13,6 +13,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager/entitysource"
+	"github.com/cloudreve/Cloudreve/v4/pkg/mediameta"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
 	"github.com/gin-gonic/gin"
 	"github.com/samber/lo"
@@ -135,8 +136,9 @@ func (s *SlaveMetaService) MediaMeta(c *gin.Context) ([]driver.MediaMeta, error)
 	}
 	defer entitySource.Close()
 
+	language := c.Query("language")
 	extractor := dep.MediaMetaExtractor(c)
-	res, err := extractor.Extract(c, s.Ext, entitySource)
+	res, err := extractor.Extract(c, s.Ext, entitySource, mediameta.WithLanguage(language))
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract media meta: %w", err)
 	}

@@ -1034,8 +1034,7 @@ func (c *FileClient) Hooks() []Hook {
 
 // Interceptors returns the client interceptors.
 func (c *FileClient) Interceptors() []Interceptor {
-	inters := c.inters.File
-	return append(inters[:len(inters):len(inters)], file.Interceptors[:]...)
+	return c.inters.File
 }
 
 func (c *FileClient) mutate(ctx context.Context, m *FileMutation) (Value, error) {

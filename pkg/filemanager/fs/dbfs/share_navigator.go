@@ -157,6 +157,14 @@ func (n *shareNavigator) Root(ctx context.Context, path *fs.URI) (*File, error) 
 	}
 
 	if n.user.ID != n.owner.ID && !n.user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionShareDownload)) {
+		if inventory.IsAnonymousUser(n.user) {
+			return nil, serializer.NewError(
+				serializer.CodeAnonymouseAccessDenied,
+				fmt.Sprintf("You don't have permission to access share links"),
+				err,
+			)
+		}
+
 		return nil, serializer.NewError(
 			serializer.CodeNoPermissionErr,
 			fmt.Sprintf("You don't have permission to access share links"),

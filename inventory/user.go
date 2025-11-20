@@ -220,8 +220,29 @@ func (c *userClient) Delete(ctx context.Context, uid int) error {
 func (c *userClient) ApplyStorageDiff(ctx context.Context, diffs StorageDiff) error {
 	ae := serializer.NewAggregateError()
 	for uid, diff := range diffs {
-		if err := c.client.User.Update().Where(user.ID(uid)).AddStorage(diff).Exec(ctx); err != nil {
-			ae.Add(fmt.Sprintf("%d", uid), fmt.Errorf("failed to apply storage diff for user %d: %w", uid, err))
+		// Retry logic for MySQL deadlock (Error 1213)
+		// This is a temporary workaround. TODO: optimize storage mutation
+		maxRetries := 3
+		var lastErr error
+		for attempt := 0; attempt < maxRetries; attempt++ {
+			if err := c.client.User.Update().Where(user.ID(uid)).AddStorage(diff).Exec(ctx); err != nil {
+				lastErr = err
+				// Check if it's a MySQL deadlock error (Error 1213)
+				if strings.Contains(err.Error(), "Error 1213") && attempt < maxRetries-1 {
+					// Wait a bit before retrying with exponential backoff
+					time.Sleep(time.Duration(attempt+1) * 10 * time.Millisecond)
+					continue
+				}
+				ae.Add(fmt.Sprintf("%d", uid), fmt.Errorf("failed to apply storage diff for user %d: %w", uid, err))
+				break
+			}
+			// Success, break out of retry loop
+			lastErr = nil
+			break
+		}
+
+		if lastErr != nil {
+			ae.Add(fmt.Sprintf("%d", uid), fmt.Errorf("failed to apply storage diff for user %d: %w", uid, lastErr))
 		}
 	}
 

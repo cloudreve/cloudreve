@@ -103,10 +103,6 @@ func (m *Migrator) migratePolicy() (map[int]bool, error) {
 			settings.ProxyServer = policy.OptionsSerialized.OdProxy
 		}
 
-		if policy.DirNameRule == "" {
-			policy.DirNameRule = "uploads/{uid}/{path}"
-		}
-
 		if policy.Type == types.PolicyTypeCos {
 			settings.ChunkSize = 1024 * 1024 * 25
 		}
@@ -122,8 +118,16 @@ func (m *Migrator) migratePolicy() (map[int]bool, error) {
 				hasRandomElement = true
 				break
 			}
+
+			if strings.Contains(policy.DirNameRule, c) {
+				hasRandomElement = true
+				break
+			}
 		}
 		if !hasRandomElement {
+			if policy.DirNameRule == "" {
+				policy.DirNameRule = "uploads/{uid}/{path}"
+			}
 			policy.FileNameRule = "{uid}_{randomkey8}_{originname}"
 			m.l.Warning("Storage policy %q has no random element in file name rule, using default file name rule.", policy.Name)
 		}

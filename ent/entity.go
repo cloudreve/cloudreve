@@ -42,8 +42,8 @@ type Entity struct {
 	CreatedBy int `json:"created_by,omitempty"`
 	// UploadSessionID holds the value of the "upload_session_id" field.
 	UploadSessionID *uuid.UUID `json:"upload_session_id,omitempty"`
-	// RecycleOptions holds the value of the "recycle_options" field.
-	RecycleOptions *types.EntityRecycleOption `json:"recycle_options,omitempty"`
+	// Props holds the value of the "props" field.
+	Props *types.EntityProps `json:"props,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the EntityQuery when eager-loading is set.
 	Edges        EntityEdges `json:"edges"`
@@ -105,7 +105,7 @@ func (*Entity) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case entity.FieldUploadSessionID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case entity.FieldRecycleOptions:
+		case entity.FieldProps:
 			values[i] = new([]byte)
 		case entity.FieldID, entity.FieldType, entity.FieldSize, entity.FieldReferenceCount, entity.FieldStoragePolicyEntities, entity.FieldCreatedBy:
 			values[i] = new(sql.NullInt64)
@@ -196,12 +196,12 @@ func (e *Entity) assignValues(columns []string, values []any) error {
 				e.UploadSessionID = new(uuid.UUID)
 				*e.UploadSessionID = *value.S.(*uuid.UUID)
 			}
-		case entity.FieldRecycleOptions:
+		case entity.FieldProps:
 			if value, ok := values[i].(*[]byte); !ok {
-				return fmt.Errorf("unexpected type %T for field recycle_options", values[i])
+				return fmt.Errorf("unexpected type %T for field props", values[i])
 			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &e.RecycleOptions); err != nil {
-					return fmt.Errorf("unmarshal field recycle_options: %w", err)
+				if err := json.Unmarshal(*value, &e.Props); err != nil {
+					return fmt.Errorf("unmarshal field props: %w", err)
 				}
 			}
 		default:
@@ -289,8 +289,8 @@ func (e *Entity) String() string {
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")
-	builder.WriteString("recycle_options=")
-	builder.WriteString(fmt.Sprintf("%v", e.RecycleOptions))
+	builder.WriteString("props=")
+	builder.WriteString(fmt.Sprintf("%v", e.Props))
 	builder.WriteByte(')')
 	return builder.String()
 }

@@ -1,13 +1,14 @@
 package local
 
 import (
+	"os"
+	"time"
+
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 	"github.com/gofrs/uuid"
-	"os"
-	"time"
 )
 
 // NewLocalFileEntity creates a new local file entity.
@@ -72,4 +73,12 @@ func (l *localFileEntity) UploadSessionID() *uuid.UUID {
 
 func (l *localFileEntity) Model() *ent.Entity {
 	return nil
+}
+
+func (l *localFileEntity) Props() *types.EntityProps {
+	return nil
+}
+
+func (l *localFileEntity) Encrypted() bool {
+	return false
 }

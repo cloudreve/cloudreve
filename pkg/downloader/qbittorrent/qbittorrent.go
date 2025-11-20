@@ -32,18 +32,18 @@ const (
 )
 
 var (
-	supportDownloadOptions = map[string]bool{
-		"cookie":             true,
-		"skip_checking":      true,
-		"root_folder":        true,
-		"rename":             true,
-		"upLimit":            true,
-		"dlLimit":            true,
-		"ratioLimit":         true,
-		"seedingTimeLimit":   true,
-		"autoTMM":            true,
-		"sequentialDownload": true,
-		"firstLastPiecePrio": true,
+	downloadOptionFormatTypes = map[string]string{
+		"cookie":             "%s",
+		"skip_checking":      "%s",
+		"root_folder":        "%s",
+		"rename":             "%s",
+		"upLimit":            "%.0f",
+		"dlLimit":            "%.0f",
+		"ratioLimit":         "%f",
+		"seedingTimeLimit":   "%.0f",
+		"autoTMM":            "%t",
+		"sequentialDownload": "%s",
+		"firstLastPiecePrio": "%t",
 	}
 )
 
@@ -271,15 +271,15 @@ func (c *qbittorrentClient) CreateTask(ctx context.Context, url string, options 
 
 	// Apply global options
 	for k, v := range c.options.Options {
-		if _, ok := supportDownloadOptions[k]; ok {
-			_ = formWriter.WriteField(k, fmt.Sprintf("%s", v))
+		if _, ok := downloadOptionFormatTypes[k]; ok {
+			_ = formWriter.WriteField(k, fmt.Sprintf(downloadOptionFormatTypes[k], v))
 		}
 	}
 
 	// Apply group options
 	for k, v := range options {
-		if _, ok := supportDownloadOptions[k]; ok {
-			_ = formWriter.WriteField(k, fmt.Sprintf("%s", v))
+		if _, ok := downloadOptionFormatTypes[k]; ok {
+			_ = formWriter.WriteField(k, fmt.Sprintf(downloadOptionFormatTypes[k], v))
 		}
 	}
 

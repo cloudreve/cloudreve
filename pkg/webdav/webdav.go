@@ -9,6 +9,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
+	"path"
+	"strings"
+	"time"
+
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
@@ -26,11 +32,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/samber/lo"
 	"golang.org/x/tools/container/intsets"
-	"net/http"
-	"net/url"
-	"path"
-	"strings"
-	"time"
 )
 
 const (
@@ -211,7 +212,13 @@ func handleMkcol(c *gin.Context, user *ent.User, fm manager.FileManager) (status
 
 	_, err = fm.Create(ctx, uri, types.FileTypeFolder, dbfs.WithNoChainedCreation(), dbfs.WithErrorOnConflict())
 	if err != nil {
-		return purposeStatusCodeFromError(err), err
+		code := purposeStatusCodeFromError(err)
+		if code == http.StatusNotFound {
+			// When the MKCOL operation creates a new collection resource, all ancestors MUST already exist,
+			// or the method MUST fail with a 409 (Conflict) status code.
+			return http.StatusConflict, err
+		}
+		return code, err
 	}
 
 	return http.StatusCreated, nil
@@ -226,6 +233,12 @@ func handlePut(c *gin.Context, user *ent.User, fm manager.FileManager) (status i
 	ancestor, uri, err := fm.SharedAddressTranslation(c, reqPath)
 	if err != nil && !ent.IsNotFound(err) {
 		return purposeStatusCodeFromError(err), err
+	}
+
+	if user.Edges.DavAccounts[0].Options.Enabled(int(types.DavAccountDisableSysFiles)) {
+		if strings.HasPrefix(reqPath.Name(), ".") {
+			return http.StatusMethodNotAllowed, nil
+		}
 	}
 
 	release, ls, status, err := confirmLock(c, fm, user, ancestor, nil, uri, nil)

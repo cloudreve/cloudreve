@@ -1,13 +1,15 @@
 services:
-  pro:
+  cloudreve:
     image: cloudreve/cloudreve:latest
     container_name: cloudreve-backend
     depends_on:
       - postgresql
       - redis
-    restart: always
+    restart: unless-stopped
     ports:
       - 5212:5212
+      - 6888:6888
+      - 6888:6888/udp
     environment:
       - CR_CONF_Database.Type=postgres
       - CR_CONF_Database.Host=postgresql
@@ -19,8 +21,12 @@ services:
       - backend_data:/cloudreve/data
 
   postgresql:
-    image: postgres:latest
+    # Best practice: Pin to major version. 
+    # NOTE: For major version jumps:
+    # backup & consult https://www.postgresql.org/docs/current/pgupgrade.html 
+    image: postgres:17    
     container_name: postgresql
+    restart: unless-stopped
     environment:
       - POSTGRES_USER=cloudreve
       - POSTGRES_DB=cloudreve
@@ -31,6 +37,7 @@ services:
   redis:
     image: redis:latest
     container_name: redis
+    restart: unless-stopped
     volumes:
       - redis_data:/data
 

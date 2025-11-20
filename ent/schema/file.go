@@ -1,10 +1,15 @@
 package schema
 
 import (
+	"context"
+	"time"
+
 	"entgo.io/ent"
+	"entgo.io/ent/dialect"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
+	"github.com/cloudreve/Cloudreve/v4/ent/hook"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 )
 
@@ -16,6 +21,17 @@ type File struct {
 // Fields of the File.
 func (File) Fields() []ent.Field {
 	return []ent.Field{
+		field.Time("created_at").
+			Immutable().
+			Default(time.Now).
+			SchemaType(map[string]string{
+				dialect.MySQL: "datetime",
+			}),
+		field.Time("updated_at").
+			Default(time.Now).
+			SchemaType(map[string]string{
+				dialect.MySQL: "datetime",
+			}),
 		field.Int("type"),
 		field.String("name"),
 		field.Int("owner_id"),
@@ -66,8 +82,19 @@ func (File) Indexes() []ent.Index {
 	}
 }
 
-func (File) Mixin() []ent.Mixin {
-	return []ent.Mixin{
-		CommonMixin{},
+func (f File) Hooks() []ent.Hook {
+	return []ent.Hook{
+		hook.On(func(next ent.Mutator) ent.Mutator {
+			return ent.MutateFunc(func(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+				if s, ok := m.(interface{ SetUpdatedAt(time.Time) }); ok {
+					_, set := m.Field("updated_at")
+					if !set {
+						s.SetUpdatedAt(time.Now())
+					}
+				}
+				v, err := next.Mutate(ctx, m)
+				return v, err
+			})
+		}, ent.OpUpdate|ent.OpUpdateOne),
 	}
 }

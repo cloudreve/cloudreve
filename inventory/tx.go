@@ -3,6 +3,7 @@ package inventory
 import (
 	"context"
 	"fmt"
+
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 )
@@ -58,6 +59,22 @@ func WithTx[T TxOperator](ctx context.Context, c T) (T, *Tx, context.Context, er
 
 	txClient = txWrapper.tx.Client()
 	return c.SetClient(txClient).(T), txWrapper, ctx, nil
+}
+
+// InheritTx wraps the given inventory client with a transaction.
+// If the transaction is already in the context, it will be inherited.
+// Otherwise, original client will be returned.
+func InheritTx[T TxOperator](ctx context.Context, c T) (T, *Tx) {
+	var txClient *ent.Client
+	var txWrapper *Tx
+
+	if txInherited, ok := ctx.Value(TxCtx{}).(*Tx); ok && !txInherited.finished {
+		txWrapper = &Tx{inherited: true, tx: txInherited.tx, parent: txInherited}
+		txClient = txWrapper.tx.Client()
+		return c.SetClient(txClient).(T), txWrapper
+	}
+
+	return c, nil
 }
 
 func Rollback(tx *Tx) error {

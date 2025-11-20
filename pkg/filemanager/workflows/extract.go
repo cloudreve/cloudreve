@@ -26,7 +26,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/queue"
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 	"github.com/gofrs/uuid"
-	"github.com/mholt/archiver/v4"
+	"github.com/mholt/archives"
 )
 
 type (
@@ -40,13 +40,15 @@ type (
 	}
 	ExtractArchiveTaskPhase string
 	ExtractArchiveTaskState struct {
-		Uri             string `json:"uri,omitempty"`
-		Encoding        string `json:"encoding,omitempty"`
-		Dst             string `json:"dst,omitempty"`
-		TempPath        string `json:"temp_path,omitempty"`
-		TempZipFilePath string `json:"temp_zip_file_path,omitempty"`
-		ProcessedCursor string `json:"processed_cursor,omitempty"`
-		SlaveTaskID     int    `json:"slave_task_id,omitempty"`
+		Uri             string   `json:"uri,omitempty"`
+		Encoding        string   `json:"encoding,omitempty"`
+		Dst             string   `json:"dst,omitempty"`
+		TempPath        string   `json:"temp_path,omitempty"`
+		TempZipFilePath string   `json:"temp_zip_file_path,omitempty"`
+		ProcessedCursor string   `json:"processed_cursor,omitempty"`
+		SlaveTaskID     int      `json:"slave_task_id,omitempty"`
+		Password        string   `json:"password,omitempty"`
+		FileMask        []string `json:"file_mask,omitempty"`
 		NodeState       `json:",inline"`
 		Phase           ExtractArchiveTaskPhase `json:"phase,omitempty"`
 	}
@@ -71,12 +73,14 @@ func init() {
 }
 
 // NewExtractArchiveTask creates a new ExtractArchiveTask
-func NewExtractArchiveTask(ctx context.Context, src, dst, encoding string) (queue.Task, error) {
+func NewExtractArchiveTask(ctx context.Context, src, dst, encoding, password string, mask []string) (queue.Task, error) {
 	state := &ExtractArchiveTaskState{
 		Uri:       src,
 		Dst:       dst,
 		Encoding:  encoding,
 		NodeState: NodeState{},
+		Password:  password,
+		FileMask:  mask,
 	}
 	stateBytes, err := json.Marshal(state)
 	if err != nil {
@@ -190,13 +194,21 @@ func (m *ExtractArchiveTask) createSlaveExtractTask(ctx context.Context, dep dep
 		return task.StatusError, fmt.Errorf("failed to get policy: %w", err)
 	}
 
+	masterKey, _ := dep.MasterEncryptKeyVault(ctx).GetMasterKey(ctx)
+	entityModel, err := decryptEntityKeyIfNeeded(masterKey, archiveFile.PrimaryEntity().Model())
+	if err != nil {
+		return task.StatusError, fmt.Errorf("failed to decrypt entity key for archive file %q: %s", archiveFile.DisplayName(), err)
+	}
+
 	payload := &SlaveExtractArchiveTaskState{
 		FileName: archiveFile.DisplayName(),
-		Entity:   archiveFile.PrimaryEntity().Model(),
+		Entity:   entityModel,
 		Policy:   policy,
 		Encoding: m.state.Encoding,
 		Dst:      m.state.Dst,
 		UserID:   user.ID,
+		Password: m.state.Password,
+		FileMask: m.state.FileMask,
 	}
 
 	payloadStr, err := json.Marshal(payload)
@@ -277,20 +289,21 @@ func (m *ExtractArchiveTask) masterExtractArchive(ctx context.Context, dep depen
 
 	m.l.Info("Extracting archive %q to %q", uri, m.state.Dst)
 	// Identify file format
-	format, readStream, err := archiver.Identify(archiveFile.DisplayName(), es)
+	format, readStream, err := archives.Identify(ctx, archiveFile.DisplayName(), es)
 	if err != nil {
 		return task.StatusError, fmt.Errorf("failed to identify archive format: %w", err)
 	}
 
-	m.l.Info("Archive file %q format identified as %q", uri, format.Name())
+	m.l.Info("Archive file %q format identified as %q", uri, format.Extension())
 
-	extractor, ok := format.(archiver.Extractor)
+	extractor, ok := format.(archives.Extractor)
 	if !ok {
-		return task.StatusError, fmt.Errorf("format not an extractor %s")
+		return task.StatusError, fmt.Errorf("format not an extractor %s", format.Extension())
 	}
 
-	if format.Name() == ".zip" {
-		// Zip extractor requires a Seeker+ReadAt
+	formatExt := format.Extension()
+	if formatExt == ".zip" || formatExt == ".7z" {
+		// Zip/7Z extractor requires a Seeker+ReadAt
 		if m.state.TempZipFilePath == "" && !es.IsLocal() {
 			m.state.Phase = ExtractArchivePhaseDownloadZip
 			m.ResumeAfter(0)
@@ -315,11 +328,25 @@ func (m *ExtractArchiveTask) masterExtractArchive(ctx context.Context, dep depen
 
 			readStream = es
 		}
+	}
 
+	if zipExtractor, ok := extractor.(archives.Zip); ok {
 		if m.state.Encoding != "" {
 			m.l.Info("Using encoding %q for zip archive", m.state.Encoding)
-			extractor = archiver.Zip{TextEncoding: m.state.Encoding}
+			encoding, ok := manager.ZipEncodings[strings.ToLower(m.state.Encoding)]
+			if !ok {
+				m.l.Warning("Unknown encoding %q, fallback to default encoding", m.state.Encoding)
+			} else {
+				zipExtractor.TextEncoding = encoding
+				extractor = zipExtractor
+			}
 		}
+	} else if rarExtractor, ok := extractor.(archives.Rar); ok && m.state.Password != "" {
+		rarExtractor.Password = m.state.Password
+		extractor = rarExtractor
+	} else if sevenZipExtractor, ok := extractor.(archives.SevenZip); ok && m.state.Password != "" {
+		sevenZipExtractor.Password = m.state.Password
+		extractor = sevenZipExtractor
 	}
 
 	needSkipToCursor := false
@@ -332,7 +359,7 @@ func (m *ExtractArchiveTask) masterExtractArchive(ctx context.Context, dep depen
 	m.Unlock()
 
 	// extract and upload
-	err = extractor.Extract(ctx, readStream, nil, func(ctx context.Context, f archiver.File) error {
+	err = extractor.Extract(ctx, readStream, func(ctx context.Context, f archives.FileInfo) error {
 		if needSkipToCursor && f.NameInArchive != m.state.ProcessedCursor {
 			atomic.AddInt64(&m.progress[ProgressTypeExtractCount].Current, 1)
 			atomic.AddInt64(&m.progress[ProgressTypeExtractSize].Current, f.Size())
@@ -350,6 +377,14 @@ func (m *ExtractArchiveTask) masterExtractArchive(ctx context.Context, dep depen
 
 		rawPath := util.FormSlash(f.NameInArchive)
 		savePath := dst.JoinRaw(rawPath)
+
+		// If file mask is not empty, check if the path is in the mask
+		if len(m.state.FileMask) > 0 && !isFileInMask(rawPath, m.state.FileMask) {
+			m.l.Warning("File %q is not in the mask, skipping...", f.NameInArchive)
+			atomic.AddInt64(&m.progress[ProgressTypeExtractCount].Current, 1)
+			atomic.AddInt64(&m.progress[ProgressTypeExtractSize].Current, f.Size())
+			return nil
+		}
 
 		// Check if path is legit
 		if !strings.HasPrefix(savePath.Path(), util.FillSlash(path.Clean(dst.Path()))) {
@@ -380,6 +415,10 @@ func (m *ExtractArchiveTask) masterExtractArchive(ctx context.Context, dep depen
 			Props: &fs.UploadProps{
 				Uri:  savePath,
 				Size: f.Size(),
+				LastModified: func() *time.Time {
+					t := f.FileInfo.ModTime().Local()
+					return &t
+				}(),
 			},
 			ProgressFunc: func(current, diff int64, total int64) {
 				atomic.AddInt64(&m.progress[ProgressTypeExtractSize].Current, diff)
@@ -533,6 +572,8 @@ type (
 		TempPath        string             `json:"temp_path,omitempty"`
 		TempZipFilePath string             `json:"temp_zip_file_path,omitempty"`
 		ProcessedCursor string             `json:"processed_cursor,omitempty"`
+		Password        string             `json:"password,omitempty"`
+		FileMask        []string           `json:"file_mask,omitempty"`
 	}
 )
 
@@ -602,18 +643,19 @@ func (m *SlaveExtractArchiveTask) Do(ctx context.Context) (task.Status, error) {
 	defer es.Close()
 
 	// 2. Identify file format
-	format, readStream, err := archiver.Identify(m.state.FileName, es)
+	format, readStream, err := archives.Identify(ctx, m.state.FileName, es)
 	if err != nil {
 		return task.StatusError, fmt.Errorf("failed to identify archive format: %w", err)
 	}
-	m.l.Info("Archive file %q format identified as %q", m.state.FileName, format.Name())
+	m.l.Info("Archive file %q format identified as %q", m.state.FileName, format.Extension())
 
-	extractor, ok := format.(archiver.Extractor)
+	extractor, ok := format.(archives.Extractor)
 	if !ok {
-		return task.StatusError, fmt.Errorf("format not an extractor %s")
+		return task.StatusError, fmt.Errorf("format not an extractor %q", format.Extension())
 	}
 
-	if format.Name() == ".zip" {
+	formatExt := format.Extension()
+	if formatExt == ".zip" || formatExt == ".7z" {
 		if _, err = es.Seek(0, 0); err != nil {
 			return task.StatusError, fmt.Errorf("failed to seek entity source: %w", err)
 		}
@@ -666,11 +708,25 @@ func (m *SlaveExtractArchiveTask) Do(ctx context.Context) (task.Status, error) {
 		if es.IsLocal() {
 			readStream = es
 		}
+	}
 
+	if zipExtractor, ok := extractor.(archives.Zip); ok {
 		if m.state.Encoding != "" {
 			m.l.Info("Using encoding %q for zip archive", m.state.Encoding)
-			extractor = archiver.Zip{TextEncoding: m.state.Encoding}
+			encoding, ok := manager.ZipEncodings[strings.ToLower(m.state.Encoding)]
+			if !ok {
+				m.l.Warning("Unknown encoding %q, fallback to default encoding", m.state.Encoding)
+			} else {
+				zipExtractor.TextEncoding = encoding
+				extractor = zipExtractor
+			}
 		}
+	} else if rarExtractor, ok := extractor.(archives.Rar); ok && m.state.Password != "" {
+		rarExtractor.Password = m.state.Password
+		extractor = rarExtractor
+	} else if sevenZipExtractor, ok := extractor.(archives.SevenZip); ok && m.state.Password != "" {
+		sevenZipExtractor.Password = m.state.Password
+		extractor = sevenZipExtractor
 	}
 
 	needSkipToCursor := false
@@ -679,7 +735,7 @@ func (m *SlaveExtractArchiveTask) Do(ctx context.Context) (task.Status, error) {
 	}
 
 	// 3. Extract and upload
-	err = extractor.Extract(ctx, readStream, nil, func(ctx context.Context, f archiver.File) error {
+	err = extractor.Extract(ctx, readStream, func(ctx context.Context, f archives.FileInfo) error {
 		if needSkipToCursor && f.NameInArchive != m.state.ProcessedCursor {
 			atomic.AddInt64(&m.progress[ProgressTypeExtractCount].Current, 1)
 			atomic.AddInt64(&m.progress[ProgressTypeExtractSize].Current, f.Size())
@@ -697,6 +753,12 @@ func (m *SlaveExtractArchiveTask) Do(ctx context.Context) (task.Status, error) {
 
 		rawPath := util.FormSlash(f.NameInArchive)
 		savePath := dst.JoinRaw(rawPath)
+
+		// If file mask is not empty, check if the path is in the mask
+		if len(m.state.FileMask) > 0 && !isFileInMask(rawPath, m.state.FileMask) {
+			m.l.Debug("File %q is not in the mask, skipping...", f.NameInArchive)
+			return nil
+		}
 
 		// Check if path is legit
 		if !strings.HasPrefix(savePath.Path(), util.FillSlash(path.Clean(dst.Path()))) {
@@ -727,6 +789,10 @@ func (m *SlaveExtractArchiveTask) Do(ctx context.Context) (task.Status, error) {
 			Props: &fs.UploadProps{
 				Uri:  savePath,
 				Size: f.Size(),
+				LastModified: func() *time.Time {
+					t := f.FileInfo.ModTime().Local()
+					return &t
+				}(),
 			},
 			ProgressFunc: func(current, diff int64, total int64) {
 				atomic.AddInt64(&m.progress[ProgressTypeExtractSize].Current, diff)
@@ -764,4 +830,18 @@ func (m *SlaveExtractArchiveTask) Progress(ctx context.Context) queue.Progresses
 	m.Lock()
 	defer m.Unlock()
 	return m.progress
+}
+
+func isFileInMask(path string, mask []string) bool {
+	if len(mask) == 0 {
+		return true
+	}
+
+	for _, m := range mask {
+		if path == m || strings.HasPrefix(path, m+"/") {
+			return true
+		}
+	}
+
+	return false
 }

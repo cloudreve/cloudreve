@@ -280,6 +280,53 @@ type (
 
 var patches = []Patch{
 	{
+		Name:       "apply_default_archive_viewer",
+		EndVersion: "4.7.0",
+		Func: func(l logging.Logger, client *ent.Client, ctx context.Context) error {
+			fileViewersSetting, err := client.Setting.Query().Where(setting.Name("file_viewers")).First(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to query file_viewers setting: %w", err)
+			}
+
+			var fileViewers []types.ViewerGroup
+			if err := json.Unmarshal([]byte(fileViewersSetting.Value), &fileViewers); err != nil {
+				return fmt.Errorf("failed to unmarshal file_viewers setting: %w", err)
+			}
+
+			fileViewerExisted := false
+			for _, viewer := range fileViewers[0].Viewers {
+				if viewer.ID == "archive" {
+					fileViewerExisted = true
+					break
+				}
+			}
+
+			// 2.2 If not existed, add it
+			if !fileViewerExisted {
+				// Found existing archive viewer default setting
+				var defaultArchiveViewer types.Viewer
+				for _, viewer := range defaultFileViewers[0].Viewers {
+					if viewer.ID == "archive" {
+						defaultArchiveViewer = viewer
+						break
+					}
+				}
+
+				fileViewers[0].Viewers = append(fileViewers[0].Viewers, defaultArchiveViewer)
+				newFileViewersSetting, err := json.Marshal(fileViewers)
+				if err != nil {
+					return fmt.Errorf("failed to marshal file_viewers setting: %w", err)
+				}
+
+				if _, err := client.Setting.UpdateOne(fileViewersSetting).SetValue(string(newFileViewersSetting)).Save(ctx); err != nil {
+					return fmt.Errorf("failed to update file_viewers setting: %w", err)
+				}
+			}
+
+			return nil
+		},
+	},
+	{
 		Name:       "apply_default_excalidraw_viewer",
 		EndVersion: "4.1.0",
 		Func: func(l logging.Logger, client *ent.Client, ctx context.Context) error {
@@ -365,6 +412,86 @@ var patches = []Patch{
 				if _, err := client.Setting.UpdateOne(fileViewersSetting).SetValue(string(newFileViewersSetting)).Save(ctx); err != nil {
 					return fmt.Errorf("failed to update file_viewers setting: %w", err)
 				}
+			}
+
+			return nil
+		},
+	},
+	{
+		Name:       "apply_email_title_magic_var",
+		EndVersion: "4.7.0",
+		Func: func(l logging.Logger, client *ent.Client, ctx context.Context) error {
+			// 1. Activate Template
+			mailActivationTemplateSetting, err := client.Setting.Query().Where(setting.Name("mail_activation_template")).First(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to query mail_activation_template setting: %w", err)
+			}
+
+			var mailActivationTemplate []struct {
+				Title    string `json:"title"`
+				Body     string `json:"body"`
+				Language string `json:"language"`
+			}
+			if err := json.Unmarshal([]byte(mailActivationTemplateSetting.Value), &mailActivationTemplate); err != nil {
+				return fmt.Errorf("failed to unmarshal mail_activation_template setting: %w", err)
+			}
+
+			for i, t := range mailActivationTemplate {
+				mailActivationTemplate[i].Title = fmt.Sprintf("[{{ .CommonContext.SiteBasic.Name }}] %s", t.Title)
+			}
+
+			newMailActivationTemplate, err := json.Marshal(mailActivationTemplate)
+			if err != nil {
+				return fmt.Errorf("failed to marshal mail_activation_template setting: %w", err)
+			}
+
+			if _, err := client.Setting.UpdateOne(mailActivationTemplateSetting).SetValue(string(newMailActivationTemplate)).Save(ctx); err != nil {
+				return fmt.Errorf("failed to update mail_activation_template setting: %w", err)
+			}
+
+			// 2. Reset Password Template
+			mailResetTemplateSetting, err := client.Setting.Query().Where(setting.Name("mail_reset_template")).First(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to query mail_reset_template setting: %w", err)
+			}
+
+			var mailResetTemplate []struct {
+				Title    string `json:"title"`
+				Body     string `json:"body"`
+				Language string `json:"language"`
+			}
+			if err := json.Unmarshal([]byte(mailResetTemplateSetting.Value), &mailResetTemplate); err != nil {
+				return fmt.Errorf("failed to unmarshal mail_reset_template setting: %w", err)
+			}
+
+			for i, t := range mailResetTemplate {
+				mailResetTemplate[i].Title = fmt.Sprintf("[{{ .CommonContext.SiteBasic.Name }}] %s", t.Title)
+			}
+			
+			newMailResetTemplate, err := json.Marshal(mailResetTemplate)
+			if err != nil {
+				return fmt.Errorf("failed to marshal mail_reset_template setting: %w", err)
+			}
+
+			if _, err := client.Setting.UpdateOne(mailResetTemplateSetting).SetValue(string(newMailResetTemplate)).Save(ctx); err != nil {
+				return fmt.Errorf("failed to update mail_reset_template setting: %w", err)
+			}
+
+			return nil
+		},
+	},
+	{
+		Name:       "apply_thumb_path_magic_var",
+		EndVersion: "4.10.0",
+		Func: func(l logging.Logger, client *ent.Client, ctx context.Context) error {
+			thumbSuffixSetting, err := client.Setting.Query().Where(setting.Name("thumb_entity_suffix")).First(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to query thumb_entity_suffix setting: %w", err)
+			}
+
+			newThumbSuffix := fmt.Sprintf("{blob_path}/{blob_name}%s", thumbSuffixSetting.Value)
+			if _, err := client.Setting.UpdateOne(thumbSuffixSetting).SetValue(newThumbSuffix).Save(ctx); err != nil {
+				return fmt.Errorf("failed to update thumb_entity_suffix setting: %w", err)
 			}
 
 			return nil

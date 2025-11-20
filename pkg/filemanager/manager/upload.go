@@ -29,7 +29,7 @@ type (
 		// ConfirmUploadSession confirms whether upload session is valid for upload.
 		ConfirmUploadSession(ctx context.Context, session *fs.UploadSession, chunkIndex int) (fs.File, error)
 		// Upload uploads file data to storage
-		Upload(ctx context.Context, req *fs.UploadRequest, policy *ent.StoragePolicy) error
+		Upload(ctx context.Context, req *fs.UploadRequest, policy *ent.StoragePolicy, session *fs.UploadSession) error
 		// CompleteUpload completes upload session and returns file object
 		CompleteUpload(ctx context.Context, session *fs.UploadSession) (fs.File, error)
 		// CancelUploadSession cancels upload session
@@ -55,7 +55,7 @@ func (m *manager) CreateUploadSession(ctx context.Context, req *fs.UploadRequest
 
 	// Validate metadata
 	if req.Props.Metadata != nil {
-		if err := m.validateMetadata(ctx, lo.MapToSlice(req.Props.Metadata, func(key string, value string) fs.MetadataPatch {
+		if _, err := m.validateMetadata(ctx, lo.MapToSlice(req.Props.Metadata, func(key string, value string) fs.MetadataPatch {
 			return fs.MetadataPatch{
 				Key:   key,
 				Value: value,
@@ -93,7 +93,8 @@ func (m *manager) CreateUploadSession(ctx context.Context, req *fs.UploadRequest
 	uploadSession.ChunkSize = uploadSession.Policy.Settings.ChunkSize
 	// Create upload credential for underlying storage driver
 	credential := &fs.UploadCredential{}
-	if !uploadSession.Policy.Settings.Relay || m.stateless {
+	unrelayed := !uploadSession.Policy.Settings.Relay || m.stateless
+	if unrelayed {
 		credential, err = d.Token(ctx, uploadSession, req)
 		if err != nil {
 			m.OnUploadFailed(ctx, uploadSession)
@@ -103,12 +104,18 @@ func (m *manager) CreateUploadSession(ctx context.Context, req *fs.UploadRequest
 		// For relayed upload, we don't need to create credential
 		uploadSession.ChunkSize = 0
 		credential.ChunkSize = 0
+		credential.EncryptMetadata = nil
+		uploadSession.Props.ClientSideEncrypted = false
 	}
 	credential.SessionID = uploadSession.Props.UploadSessionID
 	credential.Expires = req.Props.ExpireAt.Unix()
 	credential.StoragePolicy = uploadSession.Policy
 	credential.CallbackSecret = uploadSession.CallbackSecret
 	credential.Uri = uploadSession.Props.Uri.String()
+	credential.EncryptMetadata = uploadSession.EncryptMetadata
+	if !unrelayed {
+		credential.EncryptMetadata = nil
+	}
 
 	// If upload sentinel check is required, queue a check task
 	if d.Capabilities().StaticFeatures.Enabled(int(driver.HandlerCapabilityUploadSentinelRequired)) {
@@ -178,10 +185,32 @@ func (m *manager) PrepareUpload(ctx context.Context, req *fs.UploadRequest, opts
 	return m.fs.PrepareUpload(ctx, req, opts...)
 }
 
-func (m *manager) Upload(ctx context.Context, req *fs.UploadRequest, policy *ent.StoragePolicy) error {
+func (m *manager) Upload(ctx context.Context, req *fs.UploadRequest, policy *ent.StoragePolicy, session *fs.UploadSession) error {
 	d, err := m.GetStorageDriver(ctx, m.CastStoragePolicyOnSlave(ctx, policy))
 	if err != nil {
 		return err
+	}
+
+	if session != nil && session.EncryptMetadata != nil && !req.Props.ClientSideEncrypted {
+		cryptor, err := m.dep.EncryptorFactory(ctx)(session.EncryptMetadata.Algorithm)
+		if err != nil {
+			return fmt.Errorf("failed to create cryptor: %w", err)
+		}
+
+		err = cryptor.LoadMetadata(ctx, session.EncryptMetadata)
+		if err != nil {
+			return fmt.Errorf("failed to load encrypt metadata: %w", err)
+		}
+
+		if err := cryptor.SetSource(req.File, req.Seeker, req.Props.Size, 0); err != nil {
+			return fmt.Errorf("failed to set source: %w", err)
+		}
+
+		req.File = cryptor
+
+		if req.Seeker != nil {
+			req.Seeker = cryptor
+		}
 	}
 
 	if err := d.Put(ctx, req); err != nil {
@@ -301,6 +330,8 @@ func (m *manager) Update(ctx context.Context, req *fs.UploadRequest, opts ...fs.
 	}
 
 	req.Props.UploadSessionID = uuid.Must(uuid.NewV4()).String()
+	// Sever side supported encryption algorithms
+	req.Props.EncryptionSupported = []types.Cipher{types.CipherAES256CTR}
 
 	if m.stateless {
 		return m.updateStateless(ctx, req, o)
@@ -312,7 +343,7 @@ func (m *manager) Update(ctx context.Context, req *fs.UploadRequest, opts ...fs.
 		return nil, fmt.Errorf("faield to prepare uplaod: %w", err)
 	}
 
-	if err := m.Upload(ctx, req, uploadSession.Policy); err != nil {
+	if err := m.Upload(ctx, req, uploadSession.Policy, uploadSession); err != nil {
 		m.OnUploadFailed(ctx, uploadSession)
 		return nil, fmt.Errorf("failed to upload new entity: %w", err)
 	}
@@ -368,7 +399,7 @@ func (m *manager) updateStateless(ctx context.Context, req *fs.UploadRequest, o 
 	}
 
 	req.Props = res.Req.Props
-	if err := m.Upload(ctx, req, res.Session.Policy); err != nil {
+	if err := m.Upload(ctx, req, res.Session.Policy, res.Session); err != nil {
 		if err := o.Node.OnUploadFailed(ctx, &fs.StatelessOnUploadFailedService{
 			UploadSession: res.Session,
 			UserID:        o.StatelessUserID,

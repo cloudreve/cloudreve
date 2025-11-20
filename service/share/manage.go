@@ -66,7 +66,7 @@ func (service *ShareCreateService) Upsert(c *gin.Context, existed int) (string, 
 	}
 
 	base := dep.SettingProvider().SiteURL(c)
-	return explorer.BuildShareLink(share, dep.HashIDEncoder(), base), nil
+	return explorer.BuildShareLink(share, dep.HashIDEncoder(), base, true), nil
 }
 
 func DeleteShare(c *gin.Context, shareId int) error {

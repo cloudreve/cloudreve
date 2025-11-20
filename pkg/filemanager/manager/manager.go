@@ -85,7 +85,10 @@ type (
 	}
 
 	Archiver interface {
+		// CreateArchive creates an archive
 		CreateArchive(ctx context.Context, uris []*fs.URI, writer io.Writer, opts ...fs.Option) (int, error)
+		// ListArchiveFiles lists files in an archive
+		ListArchiveFiles(ctx context.Context, uri *fs.URI, entity, zipEncoding string) ([]ArchivedFile, error)
 	}
 
 	FileManager interface {
@@ -144,7 +147,8 @@ func NewFileManager(dep dependency.Dep, u *ent.User) FileManager {
 		user:     u,
 		settings: dep.SettingProvider(),
 		fs: dbfs.NewDatabaseFS(u, dep.FileClient(), dep.ShareClient(), dep.Logger(), dep.LockSystem(),
-			dep.SettingProvider(), dep.StoragePolicyClient(), dep.HashIDEncoder(), dep.UserClient(), dep.KV(), dep.NavigatorStateKV(), dep.DirectLinkClient()),
+			dep.SettingProvider(), dep.StoragePolicyClient(), dep.HashIDEncoder(), dep.UserClient(), dep.KV(), dep.NavigatorStateKV(),
+			dep.DirectLinkClient(), dep.EncryptorFactory(context.TODO())),
 		kv:           dep.KV(),
 		config:       config,
 		auth:         dep.GeneralAuth(),

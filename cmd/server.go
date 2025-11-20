@@ -12,10 +12,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	licenseKey string
-)
-
 func init() {
 	rootCmd.AddCommand(serverCmd)
 	serverCmd.PersistentFlags().StringVarP(&licenseKey, "license-key", "l", "", "License key of your Cloudreve Pro")
@@ -29,7 +25,6 @@ var serverCmd = &cobra.Command{
 			dependency.WithConfigPath(confPath),
 			dependency.WithProFlag(constants.IsProBool),
 			dependency.WithRequiredDbVersion(constants.BackendVersion),
-			dependency.WithLicenseKey(licenseKey),
 		)
 		server := application.NewServer(dep)
 		logger := dep.Logger()

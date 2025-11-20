@@ -120,6 +120,20 @@ func (f *DBFS) Create(ctx context.Context, path *fs.URI, fileType types.FileType
 
 			ancestor = newFile(ancestor, newFolder)
 		} else {
+			// valide file name
+			policy, err := f.getPreferredPolicy(ctx, ancestor)
+			if err != nil {
+				return nil, err
+			}
+
+			if err := validateExtension(desired[i], policy); err != nil {
+				return nil, fs.ErrIllegalObjectName.WithError(err)
+			}
+
+			if err := validateFileNameRegexp(desired[i], policy); err != nil {
+				return nil, fs.ErrIllegalObjectName.WithError(err)
+			}
+
 			file, err := f.createFile(ctx, ancestor, desired[i], fileType, o)
 			if err != nil {
 				return nil, err
@@ -168,6 +182,10 @@ func (f *DBFS) Rename(ctx context.Context, path *fs.URI, newName string) (fs.Fil
 
 	if target.Type() == types.FileTypeFile {
 		if err := validateExtension(newName, policy); err != nil {
+			return nil, fs.ErrIllegalObjectName.WithError(err)
+		}
+
+		if err := validateFileNameRegexp(newName, policy); err != nil {
 			return nil, fs.ErrIllegalObjectName.WithError(err)
 		}
 	}
@@ -294,9 +312,9 @@ func (f *DBFS) Delete(ctx context.Context, path []*fs.URI, opts ...fs.Option) ([
 		o.apply(opt)
 	}
 
-	var opt *types.EntityRecycleOption
+	var opt *types.EntityProps
 	if o.UnlinkOnly {
-		opt = &types.EntityRecycleOption{
+		opt = &types.EntityProps{
 			UnlinkOnly: true,
 		}
 	}
@@ -738,11 +756,10 @@ func (f *DBFS) setCurrentVersion(ctx context.Context, target *File, versionId in
 	return nil
 }
 
-func (f *DBFS) deleteFiles(ctx context.Context, targets map[Navigator][]*File, fc inventory.FileClient, opt *types.EntityRecycleOption) ([]fs.Entity, inventory.StorageDiff, error) {
+func (f *DBFS) deleteFiles(ctx context.Context, targets map[Navigator][]*File, fc inventory.FileClient, opt *types.EntityProps) ([]fs.Entity, inventory.StorageDiff, error) {
 	if f.user.Edges.Group == nil {
 		return nil, nil, fmt.Errorf("user group not loaded")
 	}
-	limit := max(f.user.Edges.Group.Settings.MaxWalkedFiles, 1)
 	allStaleEntities := make([]fs.Entity, 0, len(targets))
 	storageDiff := make(inventory.StorageDiff)
 	for n, files := range targets {
@@ -756,8 +773,7 @@ func (f *DBFS) deleteFiles(ctx context.Context, targets map[Navigator][]*File, f
 
 		// List all files to be deleted
 		toBeDeletedFiles := make([]*File, 0, len(files))
-		if err := n.Walk(ctx, files, limit, intsets.MaxInt, func(targets []*File, level int) error {
-			limit -= len(targets)
+		if err := n.Walk(ctx, files, intsets.MaxInt, intsets.MaxInt, func(targets []*File, level int) error {
 			toBeDeletedFiles = append(toBeDeletedFiles, targets...)
 			return nil
 		}); err != nil {

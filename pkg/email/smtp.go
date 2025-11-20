@@ -2,6 +2,7 @@ package email
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -9,8 +10,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
-	"github.com/go-mail/mail"
-	"github.com/gofrs/uuid"
+	"github.com/wneessen/go-mail"
 )
 
 // SMTPPool SMTP协议发送邮件
@@ -38,9 +38,11 @@ type SMTPConfig struct {
 }
 
 type message struct {
-	msg    *mail.Message
-	cid    string
-	userID int
+	msg     *mail.Msg
+	to      string
+	subject string
+	cid     string
+	userID  int
 }
 
 // NewSMTPPool initializes a new SMTP based email sending queue.
@@ -81,17 +83,21 @@ func (client *SMTPPool) Send(ctx context.Context, to, title, body string) error 
 		return nil
 	}
 
-	m := mail.NewMessage()
-	m.SetAddressHeader("From", client.config.From, client.config.FromName)
-	m.SetAddressHeader("Reply-To", client.config.ReplyTo, client.config.FromName)
-	m.SetHeader("To", to)
-	m.SetHeader("Subject", title)
-	m.SetHeader("Message-ID", fmt.Sprintf("<%s@%s>", uuid.Must(uuid.NewV4()).String(), "cloudreve"))
-	m.SetBody("text/html", body)
+	m := mail.NewMsg()
+	if err := m.FromFormat(client.config.FromName, client.config.From); err != nil {
+		return err
+	}
+	m.ReplyToFormat(client.config.FromName, client.config.ReplyTo)
+	m.To(to)
+	m.Subject(title)
+	m.SetMessageID()
+	m.SetBodyString(mail.TypeTextHTML, body)
 	client.ch <- &message{
-		msg:    m,
-		cid:    logging.CorrelationID(ctx).String(),
-		userID: inventory.UserIDFromContext(ctx),
+		msg:     m,
+		subject: title,
+		to:      to,
+		cid:     logging.CorrelationID(ctx).String(),
+		userID:  inventory.UserIDFromContext(ctx),
 	}
 	return nil
 }
@@ -116,17 +122,24 @@ func (client *SMTPPool) Init() {
 			}
 		}()
 
-		d := mail.NewDialer(client.config.Host, client.config.Port, client.config.User, client.config.Password)
-		d.Timeout = time.Duration(client.config.Keepalive+5) * time.Second
-		client.chOpen = true
-		// 是否启用 SSL
-		d.SSL = false
-		if client.config.ForceEncryption {
-			d.SSL = true
+		opts := []mail.Option{
+			mail.WithPort(client.config.Port),
+			mail.WithTimeout(time.Duration(client.config.Keepalive+5) * time.Second),
+			mail.WithSMTPAuth(mail.SMTPAuthAutoDiscover), mail.WithTLSPortPolicy(mail.TLSOpportunistic),
+			mail.WithUsername(client.config.User), mail.WithPassword(client.config.Password),
 		}
-		d.StartTLSPolicy = mail.OpportunisticStartTLS
+		if client.config.ForceEncryption {
+			opts = append(opts, mail.WithSSL())
+		}
 
-		var s mail.SendCloser
+		d, diaErr := mail.NewClient(client.config.Host, opts...)
+		if diaErr != nil {
+			client.l.Panic("Failed to create SMTP client: %s", diaErr)
+			return
+		}
+
+		client.chOpen = true
+
 		var err error
 		open := false
 		for {
@@ -139,22 +152,32 @@ func (client *SMTPPool) Init() {
 				}
 
 				if !open {
-					if s, err = d.Dial(); err != nil {
+					if err = d.DialWithContext(context.Background()); err != nil {
 						panic(err)
 					}
 					open = true
 				}
 
 				l := client.l.CopyWithPrefix(fmt.Sprintf("[Cid: %s]", m.cid))
-				if err := mail.Send(s, m.msg); err != nil {
+				if err := d.Send(m.msg); err != nil {
+					// Check if this is an SMTP RESET error after successful delivery
+					var sendErr *mail.SendError
+					var errParsed = errors.As(err, &sendErr)
+					if errParsed && sendErr.Reason == mail.ErrSMTPReset {
+						open = false
+						l.Debug("SMTP RESET error, closing connection...")
+						// https://github.com/wneessen/go-mail/issues/463
+						continue // Don't treat this as a delivery failure since mail was sent
+					}
+
 					l.Warning("Failed to send email: %s, Cid=%s", err, m.cid)
 				} else {
-					l.Info("Email sent to %q, title: %q.", m.msg.GetHeader("To"), m.msg.GetHeader("Subject"))
+					l.Info("Email sent to %q, title: %q.", m.to, m.subject)
 				}
 			// 长时间没有新邮件，则关闭SMTP连接
 			case <-time.After(time.Duration(client.config.Keepalive) * time.Second):
 				if open {
-					if err := s.Close(); err != nil {
+					if err := d.Close(); err != nil {
 						client.l.Warning("Failed to close SMTP connection: %s", err)
 					}
 					open = false

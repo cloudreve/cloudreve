@@ -129,6 +129,20 @@ func (f *DBFS) PrepareUpload(ctx context.Context, req *fs.UploadRequest, opts ..
 		return nil, err
 	}
 
+	// Encryption setting
+	var (
+		encryptMetadata *types.EncryptMetadata
+	)
+	if !policy.Settings.Encryption || req.ImportFrom != nil || len(req.Props.EncryptionSupported) == 0 {
+		req.Props.EncryptionSupported = nil
+	} else {
+		res, err := f.generateEncryptMetadata(ctx, req, policy)
+		if err != nil {
+			return nil, serializer.NewError(serializer.CodeInternalSetting, "Failed to generate encrypt metadata", err)
+		}
+		encryptMetadata = res
+	}
+
 	// validate upload request
 	if err := validateNewFile(req.Props.Uri.Name(), req.Props.Size, policy); err != nil {
 		return nil, err
@@ -146,11 +160,7 @@ func (f *DBFS) PrepareUpload(ctx context.Context, req *fs.UploadRequest, opts ..
 	if req.Props.SavePath == "" || isThumbnailAndPolicyNotAvailable {
 		req.Props.SavePath = generateSavePath(policy, req, f.user)
 		if isThumbnailAndPolicyNotAvailable {
-			req.Props.SavePath = fmt.Sprintf(
-				"%s.%s%s",
-				req.Props.SavePath,
-				util.RandStringRunes(16),
-				f.settingClient.ThumbEntitySuffix(ctx))
+			req.Props.SavePath = path.Clean(util.ReplaceMagicVar(f.settingClient.ThumbEntitySuffix(ctx), fs.Separator, true, true, time.Now(), f.user.ID, req.Props.Uri.Name(), req.Props.Uri.Path(), req.Props.SavePath))
 		}
 	}
 
@@ -174,6 +184,7 @@ func (f *DBFS) PrepareUpload(ctx context.Context, req *fs.UploadRequest, opts ..
 		entity, err := f.CreateEntity(ctx, ancestor, policy, entityType, req,
 			WithPreviousVersion(req.Props.PreviousVersion),
 			fs.WithUploadRequest(req),
+			WithEncryptMetadata(encryptMetadata),
 			WithRemoveStaleEntities(),
 		)
 		if err != nil {
@@ -189,6 +200,7 @@ func (f *DBFS) PrepareUpload(ctx context.Context, req *fs.UploadRequest, opts ..
 			WithPreferredStoragePolicy(policy),
 			WithErrorOnConflict(),
 			WithAncestor(ancestor),
+			WithEncryptMetadata(encryptMetadata),
 		)
 		if err != nil {
 			_ = inventory.Rollback(dbTx)
@@ -219,14 +231,15 @@ func (f *DBFS) PrepareUpload(ctx context.Context, req *fs.UploadRequest, opts ..
 
 	session := &fs.UploadSession{
 		Props: &fs.UploadProps{
-			Uri:             req.Props.Uri,
-			Size:            req.Props.Size,
-			SavePath:        req.Props.SavePath,
-			LastModified:    req.Props.LastModified,
-			UploadSessionID: req.Props.UploadSessionID,
-			ExpireAt:        req.Props.ExpireAt,
-			EntityType:      req.Props.EntityType,
-			Metadata:        req.Props.Metadata,
+			Uri:                 req.Props.Uri,
+			Size:                req.Props.Size,
+			SavePath:            req.Props.SavePath,
+			LastModified:        req.Props.LastModified,
+			UploadSessionID:     req.Props.UploadSessionID,
+			ExpireAt:            req.Props.ExpireAt,
+			EntityType:          req.Props.EntityType,
+			Metadata:            req.Props.Metadata,
+			ClientSideEncrypted: req.Props.ClientSideEncrypted,
 		},
 		FileID:         fileId,
 		NewFileCreated: !fileExisted,
@@ -236,6 +249,10 @@ func (f *DBFS) PrepareUpload(ctx context.Context, req *fs.UploadRequest, opts ..
 		Policy:         policy,
 		CallbackSecret: util.RandStringRunes(32),
 		LockToken:      lockToken, // Prevent lock being released.
+	}
+
+	if encryptMetadata != nil {
+		session.EncryptMetadata = encryptMetadata
 	}
 
 	// TODO: frontend should create new upload session if resumed session does not exist.

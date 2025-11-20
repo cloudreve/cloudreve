@@ -183,6 +183,8 @@ type (
 		UploadSessionID() *uuid.UUID
 		CreatedBy() *ent.User
 		Model() *ent.Entity
+		Props() *types.EntityProps
+		Encrypted() bool
 	}
 
 	FileExtendedInfo struct {
@@ -203,10 +205,11 @@ type (
 	}
 
 	MetadataPatch struct {
-		Key     string `json:"key" binding:"required"`
-		Value   string `json:"value"`
-		Private bool   `json:"private" binding:"ne=true"`
-		Remove  bool   `json:"remove"`
+		Key              string `json:"key" binding:"required"`
+		Value            string `json:"value"`
+		Private          bool   `json:"private" binding:"ne=true"`
+		Remove           bool   `json:"remove"`
+		UpdateModifiedAt bool   `json:"-"`
 	}
 
 	// ListFileResult result of listing files.
@@ -237,38 +240,40 @@ type (
 
 	// UploadCredential for uploading files in client side.
 	UploadCredential struct {
-		SessionID      string   `json:"session_id"`
-		ChunkSize      int64    `json:"chunk_size"` // 分块大小，0 为部分快
-		Expires        int64    `json:"expires"`    // 上传凭证过期时间， Unix 时间戳
-		UploadURLs     []string `json:"upload_urls,omitempty"`
-		Credential     string   `json:"credential,omitempty"`
-		UploadID       string   `json:"uploadID,omitempty"`
-		Callback       string   `json:"callback,omitempty"` // 回调地址
-		Uri            string   `json:"uri,omitempty"`      // 存储路径
-		AccessKey      string   `json:"ak,omitempty"`
-		KeyTime        string   `json:"keyTime,omitempty"` // COS用有效期
-		CompleteURL    string   `json:"completeURL,omitempty"`
-		StoragePolicy  *ent.StoragePolicy
-		CallbackSecret string `json:"callback_secret,omitempty"`
-		MimeType       string `json:"mime_type,omitempty"`     // Expected mimetype
-		UploadPolicy   string `json:"upload_policy,omitempty"` // Upyun upload policy
+		SessionID       string   `json:"session_id"`
+		ChunkSize       int64    `json:"chunk_size"` // 分块大小，0 为部分快
+		Expires         int64    `json:"expires"`    // 上传凭证过期时间， Unix 时间戳
+		UploadURLs      []string `json:"upload_urls,omitempty"`
+		Credential      string   `json:"credential,omitempty"`
+		UploadID        string   `json:"uploadID,omitempty"`
+		Callback        string   `json:"callback,omitempty"`
+		Uri             string   `json:"uri,omitempty"` // 存储路径
+		AccessKey       string   `json:"ak,omitempty"`
+		KeyTime         string   `json:"keyTime,omitempty"` // COS用有效期
+		CompleteURL     string   `json:"completeURL,omitempty"`
+		StoragePolicy   *ent.StoragePolicy
+		CallbackSecret  string                 `json:"callback_secret,omitempty"`
+		MimeType        string                 `json:"mime_type,omitempty"`     // Expected mimetype
+		UploadPolicy    string                 `json:"upload_policy,omitempty"` // Upyun upload policy
+		EncryptMetadata *types.EncryptMetadata `json:"encrypt_metadata,omitempty"`
 	}
 
 	// UploadSession stores the information of an upload session, used in server side.
 	UploadSession struct {
-		UID            int // 发起者
-		Policy         *ent.StoragePolicy
-		FileID         int    // ID of the placeholder file
-		EntityID       int    // ID of the new entity
-		Callback       string // 回调 URL 地址
-		CallbackSecret string // Callback secret
-		UploadID       string // Multi-part upload ID
-		UploadURL      string
-		Credential     string
-		ChunkSize      int64
-		SentinelTaskID int
-		NewFileCreated bool // If new file is created for this session
-		Importing      bool // If the upload is importing from another file
+		UID             int // 发起者
+		Policy          *ent.StoragePolicy
+		FileID          int    // ID of the placeholder file
+		EntityID        int    // ID of the new entity
+		Callback        string // 回调 URL 地址
+		CallbackSecret  string // Callback secret
+		UploadID        string // Multi-part upload ID
+		UploadURL       string
+		Credential      string
+		ChunkSize       int64
+		SentinelTaskID  int
+		NewFileCreated  bool // If new file is created for this session
+		Importing       bool // If the upload is importing from another file
+		EncryptMetadata *types.EncryptMetadata
 
 		LockToken string // Token of the locked placeholder file
 		Props     *UploadProps
@@ -287,8 +292,10 @@ type (
 		PreviousVersion        string
 		// EntityType is the type of the entity to be created. If not set, a new file will be created
 		// with a default version entity. This will be set in update request for existing files.
-		EntityType *types.EntityType
-		ExpireAt   time.Time
+		EntityType          *types.EntityType
+		ExpireAt            time.Time
+		EncryptionSupported []types.Cipher
+		ClientSideEncrypted bool // Whether the file stream is already encrypted by client side.
 	}
 
 	// FsOption options for underlying file system.
@@ -698,6 +705,8 @@ func LockSessionToContext(ctx context.Context, session LockSession) context.Cont
 	return context.WithValue(ctx, LockSessionCtxKey{}, session)
 }
 
+// FindDesiredEntity finds the desired entity from the file.
+// entityType is optional, if it is not nil, it will only return the entity with the given type.
 func FindDesiredEntity(file File, version string, hasher hashid.Encoder, entityType *types.EntityType) (bool, Entity) {
 	if version == "" {
 		return true, file.PrimaryEntity()
@@ -777,6 +786,14 @@ func (e *DbEntity) UploadSessionID() *uuid.UUID {
 
 func (e *DbEntity) Model() *ent.Entity {
 	return e.model
+}
+
+func (e *DbEntity) Props() *types.EntityProps {
+	return e.model.Props
+}
+
+func (e *DbEntity) Encrypted() bool {
+	return e.model.Props != nil && e.model.Props.EncryptMetadata != nil
 }
 
 func NewEmptyEntity(u *ent.User) Entity {

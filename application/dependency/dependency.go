@@ -17,6 +17,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/conf"
 	"github.com/cloudreve/Cloudreve/v4/pkg/credmanager"
 	"github.com/cloudreve/Cloudreve/v4/pkg/email"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/encrypt"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs/mime"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/lock"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
@@ -129,55 +130,59 @@ type Dep interface {
 	WebAuthn(ctx context.Context) (*webauthn.WebAuthn, error)
 	// UAParser Get a singleton uaparser.Parser instance for user agent parsing.
 	UAParser() *uaparser.Parser
+	// MasterEncryptKeyVault Get a singleton encrypt.MasterEncryptKeyVault instance for master encrypt key vault.
+	MasterEncryptKeyVault(ctx context.Context) encrypt.MasterEncryptKeyVault
+	// EncryptorFactory Get a new encrypt.CryptorFactory instance.
+	EncryptorFactory(ctx context.Context) encrypt.CryptorFactory
 }
 
 type dependency struct {
-	configProvider      conf.ConfigProvider
-	logger              logging.Logger
-	statics             iofs.FS
-	serverStaticFS      static.ServeFileSystem
-	dbClient            *ent.Client
-	rawEntClient        *ent.Client
-	kv                  cache.Driver
-	navigatorStateKv    cache.Driver
-	settingClient       inventory.SettingClient
-	fileClient          inventory.FileClient
-	shareClient         inventory.ShareClient
-	settingProvider     setting.Provider
-	userClient          inventory.UserClient
-	groupClient         inventory.GroupClient
-	storagePolicyClient inventory.StoragePolicyClient
-	taskClient          inventory.TaskClient
-	nodeClient          inventory.NodeClient
-	davAccountClient    inventory.DavAccountClient
-	directLinkClient    inventory.DirectLinkClient
-	emailClient         email.Driver
-	generalAuth         auth.Auth
-	hashidEncoder       hashid.Encoder
-	tokenAuth           auth.TokenAuth
-	lockSystem          lock.LockSystem
-	requestClient       request.Client
-	ioIntenseQueue      queue.Queue
-	thumbQueue          queue.Queue
-	mediaMetaQueue      queue.Queue
-	entityRecycleQueue  queue.Queue
-	slaveQueue          queue.Queue
-	remoteDownloadQueue queue.Queue
-	ioIntenseQueueTask  queue.Task
-	mediaMeta           mediameta.Extractor
-	thumbPipeline       thumb.Generator
-	mimeDetector        mime.MimeDetector
-	credManager         credmanager.CredManager
-	nodePool            cluster.NodePool
-	taskRegistry        queue.TaskRegistry
-	webauthn            *webauthn.WebAuthn
-	parser              *uaparser.Parser
-	cron                *cron.Cron
+	configProvider        conf.ConfigProvider
+	logger                logging.Logger
+	statics               iofs.FS
+	serverStaticFS        static.ServeFileSystem
+	dbClient              *ent.Client
+	rawEntClient          *ent.Client
+	kv                    cache.Driver
+	navigatorStateKv      cache.Driver
+	settingClient         inventory.SettingClient
+	fileClient            inventory.FileClient
+	shareClient           inventory.ShareClient
+	settingProvider       setting.Provider
+	userClient            inventory.UserClient
+	groupClient           inventory.GroupClient
+	storagePolicyClient   inventory.StoragePolicyClient
+	taskClient            inventory.TaskClient
+	nodeClient            inventory.NodeClient
+	davAccountClient      inventory.DavAccountClient
+	directLinkClient      inventory.DirectLinkClient
+	emailClient           email.Driver
+	generalAuth           auth.Auth
+	hashidEncoder         hashid.Encoder
+	tokenAuth             auth.TokenAuth
+	lockSystem            lock.LockSystem
+	requestClient         request.Client
+	ioIntenseQueue        queue.Queue
+	thumbQueue            queue.Queue
+	mediaMetaQueue        queue.Queue
+	entityRecycleQueue    queue.Queue
+	slaveQueue            queue.Queue
+	remoteDownloadQueue   queue.Queue
+	ioIntenseQueueTask    queue.Task
+	mediaMeta             mediameta.Extractor
+	thumbPipeline         thumb.Generator
+	mimeDetector          mime.MimeDetector
+	credManager           credmanager.CredManager
+	nodePool              cluster.NodePool
+	taskRegistry          queue.TaskRegistry
+	webauthn              *webauthn.WebAuthn
+	parser                *uaparser.Parser
+	cron                  *cron.Cron
+	masterEncryptKeyVault encrypt.MasterEncryptKeyVault
 
 	configPath        string
 	isPro             bool
 	requiredDbVersion string
-	licenseKey        string
 
 	// Protects inner deps that can be reloaded at runtime.
 	mu sync.Mutex
@@ -204,6 +209,19 @@ func (d *dependency) RequestClient(opts ...request.Option) request.Client {
 	}
 
 	return request.NewClient(d.ConfigProvider(), opts...)
+}
+
+func (d *dependency) MasterEncryptKeyVault(ctx context.Context) encrypt.MasterEncryptKeyVault {
+	if d.masterEncryptKeyVault != nil {
+		return d.masterEncryptKeyVault
+	}
+
+	d.masterEncryptKeyVault = encrypt.NewMasterEncryptKeyVault(ctx, d.SettingProvider())
+	return d.masterEncryptKeyVault
+}
+
+func (d *dependency) EncryptorFactory(ctx context.Context) encrypt.CryptorFactory {
+	return encrypt.NewCryptorFactory(d.MasterEncryptKeyVault(ctx))
 }
 
 func (d *dependency) WebAuthn(ctx context.Context) (*webauthn.WebAuthn, error) {
@@ -467,7 +485,7 @@ func (d *dependency) MediaMetaExtractor(ctx context.Context) mediameta.Extractor
 		return d.mediaMeta
 	}
 
-	d.mediaMeta = mediameta.NewExtractorManager(ctx, d.SettingProvider(), d.Logger())
+	d.mediaMeta = mediameta.NewExtractorManager(ctx, d.SettingProvider(), d.Logger(), d.RequestClient())
 	return d.mediaMeta
 }
 

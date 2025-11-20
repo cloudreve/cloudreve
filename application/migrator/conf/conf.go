@@ -27,8 +27,8 @@ type system struct {
 	Debug         bool
 	SessionSecret string
 	HashIDSalt    string
-	GracePeriod   int    `validate:"gte=0"`
-	ProxyHeader   string `validate:"required_with=Listen"`
+	GracePeriod   int `validate:"gte=0"`
+	ProxyHeader   string
 }
 
 type ssl struct {

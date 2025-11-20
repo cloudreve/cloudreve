@@ -120,7 +120,7 @@ func (m *manager) GetDirectLink(ctx context.Context, urls ...*fs.URI) ([]DirectL
 			}
 
 			source := entitysource.NewEntitySource(target, d, policy, m.auth, m.settings, m.hasher, m.dep.RequestClient(),
-				m.l, m.config, m.dep.MimeDetector(ctx))
+				m.l, m.config, m.dep.MimeDetector(ctx), m.dep.EncryptorFactory(ctx))
 			sourceUrl, err := source.Url(ctx,
 				entitysource.WithSpeedLimit(int64(m.user.Edges.Group.SpeedLimit)),
 				entitysource.WithDisplayName(file.Name()),
@@ -168,7 +168,7 @@ func (m *manager) GetUrlForRedirectedDirectLink(ctx context.Context, dl *ent.Dir
 	)
 
 	// Try to read from cache.
-	cacheKey := entityUrlCacheKey(primaryEntity.ID(), int64(dl.Speed), dl.Name, false,
+	cacheKey := entityUrlCacheKey(primaryEntity.ID(), int64(dl.Speed), dl.Name, o.IsDownload,
 		m.settings.SiteURL(ctx).String())
 	if cached, ok := m.kv.Get(cacheKey); ok {
 		cachedItem := cached.(EntityUrlCache)
@@ -182,10 +182,10 @@ func (m *manager) GetUrlForRedirectedDirectLink(ctx context.Context, dl *ent.Dir
 		}
 
 		source := entitysource.NewEntitySource(primaryEntity, d, policy, m.auth, m.settings, m.hasher, m.dep.RequestClient(),
-			m.l, m.config, m.dep.MimeDetector(ctx))
+			m.l, m.config, m.dep.MimeDetector(ctx), m.dep.EncryptorFactory(ctx))
 		downloadUrl, err := source.Url(ctx,
 			entitysource.WithExpire(o.Expire),
-			entitysource.WithDownload(false),
+			entitysource.WithDownload(o.IsDownload),
 			entitysource.WithSpeedLimit(int64(dl.Speed)),
 			entitysource.WithDisplayName(dl.Name),
 		)
@@ -282,7 +282,7 @@ func (m *manager) GetEntityUrls(ctx context.Context, args []GetEntityUrlArgs, op
 
 		// Cache miss, Generate new url
 		source := entitysource.NewEntitySource(target, d, policy, m.auth, m.settings, m.hasher, m.dep.RequestClient(),
-			m.l, m.config, m.dep.MimeDetector(ctx))
+			m.l, m.config, m.dep.MimeDetector(ctx), m.dep.EncryptorFactory(ctx))
 		downloadUrl, err := source.Url(ctx,
 			entitysource.WithExpire(o.Expire),
 			entitysource.WithDownload(o.IsDownload),
@@ -349,7 +349,7 @@ func (m *manager) GetEntitySource(ctx context.Context, entityID int, opts ...fs.
 	}
 
 	return entitysource.NewEntitySource(entity, handler, policy, m.auth, m.settings, m.hasher, m.dep.RequestClient(), m.l,
-		m.config, m.dep.MimeDetector(ctx), entitysource.WithContext(ctx), entitysource.WithThumb(o.IsThumb)), nil
+		m.config, m.dep.MimeDetector(ctx), m.dep.EncryptorFactory(ctx), entitysource.WithContext(ctx), entitysource.WithThumb(o.IsThumb)), nil
 }
 
 func (l *manager) SetCurrentVersion(ctx context.Context, path *fs.URI, version int) error {

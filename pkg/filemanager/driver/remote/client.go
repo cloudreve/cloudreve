@@ -43,7 +43,7 @@ type Client interface {
 	// DeleteUploadSession deletes remote upload session
 	DeleteUploadSession(ctx context.Context, sessionID string) error
 	// MediaMeta gets media meta from remote server
-	MediaMeta(ctx context.Context, src, ext string) ([]driver.MediaMeta, error)
+	MediaMeta(ctx context.Context, src, ext, language string) ([]driver.MediaMeta, error)
 	// DeleteFiles deletes files from remote server
 	DeleteFiles(ctx context.Context, files ...string) ([]string, error)
 	// List lists files from remote server
@@ -183,10 +183,10 @@ func (c *remoteClient) DeleteFiles(ctx context.Context, files ...string) ([]stri
 	return nil, nil
 }
 
-func (c *remoteClient) MediaMeta(ctx context.Context, src, ext string) ([]driver.MediaMeta, error) {
+func (c *remoteClient) MediaMeta(ctx context.Context, src, ext, language string) ([]driver.MediaMeta, error) {
 	resp, err := c.httpClient.Request(
 		http.MethodGet,
-		routes.SlaveMediaMetaRoute(src, ext),
+		routes.SlaveMediaMetaRoute(src, ext, language),
 		nil,
 		request.WithContext(ctx),
 		request.WithLogger(c.l),
