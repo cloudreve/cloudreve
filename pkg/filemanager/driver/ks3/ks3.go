@@ -347,7 +347,7 @@ func (handler *Driver) Source(ctx context.Context, e fs.Entity, args *driver.Get
 	var contentDescription *string
 	if args.IsDownload {
 		encodedFilename := url.PathEscape(args.DisplayName)
-		contentDescription = aws.String(fmt.Sprintf(`attachment; filename="%s"`, encodedFilename))
+		contentDescription = aws.String(fmt.Sprintf(`attachment; filename=%s`, encodedFilename))
 	}
 
 	// 确保过期时间不小于 0 ，如果小于则设置为 7 天
