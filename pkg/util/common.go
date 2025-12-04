@@ -164,7 +164,11 @@ func ReplaceMagicVar(rawString string, fsSeparator string, pathAvailable bool, b
 			return match
 		case "{blob_path}":
 			if blobAvailable {
-				return filepath.Dir(completeBlobPath) + fsSeparator
+				lastSlash := strings.LastIndexAny(completeBlobPath, "/\\")
+				if lastSlash >= 0 {
+					return completeBlobPath[:lastSlash] + fsSeparator
+				}
+				return fsSeparator
 			}
 			return match
 		default:
