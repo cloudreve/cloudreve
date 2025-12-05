@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -101,7 +102,7 @@ func Replace(table map[string]string, s string) string {
 
 // ReplaceMagicVar 动态替换字符串中的魔法变量
 func ReplaceMagicVar(rawString string, fsSeparator string, pathAvailable bool, blobAvailable bool,
-					 timeConst time.Time, userId int, originName string, originPath string, completeBlobPath string) string {
+	timeConst time.Time, userId int, originName string, originPath string, completeBlobPath string) string {
 	re := regexp.MustCompile(`\{[^{}]+\}`)
 	return re.ReplaceAllStringFunc(rawString, func(match string) string {
 		switch match {
@@ -164,11 +165,7 @@ func ReplaceMagicVar(rawString string, fsSeparator string, pathAvailable bool, b
 			return match
 		case "{blob_path}":
 			if blobAvailable {
-				lastSlash := strings.LastIndexAny(completeBlobPath, "/\\")
-				if lastSlash >= 0 {
-					return completeBlobPath[:lastSlash] + fsSeparator
-				}
-				return fsSeparator
+				return path.Dir(completeBlobPath) + fsSeparator
 			}
 			return match
 		default:
