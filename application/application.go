@@ -17,6 +17,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/crontab"
 	"github.com/cloudreve/Cloudreve/v4/pkg/email"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/onedrive"
+	"github.com/cloudreve/Cloudreve/v4/pkg/h3"
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
@@ -46,6 +47,7 @@ type server struct {
 	dbClient  *ent.Client
 	config    conf.ConfigProvider
 	server    *http.Server
+	h3Servers map[string]*h3.H3Server
 	kv        cache.Driver
 	mailQueue email.Driver
 }
@@ -125,7 +127,12 @@ func (s *server) Start() error {
 
 	api := routers.InitRouter(s.dep)
 	api.TrustedPlatform = s.config.System().ProxyHeader
-	s.server = &http.Server{Handler: api}
+
+	s.server = &http.Server{
+		Handler: api,
+	}
+
+	s.h3Servers = make(map[string]*h3.H3Server)
 
 	// 如果启用了SSL
 	if s.config.SSL().CertPath != "" {
@@ -154,6 +161,8 @@ func (s *server) Start() error {
 
 		return nil
 	}
+
+	api.POST("/api/v4/p2p/signal", s.handleSignal)
 
 	s.logger.Info("Listening to %q", s.config.System().Listen)
 	s.server.Addr = s.config.System().Listen
@@ -185,6 +194,12 @@ func (s *server) Close() {
 		err := s.server.Shutdown(ctx)
 		if err != nil {
 			s.logger.Error("Failed to shutdown server: %s", err)
+		}
+	}
+	for laddr, hs := range s.h3Servers {
+		err := hs.Shutdown(ctx)
+		if err != nil {
+			s.logger.Error("Failed to shutdown h3 server: %s %s", laddr, err)
 		}
 	}
 
@@ -221,4 +236,39 @@ func (s *server) runUnix(server *http.Server) error {
 	}
 
 	return server.Serve(listener)
+}
+
+func (s *server) handleSignal(c *gin.Context) {
+	var req struct {
+		Addr string `json:"addr"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.Status(400)
+		s.logger.Error("bind req error:%v", err)
+		return
+	}
+	hs, err := h3.NewH3Server()
+	if err != nil {
+		c.Status(500)
+		s.logger.Error("create h3 server error:%v", err)
+		return
+	}
+	hs.Handler = s.server.Handler
+
+	localAddr, pubAddr := hs.GetAddrs()
+	c.String(http.StatusOK, pubAddr)
+	go func() {
+		err := h3.PunchHole(localAddr, req.Addr)
+		if err != nil {
+			s.logger.Error("punch h3 server error:%v", err)
+			return
+		}
+		s.h3Servers[localAddr] = hs
+		err = hs.Serve()
+		if err != nil {
+			s.logger.Error("punch h3 server error:%v", err)
+		}
+		delete(s.h3Servers, localAddr)
+	}()
+
 }
