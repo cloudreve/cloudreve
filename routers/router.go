@@ -600,6 +600,10 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 			content := file.Group("content")
 			contentCors := cors.New(cors.Config{
 				AllowOrigins: []string{"*"},
+				AllowMethods: []string{"GET", "HEAD", "OPTIONS"},
+				AllowHeaders: []string{"Range", "If-Range", "Authorization", "Content-Type"},
+				ExposeHeaders: []string{"Content-Range", "Accept-Ranges", "Content-Length", "Content-Disposition"},
+				AllowCredentials: false, // 使用 "*" 时必须为 false
 			})
 			content.Use(contentCors)
 			{
