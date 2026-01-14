@@ -4,7 +4,7 @@ before:
   hooks:
     - go mod tidy
     - chmod +x ./.build/build-assets.sh
-    - ./.build/build-assets.sh {{.Version}}
+    - ./.build/build-assets.sh {{.Tag}}
 
 builds:
   - env:
