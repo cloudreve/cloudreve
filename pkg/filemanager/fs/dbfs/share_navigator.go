@@ -302,9 +302,7 @@ func (n *shareNavigator) FollowTx(ctx context.Context) (func(), error) {
 func (n *shareNavigator) ExecuteHook(ctx context.Context, hookType fs.HookType, file *File) error {
 	switch hookType {
 	case fs.HookTypeBeforeDownload:
-		if n.singleFileShare {
-			return n.shareClient.Downloaded(ctx, n.share)
-		}
+		return n.shareClient.Downloaded(ctx, n.share)
 	}
 	return nil
 }
