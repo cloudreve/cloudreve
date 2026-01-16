@@ -120,7 +120,7 @@ func Thumbnail(maxWidth, maxHeight uint, img image.Image) image.Image {
 
 func Resize(newWidth, newHeight uint, img image.Image) image.Image {
 	// Set the expected size that you want:
-	dst := image.NewRGBA(image.Rect(0, 0, int(newWidth), int(newHeight)))
+	dst := image.NewNRGBA(image.Rect(0, 0, int(newWidth), int(newHeight)))
 	// Resize:
 	draw.BiLinear.Scale(dst, dst.Rect, img, img.Bounds(), draw.Src, nil)
 	return dst
