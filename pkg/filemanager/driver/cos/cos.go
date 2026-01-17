@@ -416,8 +416,10 @@ func (handler Driver) signSourceURL(ctx context.Context, path string, expire *ti
 
 		file.Path = path
 
-		// 非签名URL不支持设置响应header
-		options.ContentDescription = ""
+		// 公有空间不支持设置响应header
+		if !handler.policy.IsPrivate {
+			options.ContentDescription = ""
+		}
 
 		optionQuery, err := query.Values(*options)
 		if err != nil {
