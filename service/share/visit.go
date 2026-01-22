@@ -2,6 +2,7 @@ package share
 
 import (
 	"context"
+	"net/url"
 	"strings"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
@@ -46,6 +47,68 @@ func (s *ShortLinkRedirectService) RedirectTo(c *gin.Context) string {
 
 	shareLongUrl.RawQuery = shareLongUrlQuery.Encode()
 	return shareLongUrl.String()
+}
+
+// RenderOGPage renders an Open Graph HTML page for social media previews
+func (s *ShortLinkRedirectService) RenderOGPage(c *gin.Context) (string, error) {
+	dep := dependency.FromContext(c)
+	shareClient := dep.ShareClient()
+	settings := dep.SettingProvider()
+
+	// Load share with user and file info
+	ctx := context.WithValue(c, inventory.LoadShareUser{}, true)
+	ctx = context.WithValue(ctx, inventory.LoadShareFile{}, true)
+	share, err := shareClient.GetByHashID(ctx, s.ID)
+	if err != nil {
+		return "", err
+	}
+
+	// Check if share is valid
+	if err := inventory.IsValidShare(share); err != nil {
+		return "", err
+	}
+
+	// Get site settings
+	siteBasic := settings.SiteBasic(c)
+	pwa := settings.PWA(c)
+	base := settings.SiteURL(c)
+
+	// Build share URL
+	shareURL := routes.MasterShareUrl(base, s.ID, "")
+
+	// Build thumbnail URL - use PWA large icon (PNG), fallback to medium icon
+	thumbnailURL := pwa.LargeIcon
+	if thumbnailURL == "" {
+		thumbnailURL = pwa.MediumIcon
+	}
+	if thumbnailURL != "" && !isAbsoluteURL(thumbnailURL) {
+		thumbnailURL = base.ResolveReference(&url.URL{Path: thumbnailURL}).String()
+	}
+
+	// Get file info
+	fileName := share.Edges.File.Name
+	fileSize := FormatFileSize(share.Edges.File.Size)
+
+	// Get owner name (don't expose email for privacy)
+	ownerName := share.Edges.User.Nick
+
+	// Prepare OG data
+	ogData := &ShareOGData{
+		SiteName:     siteBasic.Name,
+		FileName:     fileName,
+		FileSize:     fileSize,
+		OwnerName:    ownerName,
+		ShareURL:     shareURL.String(),
+		ThumbnailURL: thumbnailURL,
+		RedirectURL:  s.RedirectTo(c),
+	}
+
+	return RenderOGHTML(ogData)
+}
+
+// isAbsoluteURL checks if the URL is absolute (starts with http:// or https://)
+func isAbsoluteURL(u string) bool {
+	return strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://")
 }
 
 type (
