@@ -54,19 +54,20 @@ func (s *ShortLinkRedirectService) RenderOGPage(c *gin.Context) (string, error) 
 	dep := dependency.FromContext(c)
 	shareClient := dep.ShareClient()
 	settings := dep.SettingProvider()
+	u := inventory.UserFromContext(c)
+
+	// Check if anonymous users have permission to access share links
+	anonymousGroup, err := dep.GroupClient().AnonymousGroup(c)
+	needLogin := err != nil || anonymousGroup.Permissions == nil || !anonymousGroup.Permissions.Enabled(int(types.GroupPermissionShareDownload))
 
 	// Load share with user and file info
 	ctx := context.WithValue(c, inventory.LoadShareUser{}, true)
 	ctx = context.WithValue(ctx, inventory.LoadShareFile{}, true)
 	share, err := shareClient.GetByHashID(ctx, s.ID)
-	if err != nil {
-		return "", err
-	}
 
-	// Check if share is valid
-	if err := inventory.IsValidShare(share); err != nil {
-		return "", err
-	}
+	// Determine share status
+	shareNotFound := err != nil
+	shareExpired := !shareNotFound && inventory.IsValidShare(share) != nil
 
 	// Get site settings
 	siteBasic := settings.SiteBasic(c)
@@ -85,12 +86,40 @@ func (s *ShortLinkRedirectService) RenderOGPage(c *gin.Context) (string, error) 
 		thumbnailURL = base.ResolveReference(&url.URL{Path: thumbnailURL}).String()
 	}
 
-	// Get file info
-	fileName := share.Edges.File.Name
-	fileSize := FormatFileSize(share.Edges.File.Size)
-
-	// Get owner name (don't expose email for privacy)
-	ownerName := share.Edges.User.Nick
+	// Get file info (hide for invalid/expired/password-protected/login-required shares)
+	var fileName, fileSize, ownerName string
+	if shareNotFound {
+		fileName = siteBasic.Name
+		fileSize = "Invalid Link"
+	} else if needLogin {
+		fileName = siteBasic.Name
+		fileSize = "Need Login"
+	} else if shareExpired {
+		fileName = siteBasic.Name
+		fileSize = "Share Expired"
+	} else if share.Password != "" && !isShareUnlocked(share, s.Password, u) {
+		// Password required but not provided or incorrect
+		fileName = siteBasic.Name
+		fileSize = "Password Required"
+	} else if share.Edges.File != nil {
+		fileName = share.Edges.File.Name
+		if fileName == "" {
+			fileName = "Shared File"
+		}
+		// Show "Folder" for directories, file size for files
+		if types.FileType(share.Edges.File.Type) == types.FileTypeFolder {
+			fileSize = "Folder"
+		} else {
+			fileSize = FormatFileSize(share.Edges.File.Size)
+		}
+		// Get owner name (don't expose email for privacy)
+		if share.Edges.User != nil {
+			ownerName = share.Edges.User.Nick
+		}
+	} else {
+		fileName = siteBasic.Name
+		fileSize = "Invalid Link"
+	}
 
 	// Prepare OG data
 	ogData := &ShareOGData{
@@ -109,6 +138,19 @@ func (s *ShortLinkRedirectService) RenderOGPage(c *gin.Context) (string, error) 
 // isAbsoluteURL checks if the URL is absolute (starts with http:// or https://)
 func isAbsoluteURL(u string) bool {
 	return strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://")
+}
+
+func isShareUnlocked(share *ent.Share, password string, viewer *ent.User) bool {
+	if share.Password == "" {
+		return true
+	}
+	if password == share.Password {
+		return true
+	}
+	if viewer != nil && share.Edges.User != nil && share.Edges.User.ID == viewer.ID {
+		return true
+	}
+	return false
 }
 
 type (
@@ -143,11 +185,7 @@ func (s *ShareInfoService) Get(c *gin.Context) (*explorer.Share, error) {
 		_ = shareClient.Viewed(c, share)
 	}
 
-	unlocked := true
-	// Share requires password
-	if share.Password != "" && s.Password != share.Password && share.Edges.User.ID != u.ID {
-		unlocked = false
-	}
+	unlocked := isShareUnlocked(share, s.Password, u)
 
 	base := dep.SettingProvider().SiteURL(c)
 	res := explorer.BuildShare(share, base, dep.HashIDEncoder(), u, share.Edges.User, share.Edges.File.Name,

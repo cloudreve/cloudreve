@@ -101,17 +101,7 @@ func isSocialMediaBot(ua string) bool {
 		"slackbot",
 		"discordbot",
 		"telegrambot",
-		"applebot",
-		"pinterest",
-		"googlebot",
-		"bingbot",
-		"yandexbot",
-		"duckduckbot",
-		"baiduspider",
-		"sogou",
-		"exabot",
 		"facebot",
-		"ia_archiver",
 	}
 	ua = strings.ToLower(ua)
 	for _, bot := range bots {
