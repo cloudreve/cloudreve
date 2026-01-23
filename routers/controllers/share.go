@@ -2,10 +2,10 @@ package controllers
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
+	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 	"github.com/cloudreve/Cloudreve/v4/service/share"
 	"github.com/gin-gonic/gin"
 )
@@ -78,7 +78,7 @@ func ShareRedirect(c *gin.Context) {
 	service := ParametersFromContext[*share.ShortLinkRedirectService](c, share.ShortLinkRedirectParamCtx{})
 
 	// Check if the request is from a social media bot
-	if isSocialMediaBot(c.GetHeader("User-Agent")) {
+	if util.IsSocialMediaBot(c.GetHeader("User-Agent")) {
 		html, err := service.RenderOGPage(c)
 		if err == nil {
 			c.Header("Content-Type", "text/html; charset=utf-8")
@@ -89,25 +89,4 @@ func ShareRedirect(c *gin.Context) {
 	}
 
 	c.Redirect(http.StatusFound, service.RedirectTo(c))
-}
-
-// isSocialMediaBot checks if the User-Agent belongs to a social media crawler
-func isSocialMediaBot(ua string) bool {
-	bots := []string{
-		"facebookexternalhit",
-		"twitterbot",
-		"linkedinbot",
-		"whatsapp",
-		"slackbot",
-		"discordbot",
-		"telegrambot",
-		"facebot",
-	}
-	ua = strings.ToLower(ua)
-	for _, bot := range bots {
-		if strings.Contains(ua, bot) {
-			return true
-		}
-	}
-	return false
 }

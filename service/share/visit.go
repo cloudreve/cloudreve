@@ -2,19 +2,16 @@ package share
 
 import (
 	"context"
-	"net/url"
-	"path"
-	"strings"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
-	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
-	"github.com/cloudreve/Cloudreve/v4/pkg/cluster/routes"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
+	sharepkg "github.com/cloudreve/Cloudreve/v4/pkg/share"
+	"github.com/cloudreve/Cloudreve/v4/pkg/sharepreview"
 	"github.com/cloudreve/Cloudreve/v4/service/explorer"
 	"github.com/gin-gonic/gin"
 )
@@ -27,150 +24,17 @@ type (
 	ShortLinkRedirectParamCtx struct{}
 )
 
-const (
-	ogStatusInvalidLink      = "Invalid Link"
-	ogStatusNeedLogin        = "Need Login"
-	ogStatusShareExpired     = "Share Expired"
-	ogStatusPasswordRequired = "Password Required"
-	ogDefaultFileName        = "Shared File"
-	ogDefaultFolderName      = "Shared Folder"
-)
-
 func (s *ShortLinkRedirectService) RedirectTo(c *gin.Context) string {
-	shareLongUrl := routes.MasterShareLongUrl(s.ID, s.Password)
-
-	shortLinkQuery := c.Request.URL.Query() // Query in ShortLink, adapt to Cloudreve V3
-	shareLongUrlQuery := shareLongUrl.Query()
-
-	userSpecifiedPath := shortLinkQuery.Get("path")
-	if userSpecifiedPath != "" {
-		masterPath := shareLongUrlQuery.Get("path")
-		masterPath += "/" + strings.TrimPrefix(userSpecifiedPath, "/")
-
-		shareLongUrlQuery.Set("path", masterPath)
-	}
-
-	shortLinkQuery.Del("path") // 防止用户指定的 Path 就是空字符串
-	for k, vals := range shortLinkQuery {
-		shareLongUrlQuery[k] = append(shareLongUrlQuery[k], vals...)
-	}
-
-	shareLongUrl.RawQuery = shareLongUrlQuery.Encode()
-	return shareLongUrl.String()
+	return sharepkg.BuildRedirectURL(s.ID, s.Password, c.Query("path"), c.Request.URL.Query())
 }
 
 // RenderOGPage renders an Open Graph HTML page for social media previews
 func (s *ShortLinkRedirectService) RenderOGPage(c *gin.Context) (string, error) {
-	dep := dependency.FromContext(c)
-	shareClient := dep.ShareClient()
-	settings := dep.SettingProvider()
-	u := inventory.UserFromContext(c)
-
-	// Check if anonymous users have permission to access share links
-	anonymousGroup, err := dep.GroupClient().AnonymousGroup(c)
-	needLogin := err != nil || anonymousGroup.Permissions == nil || !anonymousGroup.Permissions.Enabled(int(types.GroupPermissionShareDownload))
-
-	// Load share with user and file info
-	ctx := context.WithValue(c, inventory.LoadShareUser{}, true)
-	ctx = context.WithValue(ctx, inventory.LoadShareFile{}, true)
-	share, err := shareClient.GetByHashID(ctx, s.ID)
-
-	// Determine share status
-	shareNotFound := err != nil
-	shareExpired := !shareNotFound && inventory.IsValidShare(share) != nil
-
-	// Get site settings
-	siteBasic := settings.SiteBasic(c)
-	pwa := settings.PWA(c)
-	base := settings.SiteURL(c)
-
-	// Build share URL
-	shareURL := routes.MasterShareUrl(base, s.ID, "")
-
-	// Build thumbnail URL - use PWA large icon (PNG), fallback to medium icon
-	thumbnailURL := pwa.LargeIcon
-	if thumbnailURL == "" {
-		thumbnailURL = pwa.MediumIcon
-	}
-	if thumbnailURL != "" && !isAbsoluteURL(thumbnailURL) {
-		thumbnailURL = base.ResolveReference(&url.URL{Path: thumbnailURL}).String()
-	}
-
-	// Prepare OG data
-	ogData := &ShareOGData{
-		SiteName:        siteBasic.Name,
-		SiteDescription: siteBasic.Description,
-		SiteURL:         base.String(),
-		ShareURL:        shareURL.String(),
-		ShareID:         s.ID,
-		ThumbnailURL:    thumbnailURL,
-		RedirectURL:     s.RedirectTo(c),
-	}
-
-	// Get file info (hide for invalid/expired/password-protected/login-required shares)
-	switch {
-	case shareNotFound:
-		return renderStatusOG(ogData, siteBasic.Name, ogStatusInvalidLink)
-	case needLogin:
-		return renderStatusOG(ogData, siteBasic.Name, ogStatusNeedLogin)
-	case shareExpired:
-		return renderStatusOG(ogData, siteBasic.Name, ogStatusShareExpired)
-	case share.Password != "" && !isShareUnlocked(share, s.Password, u):
-		// Password required but not provided or incorrect.
-		return renderStatusOG(ogData, siteBasic.Name, ogStatusPasswordRequired)
-	case share.Edges.File == nil:
-		return renderStatusOG(ogData, siteBasic.Name, ogStatusInvalidLink)
-	}
-
-	// Get owner name (don't expose email for privacy).
-	if share.Edges.User != nil {
-		ogData.OwnerName = share.Edges.User.Nick
-	}
-
-	shareFile := share.Edges.File
-	if types.FileType(shareFile.Type) == types.FileTypeFolder {
-		ogData.FolderName = defaultIfEmpty(shareFile.Name, ogDefaultFolderName)
-		ogData.DisplayName = ogData.FolderName
-		return RenderFolderOGHTML(ogData, ogFolderTitleTemplate, ogFolderDescTemplate)
-	}
-
-	ogData.FileName = defaultIfEmpty(shareFile.Name, ogDefaultFileName)
-	ogData.FileSize = FormatFileSize(shareFile.Size)
-	ogData.FileExt = strings.TrimPrefix(path.Ext(ogData.FileName), ".")
-	ogData.DisplayName = ogData.FileName
-
-	return RenderOGHTML(ogData, ogFileTitleTemplate, ogFileDescTemplate)
-}
-
-// isAbsoluteURL checks if the URL is absolute (starts with http:// or https://)
-func isAbsoluteURL(u string) bool {
-	return strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://")
-}
-
-func isShareUnlocked(share *ent.Share, password string, viewer *ent.User) bool {
-	if share.Password == "" {
-		return true
-	}
-	if password == share.Password {
-		return true
-	}
-	if viewer != nil && share.Edges.User != nil && share.Edges.User.ID == viewer.ID {
-		return true
-	}
-	return false
-}
-
-func renderStatusOG(data *ShareOGData, displayName, status string) (string, error) {
-	data.Status = status
-	data.DisplayName = displayName
-	return RenderStatusOGHTML(data, ogStatusTitleTemplate, ogStatusDescTemplate)
-}
-
-func defaultIfEmpty(value, fallback string) string {
-	if value == "" {
-		return fallback
-	}
-	return value
+	return sharepreview.RenderOGPage(c, sharepreview.Options{
+		ID:        s.ID,
+		Password:  s.Password,
+		SharePath: c.Query("path"),
+	})
 }
 
 type (
@@ -187,25 +51,20 @@ func (s *ShareInfoService) Get(c *gin.Context) (*explorer.Share, error) {
 	u := inventory.UserFromContext(c)
 	shareClient := dep.ShareClient()
 
-	ctx := context.WithValue(c, inventory.LoadShareUser{}, true)
-	ctx = context.WithValue(ctx, inventory.LoadShareFile{}, true)
-	share, err := shareClient.GetByID(ctx, hashid.FromContext(c))
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, serializer.NewError(serializer.CodeNotFound, "Share not found", nil)
-		}
-		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get share", err)
-	}
-
-	if err := inventory.IsValidShare(share); err != nil {
+	shareID := hashid.FromContext(c)
+	share, unlocked, status, err := sharepkg.LoadShareForInfo(c, shareClient, shareID, u, s.Password)
+	switch status {
+	case sharepkg.LoadNotFound:
+		return nil, serializer.NewError(serializer.CodeNotFound, "Share not found", nil)
+	case sharepkg.LoadExpired:
 		return nil, serializer.NewError(serializer.CodeNotFound, "Share link expired", err)
+	case sharepkg.LoadError:
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get share", err)
 	}
 
 	if s.CountViews {
 		_ = shareClient.Viewed(c, share)
 	}
-
-	unlocked := isShareUnlocked(share, s.Password, u)
 
 	base := dep.SettingProvider().SiteURL(c)
 	res := explorer.BuildShare(share, base, dep.HashIDEncoder(), u, share.Edges.User, share.Edges.File.Name,
