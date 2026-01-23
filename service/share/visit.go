@@ -3,6 +3,7 @@ package share
 import (
 	"context"
 	"net/url"
+	"path"
 	"strings"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
@@ -24,6 +25,15 @@ type (
 		Password string `uri:"password"`
 	}
 	ShortLinkRedirectParamCtx struct{}
+)
+
+const (
+	ogStatusInvalidLink      = "Invalid Link"
+	ogStatusNeedLogin        = "Need Login"
+	ogStatusShareExpired     = "Share Expired"
+	ogStatusPasswordRequired = "Password Required"
+	ogDefaultFileName        = "Shared File"
+	ogDefaultFolderName      = "Shared Folder"
 )
 
 func (s *ShortLinkRedirectService) RedirectTo(c *gin.Context) string {
@@ -86,53 +96,50 @@ func (s *ShortLinkRedirectService) RenderOGPage(c *gin.Context) (string, error) 
 		thumbnailURL = base.ResolveReference(&url.URL{Path: thumbnailURL}).String()
 	}
 
-	// Get file info (hide for invalid/expired/password-protected/login-required shares)
-	var fileName, fileSize, ownerName string
-	if shareNotFound {
-		fileName = siteBasic.Name
-		fileSize = "Invalid Link"
-	} else if needLogin {
-		fileName = siteBasic.Name
-		fileSize = "Need Login"
-	} else if shareExpired {
-		fileName = siteBasic.Name
-		fileSize = "Share Expired"
-	} else if share.Password != "" && !isShareUnlocked(share, s.Password, u) {
-		// Password required but not provided or incorrect
-		fileName = siteBasic.Name
-		fileSize = "Password Required"
-	} else if share.Edges.File != nil {
-		fileName = share.Edges.File.Name
-		if fileName == "" {
-			fileName = "Shared File"
-		}
-		// Show "Folder" for directories, file size for files
-		if types.FileType(share.Edges.File.Type) == types.FileTypeFolder {
-			fileSize = "Folder"
-		} else {
-			fileSize = FormatFileSize(share.Edges.File.Size)
-		}
-		// Get owner name (don't expose email for privacy)
-		if share.Edges.User != nil {
-			ownerName = share.Edges.User.Nick
-		}
-	} else {
-		fileName = siteBasic.Name
-		fileSize = "Invalid Link"
-	}
-
 	// Prepare OG data
 	ogData := &ShareOGData{
-		SiteName:     siteBasic.Name,
-		FileName:     fileName,
-		FileSize:     fileSize,
-		OwnerName:    ownerName,
-		ShareURL:     shareURL.String(),
-		ThumbnailURL: thumbnailURL,
-		RedirectURL:  s.RedirectTo(c),
+		SiteName:        siteBasic.Name,
+		SiteDescription: siteBasic.Description,
+		SiteURL:         base.String(),
+		ShareURL:        shareURL.String(),
+		ShareID:         s.ID,
+		ThumbnailURL:    thumbnailURL,
+		RedirectURL:     s.RedirectTo(c),
 	}
 
-	return RenderOGHTML(ogData)
+	// Get file info (hide for invalid/expired/password-protected/login-required shares)
+	switch {
+	case shareNotFound:
+		return renderStatusOG(ogData, siteBasic.Name, ogStatusInvalidLink)
+	case needLogin:
+		return renderStatusOG(ogData, siteBasic.Name, ogStatusNeedLogin)
+	case shareExpired:
+		return renderStatusOG(ogData, siteBasic.Name, ogStatusShareExpired)
+	case share.Password != "" && !isShareUnlocked(share, s.Password, u):
+		// Password required but not provided or incorrect.
+		return renderStatusOG(ogData, siteBasic.Name, ogStatusPasswordRequired)
+	case share.Edges.File == nil:
+		return renderStatusOG(ogData, siteBasic.Name, ogStatusInvalidLink)
+	}
+
+	// Get owner name (don't expose email for privacy).
+	if share.Edges.User != nil {
+		ogData.OwnerName = share.Edges.User.Nick
+	}
+
+	shareFile := share.Edges.File
+	if types.FileType(shareFile.Type) == types.FileTypeFolder {
+		ogData.FolderName = defaultIfEmpty(shareFile.Name, ogDefaultFolderName)
+		ogData.DisplayName = ogData.FolderName
+		return RenderFolderOGHTML(ogData, ogFolderTitleTemplate, ogFolderDescTemplate)
+	}
+
+	ogData.FileName = defaultIfEmpty(shareFile.Name, ogDefaultFileName)
+	ogData.FileSize = FormatFileSize(shareFile.Size)
+	ogData.FileExt = strings.TrimPrefix(path.Ext(ogData.FileName), ".")
+	ogData.DisplayName = ogData.FileName
+
+	return RenderOGHTML(ogData, ogFileTitleTemplate, ogFileDescTemplate)
 }
 
 // isAbsoluteURL checks if the URL is absolute (starts with http:// or https://)
@@ -151,6 +158,19 @@ func isShareUnlocked(share *ent.Share, password string, viewer *ent.User) bool {
 		return true
 	}
 	return false
+}
+
+func renderStatusOG(data *ShareOGData, displayName, status string) (string, error) {
+	data.Status = status
+	data.DisplayName = displayName
+	return RenderStatusOGHTML(data, ogStatusTitleTemplate, ogStatusDescTemplate)
+}
+
+func defaultIfEmpty(value, fallback string) string {
+	if value == "" {
+		return fallback
+	}
+	return value
 }
 
 type (
