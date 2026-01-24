@@ -23,6 +23,14 @@ type (
 	LoadShareUser struct{}
 )
 
+// WithShareEagerLoad returns a context with share eager loading options enabled.
+// This loads the share's associated user and file when querying.
+func WithShareEagerLoad(ctx context.Context) context.Context {
+	ctx = context.WithValue(ctx, LoadShareUser{}, true)
+	ctx = context.WithValue(ctx, LoadShareFile{}, true)
+	return ctx
+}
+
 var (
 	ErrShareLinkExpired  = fmt.Errorf("share link expired")
 	ErrOwnerInactive     = fmt.Errorf("owner is inactive")
