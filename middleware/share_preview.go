@@ -166,7 +166,7 @@ func renderShareOGPage(c *gin.Context, dep dependency.Dep, id, password string) 
 	data.Title = shareInfo.Name
 	if shareInfo.SourceType != nil && *shareInfo.SourceType == types.FileTypeFolder {
 		data.Description = "Folder"
-	} else {
+	} else if shareInfo.Unlocked {
 		data.Description = formatFileSize(shareInfo.Size)
 		thumbnail, err := loadShareThumbnail(c, id, password, shareInfo)
 		if err == nil {
