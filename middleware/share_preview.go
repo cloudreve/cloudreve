@@ -2,26 +2,27 @@ package middleware
 
 import (
 	"bytes"
-	"crypto/subtle"
+	"errors"
 	"fmt"
 	"html/template"
 	"net/url"
 	"strings"
 
+	"github.com/cloudreve/Cloudreve/v4/application/constants"
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
-	"github.com/cloudreve/Cloudreve/v4/ent"
-	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cluster/routes"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
+	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
+	"github.com/cloudreve/Cloudreve/v4/pkg/util"
+	"github.com/cloudreve/Cloudreve/v4/service/explorer"
+	"github.com/cloudreve/Cloudreve/v4/service/share"
 	"github.com/gin-gonic/gin"
 )
 
 const (
-	ogStatusInvalidLink      = "Invalid Link"
-	ogStatusShareUnavailable = "Share Unavailable"
-	ogStatusPasswordRequired = "Password Required"
-	ogStatusNeedLogin        = "Login Required"
+	ogStatusInvalidLink = "Invalid Link"
 )
 
 type ogData struct {
@@ -114,22 +115,14 @@ func extractShareParams(c *gin.Context) (id, password string) {
 		}
 	} else if urlPath == "/home" || urlPath == "/home/" {
 		rawPath := c.Query("path")
-		if strings.HasPrefix(rawPath, "cloudreve://") {
-			u, err := url.Parse(rawPath)
-			if err != nil {
-				return "", ""
-			}
-			if strings.ToLower(u.Host) != "share" || u.User == nil {
-				return "", ""
-			}
-			id = u.User.Username()
-			password, _ = u.User.Password()
+		uri, err := fs.NewUriFromString(rawPath)
+		if err != nil || uri.FileSystem() != constants.FileSystemShare {
+			return "", ""
 		}
+
+		return uri.ID(""), uri.Password()
 	}
 
-	if len(id) > 32 || len(password) > 32 {
-		return "", ""
-	}
 	return id, password
 }
 
@@ -143,7 +136,7 @@ func renderShareOGPage(c *gin.Context, dep dependency.Dep, id, password string) 
 		SiteName:    siteBasic.Name,
 		Title:       siteBasic.Name,
 		Description: siteBasic.Description,
-		ShareURL:    routes.MasterShareUrl(base, id, "").String(),
+		ShareURL:    routes.MasterShareUrl(base, id, password).String(),
 		RedirectURL: routes.MasterShareLongUrl(id, password).String(),
 	}
 
@@ -159,62 +152,66 @@ func renderShareOGPage(c *gin.Context, dep dependency.Dep, id, password string) 
 		return renderOGHTML(data)
 	}
 
-	share, err := loadShareForOG(c, dep, shareID)
+	shareInfo, err := loadShareForOG(c, shareID, password)
 	if err != nil {
-		if ent.IsNotFound(err) {
+		var appErr serializer.AppError
+		if errors.As(err, &appErr) {
+			data.Description = appErr.Msg
+		} else {
 			data.Description = ogStatusInvalidLink
-		} else {
-			data.Description = ogStatusShareUnavailable
 		}
 		return renderOGHTML(data)
 	}
 
-	if err := inventory.IsValidShare(share); err != nil {
-		data.Description = ogStatusShareUnavailable
-		return renderOGHTML(data)
-	}
-
-	if !canAnonymousAccessShare(c, dep) {
-		data.Description = ogStatusNeedLogin
-		return renderOGHTML(data)
-	}
-
-	if share.Password != "" && subtle.ConstantTimeCompare([]byte(share.Password), []byte(password)) != 1 {
-		data.Description = ogStatusPasswordRequired
-		return renderOGHTML(data)
-	}
-
-	targetFile := share.Edges.File
-	if targetFile != nil {
-		fileName := targetFile.Name
-		fileType := types.FileType(targetFile.Type)
-
-		data.Title = fileName
-		if fileType == types.FileTypeFolder {
-			data.Description = "Folder"
-		} else {
-			data.Description = formatFileSize(targetFile.Size)
-		}
-
-		if share.Edges.User != nil && share.Edges.User.Nick != "" {
-			data.Description += " · " + share.Edges.User.Nick
+	data.Title = shareInfo.Name
+	if shareInfo.SourceType != nil && *shareInfo.SourceType == types.FileTypeFolder {
+		data.Description = "Folder"
+	} else {
+		data.Description = formatFileSize(shareInfo.Size)
+		thumbnail, err := loadShareThumbnail(c, id, password, shareInfo)
+		if err == nil {
+			data.ImageURL = thumbnail
 		}
 	}
 
+	data.Description += " · " + shareInfo.Owner.Nickname
 	return renderOGHTML(data)
 }
 
-func loadShareForOG(c *gin.Context, dep dependency.Dep, shareID int) (*ent.Share, error) {
-	ctx := inventory.WithShareEagerLoad(c)
-	return dep.ShareClient().GetByID(ctx, shareID)
+func loadShareThumbnail(c *gin.Context, shareID, password string, shareInfo *explorer.Share) (string, error) {
+	shareUri, err := fs.NewUriFromString(fs.NewShareUri(shareID, password))
+	if err != nil {
+		return "", fmt.Errorf("failed to construct share uri: %w", err)
+	}
+
+	subService := &explorer.FileThumbService{
+		Uri: shareUri.Join(shareInfo.Name).String(),
+	}
+
+	if err := SetUserCtx(c, 0); err != nil {
+		return "", err
+	}
+
+	res, err := subService.Get(c)
+	if err != nil {
+		return "", err
+	}
+
+	return res.Url, nil
 }
 
-func canAnonymousAccessShare(c *gin.Context, dep dependency.Dep) bool {
-	anonymousGroup, err := dep.GroupClient().AnonymousGroup(c)
-	if err != nil {
-		return false
+func loadShareForOG(c *gin.Context, shareID int, password string) (*explorer.Share, error) {
+	subService := &share.ShareInfoService{
+		Password:   password,
+		CountViews: false,
 	}
-	return anonymousGroup.Permissions.Enabled(int(types.GroupPermissionShareDownload))
+
+	if err := SetUserCtx(c, 0); err != nil {
+		return nil, err
+	}
+
+	util.WithValue(c, hashid.ObjectIDCtx{}, shareID)
+	return subService.Get(c)
 }
 
 func renderOGHTML(data *ogData) string {
