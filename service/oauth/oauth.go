@@ -60,6 +60,9 @@ func (s *GrantService) Get(c *gin.Context) (*GrantResponse, error) {
 	user := inventory.UserFromContext(c)
 	kv := dep.KV()
 	oAuthClient := dep.OAuthClientClient()
+	if s.CodeChallenge != "" && s.CodeChallengeMethod == "" {
+		s.CodeChallengeMethod = "S256"
+	}
 
 	// 1. Get app registration and grant
 	app, err := oAuthClient.GetByGUIDWithGrants(c, s.ClientID, user.ID)
