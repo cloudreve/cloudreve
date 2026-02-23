@@ -458,8 +458,11 @@ func (f *DBFS) Get(ctx context.Context, path *fs.URI, opts ...fs.Option) (fs.Fil
 		// first, try to load from cache
 		summary, ok := f.cache.Get(fmt.Sprintf("%s%d", folderSummaryCachePrefix, target.ID()))
 		if ok {
-			summaryTyped := summary.(fs.FolderSummary)
-			target.FileFolderSummary = &summaryTyped
+			summaryTyped, ok := summary.(*fs.FolderSummary)
+			if !ok {
+				return nil, fmt.Errorf("unexpected folder summary type %T", summary)
+			}
+			target.FileFolderSummary = summaryTyped
 		} else {
 			// cache miss, walk the folder to get the summary
 			newSummary := &fs.FolderSummary{Completed: true}
