@@ -138,7 +138,6 @@ func (handler *Driver) List(ctx context.Context, base string, onProgress driver.
 	}
 
 	// 是否为递归列出
-
 	if !recursive {
 		opt.Delimiter = "/"
 	}
@@ -172,8 +171,8 @@ func (handler *Driver) List(ctx context.Context, base string, onProgress driver.
 
 	// 处理列取结果
 	res := make([]fs.PhysicalObject, 0, len(objects)+len(commons))
-	// 处理目录
 
+	// 处理目录
 	for _, object := range commons {
 		rel, err := filepath.Rel(opt.Prefix, object)
 		if err != nil {
@@ -191,8 +190,10 @@ func (handler *Driver) List(ctx context.Context, base string, onProgress driver.
 	onProgress(len(commons))
 
 	// 处理文件
-
 	for _, object := range objects {
+		if strings.HasSuffix(object.Key, "/") && object.Size == 0 {
+			continue
+		}
 		rel, err := filepath.Rel(opt.Prefix, object.Key)
 		if err != nil {
 			handler.l.Warning("Failed to get relative path: %s", err)
