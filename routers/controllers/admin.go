@@ -586,6 +586,7 @@ func AdminBatchDeleteShare(c *gin.Context) {
 		c.JSON(200, serializer.Err(c, err))
 		return
 	}
+	c.JSON(200, serializer.Response{})
 }
 
 func AdminCalibrateStorage(c *gin.Context) {
