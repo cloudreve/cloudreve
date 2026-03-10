@@ -16,6 +16,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/davaccount"
 	"github.com/cloudreve/Cloudreve/v4/ent/file"
+	"github.com/cloudreve/Cloudreve/v4/ent/oauthgrant"
 	"github.com/cloudreve/Cloudreve/v4/ent/passkey"
 	"github.com/cloudreve/Cloudreve/v4/ent/schema"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
@@ -212,6 +213,11 @@ func (c *userClient) Delete(ctx context.Context, uid int) error {
 	// Tasks
 	if _, err := c.client.Task.Delete().Where(task.UserTasks(uid)).Exec(ctx); err != nil {
 		return fmt.Errorf("failed to delete tasks: %w", err)
+	}
+
+	// OAuth grants
+	if _, err := c.client.OAuthGrant.Delete().Where(oauthgrant.UserID(uid)).Exec(schema.SkipSoftDelete(ctx)); err != nil {
+		return fmt.Errorf("failed to delete oauth grants: %w", err)
 	}
 
 	return c.client.User.DeleteOneID(uid).Exec(schema.SkipSoftDelete(ctx))
