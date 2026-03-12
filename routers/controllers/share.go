@@ -72,6 +72,16 @@ func DeleteShare(c *gin.Context) {
 	c.JSON(200, serializer.Response{})
 }
 
+func BatchDeleteShare(c *gin.Context) {
+	service := ParametersFromContext[*share.BatchDeleteShareService](c, share.BatchDeleteParamCtx{})
+	err := service.Delete(c)
+	if err != nil {
+		c.JSON(200, serializer.Err(c, err))
+	}
+
+	c.JSON(200, serializer.Response{})
+}
+
 func ShareRedirect(c *gin.Context) {
 	service := ParametersFromContext[*share.ShortLinkRedirectService](c, share.ShortLinkRedirectParamCtx{})
 	c.Redirect(http.StatusFound, service.RedirectTo(c))

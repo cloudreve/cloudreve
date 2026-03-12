@@ -27,7 +27,34 @@ type (
 		ShowReadMe      bool   `json:"show_readme"`
 	}
 	ShareCreateParamCtx struct{}
+
+	BatchDeleteShareService struct {
+		ShareIDs []string `json:"ids" binding:"required"`
+	}
+	BatchDeleteParamCtx struct{}
 )
+
+func (s *BatchDeleteShareService) Delete(c *gin.Context) error {
+	dep := dependency.FromContext(c)
+	shareClient := dep.ShareClient()
+
+	var shareIDs []int
+
+	for _, v := range s.ShareIDs {
+		share, err := shareClient.GetByHashID(c, v)
+		if err != nil {
+			return err
+		}
+
+		shareIDs = append(shareIDs, share.ID)
+	}
+
+	if err := shareClient.DeleteBatch(c, shareIDs); err != nil {
+		return serializer.NewError(serializer.CodeDBError, "Failed to delete shares", err)
+	}
+
+	return nil
+}
 
 // Upsert 创建或更新分享
 func (service *ShareCreateService) Upsert(c *gin.Context, existed int) (string, error) {

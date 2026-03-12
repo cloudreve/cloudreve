@@ -38,7 +38,6 @@ func InitRouter(dep dependency.Dep) *gin.Engine {
 
 	l.Info("Current running mode: Slave.")
 	return initSlaveRouter(dep)
-
 }
 
 func newGinEngine(dep dependency.Dep) *gin.Engine {
@@ -841,6 +840,12 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				middleware.RequiredScopes(types.ScopeSharesWrite),
 				middleware.HashID(hashid.ShareID),
 				controllers.DeleteShare,
+			)
+			share.DELETE("",
+				middleware.LoginRequired(),
+				middleware.RequiredScopes(types.ScopeSharesWrite),
+				controllers.FromJSON[sharesvc.BatchDeleteShareService](sharesvc.BatchDeleteParamCtx{}),
+				controllers.BatchDeleteShare,
 			)
 			//// 获取README文本文件内容
 			//share.GET("readme/:id",
