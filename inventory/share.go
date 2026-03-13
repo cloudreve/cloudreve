@@ -41,8 +41,6 @@ type (
 		GetByIDUser(ctx context.Context, id, uid int) (*ent.Share, error)
 		// GetByHashID returns the share with given hash id.
 		GetByHashID(ctx context.Context, idRaw string) (*ent.Share, error)
-		// GetByHashIDs returns the shares with given hash ids
-		GetByHashIDs(ctx context.Context, idsRaw []string) ([]*ent.Share, error)
 		// Upsert creates or update a new share record.
 		Upsert(ctx context.Context, params *CreateShareParams) (*ent.Share, error)
 		// Viewed increase the view count of the share.
@@ -51,12 +49,14 @@ type (
 		Downloaded(ctx context.Context, share *ent.Share) error
 		// Delete deletes the share.
 		Delete(ctx context.Context, shareId int) error
+		// DeleteBatch deletes the shares with the given ids.
+		DeleteBatch(ctx context.Context, shareIds []int) error
+		// DeleteBatchByUserID deletes the shares with the given ids and user id
+		DeleteBatchByUserID(ctx context.Context, uid int, shareIds []int) error
 		// List returns a list of shares with the given args.
 		List(ctx context.Context, args *ListShareArgs) (*ListShareResult, error)
 		// CountByTimeRange counts the number of shares created in the given time range.
 		CountByTimeRange(ctx context.Context, start, end *time.Time) (int, error)
-		// DeleteBatch deletes the shares with the given ids.
-		DeleteBatch(ctx context.Context, shareIds []int) error
 	}
 
 	CreateShareParams struct {
@@ -163,21 +163,6 @@ func (c *shareClient) GetByHashID(ctx context.Context, idRaw string) (*ent.Share
 	return c.GetByID(ctx, id)
 }
 
-func (c *shareClient) GetByHashIDs(ctx context.Context, idsRaw []string) ([]*ent.Share, error) {
-	var ids []int
-
-	for _, v := range idsRaw {
-		id, err := c.hasher.Decode(v, hashid.ShareID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to decode hash id %q: %w", v, err)
-		}
-
-		ids = append(ids, id)
-	}
-
-	return c.GetByIDs(ctx, ids)
-}
-
 func (c *shareClient) GetByID(ctx context.Context, id int) (*ent.Share, error) {
 	s, err := withShareEagerLoading(ctx, c.client.Share.Query().Where(share.ID(id))).First(ctx)
 	if err != nil {
@@ -209,6 +194,11 @@ func (c *shareClient) GetByIDs(ctx context.Context, ids []int) ([]*ent.Share, er
 
 func (c *shareClient) DeleteBatch(ctx context.Context, shareIds []int) error {
 	_, err := c.client.Share.Delete().Where(share.IDIn(shareIds...)).Exec(ctx)
+	return err
+}
+
+func (c *shareClient) DeleteBatchByUserID(ctx context.Context, uid int, shareIds []int) error {
+	_, err := c.client.Share.Delete().Where(share.IDIn(shareIds...)).Where(share.HasUserWith(user.ID(uid))).Exec(ctx)
 	return err
 }
 
