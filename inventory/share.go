@@ -41,6 +41,8 @@ type (
 		GetByIDUser(ctx context.Context, id, uid int) (*ent.Share, error)
 		// GetByHashID returns the share with given hash id.
 		GetByHashID(ctx context.Context, idRaw string) (*ent.Share, error)
+		// GetByHashIDs returns the shares with given hash ids
+		GetByHashIDs(ctx context.Context, idsRaw []string) ([]*ent.Share, error)
 		// Upsert creates or update a new share record.
 		Upsert(ctx context.Context, params *CreateShareParams) (*ent.Share, error)
 		// Viewed increase the view count of the share.
@@ -159,6 +161,21 @@ func (c *shareClient) GetByHashID(ctx context.Context, idRaw string) (*ent.Share
 	}
 
 	return c.GetByID(ctx, id)
+}
+
+func (c *shareClient) GetByHashIDs(ctx context.Context, idsRaw []string) ([]*ent.Share, error) {
+	var ids []int
+
+	for _, v := range idsRaw {
+		id, err := c.hasher.Decode(v, hashid.ShareID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode hash id %q: %w", v, err)
+		}
+
+		ids = append(ids, id)
+	}
+
+	return c.GetByIDs(ctx, ids)
 }
 
 func (c *shareClient) GetByID(ctx context.Context, id int) (*ent.Share, error) {

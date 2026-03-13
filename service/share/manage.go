@@ -38,18 +38,17 @@ func (s *BatchDeleteShareService) Delete(c *gin.Context) error {
 	dep := dependency.FromContext(c)
 	shareClient := dep.ShareClient()
 
-	var shareIDs []int
-
-	for _, v := range s.ShareIDs {
-		share, err := shareClient.GetByHashID(c, v)
-		if err != nil {
-			return err
-		}
-
-		shareIDs = append(shareIDs, share.ID)
+	shares, err := shareClient.GetByHashIDs(c, s.ShareIDs)
+	if err != nil {
+		return err
 	}
 
-	if err := shareClient.DeleteBatch(c, shareIDs); err != nil {
+	var ids []int
+	for _, v := range shares {
+		ids = append(ids, v.ID)
+	}
+
+	if err := shareClient.DeleteBatch(c, ids); err != nil {
 		return serializer.NewError(serializer.CodeDBError, "Failed to delete shares", err)
 	}
 
