@@ -2,6 +2,7 @@ package share
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
@@ -10,6 +11,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager"
+	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
 	"github.com/cloudreve/Cloudreve/v4/service/explorer"
 	"github.com/gin-gonic/gin"
@@ -27,7 +29,35 @@ type (
 		ShowReadMe      bool   `json:"show_readme"`
 	}
 	ShareCreateParamCtx struct{}
+
+	BatchDeleteShareService struct {
+		ShareIDs []string `json:"ids" binding:"required"`
+	}
+	BatchDeleteParamCtx struct{}
 )
+
+func (service *BatchDeleteShareService) Delete(c *gin.Context) error {
+	dep := dependency.FromContext(c)
+	uid := inventory.UserIDFromContext(c)
+	shareClient := dep.ShareClient()
+
+	var ids []int
+
+	for _, v := range service.ShareIDs {
+		id, err := dep.HashIDEncoder().Decode(v, hashid.ShareID)
+		if err != nil {
+			return fmt.Errorf("failed to decode hash id %q: %w", v, err)
+		}
+
+		ids = append(ids, id)
+	}
+
+	if err := shareClient.DeleteBatchByUserID(c, uid, ids); err != nil {
+		return serializer.NewError(serializer.CodeDBError, "Failed to delete shares", err)
+	}
+
+	return nil
+}
 
 // Upsert 创建或更新分享
 func (service *ShareCreateService) Upsert(c *gin.Context, existed int) (string, error) {
