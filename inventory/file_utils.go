@@ -474,17 +474,18 @@ func getFileCursorQuery(args *ListFileParameters, token *PageToken, query []*ent
 		predicates = fileCursorQuery[file.FieldID]
 	}
 
-	// If all folder is already listed in previous page, only query for files.
-	if token != nil && token.StartWithFile && !args.MixedType {
-		query = query[1:2]
-	}
-
-	// Mixing folders and files with one query
+	// Select appropriate query based on args and token state
 	if args.MixedType {
+		// Mixing folders and files with one query
 		query = query[2:]
 	} else if args.FolderOnly {
+		// Only folders
 		query = query[0:1]
+	} else if token != nil && token.StartWithFile {
+		// If all folders are already listed in previous page, only query for files
+		query = query[1:2]
 	}
+	// Default: query remains as [folderQuery, fileQuery, mixedQuery] for normal pagination
 
 	if token != nil {
 		query[0].Where(predicates[o.Desc](token))
