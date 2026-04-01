@@ -603,10 +603,11 @@ func (s *UnlockFileService) Unlock(c *gin.Context) error {
 type (
 	GetFileInfoParameterCtx struct{}
 	GetFileInfoService      struct {
-		Uri           string `form:"uri"`
-		ID            string `form:"id"`
-		ExtendedInfo  bool   `form:"extended"`
-		FolderSummary bool   `form:"folder_summary"`
+		Uri                      string `form:"uri"`
+		ID                       string `form:"id"`
+		ExtendedInfo             bool   `form:"extended"`
+		FolderSummary            bool   `form:"folder_summary"`
+		FolderSummaryBypassCache bool   `form:"nocache"`
 	}
 )
 
@@ -645,6 +646,9 @@ func (s *GetFileInfoService) Get(c *gin.Context) (*FileResponse, error) {
 	}
 	if s.FolderSummary {
 		opts = append(opts, dbfs.WithLoadFolderSummary())
+		if s.FolderSummaryBypassCache {
+			opts = append(opts, dbfs.WithBypassFolderSummaryCache())
+		}
 	}
 
 	file, err := m.Get(c, uri, opts...)

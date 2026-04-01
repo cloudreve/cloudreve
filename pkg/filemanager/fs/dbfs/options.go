@@ -9,6 +9,7 @@ import (
 type dbfsOption struct {
 	*fs.FsOption
 	loadFolderSummary          bool
+	bypassFolderSummaryCache   bool
 	extendedInfo               bool
 	loadFilePublicMetadata     bool
 	loadFileShareIfOwned       bool
@@ -170,6 +171,14 @@ func WithExtendedInfo() fs.Option {
 func WithLoadFolderSummary() fs.Option {
 	return optionFunc(func(o *dbfsOption) {
 		o.loadFolderSummary = true
+	})
+}
+
+// WithBypassFolderSummaryCache enables bypassing existing cached folder summary.
+// Newly calculated summary will still be written to cache.
+func WithBypassFolderSummaryCache() fs.Option {
+	return optionFunc(func(o *dbfsOption) {
+		o.bypassFolderSummaryCache = true
 	})
 }
 
