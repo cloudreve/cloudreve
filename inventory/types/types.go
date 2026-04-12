@@ -287,8 +287,9 @@ const (
 	PolicyTypeS3     = "s3"
 	PolicyTypeKs3    = "ks3"
 	PolicyTypeOd     = "onedrive"
-	PolicyTypeRemote = "remote"
-	PolicyTypeObs    = "obs"
+	PolicyTypeRemote  = "remote"
+	PolicyTypeObs     = "obs"
+	PolicyTypeDarkibox = "darkibox"
 )
 
 const (
