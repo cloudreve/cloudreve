@@ -383,6 +383,8 @@ func getFileOrderOption(args *ListFileParameters) []file.OrderOption {
 		return []file.OrderOption{file.ByName(orderTerm), file.ByID(orderTerm)}
 	case file.FieldSize:
 		return []file.OrderOption{file.BySize(orderTerm), file.ByID(orderTerm)}
+	case file.FieldCreatedAt:
+		return []file.OrderOption{file.ByCreatedAt(orderTerm), file.ByID(orderTerm)}
 	case file.FieldUpdatedAt:
 		return []file.OrderOption{file.ByUpdatedAt(orderTerm), file.ByID(orderTerm)}
 	default:
@@ -435,10 +437,16 @@ var fileCursorQuery = map[string]map[bool]func(token *PageToken) predicate.File{
 	},
 	file.FieldCreatedAt: {
 		true: func(token *PageToken) predicate.File {
-			return file.IDLT(token.ID)
+			return file.Or(
+				file.CreatedAtLT(*token.Time),
+				file.And(file.CreatedAt(*token.Time), file.IDLT(token.ID)),
+			)
 		},
 		false: func(token *PageToken) predicate.File {
-			return file.IDGT(token.ID)
+			return file.Or(
+				file.CreatedAtGT(*token.Time),
+				file.And(file.CreatedAt(*token.Time), file.IDGT(token.ID)),
+			)
 		},
 	},
 	file.FieldUpdatedAt: {
@@ -502,6 +510,8 @@ func getFileNextPageToken(hasher hashid.Encoder, last *ent.File, args *ListFileP
 	switch args.OrderBy {
 	case file.FieldName:
 		token.String = last.Name
+	case file.FieldCreatedAt:
+		token.Time = &last.CreatedAt
 	case file.FieldSize:
 		token.Int = int(last.Size)
 	case file.FieldUpdatedAt:
