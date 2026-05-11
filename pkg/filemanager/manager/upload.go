@@ -407,7 +407,7 @@ func (m *manager) updateStateless(ctx context.Context, req *fs.UploadRequest, o 
 		return nil, fmt.Errorf("faield to prepare uplaod: %w", err)
 	}
 	// A successful upstream call may still return a response with nil Req or
-	// Session — observed when the master returned 502 mid-prepare (#3441) and
+	// Session, observed when the master returned 502 mid-prepare (#3441) and
 	// crashed the slave on the next attribute access.
 	if res == nil || res.Req == nil || res.Session == nil {
 		return nil, fmt.Errorf("stateless prepare upload returned an incomplete response")
