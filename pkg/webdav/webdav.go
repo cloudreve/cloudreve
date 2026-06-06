@@ -47,8 +47,14 @@ func stripPrefix(p string, u *ent.User) (string, *fs.URI, int, error) {
 	prefix := davPrefix
 	if r := strings.TrimPrefix(p, prefix); len(r) < len(p) {
 		r = strings.TrimPrefix(r, fs.Separator)
-		return r, base.JoinRaw(util.RemoveSlash(r)), http.StatusOK, nil
+		candidate := base.JoinRaw(util.RemoveSlash(r))
+		if !candidate.EqualOrIsDescendantOf(base, "") {
+			return "", nil, http.StatusForbidden, errPrefixMismatch
+		}
+
+		return r, candidate, http.StatusOK, nil
 	}
+
 	return "", nil, http.StatusNotFound, errPrefixMismatch
 }
 
