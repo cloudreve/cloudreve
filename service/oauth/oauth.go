@@ -16,6 +16,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/samber/lo"
 )
 
@@ -50,6 +51,7 @@ type (
 		ResponseType        string `json:"response_type" binding:"required,eq=code"`
 		RedirectURI         string `json:"redirect_uri" binding:"required"`
 		State               string `json:"state" binding:"max=4096"`
+		Nonce               string `json:"nonce" binding:"max=4096"`
 		Scope               string `json:"scope" binding:"required"`
 		CodeChallenge       string `json:"code_challenge" binding:"max=255"`
 		CodeChallengeMethod string `json:"code_challenge_method" binding:"omitempty,eq=S256"`
@@ -84,7 +86,7 @@ func (s *GrantService) Get(c *gin.Context) (*GrantResponse, error) {
 	}
 
 	// Parse requested scopes (space-separated per OAuth 2.0 spec)
-	requestedScopes := strings.Split(s.Scope, " ")
+	requestedScopes := strings.Fields(s.Scope)
 
 	// Validate requested scopes: must be a subset of registered app scopes
 	if !auth.ValidateScopes(requestedScopes, app.Scopes) {
@@ -108,6 +110,7 @@ func (s *GrantService) Get(c *gin.Context) (*GrantResponse, error) {
 		UserID:        user.ID,
 		Scopes:        requestedScopes,
 		RedirectURI:   s.RedirectURI,
+		Nonce:         s.Nonce,
 		CodeChallenge: s.CodeChallenge,
 	}
 
@@ -129,6 +132,7 @@ type (
 		ClientSecret string `form:"client_secret" binding:"required"`
 		GrantType    string `form:"grant_type" binding:"required,eq=authorization_code"`
 		Code         string `form:"code" binding:"required"`
+		RedirectURI  string `form:"redirect_uri" binding:"required"`
 		CodeVerifier string `form:"code_verifier"`
 	}
 )
@@ -158,6 +162,9 @@ func (s *ExchangeTokenService) Exchange(c *gin.Context) (*TokenResponse, error) 
 	// 2. Validate client_id matches the one in authorization code
 	if authCode.ClientID != s.ClientID {
 		return nil, serializer.NewError(serializer.CodeCredentialInvalid, "Client ID mismatch", nil)
+	}
+	if authCode.RedirectURI != s.RedirectURI {
+		return nil, serializer.NewError(serializer.CodeCredentialInvalid, "Redirect URI mismatch", nil)
 	}
 
 	// 3. Verify PKCE: SHA256(code_verifier) should match code_challenge
@@ -230,7 +237,45 @@ func (s *ExchangeTokenService) Exchange(c *gin.Context) (*TokenResponse, error) 
 		}
 	}
 
+	if lo.Contains(authCode.Scopes, types.ScopeOpenID) {
+		idToken, err := buildIDToken(c, dep, user, s.ClientID, authCode.Scopes, token.AccessExpires, authCode.Nonce)
+		if err != nil {
+			return nil, serializer.NewError(serializer.CodeEncryptError, "Failed to issue ID token", err)
+		}
+		resp.IDToken = idToken
+	}
+
 	return resp, nil
+}
+
+func buildIDToken(c *gin.Context, dep dependency.Dep, user *ent.User, clientID string, scopes []string, expires time.Time, nonce string) (string, error) {
+	sub := hashid.EncodeUserID(dep.HashIDEncoder(), user.ID)
+	claims := &auth.OIDCIDTokenClaims{
+		Nonce: nonce,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    oidcIssuer(c).String(),
+			Subject:   sub,
+			Audience:  jwt.ClaimStrings{clientID},
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(expires),
+		},
+	}
+
+	for _, scope := range scopes {
+		switch scope {
+		case types.ScopeProfile:
+			siteUrl := dep.SettingProvider().SiteURL(c)
+			claims.Name = user.Nick
+			claims.PreferredUsername = user.Nick
+			claims.Picture = routes.MasterUserAvatarUrl(siteUrl, sub).String()
+			claims.UpdatedAt = user.UpdatedAt.Unix()
+		case types.ScopeEmail:
+			claims.Email = user.Email
+			claims.EmailVerified = true
+		}
+	}
+
+	return auth.SignOIDCIDToken(c, dep.SettingClient(), claims)
 }
 
 type (
