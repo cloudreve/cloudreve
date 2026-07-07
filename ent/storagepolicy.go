@@ -66,9 +66,11 @@ type StoragePolicyEdges struct {
 	Entities []*Entity `json:"entities,omitempty"`
 	// Node holds the value of the node edge.
 	Node *Node `json:"node,omitempty"`
+	// GroupsAllowed holds the value of the groups_allowed edge.
+	GroupsAllowed []*Group `json:"groups_allowed,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 }
 
 // GroupsOrErr returns the Groups value or an error if the edge
@@ -109,6 +111,15 @@ func (e StoragePolicyEdges) NodeOrErr() (*Node, error) {
 		return e.Node, nil
 	}
 	return nil, &NotLoadedError{edge: "node"}
+}
+
+// GroupsAllowedOrErr returns the GroupsAllowed value or an error if the edge
+// was not loaded in eager-loading.
+func (e StoragePolicyEdges) GroupsAllowedOrErr() ([]*Group, error) {
+	if e.loadedTypes[4] {
+		return e.GroupsAllowed, nil
+	}
+	return nil, &NotLoadedError{edge: "groups_allowed"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -273,6 +284,11 @@ func (sp *StoragePolicy) QueryNode() *NodeQuery {
 	return NewStoragePolicyClient(sp.config).QueryNode(sp)
 }
 
+// QueryGroupsAllowed queries the "groups_allowed" edge of the StoragePolicy entity.
+func (sp *StoragePolicy) QueryGroupsAllowed() *GroupQuery {
+	return NewStoragePolicyClient(sp.config).QueryGroupsAllowed(sp)
+}
+
 // Update returns a builder for updating this StoragePolicy.
 // Note that you need to call StoragePolicy.Unwrap() before calling this method if this StoragePolicy
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -368,6 +384,12 @@ func (e *StoragePolicy) SetEntities(v []*Entity) {
 func (e *StoragePolicy) SetNode(v *Node) {
 	e.Edges.Node = v
 	e.Edges.loadedTypes[3] = true
+}
+
+// SetGroupsAllowed manually set the edge as loaded state.
+func (e *StoragePolicy) SetGroupsAllowed(v []*Group) {
+	e.Edges.GroupsAllowed = v
+	e.Edges.loadedTypes[4] = true
 }
 
 // StoragePolicies is a parsable slice of StoragePolicy.

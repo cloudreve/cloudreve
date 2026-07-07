@@ -54,5 +54,9 @@ func (StoragePolicy) Edges() []ent.Edge {
 			Ref("storage_policy").
 			Field("node_id").
 			Unique(),
+		// groups_allowed is the inverse of Group.storage_policies_allowed: the set
+		// of groups that are permitted to upload to this policy.
+		edge.From("groups_allowed", Group.Type).
+			Ref("storage_policies_allowed"),
 	}
 }

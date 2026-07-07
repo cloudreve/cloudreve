@@ -77,6 +77,12 @@ func (c *groupClient) ListAll(ctx context.Context) ([]*ent.Group, error) {
 }
 
 func (c *groupClient) Upsert(ctx context.Context, group *ent.Group) (*ent.Group, error) {
+	defaultPolicyID := 0
+	if group.Edges.StoragePolicies != nil && group.Edges.StoragePolicies.ID > 0 {
+		defaultPolicyID = group.Edges.StoragePolicies.ID
+	}
+	allowedIDs := allowedPolicyIDs(group, defaultPolicyID)
+
 	if group.ID == 0 {
 		stm := c.client.Group.Create().
 			SetName(group.Name).
@@ -85,8 +91,11 @@ func (c *groupClient) Upsert(ctx context.Context, group *ent.Group) (*ent.Group,
 			SetPermissions(group.Permissions).
 			SetSettings(group.Settings)
 
-		if group.Edges.StoragePolicies != nil && group.Edges.StoragePolicies.ID > 0 {
-			stm.SetStoragePolicyID(group.Edges.StoragePolicies.ID)
+		if defaultPolicyID > 0 {
+			stm.SetStoragePolicyID(defaultPolicyID)
+		}
+		if len(allowedIDs) > 0 {
+			stm.AddStoragePoliciesAllowedIDs(allowedIDs...)
 		}
 
 		return stm.Save(ctx)
@@ -98,10 +107,14 @@ func (c *groupClient) Upsert(ctx context.Context, group *ent.Group) (*ent.Group,
 		SetSpeedLimit(group.SpeedLimit).
 		SetPermissions(group.Permissions).
 		SetSettings(group.Settings).
-		ClearStoragePolicies()
+		ClearStoragePolicies().
+		ClearStoragePoliciesAllowed()
 
-	if group.Edges.StoragePolicies != nil && group.Edges.StoragePolicies.ID > 0 {
-		stm.SetStoragePolicyID(group.Edges.StoragePolicies.ID)
+	if defaultPolicyID > 0 {
+		stm.SetStoragePolicyID(defaultPolicyID)
+	}
+	if len(allowedIDs) > 0 {
+		stm.AddStoragePoliciesAllowedIDs(allowedIDs...)
 	}
 
 	res, err := stm.Save(ctx)
@@ -110,6 +123,33 @@ func (c *groupClient) Upsert(ctx context.Context, group *ent.Group) (*ent.Group,
 	}
 
 	return res, nil
+}
+
+// allowedPolicyIDs computes the deduplicated set of storage policy ids a group is
+// allowed to upload to, always including the default policy id (when set) so the
+// default is guaranteed to be a member of the allowed set.
+func allowedPolicyIDs(group *ent.Group, defaultPolicyID int) []int {
+	seen := make(map[int]struct{})
+	ids := make([]int, 0)
+	add := func(id int) {
+		if id <= 0 {
+			return
+		}
+		if _, ok := seen[id]; ok {
+			return
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
+
+	add(defaultPolicyID)
+	for _, p := range group.Edges.StoragePoliciesAllowed {
+		if p != nil {
+			add(p.ID)
+		}
+	}
+
+	return ids
 }
 
 func (c *groupClient) Delete(ctx context.Context, id int) error {
@@ -170,6 +210,9 @@ func getGroupOrderOption(args *ListGroupParameters) []group.OrderOption {
 func withGroupEagerLoading(ctx context.Context, q *ent.GroupQuery) *ent.GroupQuery {
 	if _, ok := ctx.Value(LoadGroupPolicy{}).(bool); ok {
 		q.WithStoragePolicies(func(spq *ent.StoragePolicyQuery) {
+			withStoragePolicyEagerLoading(ctx, spq)
+		})
+		q.WithStoragePoliciesAllowed(func(spq *ent.StoragePolicyQuery) {
 			withStoragePolicyEagerLoading(ctx, spq)
 		})
 	}

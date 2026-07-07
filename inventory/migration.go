@@ -47,6 +47,10 @@ func migrate(l logging.Logger, client *ent.Client, ctx context.Context, kv cache
 		return fmt.Errorf("failed migrating default storage policy: %w", err)
 	}
 
+	if err := migrateGroupAvailablePolicies(l, client, ctx); err != nil {
+		return fmt.Errorf("failed migrating group available storage policies: %w", err)
+	}
+
 	if err := migrateOAuthClient(l, client, ctx); err != nil {
 		return fmt.Errorf("failed migrating OAuth client: %w", err)
 	}
@@ -130,6 +134,41 @@ func migrateSysGroups(l logging.Logger, client *ent.Client, ctx context.Context)
 
 	if err := migrateMasterNode(l, client, ctx); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// migrateGroupAvailablePolicies backfills each group's allowed storage-policy set
+// (the storage_policies_allowed M2M) with its default policy (storage_policy_id), so
+// existing single-policy groups keep working after multi-policy support was added.
+// Idempotent: it only adds the default when it is not already part of the set.
+func migrateGroupAvailablePolicies(l logging.Logger, client *ent.Client, ctx context.Context) error {
+	l.Info("Backfilling group available storage policies...")
+	groups, err := client.Group.Query().WithStoragePoliciesAllowed().All(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query groups for policy backfill: %w", err)
+	}
+
+	for _, g := range groups {
+		if g.StoragePolicyID == 0 {
+			continue
+		}
+
+		already := false
+		for _, p := range g.Edges.StoragePoliciesAllowed {
+			if p.ID == g.StoragePolicyID {
+				already = true
+				break
+			}
+		}
+		if already {
+			continue
+		}
+
+		if err := client.Group.UpdateOne(g).AddStoragePoliciesAllowedIDs(g.StoragePolicyID).Exec(ctx); err != nil {
+			return fmt.Errorf("failed to backfill available policy for group %d: %w", g.ID, err)
+		}
 	}
 
 	return nil

@@ -5317,28 +5317,31 @@ func (m *FsEventMutation) ResetEdge(name string) error {
 // GroupMutation represents an operation that mutates the Group nodes in the graph.
 type GroupMutation struct {
 	config
-	op                      Op
-	typ                     string
-	id                      *int
-	created_at              *time.Time
-	updated_at              *time.Time
-	deleted_at              *time.Time
-	name                    *string
-	max_storage             *int64
-	addmax_storage          *int64
-	speed_limit             *int
-	addspeed_limit          *int
-	permissions             **boolset.BooleanSet
-	settings                **types.GroupSetting
-	clearedFields           map[string]struct{}
-	users                   map[int]struct{}
-	removedusers            map[int]struct{}
-	clearedusers            bool
-	storage_policies        *int
-	clearedstorage_policies bool
-	done                    bool
-	oldValue                func(context.Context) (*Group, error)
-	predicates              []predicate.Group
+	op                              Op
+	typ                             string
+	id                              *int
+	created_at                      *time.Time
+	updated_at                      *time.Time
+	deleted_at                      *time.Time
+	name                            *string
+	max_storage                     *int64
+	addmax_storage                  *int64
+	speed_limit                     *int
+	addspeed_limit                  *int
+	permissions                     **boolset.BooleanSet
+	settings                        **types.GroupSetting
+	clearedFields                   map[string]struct{}
+	users                           map[int]struct{}
+	removedusers                    map[int]struct{}
+	clearedusers                    bool
+	storage_policies                *int
+	clearedstorage_policies         bool
+	storage_policies_allowed        map[int]struct{}
+	removedstorage_policies_allowed map[int]struct{}
+	clearedstorage_policies_allowed bool
+	done                            bool
+	oldValue                        func(context.Context) (*Group, error)
+	predicates                      []predicate.Group
 }
 
 var _ ent.Mutation = (*GroupMutation)(nil)
@@ -5964,6 +5967,60 @@ func (m *GroupMutation) ResetStoragePolicies() {
 	m.clearedstorage_policies = false
 }
 
+// AddStoragePoliciesAllowedIDs adds the "storage_policies_allowed" edge to the StoragePolicy entity by ids.
+func (m *GroupMutation) AddStoragePoliciesAllowedIDs(ids ...int) {
+	if m.storage_policies_allowed == nil {
+		m.storage_policies_allowed = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.storage_policies_allowed[ids[i]] = struct{}{}
+	}
+}
+
+// ClearStoragePoliciesAllowed clears the "storage_policies_allowed" edge to the StoragePolicy entity.
+func (m *GroupMutation) ClearStoragePoliciesAllowed() {
+	m.clearedstorage_policies_allowed = true
+}
+
+// StoragePoliciesAllowedCleared reports if the "storage_policies_allowed" edge to the StoragePolicy entity was cleared.
+func (m *GroupMutation) StoragePoliciesAllowedCleared() bool {
+	return m.clearedstorage_policies_allowed
+}
+
+// RemoveStoragePoliciesAllowedIDs removes the "storage_policies_allowed" edge to the StoragePolicy entity by IDs.
+func (m *GroupMutation) RemoveStoragePoliciesAllowedIDs(ids ...int) {
+	if m.removedstorage_policies_allowed == nil {
+		m.removedstorage_policies_allowed = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.storage_policies_allowed, ids[i])
+		m.removedstorage_policies_allowed[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedStoragePoliciesAllowed returns the removed IDs of the "storage_policies_allowed" edge to the StoragePolicy entity.
+func (m *GroupMutation) RemovedStoragePoliciesAllowedIDs() (ids []int) {
+	for id := range m.removedstorage_policies_allowed {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// StoragePoliciesAllowedIDs returns the "storage_policies_allowed" edge IDs in the mutation.
+func (m *GroupMutation) StoragePoliciesAllowedIDs() (ids []int) {
+	for id := range m.storage_policies_allowed {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetStoragePoliciesAllowed resets all changes to the "storage_policies_allowed" edge.
+func (m *GroupMutation) ResetStoragePoliciesAllowed() {
+	m.storage_policies_allowed = nil
+	m.clearedstorage_policies_allowed = false
+	m.removedstorage_policies_allowed = nil
+}
+
 // Where appends a list predicates to the GroupMutation builder.
 func (m *GroupMutation) Where(ps ...predicate.Group) {
 	m.predicates = append(m.predicates, ps...)
@@ -6293,12 +6350,15 @@ func (m *GroupMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *GroupMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.users != nil {
 		edges = append(edges, group.EdgeUsers)
 	}
 	if m.storage_policies != nil {
 		edges = append(edges, group.EdgeStoragePolicies)
+	}
+	if m.storage_policies_allowed != nil {
+		edges = append(edges, group.EdgeStoragePoliciesAllowed)
 	}
 	return edges
 }
@@ -6317,15 +6377,24 @@ func (m *GroupMutation) AddedIDs(name string) []ent.Value {
 		if id := m.storage_policies; id != nil {
 			return []ent.Value{*id}
 		}
+	case group.EdgeStoragePoliciesAllowed:
+		ids := make([]ent.Value, 0, len(m.storage_policies_allowed))
+		for id := range m.storage_policies_allowed {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *GroupMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.removedusers != nil {
 		edges = append(edges, group.EdgeUsers)
+	}
+	if m.removedstorage_policies_allowed != nil {
+		edges = append(edges, group.EdgeStoragePoliciesAllowed)
 	}
 	return edges
 }
@@ -6340,18 +6409,27 @@ func (m *GroupMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case group.EdgeStoragePoliciesAllowed:
+		ids := make([]ent.Value, 0, len(m.removedstorage_policies_allowed))
+		for id := range m.removedstorage_policies_allowed {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *GroupMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.clearedusers {
 		edges = append(edges, group.EdgeUsers)
 	}
 	if m.clearedstorage_policies {
 		edges = append(edges, group.EdgeStoragePolicies)
+	}
+	if m.clearedstorage_policies_allowed {
+		edges = append(edges, group.EdgeStoragePoliciesAllowed)
 	}
 	return edges
 }
@@ -6364,6 +6442,8 @@ func (m *GroupMutation) EdgeCleared(name string) bool {
 		return m.clearedusers
 	case group.EdgeStoragePolicies:
 		return m.clearedstorage_policies
+	case group.EdgeStoragePoliciesAllowed:
+		return m.clearedstorage_policies_allowed
 	}
 	return false
 }
@@ -6388,6 +6468,9 @@ func (m *GroupMutation) ResetEdge(name string) error {
 		return nil
 	case group.EdgeStoragePolicies:
 		m.ResetStoragePolicies()
+		return nil
+	case group.EdgeStoragePoliciesAllowed:
+		m.ResetStoragePoliciesAllowed()
 		return nil
 	}
 	return fmt.Errorf("unknown Group edge %s", name)
@@ -12511,39 +12594,42 @@ func (m *ShareMutation) ResetEdge(name string) error {
 // StoragePolicyMutation represents an operation that mutates the StoragePolicy nodes in the graph.
 type StoragePolicyMutation struct {
 	config
-	op              Op
-	typ             string
-	id              *int
-	created_at      *time.Time
-	updated_at      *time.Time
-	deleted_at      *time.Time
-	name            *string
-	_type           *string
-	server          *string
-	bucket_name     *string
-	is_private      *bool
-	access_key      *string
-	secret_key      *string
-	max_size        *int64
-	addmax_size     *int64
-	dir_name_rule   *string
-	file_name_rule  *string
-	settings        **types.PolicySetting
-	clearedFields   map[string]struct{}
-	groups          map[int]struct{}
-	removedgroups   map[int]struct{}
-	clearedgroups   bool
-	files           map[int]struct{}
-	removedfiles    map[int]struct{}
-	clearedfiles    bool
-	entities        map[int]struct{}
-	removedentities map[int]struct{}
-	clearedentities bool
-	node            *int
-	clearednode     bool
-	done            bool
-	oldValue        func(context.Context) (*StoragePolicy, error)
-	predicates      []predicate.StoragePolicy
+	op                    Op
+	typ                   string
+	id                    *int
+	created_at            *time.Time
+	updated_at            *time.Time
+	deleted_at            *time.Time
+	name                  *string
+	_type                 *string
+	server                *string
+	bucket_name           *string
+	is_private            *bool
+	access_key            *string
+	secret_key            *string
+	max_size              *int64
+	addmax_size           *int64
+	dir_name_rule         *string
+	file_name_rule        *string
+	settings              **types.PolicySetting
+	clearedFields         map[string]struct{}
+	groups                map[int]struct{}
+	removedgroups         map[int]struct{}
+	clearedgroups         bool
+	files                 map[int]struct{}
+	removedfiles          map[int]struct{}
+	clearedfiles          bool
+	entities              map[int]struct{}
+	removedentities       map[int]struct{}
+	clearedentities       bool
+	node                  *int
+	clearednode           bool
+	groups_allowed        map[int]struct{}
+	removedgroups_allowed map[int]struct{}
+	clearedgroups_allowed bool
+	done                  bool
+	oldValue              func(context.Context) (*StoragePolicy, error)
+	predicates            []predicate.StoragePolicy
 }
 
 var _ ent.Mutation = (*StoragePolicyMutation)(nil)
@@ -13537,6 +13623,60 @@ func (m *StoragePolicyMutation) ResetNode() {
 	m.clearednode = false
 }
 
+// AddGroupsAllowedIDs adds the "groups_allowed" edge to the Group entity by ids.
+func (m *StoragePolicyMutation) AddGroupsAllowedIDs(ids ...int) {
+	if m.groups_allowed == nil {
+		m.groups_allowed = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.groups_allowed[ids[i]] = struct{}{}
+	}
+}
+
+// ClearGroupsAllowed clears the "groups_allowed" edge to the Group entity.
+func (m *StoragePolicyMutation) ClearGroupsAllowed() {
+	m.clearedgroups_allowed = true
+}
+
+// GroupsAllowedCleared reports if the "groups_allowed" edge to the Group entity was cleared.
+func (m *StoragePolicyMutation) GroupsAllowedCleared() bool {
+	return m.clearedgroups_allowed
+}
+
+// RemoveGroupsAllowedIDs removes the "groups_allowed" edge to the Group entity by IDs.
+func (m *StoragePolicyMutation) RemoveGroupsAllowedIDs(ids ...int) {
+	if m.removedgroups_allowed == nil {
+		m.removedgroups_allowed = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.groups_allowed, ids[i])
+		m.removedgroups_allowed[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedGroupsAllowed returns the removed IDs of the "groups_allowed" edge to the Group entity.
+func (m *StoragePolicyMutation) RemovedGroupsAllowedIDs() (ids []int) {
+	for id := range m.removedgroups_allowed {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// GroupsAllowedIDs returns the "groups_allowed" edge IDs in the mutation.
+func (m *StoragePolicyMutation) GroupsAllowedIDs() (ids []int) {
+	for id := range m.groups_allowed {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetGroupsAllowed resets all changes to the "groups_allowed" edge.
+func (m *StoragePolicyMutation) ResetGroupsAllowed() {
+	m.groups_allowed = nil
+	m.clearedgroups_allowed = false
+	m.removedgroups_allowed = nil
+}
+
 // Where appends a list predicates to the StoragePolicyMutation builder.
 func (m *StoragePolicyMutation) Where(ps ...predicate.StoragePolicy) {
 	m.predicates = append(m.predicates, ps...)
@@ -13992,7 +14132,7 @@ func (m *StoragePolicyMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *StoragePolicyMutation) AddedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.groups != nil {
 		edges = append(edges, storagepolicy.EdgeGroups)
 	}
@@ -14004,6 +14144,9 @@ func (m *StoragePolicyMutation) AddedEdges() []string {
 	}
 	if m.node != nil {
 		edges = append(edges, storagepolicy.EdgeNode)
+	}
+	if m.groups_allowed != nil {
+		edges = append(edges, storagepolicy.EdgeGroupsAllowed)
 	}
 	return edges
 }
@@ -14034,13 +14177,19 @@ func (m *StoragePolicyMutation) AddedIDs(name string) []ent.Value {
 		if id := m.node; id != nil {
 			return []ent.Value{*id}
 		}
+	case storagepolicy.EdgeGroupsAllowed:
+		ids := make([]ent.Value, 0, len(m.groups_allowed))
+		for id := range m.groups_allowed {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *StoragePolicyMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.removedgroups != nil {
 		edges = append(edges, storagepolicy.EdgeGroups)
 	}
@@ -14049,6 +14198,9 @@ func (m *StoragePolicyMutation) RemovedEdges() []string {
 	}
 	if m.removedentities != nil {
 		edges = append(edges, storagepolicy.EdgeEntities)
+	}
+	if m.removedgroups_allowed != nil {
+		edges = append(edges, storagepolicy.EdgeGroupsAllowed)
 	}
 	return edges
 }
@@ -14075,13 +14227,19 @@ func (m *StoragePolicyMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case storagepolicy.EdgeGroupsAllowed:
+		ids := make([]ent.Value, 0, len(m.removedgroups_allowed))
+		for id := range m.removedgroups_allowed {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *StoragePolicyMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.clearedgroups {
 		edges = append(edges, storagepolicy.EdgeGroups)
 	}
@@ -14093,6 +14251,9 @@ func (m *StoragePolicyMutation) ClearedEdges() []string {
 	}
 	if m.clearednode {
 		edges = append(edges, storagepolicy.EdgeNode)
+	}
+	if m.clearedgroups_allowed {
+		edges = append(edges, storagepolicy.EdgeGroupsAllowed)
 	}
 	return edges
 }
@@ -14109,6 +14270,8 @@ func (m *StoragePolicyMutation) EdgeCleared(name string) bool {
 		return m.clearedentities
 	case storagepolicy.EdgeNode:
 		return m.clearednode
+	case storagepolicy.EdgeGroupsAllowed:
+		return m.clearedgroups_allowed
 	}
 	return false
 }
@@ -14139,6 +14302,9 @@ func (m *StoragePolicyMutation) ResetEdge(name string) error {
 		return nil
 	case storagepolicy.EdgeNode:
 		m.ResetNode()
+		return nil
+	case storagepolicy.EdgeGroupsAllowed:
+		m.ResetGroupsAllowed()
 		return nil
 	}
 	return fmt.Errorf("unknown StoragePolicy edge %s", name)

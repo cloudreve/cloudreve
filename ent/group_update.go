@@ -198,6 +198,21 @@ func (gu *GroupUpdate) SetStoragePolicies(s *StoragePolicy) *GroupUpdate {
 	return gu.SetStoragePoliciesID(s.ID)
 }
 
+// AddStoragePoliciesAllowedIDs adds the "storage_policies_allowed" edge to the StoragePolicy entity by IDs.
+func (gu *GroupUpdate) AddStoragePoliciesAllowedIDs(ids ...int) *GroupUpdate {
+	gu.mutation.AddStoragePoliciesAllowedIDs(ids...)
+	return gu
+}
+
+// AddStoragePoliciesAllowed adds the "storage_policies_allowed" edges to the StoragePolicy entity.
+func (gu *GroupUpdate) AddStoragePoliciesAllowed(s ...*StoragePolicy) *GroupUpdate {
+	ids := make([]int, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return gu.AddStoragePoliciesAllowedIDs(ids...)
+}
+
 // Mutation returns the GroupMutation object of the builder.
 func (gu *GroupUpdate) Mutation() *GroupMutation {
 	return gu.mutation
@@ -228,6 +243,27 @@ func (gu *GroupUpdate) RemoveUsers(u ...*User) *GroupUpdate {
 func (gu *GroupUpdate) ClearStoragePolicies() *GroupUpdate {
 	gu.mutation.ClearStoragePolicies()
 	return gu
+}
+
+// ClearStoragePoliciesAllowed clears all "storage_policies_allowed" edges to the StoragePolicy entity.
+func (gu *GroupUpdate) ClearStoragePoliciesAllowed() *GroupUpdate {
+	gu.mutation.ClearStoragePoliciesAllowed()
+	return gu
+}
+
+// RemoveStoragePoliciesAllowedIDs removes the "storage_policies_allowed" edge to StoragePolicy entities by IDs.
+func (gu *GroupUpdate) RemoveStoragePoliciesAllowedIDs(ids ...int) *GroupUpdate {
+	gu.mutation.RemoveStoragePoliciesAllowedIDs(ids...)
+	return gu
+}
+
+// RemoveStoragePoliciesAllowed removes "storage_policies_allowed" edges to StoragePolicy entities.
+func (gu *GroupUpdate) RemoveStoragePoliciesAllowed(s ...*StoragePolicy) *GroupUpdate {
+	ids := make([]int, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return gu.RemoveStoragePoliciesAllowedIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -384,6 +420,51 @@ func (gu *GroupUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Inverse: true,
 			Table:   group.StoragePoliciesTable,
 			Columns: []string{group.StoragePoliciesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(storagepolicy.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if gu.mutation.StoragePoliciesAllowedCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   group.StoragePoliciesAllowedTable,
+			Columns: group.StoragePoliciesAllowedPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(storagepolicy.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := gu.mutation.RemovedStoragePoliciesAllowedIDs(); len(nodes) > 0 && !gu.mutation.StoragePoliciesAllowedCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   group.StoragePoliciesAllowedTable,
+			Columns: group.StoragePoliciesAllowedPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(storagepolicy.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := gu.mutation.StoragePoliciesAllowedIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   group.StoragePoliciesAllowedTable,
+			Columns: group.StoragePoliciesAllowedPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(storagepolicy.FieldID, field.TypeInt),
@@ -580,6 +661,21 @@ func (guo *GroupUpdateOne) SetStoragePolicies(s *StoragePolicy) *GroupUpdateOne 
 	return guo.SetStoragePoliciesID(s.ID)
 }
 
+// AddStoragePoliciesAllowedIDs adds the "storage_policies_allowed" edge to the StoragePolicy entity by IDs.
+func (guo *GroupUpdateOne) AddStoragePoliciesAllowedIDs(ids ...int) *GroupUpdateOne {
+	guo.mutation.AddStoragePoliciesAllowedIDs(ids...)
+	return guo
+}
+
+// AddStoragePoliciesAllowed adds the "storage_policies_allowed" edges to the StoragePolicy entity.
+func (guo *GroupUpdateOne) AddStoragePoliciesAllowed(s ...*StoragePolicy) *GroupUpdateOne {
+	ids := make([]int, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return guo.AddStoragePoliciesAllowedIDs(ids...)
+}
+
 // Mutation returns the GroupMutation object of the builder.
 func (guo *GroupUpdateOne) Mutation() *GroupMutation {
 	return guo.mutation
@@ -610,6 +706,27 @@ func (guo *GroupUpdateOne) RemoveUsers(u ...*User) *GroupUpdateOne {
 func (guo *GroupUpdateOne) ClearStoragePolicies() *GroupUpdateOne {
 	guo.mutation.ClearStoragePolicies()
 	return guo
+}
+
+// ClearStoragePoliciesAllowed clears all "storage_policies_allowed" edges to the StoragePolicy entity.
+func (guo *GroupUpdateOne) ClearStoragePoliciesAllowed() *GroupUpdateOne {
+	guo.mutation.ClearStoragePoliciesAllowed()
+	return guo
+}
+
+// RemoveStoragePoliciesAllowedIDs removes the "storage_policies_allowed" edge to StoragePolicy entities by IDs.
+func (guo *GroupUpdateOne) RemoveStoragePoliciesAllowedIDs(ids ...int) *GroupUpdateOne {
+	guo.mutation.RemoveStoragePoliciesAllowedIDs(ids...)
+	return guo
+}
+
+// RemoveStoragePoliciesAllowed removes "storage_policies_allowed" edges to StoragePolicy entities.
+func (guo *GroupUpdateOne) RemoveStoragePoliciesAllowed(s ...*StoragePolicy) *GroupUpdateOne {
+	ids := make([]int, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return guo.RemoveStoragePoliciesAllowedIDs(ids...)
 }
 
 // Where appends a list predicates to the GroupUpdate builder.
@@ -796,6 +913,51 @@ func (guo *GroupUpdateOne) sqlSave(ctx context.Context) (_node *Group, err error
 			Inverse: true,
 			Table:   group.StoragePoliciesTable,
 			Columns: []string{group.StoragePoliciesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(storagepolicy.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if guo.mutation.StoragePoliciesAllowedCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   group.StoragePoliciesAllowedTable,
+			Columns: group.StoragePoliciesAllowedPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(storagepolicy.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := guo.mutation.RemovedStoragePoliciesAllowedIDs(); len(nodes) > 0 && !guo.mutation.StoragePoliciesAllowedCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   group.StoragePoliciesAllowedTable,
+			Columns: group.StoragePoliciesAllowedPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(storagepolicy.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := guo.mutation.StoragePoliciesAllowedIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   group.StoragePoliciesAllowedTable,
+			Columns: group.StoragePoliciesAllowedPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(storagepolicy.FieldID, field.TypeInt),

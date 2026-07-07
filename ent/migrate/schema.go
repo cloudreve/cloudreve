@@ -526,6 +526,31 @@ var (
 			},
 		},
 	}
+	// GroupStoragePoliciesAllowedColumns holds the columns for the "group_storage_policies_allowed" table.
+	GroupStoragePoliciesAllowedColumns = []*schema.Column{
+		{Name: "group_id", Type: field.TypeInt},
+		{Name: "storage_policy_id", Type: field.TypeInt},
+	}
+	// GroupStoragePoliciesAllowedTable holds the schema information for the "group_storage_policies_allowed" table.
+	GroupStoragePoliciesAllowedTable = &schema.Table{
+		Name:       "group_storage_policies_allowed",
+		Columns:    GroupStoragePoliciesAllowedColumns,
+		PrimaryKey: []*schema.Column{GroupStoragePoliciesAllowedColumns[0], GroupStoragePoliciesAllowedColumns[1]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "group_storage_policies_allowed_group_id",
+				Columns:    []*schema.Column{GroupStoragePoliciesAllowedColumns[0]},
+				RefColumns: []*schema.Column{GroupsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "group_storage_policies_allowed_storage_policy_id",
+				Columns:    []*schema.Column{GroupStoragePoliciesAllowedColumns[1]},
+				RefColumns: []*schema.Column{StoragePoliciesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		DavAccountsTable,
@@ -545,6 +570,7 @@ var (
 		TasksTable,
 		UsersTable,
 		FileEntitiesTable,
+		GroupStoragePoliciesAllowedTable,
 	}
 )
 
@@ -569,4 +595,6 @@ func init() {
 	UsersTable.ForeignKeys[0].RefTable = GroupsTable
 	FileEntitiesTable.ForeignKeys[0].RefTable = FilesTable
 	FileEntitiesTable.ForeignKeys[1].RefTable = EntitiesTable
+	GroupStoragePoliciesAllowedTable.ForeignKeys[0].RefTable = GroupsTable
+	GroupStoragePoliciesAllowedTable.ForeignKeys[1].RefTable = StoragePoliciesTable
 }

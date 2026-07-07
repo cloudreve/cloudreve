@@ -1037,6 +1037,29 @@ func HasNodeWith(preds ...predicate.Node) predicate.StoragePolicy {
 	})
 }
 
+// HasGroupsAllowed applies the HasEdge predicate on the "groups_allowed" edge.
+func HasGroupsAllowed() predicate.StoragePolicy {
+	return predicate.StoragePolicy(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, GroupsAllowedTable, GroupsAllowedPrimaryKey...),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasGroupsAllowedWith applies the HasEdge predicate on the "groups_allowed" edge with a given conditions (other predicates).
+func HasGroupsAllowedWith(preds ...predicate.Group) predicate.StoragePolicy {
+	return predicate.StoragePolicy(func(s *sql.Selector) {
+		step := newGroupsAllowedStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.StoragePolicy) predicate.StoragePolicy {
 	return predicate.StoragePolicy(sql.AndPredicates(predicates...))

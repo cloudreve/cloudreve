@@ -28,8 +28,11 @@ type (
 
 	StoragePolicyClient interface {
 		TxOperator
-		// GetByGroup returns the storage policies of the group.
+		// GetByGroup returns the default storage policy of the group.
 		GetByGroup(ctx context.Context, group *ent.Group) (*ent.StoragePolicy, error)
+		// ListPoliciesByGroup returns the set of storage policies a member of the group
+		// is allowed to upload to (the group's storage_policies_allowed edge).
+		ListPoliciesByGroup(ctx context.Context, group *ent.Group) ([]*ent.StoragePolicy, error)
 		// GetPolicyByID returns the storage policy by id.
 		GetPolicyByID(ctx context.Context, id int) (*ent.StoragePolicy, error)
 		// UpdateAccessKey updates the access key of the storage policy. It also clear related cache in KV.
@@ -149,6 +152,36 @@ func (c *storagePolicyClient) GetByGroup(ctx context.Context, group *ent.Group) 
 	res, err := withStoragePolicyEagerLoading(ctx, c.client.Group.QueryStoragePolicies(group)).WithNode().First(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get storage policies: %w", err)
+	}
+
+	return res, nil
+}
+
+// ListPoliciesByGroup returns the set of storage policies the group is allowed to
+// upload to. The result always includes the group's default policy (storage_policy_id)
+// even if it is not explicitly present in the allowed set, so callers can treat the
+// returned slice as the authoritative allowed set.
+func (c *storagePolicyClient) ListPoliciesByGroup(ctx context.Context, group *ent.Group) ([]*ent.StoragePolicy, error) {
+	res, err := withStoragePolicyEagerLoading(ctx, c.client.Group.QueryStoragePoliciesAllowed(group)).WithNode().All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list allowed storage policies: %w", err)
+	}
+
+	// Ensure the default policy is always part of the allowed set.
+	if group.StoragePolicyID != 0 {
+		found := false
+		for _, p := range res {
+			if p.ID == group.StoragePolicyID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			def, err := c.GetPolicyByID(ctx, group.StoragePolicyID)
+			if err == nil && def != nil {
+				res = append(res, def)
+			}
+		}
 	}
 
 	return res, nil

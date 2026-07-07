@@ -256,7 +256,10 @@ type ListResponse struct {
 	MixedType             bool                `json:"mixed_type"`
 	SingleFileView        bool                `json:"single_file_view,omitempty"`
 	StoragePolicy         *StoragePolicy      `json:"storage_policy,omitempty"`
-	View                  *types.ExplorerView `json:"view,omitempty"`
+	// AvailableStoragePolicies is the set of storage policies the current user's group
+	// may upload to. The uploader offers these as choices; StoragePolicy is the default.
+	AvailableStoragePolicies []*StoragePolicy    `json:"available_storage_policies,omitempty"`
+	View                     *types.ExplorerView `json:"view,omitempty"`
 }
 
 type FileResponse struct {
@@ -394,7 +397,10 @@ func BuildListResponse(ctx context.Context, u *ent.User, parent fs.File, res *fs
 		MixedType:             res.MixedType,
 		SingleFileView:        res.SingleFileView,
 		StoragePolicy:         BuildStoragePolicy(res.StoragePolicy, hasher),
-		View:                  res.View,
+		AvailableStoragePolicies: lo.Map(res.AvailableStoragePolicies, func(sp *ent.StoragePolicy, _ int) *StoragePolicy {
+			return BuildStoragePolicy(sp, hasher)
+		}),
+		View: res.View,
 	}
 
 	if !res.Parent.IsNil() {

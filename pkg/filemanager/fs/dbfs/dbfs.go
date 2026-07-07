@@ -202,10 +202,19 @@ func (f *DBFS) List(ctx context.Context, path *fs.URI, opts ...fs.Option) (fs.Fi
 	}
 
 	var storagePolicy *ent.StoragePolicy
+	var availablePolicies []*ent.StoragePolicy
 	if parent != nil {
 		storagePolicy, err = f.getPreferredPolicy(ctx, parent)
 		if err != nil {
 			f.l.Warning("Failed to get preferred policy: %v", err)
+		}
+
+		if ownerGroup := parent.Owner().Edges.Group; ownerGroup != nil {
+			sc, _ := inventory.InheritTx(ctx, f.storagePolicyClient)
+			availablePolicies, err = sc.ListPoliciesByGroup(ctx, ownerGroup)
+			if err != nil {
+				f.l.Warning("Failed to get available storage policies: %v", err)
+			}
 		}
 	}
 
@@ -219,9 +228,10 @@ func (f *DBFS) List(ctx context.Context, path *fs.URI, opts ...fs.Option) (fs.Fi
 		RecursionLimitReached: children.RecursionLimitReached,
 		MixedType:             children.MixedType,
 		SingleFileView:        children.SingleFileView,
-		Parent:                parent,
-		StoragePolicy:         storagePolicy,
-		View:                  view,
+		Parent:                   parent,
+		StoragePolicy:            storagePolicy,
+		AvailableStoragePolicies: availablePolicies,
+		View:                     view,
 	}, nil
 }
 
@@ -679,6 +689,31 @@ func (f *DBFS) getPreferredPolicy(ctx context.Context, file *File) (*ent.Storage
 	}
 
 	return groupPolicy, nil
+}
+
+// getAllowedPolicy resolves a client-requested storage policy for the given file,
+// validating that the policy id belongs to the owner group's allowed set. It returns
+// CodePolicyNotAllowed when the policy is not part of that set — this is the mandatory
+// membership check that guards per-upload policy selection.
+func (f *DBFS) getAllowedPolicy(ctx context.Context, file *File, policyID int) (*ent.StoragePolicy, error) {
+	ownerGroup := file.Owner().Edges.Group
+	if ownerGroup == nil {
+		return nil, fmt.Errorf("owner group not loaded")
+	}
+
+	sc, _ := inventory.InheritTx(ctx, f.storagePolicyClient)
+	allowed, err := sc.ListPoliciesByGroup(ctx, ownerGroup)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get available storage policies", err)
+	}
+
+	for _, p := range allowed {
+		if p.ID == policyID {
+			return p, nil
+		}
+	}
+
+	return nil, serializer.NewError(serializer.CodePolicyNotAllowed, "The selected storage policy is not available for your group", nil)
 }
 
 func (f *DBFS) getFileByPath(ctx context.Context, navigator Navigator, path *fs.URI) (*File, error) {

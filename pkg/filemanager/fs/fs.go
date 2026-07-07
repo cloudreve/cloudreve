@@ -224,7 +224,10 @@ type (
 		MixedType             bool
 		SingleFileView        bool
 		StoragePolicy         *ent.StoragePolicy
-		View                  *types.ExplorerView
+		// AvailableStoragePolicies is the set of storage policies the current user's
+		// group is allowed to upload to. StoragePolicy above is the default one.
+		AvailableStoragePolicies []*ent.StoragePolicy
+		View                     *types.ExplorerView
 	}
 
 	// NavigatorProps is the properties of current filesystem.

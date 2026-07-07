@@ -3,7 +3,9 @@ package constants
 // These values will be injected at build time, DO NOT EDIT.
 
 // BackendVersion 当前后端版本号
-var BackendVersion = "4.14.0"
+// Bumped to 4.14.1 in this fork to trigger the schema migration that creates the
+// group⇄storage_policy allowed-set join table and backfills it (see inventory/migration.go).
+var BackendVersion = "4.14.1"
 
 // IsPro 是否为Pro版本
 var IsPro = "false"

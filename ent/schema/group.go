@@ -41,5 +41,9 @@ func (Group) Edges() []ent.Edge {
 			Ref("groups").
 			Field("storage_policy_id").
 			Unique(),
+		// storage_policies_allowed is the set of storage policies a member of this
+		// group may upload to. storage_policy_id above remains the default policy
+		// used when the client does not pick one. Many-to-many.
+		edge.To("storage_policies_allowed", StoragePolicy.Type),
 	}
 }
