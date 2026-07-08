@@ -325,6 +325,18 @@ func Restore(c *gin.Context) {
 	c.JSON(200, serializer.Response{})
 }
 
+// EmptyTrash hard-deletes every top-level item in the current user's trash bin.
+func EmptyTrash(c *gin.Context) {
+	err := explorer.EmptyTrash(c)
+	if err != nil {
+		c.JSON(200, serializer.Err(c, err))
+		c.Abort()
+		return
+	}
+
+	c.JSON(200, serializer.Response{})
+}
+
 // Unlock unlocks files by given tokens
 func Unlock(c *gin.Context) {
 	service := ParametersFromContext[*explorer.UnlockFileService](c, explorer.UnlockFileParameterCtx{})

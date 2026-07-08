@@ -157,6 +157,46 @@ func (m *manager) SoftDelete(ctx context.Context, path ...*fs.URI) error {
 	return m.fs.SoftDelete(ctx, path...)
 }
 
+// EmptyTrash hard-deletes every top-level item in the current user's trash bin.
+// It iterates through all pages of the trash listing and performs the deletion in
+// batches. Returns nil if the trash is already empty.
+func (m *manager) EmptyTrash(ctx context.Context) error {
+	trashUri, err := fs.NewUriFromString(fmt.Sprintf("%s://%s", constants.CloudreveScheme, constants.FileSystemTrash))
+	if err != nil {
+		return fmt.Errorf("failed to build trash uri: %w", err)
+	}
+
+	dbfsSetting := m.settings.DBFS(ctx)
+	pageSize := dbfsSetting.MaxPageSize
+
+	for {
+		_, listRes, err := m.fs.List(ctx, trashUri, fs.WithPageSize(pageSize))
+		if err != nil {
+			return fmt.Errorf("failed to list trash: %w", err)
+		}
+
+		if len(listRes.Files) == 0 {
+			return nil
+		}
+
+		uris := make([]*fs.URI, 0, len(listRes.Files))
+		for _, f := range listRes.Files {
+			uris = append(uris, f.Uri(false))
+		}
+
+		if err := m.Delete(ctx, uris, fs.WithSysSkipSoftDelete(true)); err != nil {
+			return fmt.Errorf("failed to delete trash files: %w", err)
+		}
+
+		// Stop when there are no more pages.
+		if listRes.Pagination == nil ||
+			(listRes.Pagination.IsCursor && listRes.Pagination.NextPageToken == "") ||
+			(!listRes.Pagination.IsCursor && len(listRes.Files) < pageSize) {
+			return nil
+		}
+	}
+}
+
 func (m *manager) Delete(ctx context.Context, path []*fs.URI, opts ...fs.Option) error {
 	o := newOption()
 	for _, opt := range opts {

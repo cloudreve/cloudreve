@@ -671,6 +671,11 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				middleware.ValidateBatchFileCount(dep, explorer.DeleteFileParameterCtx{}),
 				controllers.Delete,
 			)
+			// Empty trash bin
+			file.DELETE("trash",
+				middleware.RequiredScopes(types.ScopeFilesWrite),
+				controllers.EmptyTrash,
+			)
 			// Force unlock
 			file.DELETE("lock",
 				middleware.RequiredScopes(types.ScopeFilesWrite),

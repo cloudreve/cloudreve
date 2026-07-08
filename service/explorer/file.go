@@ -579,6 +579,20 @@ func (s *DeleteFileService) Restore(c *gin.Context) error {
 	return nil
 }
 
+// EmptyTrash hard-deletes every top-level item in the current user's trash bin.
+func EmptyTrash(c *gin.Context) error {
+	dep := dependency.FromContext(c)
+	user := inventory.UserFromContext(c)
+	m := manager.NewFileManager(dep, user)
+	defer m.Recycle()
+
+	if err := m.EmptyTrash(c); err != nil {
+		return fmt.Errorf("failed to empty trash: %w", err)
+	}
+
+	return nil
+}
+
 type (
 	UnlockFileParameterCtx struct{}
 	UnlockFileService      struct {
