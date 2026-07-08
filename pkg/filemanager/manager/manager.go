@@ -43,6 +43,8 @@ type (
 		Rename(ctx context.Context, path *fs.URI, newName string) (fs.File, error)
 		// Delete deletes a group of file or directory. UnlinkOnly indicates whether to delete file record in DB only.
 		Delete(ctx context.Context, path []*fs.URI, opts ...fs.Option) error
+		// EmptyTrash hard-deletes every top-level item in the current user's trash bin.
+		EmptyTrash(ctx context.Context) error
 		// Restore restores a group of files
 		Restore(ctx context.Context, path ...*fs.URI) error
 		// MoveOrCopy moves or copies a group of files
