@@ -1,0 +1,28 @@
+# Build context trimming for Dockerfile.build (self-contained fork build).
+# Keep `assets/` (fork frontend submodule) — it is required by the frontend stage.
+
+.git
+.github
+.gitignore
+
+# Local runtime state / secrets — must never enter the image.
+data/
+conf.ini
+*.db
+*.db-journal
+*.sqlite
+*.log
+
+# Regenerated inside the build (frontend stage produces a fresh assets.zip).
+application/statics/assets.zip
+
+# Frontend artifacts rebuilt in-stage.
+assets/node_modules/
+assets/build/
+front/
+node_modules/
+
+# Editor / OS noise.
+.idea/
+.vscode/
+.DS_Store

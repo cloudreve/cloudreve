@@ -1,0 +1,67 @@
+services:
+  cloudreve:
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+      args:
+        CR_VERSION: "4.14.1"
+    container_name: cloudreve-fork
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8078:5212"
+      # aria2 BitTorrent — NOT reachable through the HTTP tunnel; publish directly only if needed:
+      # - "6888:6888"
+      # - "6888:6888/udp"
+    environment:
+      - CR_CONF_Database.Type=postgres
+      - CR_CONF_Database.Host=postgresql
+      - CR_CONF_Database.User=cloudreve
+      - CR_CONF_Database.Name=cloudreve
+      - CR_CONF_Database.Port=5432
+      - CR_CONF_Redis.Server=redis:6379
+    volumes:
+      - backend_data:/cloudreve/data
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 1g
+
+  postgresql:
+    image: postgres:17
+    container_name: cloudreve-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=cloudreve
+      - POSTGRES_DB=cloudreve
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    volumes:
+      - database_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cloudreve -d cloudreve"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  redis:
+    image: redis:latest
+    container_name: cloudreve-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+volumes:
+  backend_data:
+  database_postgres:
+  redis_data:

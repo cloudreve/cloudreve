@@ -1,0 +1,103 @@
+# syntax=docker/dockerfile:1
+#
+# Self-contained multi-stage build for the Cloudreve FORK (thotenn/cloudreve).
+#
+# Difference vs ./Dockerfile:
+#   - ./Dockerfile is the UPSTREAM/goreleaser one: it only PACKAGES an already-built binary
+#     (`COPY cloudreve ./cloudreve`). goreleaser builds the frontend + Go binary beforehand.
+#   - THIS file builds everything from source in one shot (frontend -> assets.zip -> Go binary
+#     -> runtime image), so a plain `docker build` / Coolify "build from git" produces a runnable
+#     fork image with NO external build steps.
+#
+# Docs: ../docs/cloudreve/context/setup/docker-solution/ (build) and setup/coolify-deploy.md (deploy).
+#
+# ---------------------------------------------------------------------------------------------
+# Frontend sourcing: the fork UI must be present as ./assets (the `assets` submodule repointed to
+# thotenn/cloudreve-front). Coolify clones submodules recursively. If you don't want to repoint the
+# submodule, replace the `COPY assets/` below with a clone (see the FRONT_REF ARG note).
+# ---------------------------------------------------------------------------------------------
+#
+# Version: CR_VERSION should equal application/constants/constants.go `BackendVersion` (currently
+# 4.14.1). We deliberately do NOT inject BackendVersion via -ldflags: constants.go stays the single
+# source of truth that fires DB migrations (bumped per ticket, e.g. APP-100). CR_VERSION only labels
+# the embedded frontend so the backend's "static resource version" check matches (cosmetic warning).
+
+ARG CR_VERSION=4.14.1
+
+########################  Stage 1 — frontend -> assets.zip  ########################
+FROM node:20-slim AS frontend
+ARG CR_VERSION
+WORKDIR /build
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends zip git ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+# The fork frontend, as the recursively-checked-out `assets` submodule.
+# Alternative (no submodule change): comment the COPY and use, before `yarn`:
+#   ARG FRONT_REF=master
+#   RUN git clone --depth 1 -b "$FRONT_REF" https://github.com/thotenn/cloudreve-front assets
+COPY assets/ ./assets/
+
+# Pin Yarn Berry (fork uses 4.x; .yarnrc.yml has no packageManager/yarnPath → corepack would be ambiguous).
+RUN corepack enable && corepack prepare yarn@4.12.0 --activate
+WORKDIR /build/assets
+ENV NODE_OPTIONS=--max-old-space-size=8192
+# Label the build version (Yarn Berry-safe; avoids `yarn version` plugin differences).
+RUN node -e "const f='./package.json',p=require(f);p.version='${CR_VERSION}';require('fs').writeFileSync(f,JSON.stringify(p,null,2))"
+RUN --mount=type=cache,target=/usr/local/share/.cache/yarn \
+    yarn install --network-timeout 1000000 \
+ && yarn run build
+
+WORKDIR /build
+# Embed layout expected by //go:embed: fs.Sub(statics, "assets/build") -> archive holds assets/build/...
+RUN zip -qr assets.zip assets/build
+
+########################  Stage 2 — Go binary (embeds assets.zip)  ########################
+FROM golang:1.25-alpine AS backend
+ARG CR_VERSION
+RUN apk add --no-cache git
+WORKDIR /src
+
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+
+COPY . .
+# Real embedded UI (overrides any stale local application/statics/assets.zip copied above).
+COPY --from=frontend /build/assets.zip ./application/statics/assets.zip
+
+ENV CGO_ENABLED=0 GOOS=linux
+# NOTE: no `-X ...BackendVersion=` on purpose (see header). Only LastCommit is labelled.
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go build -trimpath -buildvcs=false \
+      -ldflags "-s -w -X 'github.com/cloudreve/Cloudreve/v4/application/constants.LastCommit=docker-${CR_VERSION}'" \
+      -o /out/cloudreve .
+
+########################  Stage 3 — runtime  ########################
+FROM alpine:latest AS runtime
+WORKDIR /cloudreve
+
+# Same system deps as ./Dockerfile — ffmpeg + vips-tools are what the media post-processing
+# (APP-101) needs; they ship in the image, no host ffmpeg required.
+RUN apk update \
+ && apk add --no-cache tzdata vips-tools ffmpeg libreoffice aria2 supervisor \
+      font-noto font-noto-cjk libheif libraw-tools \
+ && mkdir -p ./data/temp/aria2 \
+ && chmod -R 766 ./data/temp/aria2
+
+ENV CR_ENABLE_ARIA2=1 \
+    CR_SETTING_DEFAULT_thumb_ffmpeg_enabled=1 \
+    CR_SETTING_DEFAULT_thumb_vips_enabled=1 \
+    CR_SETTING_DEFAULT_thumb_libreoffice_enabled=1 \
+    CR_SETTING_DEFAULT_media_meta_ffprobe=1 \
+    CR_SETTING_DEFAULT_thumb_libraw_enabled=1
+
+COPY .build/aria2.supervisor.conf .build/entrypoint.sh ./
+COPY --from=backend /out/cloudreve ./cloudreve
+
+RUN chmod +x ./cloudreve ./entrypoint.sh
+
+EXPOSE 5212 443 6888 6888/udp
+VOLUME ["/cloudreve/data"]
+ENTRYPOINT ["sh", "./entrypoint.sh"]
