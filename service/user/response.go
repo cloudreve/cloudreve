@@ -32,6 +32,7 @@ type UserSettings struct {
 	Passkeys                []Passkey    `json:"passkeys,omitempty"`
 	DisableViewSync         bool         `json:"disable_view_sync"`
 	ShareLinksInProfile     string       `json:"share_links_in_profile"`
+	AutoCompressImages      bool         `json:"auto_compress_images"`
 	OAuthGrants             []OauthGrant `json:"oauth_grants,omitempty"`
 }
 
@@ -47,6 +48,7 @@ func BuildUserSettings(u *ent.User, passkeys []*ent.Passkey, parser *uaparser.Pa
 		}),
 		DisableViewSync:     u.Settings.DisableViewSync,
 		ShareLinksInProfile: string(u.Settings.ShareLinksInProfile),
+		AutoCompressImages:  u.Settings.AutoCompressImages,
 		OAuthGrants: lo.Map(grants, func(item *ent.OAuthGrant, index int) OauthGrant {
 			return BuildOauthGrant(item)
 		}),

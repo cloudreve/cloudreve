@@ -216,6 +216,40 @@ var (
 			},
 		},
 	}
+	// MediaProcessTasksColumns holds the columns for the "media_process_tasks" table.
+	MediaProcessTasksColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "media_type", Type: field.TypeEnum, Enums: []string{"image", "video"}, Default: "image"},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "processing", "done", "failed", "skipped"}, Default: "pending"},
+		{Name: "entity_id", Type: field.TypeInt},
+		{Name: "file_id", Type: field.TypeInt, Nullable: true},
+		{Name: "owner_id", Type: field.TypeInt},
+		{Name: "attempts", Type: field.TypeInt, Default: 0},
+		{Name: "error", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "result_size", Type: field.TypeInt64, Nullable: true},
+		{Name: "props", Type: field.TypeJSON, Nullable: true},
+	}
+	// MediaProcessTasksTable holds the schema information for the "media_process_tasks" table.
+	MediaProcessTasksTable = &schema.Table{
+		Name:       "media_process_tasks",
+		Columns:    MediaProcessTasksColumns,
+		PrimaryKey: []*schema.Column{MediaProcessTasksColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "mediaprocesstask_status_media_type",
+				Unique:  false,
+				Columns: []*schema.Column{MediaProcessTasksColumns[5], MediaProcessTasksColumns[4]},
+			},
+			{
+				Name:    "mediaprocesstask_entity_id_status",
+				Unique:  false,
+				Columns: []*schema.Column{MediaProcessTasksColumns[6], MediaProcessTasksColumns[5]},
+			},
+		},
+	}
 	// MetadataColumns holds the columns for the "metadata" table.
 	MetadataColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -559,6 +593,7 @@ var (
 		FilesTable,
 		FsEventsTable,
 		GroupsTable,
+		MediaProcessTasksTable,
 		MetadataTable,
 		NodesTable,
 		OauthClientsTable,

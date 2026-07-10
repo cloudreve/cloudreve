@@ -120,6 +120,10 @@ type Dep interface {
 	ThumbQueue(ctx context.Context) queue.Queue
 	// EntityRecycleQueue Get a singleton queue.Queue instance for entity recycle.
 	EntityRecycleQueue(ctx context.Context) queue.Queue
+	// MediaProcessQueue Get a singleton queue.Queue instance for media post-processing (APP-101).
+	MediaProcessQueue(ctx context.Context) queue.Queue
+	// MediaProcessClient Creates a new inventory.MediaProcessClient instance for the media_process_task store.
+	MediaProcessClient() inventory.MediaProcessClient
 	// MimeDetector Get a singleton fs.MimeDetector instance for MIME type detection.
 	MimeDetector(ctx context.Context) mime.MimeDetector
 	// CredManager Get a singleton credmanager.CredManager instance for credential management.
@@ -165,6 +169,7 @@ type dependency struct {
 	groupClient           inventory.GroupClient
 	storagePolicyClient   inventory.StoragePolicyClient
 	taskClient            inventory.TaskClient
+	mediaProcessClient    inventory.MediaProcessClient
 	nodeClient            inventory.NodeClient
 	davAccountClient      inventory.DavAccountClient
 	directLinkClient      inventory.DirectLinkClient
@@ -180,6 +185,7 @@ type dependency struct {
 	thumbQueue            queue.Queue
 	mediaMetaQueue        queue.Queue
 	entityRecycleQueue    queue.Queue
+	mediaProcessQueue     queue.Queue
 	slaveQueue            queue.Queue
 	remoteDownloadQueue   queue.Queue
 	ioIntenseQueueTask    queue.Task
@@ -744,6 +750,47 @@ func (d *dependency) EntityRecycleQueue(ctx context.Context) queue.Queue {
 		queue.WithTaskPullInterval(10*time.Second),
 	)
 	return d.entityRecycleQueue
+}
+
+func (d *dependency) MediaProcessQueue(ctx context.Context) queue.Queue {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	_, reload := ctx.Value(ReloadCtx{}).(bool)
+	if d.mediaProcessQueue != nil && !reload {
+		return d.mediaProcessQueue
+	}
+
+	if d.mediaProcessQueue != nil {
+		d.mediaProcessQueue.Shutdown()
+	}
+
+	settings := d.SettingProvider()
+	queueSetting := settings.Queue(context.Background(), setting.QueueTypeMediaProcess)
+	// Worker count comes from the dedicated media_compress_worker_num key (default
+	// 1) to keep compression CPU-bounded — the generic queue worker_num getter has
+	// an upstream key bug that always yields its fallback.
+	workerNum := settings.MediaProcess(context.Background()).WorkerNum
+
+	d.mediaProcessQueue = queue.New(d.Logger(), d.TaskClient(), d.TaskRegistry(), d,
+		queue.WithBackoffFactor(queueSetting.BackoffFactor),
+		queue.WithMaxRetry(queueSetting.MaxRetry),
+		queue.WithBackoffMaxDuration(queueSetting.BackoffMaxDuration),
+		queue.WithRetryDelay(queueSetting.RetryDelay),
+		queue.WithWorkerCount(workerNum),
+		queue.WithName("MediaProcessQueue"),
+		queue.WithMaxTaskExecution(queueSetting.MaxExecution),
+		queue.WithResumeTaskType(queue.MediaCompressTaskType),
+		queue.WithTaskPullInterval(10*time.Second),
+	)
+	return d.mediaProcessQueue
+}
+
+func (d *dependency) MediaProcessClient() inventory.MediaProcessClient {
+	if d.mediaProcessClient != nil {
+		return d.mediaProcessClient
+	}
+	return inventory.NewMediaProcessClient(d.DBClient(), d.ConfigProvider().Database().Type)
 }
 
 func (d *dependency) SlaveQueue(ctx context.Context) queue.Queue {

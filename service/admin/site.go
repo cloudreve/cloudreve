@@ -262,6 +262,12 @@ var (
 		"queue_remote_download_backoff_max_duration": remoteDownloadQueuePostProcessor,
 		"queue_remote_download_max_retry":            remoteDownloadQueuePostProcessor,
 		"queue_remote_download_retry_delay":          remoteDownloadQueuePostProcessor,
+		"media_compress_worker_num":                  mediaProcessQueuePostProcessor,
+		"queue_media_process_max_execution":          mediaProcessQueuePostProcessor,
+		"queue_media_process_backoff_factor":         mediaProcessQueuePostProcessor,
+		"queue_media_process_backoff_max_duration":   mediaProcessQueuePostProcessor,
+		"queue_media_process_max_retry":              mediaProcessQueuePostProcessor,
+		"queue_media_process_retry_delay":            mediaProcessQueuePostProcessor,
 		"secret_key":                                 secretKeyPostProcessor,
 		"fts_meilisearch_embed_config":               meilisearchPostProcessor,
 		"fts_meilisearch_endpoint":                   meilisearchPostProcessor,
@@ -410,6 +416,12 @@ func entityRecycleQueuePostProcessor(ctx context.Context, settings map[string]st
 func thumbQueuePostProcessor(ctx context.Context, settings map[string]string) error {
 	dep := dependency.FromContext(ctx)
 	dep.ThumbQueue(context.WithValue(ctx, dependency.ReloadCtx{}, true)).Start()
+	return nil
+}
+
+func mediaProcessQueuePostProcessor(ctx context.Context, settings map[string]string) error {
+	dep := dependency.FromContext(ctx)
+	dep.MediaProcessQueue(context.WithValue(ctx, dependency.ReloadCtx{}, true)).Start()
 	return nil
 }
 

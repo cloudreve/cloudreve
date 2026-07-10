@@ -89,6 +89,20 @@ type (
 		MaxRetry           int
 		RetryDelay         time.Duration
 	}
+
+	// MediaProcessSetting carries the media post-processing (image compression)
+	// parameters (APP-101), all editable from the admin panel.
+	MediaProcessSetting struct {
+		ImageEnabled bool   // master switch for image compression
+		Engine       string // "vips" | "ffmpeg"
+		WorkerNum    int    // compression concurrency (dedicated key; default 1)
+		BatchSize    int    // max rows the cron enqueues per run
+		Quality      int    // 1..100
+		Format       string // "keep" | "webp" | "jpeg" | "png"
+		ExtraArgs    string // extra engine flags
+		ResultMode   string // "version" | "replace" | "auto"
+		MinSize      int64  // skip blobs smaller than this (bytes)
+	}
 )
 
 type ThumbEncode struct {
@@ -103,6 +117,7 @@ var (
 	QueueTypeEntityRecycle  = QueueType("recycle")
 	QueueTypeSlave          = QueueType("slave")
 	QueueTypeRemoteDownload = QueueType("remote_download")
+	QueueTypeMediaProcess   = QueueType("media_process")
 )
 
 type CronType string
@@ -111,6 +126,7 @@ var (
 	CronTypeEntityCollect    = CronType("entity_collect")
 	CronTypeTrashBinCollect  = CronType("trash_bin_collect")
 	CronTypeOauthCredRefresh = CronType("oauth_cred_refresh")
+	CronTypeMediaProcess     = CronType("media_process")
 )
 
 type Theme struct {

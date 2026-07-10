@@ -230,6 +230,7 @@ type (
 		TwoFACode               *string   `json:"two_fa_code" binding:"omitempty"`
 		DisableViewSync         *bool     `json:"disable_view_sync" binding:"omitempty"`
 		ShareLinksInProfile     *string   `json:"share_links_in_profile" binding:"omitempty"`
+		AutoCompressImages      *bool     `json:"auto_compress_images" binding:"omitempty"`
 	}
 	PatchUserSettingParamsCtx struct{}
 )
@@ -273,6 +274,11 @@ func (s *PatchUserSetting) Patch(c *gin.Context) error {
 
 	if s.DisableViewSync != nil {
 		u.Settings.DisableViewSync = *s.DisableViewSync
+		saveSetting = true
+	}
+
+	if s.AutoCompressImages != nil {
+		u.Settings.AutoCompressImages = *s.AutoCompressImages
 		saveSetting = true
 	}
 

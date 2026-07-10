@@ -24,6 +24,9 @@ type FsEvent func(*sql.Selector)
 // Group is the predicate function for group builders.
 type Group func(*sql.Selector)
 
+// MediaProcessTask is the predicate function for mediaprocesstask builders.
+type MediaProcessTask func(*sql.Selector)
+
 // Metadata is the predicate function for metadata builders.
 type Metadata func(*sql.Selector)
 

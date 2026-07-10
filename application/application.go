@@ -108,6 +108,7 @@ func (s *server) Start() error {
 		s.dep.EntityRecycleQueue(context.Background()).Start()
 		s.dep.IoIntenseQueue(context.Background()).Start()
 		s.dep.RemoteDownloadQueue(context.Background()).Start()
+		s.dep.MediaProcessQueue(context.Background()).Start()
 
 		// Start cron jobs
 		c, err := crontab.NewCron(context.Background(), s.dep)

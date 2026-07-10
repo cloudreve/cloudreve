@@ -156,6 +156,8 @@ type (
 		MusicCoverThumbExts(ctx context.Context) []string
 		// Cron returns the crontab settings.
 		Cron(ctx context.Context, t CronType) string
+		// MediaProcess returns the media post-processing (image compression) settings.
+		MediaProcess(ctx context.Context) *MediaProcessSetting
 		// Theme returns the theme settings.
 		Theme(ctx context.Context) *Theme
 		// Logo returns the logo settings.
@@ -437,6 +439,24 @@ func (s *settingProvider) Theme(ctx context.Context) *Theme {
 
 func (s *settingProvider) Cron(ctx context.Context, t CronType) string {
 	return s.getString(ctx, "cron_"+string(t), "@hourly")
+}
+
+func (s *settingProvider) MediaProcess(ctx context.Context) *MediaProcessSetting {
+	workerNum := s.getInt(ctx, "media_compress_worker_num", 1)
+	if workerNum <= 0 {
+		workerNum = 1
+	}
+	return &MediaProcessSetting{
+		ImageEnabled: s.getBoolean(ctx, "media_compress_image_enabled", false),
+		Engine:       s.getString(ctx, "media_compress_engine", "vips"),
+		WorkerNum:    workerNum,
+		BatchSize:    s.getInt(ctx, "media_compress_batch_size", 50),
+		Quality:      s.getInt(ctx, "media_compress_image_quality", 80),
+		Format:       s.getString(ctx, "media_compress_image_format", "keep"),
+		ExtraArgs:    s.getString(ctx, "media_compress_image_args", ""),
+		ResultMode:   s.getString(ctx, "media_compress_result_mode", "version"),
+		MinSize:      s.getInt64(ctx, "media_compress_min_size", 204800),
+	}
 }
 
 func (s *settingProvider) BuiltinThumbGeneratorEnabled(ctx context.Context) bool {

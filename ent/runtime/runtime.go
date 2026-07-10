@@ -11,6 +11,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/file"
 	"github.com/cloudreve/Cloudreve/v4/ent/fsevent"
 	"github.com/cloudreve/Cloudreve/v4/ent/group"
+	"github.com/cloudreve/Cloudreve/v4/ent/mediaprocesstask"
 	"github.com/cloudreve/Cloudreve/v4/ent/metadata"
 	"github.com/cloudreve/Cloudreve/v4/ent/node"
 	"github.com/cloudreve/Cloudreve/v4/ent/oauthclient"
@@ -152,6 +153,29 @@ func init() {
 	groupDescSettings := groupFields[4].Descriptor()
 	// group.DefaultSettings holds the default value on creation for the settings field.
 	group.DefaultSettings = groupDescSettings.Default.(*types.GroupSetting)
+	mediaprocesstaskMixin := schema.MediaProcessTask{}.Mixin()
+	mediaprocesstaskMixinHooks0 := mediaprocesstaskMixin[0].Hooks()
+	mediaprocesstask.Hooks[0] = mediaprocesstaskMixinHooks0[0]
+	mediaprocesstaskMixinInters0 := mediaprocesstaskMixin[0].Interceptors()
+	mediaprocesstask.Interceptors[0] = mediaprocesstaskMixinInters0[0]
+	mediaprocesstaskMixinFields0 := mediaprocesstaskMixin[0].Fields()
+	_ = mediaprocesstaskMixinFields0
+	mediaprocesstaskFields := schema.MediaProcessTask{}.Fields()
+	_ = mediaprocesstaskFields
+	// mediaprocesstaskDescCreatedAt is the schema descriptor for created_at field.
+	mediaprocesstaskDescCreatedAt := mediaprocesstaskMixinFields0[0].Descriptor()
+	// mediaprocesstask.DefaultCreatedAt holds the default value on creation for the created_at field.
+	mediaprocesstask.DefaultCreatedAt = mediaprocesstaskDescCreatedAt.Default.(func() time.Time)
+	// mediaprocesstaskDescUpdatedAt is the schema descriptor for updated_at field.
+	mediaprocesstaskDescUpdatedAt := mediaprocesstaskMixinFields0[1].Descriptor()
+	// mediaprocesstask.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	mediaprocesstask.DefaultUpdatedAt = mediaprocesstaskDescUpdatedAt.Default.(func() time.Time)
+	// mediaprocesstask.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	mediaprocesstask.UpdateDefaultUpdatedAt = mediaprocesstaskDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// mediaprocesstaskDescAttempts is the schema descriptor for attempts field.
+	mediaprocesstaskDescAttempts := mediaprocesstaskFields[5].Descriptor()
+	// mediaprocesstask.DefaultAttempts holds the default value on creation for the attempts field.
+	mediaprocesstask.DefaultAttempts = mediaprocesstaskDescAttempts.Default.(int)
 	metadataMixin := schema.Metadata{}.Mixin()
 	metadataMixinHooks0 := metadataMixin[0].Hooks()
 	metadata.Hooks[0] = metadataMixinHooks0[0]

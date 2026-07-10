@@ -18,6 +18,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/file"
 	"github.com/cloudreve/Cloudreve/v4/ent/fsevent"
 	"github.com/cloudreve/Cloudreve/v4/ent/group"
+	"github.com/cloudreve/Cloudreve/v4/ent/mediaprocesstask"
 	"github.com/cloudreve/Cloudreve/v4/ent/metadata"
 	"github.com/cloudreve/Cloudreve/v4/ent/node"
 	"github.com/cloudreve/Cloudreve/v4/ent/oauthclient"
@@ -88,22 +89,23 @@ var (
 func checkColumn(table, column string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			davaccount.Table:    davaccount.ValidColumn,
-			directlink.Table:    directlink.ValidColumn,
-			entity.Table:        entity.ValidColumn,
-			file.Table:          file.ValidColumn,
-			fsevent.Table:       fsevent.ValidColumn,
-			group.Table:         group.ValidColumn,
-			metadata.Table:      metadata.ValidColumn,
-			node.Table:          node.ValidColumn,
-			oauthclient.Table:   oauthclient.ValidColumn,
-			oauthgrant.Table:    oauthgrant.ValidColumn,
-			passkey.Table:       passkey.ValidColumn,
-			setting.Table:       setting.ValidColumn,
-			share.Table:         share.ValidColumn,
-			storagepolicy.Table: storagepolicy.ValidColumn,
-			task.Table:          task.ValidColumn,
-			user.Table:          user.ValidColumn,
+			davaccount.Table:       davaccount.ValidColumn,
+			directlink.Table:       directlink.ValidColumn,
+			entity.Table:           entity.ValidColumn,
+			file.Table:             file.ValidColumn,
+			fsevent.Table:          fsevent.ValidColumn,
+			group.Table:            group.ValidColumn,
+			mediaprocesstask.Table: mediaprocesstask.ValidColumn,
+			metadata.Table:         metadata.ValidColumn,
+			node.Table:             node.ValidColumn,
+			oauthclient.Table:      oauthclient.ValidColumn,
+			oauthgrant.Table:       oauthgrant.ValidColumn,
+			passkey.Table:          passkey.ValidColumn,
+			setting.Table:          setting.ValidColumn,
+			share.Table:            share.ValidColumn,
+			storagepolicy.Table:    storagepolicy.ValidColumn,
+			task.Table:             task.ValidColumn,
+			user.Table:             user.ValidColumn,
 		})
 	})
 	return columnCheck(table, column)

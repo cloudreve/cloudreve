@@ -625,6 +625,26 @@ var DefaultSettings = map[string]string{
 	"queue_remote_download_backoff_max_duration": "600",
 	"queue_remote_download_max_retry":            "5",
 	"queue_remote_download_retry_delay":          "0",
+	// APP-101 — media post-processing (image compression) queue tuning + cron.
+	"queue_media_process_max_execution":          "3600",
+	"queue_media_process_backoff_factor":         "2",
+	"queue_media_process_backoff_max_duration":   "60",
+	"queue_media_process_max_retry":              "3",
+	"queue_media_process_retry_delay":            "5",
+	"cron_media_process":                         "@every 1h",
+	// Master switch + compression parameters. Engine defaults to vips (better for
+	// stills; present in the deploy image alongside ffmpeg). Worker count uses a
+	// dedicated key (the generic queue worker_num getter has an upstream key bug),
+	// default 1 to keep CPU usage bounded.
+	"media_compress_image_enabled":               "0",
+	"media_compress_engine":                      "vips",
+	"media_compress_worker_num":                  "1",
+	"media_compress_batch_size":                  "50",
+	"media_compress_image_quality":               "80",
+	"media_compress_image_format":                "keep",
+	"media_compress_image_args":                  "",
+	"media_compress_result_mode":                 "version",
+	"media_compress_min_size":                    "204800", // 200 KB
 	"entity_url_default_ttl":                     "3600",
 	"entity_url_cache_margin":                    "600",
 	"media_meta":                                 "1",

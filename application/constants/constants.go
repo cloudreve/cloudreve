@@ -5,7 +5,9 @@ package constants
 // BackendVersion 当前后端版本号
 // Bumped to 4.14.1 in this fork to trigger the schema migration that creates the
 // group⇄storage_policy allowed-set join table and backfills it (see inventory/migration.go).
-var BackendVersion = "4.14.1"
+// Bumped to 4.14.2 (APP-101) to trigger the migration that creates the
+// media_process_task table and seeds the media-compression default settings.
+var BackendVersion = "4.14.2"
 
 // IsPro 是否为Pro版本
 var IsPro = "false"

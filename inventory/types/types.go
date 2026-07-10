@@ -17,6 +17,20 @@ type (
 		DisableViewSync     bool                     `json:"disable_view_sync,omitempty"`
 		FsViewMap           map[string]ExplorerView  `json:"fs_view_map,omitempty"`
 		ShareLinksInProfile ShareLinksInProfileLevel `json:"share_links_in_profile,omitempty"`
+		// AutoCompressImages opts this user's uploaded images into the deferred
+		// media post-processing (compression) pipeline (APP-101). Default off.
+		AutoCompressImages bool `json:"auto_compress_images,omitempty"`
+	}
+
+	// MediaProcessTaskProps is the JSON payload of a media_process_task row
+	// (APP-101). Signature is the idempotency fingerprint (engine+quality+format
+	// +original size) so a blob is not recompressed with the same parameters.
+	MediaProcessTaskProps struct {
+		Engine       string `json:"engine,omitempty"`
+		Quality      int    `json:"quality,omitempty"`
+		Format       string `json:"format,omitempty"`
+		OriginalSize int64  `json:"original_size,omitempty"`
+		Signature    string `json:"signature,omitempty"`
 	}
 
 	ShareLinksInProfileLevel string

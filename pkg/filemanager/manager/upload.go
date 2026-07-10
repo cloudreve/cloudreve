@@ -318,6 +318,8 @@ func (m *manager) CompleteUpload(ctx context.Context, session *fs.UploadSession)
 	}
 
 	m.onNewEntityUploaded(ctx, session, d, ownerId)
+	// APP-101: register the new image for deferred compression when eligible.
+	m.enqueueMediaProcessIfEligible(ctx, session, file)
 	// Remove upload session
 	_ = m.kv.Delete(UploadSessionCachePrefix, session.Props.UploadSessionID)
 	return file, nil

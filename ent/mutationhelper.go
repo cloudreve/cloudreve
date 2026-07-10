@@ -40,6 +40,12 @@ func (m *GroupMutation) SetRawID(t int) {
 
 // SetUpdatedAt sets the "updated_at" field.
 
+func (m *MediaProcessTaskMutation) SetRawID(t int) {
+	m.id = &t
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+
 func (m *MetadataMutation) SetRawID(t int) {
 	m.id = &t
 }
