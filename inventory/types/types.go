@@ -20,13 +20,20 @@ type (
 		// AutoCompressImages opts this user's uploaded images into the deferred
 		// media post-processing (compression) pipeline (APP-101). Default off.
 		AutoCompressImages bool `json:"auto_compress_images,omitempty"`
+		// AutoCompressVideos opts this user's uploaded videos into the deferred
+		// video transcoding pipeline (APP-103). Default off.
+		AutoCompressVideos bool `json:"auto_compress_videos,omitempty"`
 	}
 
 	// MediaProcessTaskProps is the JSON payload of a media_process_task row
 	// (APP-101). Signature is the idempotency fingerprint (engine+quality+format
 	// +original size) so a blob is not recompressed with the same parameters.
+	// For video (APP-103) Engine is "ffmpeg", Codec holds the video codec, Quality
+	// holds the CRF and Format the target container. New fields are JSON-only
+	// (props is a JSON column) — no schema migration.
 	MediaProcessTaskProps struct {
 		Engine       string `json:"engine,omitempty"`
+		Codec        string `json:"codec,omitempty"`
 		Quality      int    `json:"quality,omitempty"`
 		Format       string `json:"format,omitempty"`
 		OriginalSize int64  `json:"original_size,omitempty"`

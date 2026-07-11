@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -62,54 +63,73 @@ type (
 
 func init() {
 	queue.RegisterResumableTaskFactory(queue.MediaCompressTaskType, NewMediaCompressTaskFromModel)
+	queue.RegisterResumableTaskFactory(queue.MediaCompressVideoTaskType, NewMediaCompressTaskFromModel)
 
-	// Cron: enqueue a bounded batch of pending images onto the dedicated
-	// MediaProcessQueue. Mirrors pkg/filemanager/manager/recycle.go.
+	// Cron: enqueue bounded batches of pending media onto their dedicated queues.
+	// Image and video are independent lanes so either can run with the other off,
+	// and a long video transcode never blocks image compression (APP-103). Mirrors
+	// pkg/filemanager/manager/recycle.go.
 	crontab.Register(setting.CronTypeMediaProcess, func(ctx context.Context) {
 		dep := dependency.FromContext(ctx)
-		l := dep.Logger()
+		sp := dep.SettingProvider()
 
-		mp := dep.SettingProvider().MediaProcess(ctx)
-		if !mp.ImageEnabled {
-			return
+		if mp := sp.MediaProcess(ctx); mp.ImageEnabled {
+			enqueueMediaProcessLane(ctx, dep, mediaprocesstask.MediaTypeImage, mp.BatchSize,
+				queue.MediaCompressTaskType, dep.MediaProcessQueue(ctx))
 		}
-
-		rows, err := dep.MediaProcessClient().ListPending(ctx, mediaprocesstask.MediaTypeImage, mp.BatchSize)
-		if err != nil {
-			l.Error("Failed to list pending media process tasks: %s", err)
-			return
+		if v := sp.MediaProcessVideo(ctx); v.Enabled {
+			enqueueMediaProcessLane(ctx, dep, mediaprocesstask.MediaTypeVideo, v.BatchSize,
+				queue.MediaCompressVideoTaskType, dep.MediaVideoQueue(ctx))
 		}
-		if len(rows) == 0 {
-			return
-		}
-
-		q := dep.MediaProcessQueue(ctx)
-		uc := dep.UserClient()
-		enqueued := 0
-		for _, row := range rows {
-			// The task must carry an owner (DBTask.Owner() is dereferenced when the
-			// queue persists the task); attribute it to the blob's owner.
-			owner, err := uc.GetByID(ctx, row.OwnerID)
-			if err != nil {
-				l.Error("Failed to load owner %d for media compress row %d: %s", row.OwnerID, row.ID, err)
-				continue
-			}
-			t, err := NewMediaCompressTask(ctx, row.ID, owner)
-			if err != nil {
-				l.Error("Failed to create media compress task for row %d: %s", row.ID, err)
-				continue
-			}
-			if err := q.QueueTask(ctx, t); err != nil {
-				l.Error("Failed to queue media compress task for row %d: %s", row.ID, err)
-				continue
-			}
-			enqueued++
-		}
-		l.Info("Enqueued %d media compress task(s) from cron.", enqueued)
 	})
 }
 
+// enqueueMediaProcessLane lists a bounded batch of pending rows of the given media
+// type and enqueues one MediaCompressTask per row onto the provided queue, tagged
+// with taskType so it lands on the right (image vs video) lane.
+func enqueueMediaProcessLane(ctx context.Context, dep dependency.Dep, mediaType mediaprocesstask.MediaType, batchSize int, taskType string, q queue.Queue) {
+	l := dep.Logger()
+	rows, err := dep.MediaProcessClient().ListPending(ctx, mediaType, batchSize)
+	if err != nil {
+		l.Error("Failed to list pending media process tasks (%s): %s", mediaType, err)
+		return
+	}
+	if len(rows) == 0 {
+		return
+	}
+
+	uc := dep.UserClient()
+	enqueued := 0
+	for _, row := range rows {
+		// The task must carry an owner (DBTask.Owner() is dereferenced when the
+		// queue persists the task); attribute it to the blob's owner.
+		owner, err := uc.GetByID(ctx, row.OwnerID)
+		if err != nil {
+			l.Error("Failed to load owner %d for media compress row %d: %s", row.OwnerID, row.ID, err)
+			continue
+		}
+		t, err := newMediaCompressTask(ctx, row.ID, owner, taskType)
+		if err != nil {
+			l.Error("Failed to create media compress task for row %d: %s", row.ID, err)
+			continue
+		}
+		if err := q.QueueTask(ctx, t); err != nil {
+			l.Error("Failed to queue media compress task for row %d: %s", row.ID, err)
+			continue
+		}
+		enqueued++
+	}
+	l.Info("Enqueued %d media compress task(s) (%s) from cron.", enqueued, mediaType)
+}
+
 func NewMediaCompressTask(ctx context.Context, rowID int, owner *ent.User) (queue.Task, error) {
+	return newMediaCompressTask(ctx, rowID, owner, queue.MediaCompressTaskType)
+}
+
+// newMediaCompressTask builds a MediaCompressTask tagged with the given queue task
+// type, which selects the lane it runs on: MediaCompressTaskType (image) →
+// MediaProcessQueue, MediaCompressVideoTaskType (video) → MediaVideoQueue.
+func newMediaCompressTask(ctx context.Context, rowID int, owner *ent.User, taskType string) (queue.Task, error) {
 	state := &MediaCompressTaskState{RowID: rowID}
 	stateBytes, err := json.Marshal(state)
 	if err != nil {
@@ -122,7 +142,7 @@ func NewMediaCompressTask(ctx context.Context, rowID int, owner *ent.User) (queu
 			// persisting the task (pkg/queue/task.go).
 			DirectOwner: owner,
 			Task: &ent.Task{
-				Type:          queue.MediaCompressTaskType,
+				Type:          taskType,
 				CorrelationID: logging.CorrelationID(ctx),
 				PrivateState:  string(stateBytes),
 				PublicState:   &types.TaskPublicState{},
@@ -162,8 +182,14 @@ func (m *MediaCompressTask) Do(ctx context.Context) (task.Status, error) {
 		return task.StatusCompleted, nil
 	}
 
-	settings := dep.SettingProvider().MediaProcess(ctx)
-	if !settings.ImageEnabled {
+	// Master-switch gate per media type: image and video have independent switches
+	// so one lane can be off while the other runs (APP-103).
+	sp := dep.SettingProvider()
+	enabled := sp.MediaProcess(ctx).ImageEnabled
+	if row.MediaType == mediaprocesstask.MediaTypeVideo {
+		enabled = sp.MediaProcessVideo(ctx).Enabled
+	}
+	if !enabled {
 		_, _ = mpClient.SetStatus(ctx, row.ID, &inventory.MediaProcessStatusArgs{Status: mediaprocesstask.StatusSkipped})
 		return task.StatusCompleted, nil
 	}
@@ -177,7 +203,7 @@ func (m *MediaCompressTask) Do(ctx context.Context) (task.Status, error) {
 		return task.StatusError, fmt.Errorf("failed to mark processing: %w", err)
 	}
 
-	if err := m.compress(ctx, dep, settings, row); err != nil {
+	if err := m.compress(ctx, dep, row); err != nil {
 		// Persist the error; the queue backoff will retry up to MaxRetry, after
 		// which the row stays "processing" — a follow-up sweep can requeue it.
 		_, _ = mpClient.SetStatus(ctx, row.ID, &inventory.MediaProcessStatusArgs{
@@ -190,10 +216,14 @@ func (m *MediaCompressTask) Do(ctx context.Context) (task.Status, error) {
 	return task.StatusCompleted, nil
 }
 
-// compress runs the full pipeline for one row: read → compress → write-back as a
-// new version → mark done. Returns nil on success or a documented skip.
-func (m *MediaCompressTask) compress(ctx context.Context, dep dependency.Dep, settings *setting.MediaProcessSetting, row *ent.MediaProcessTask) error {
+// compress runs the full pipeline for one row: read → compress/transcode →
+// write-back as a new version → mark done. The read, size/idempotency guards,
+// write-back and quota accounting are shared between image and video; only the
+// engine step branches by media_type. Returns nil on success or a documented skip.
+func (m *MediaCompressTask) compress(ctx context.Context, dep dependency.Dep, row *ent.MediaProcessTask) error {
 	mpClient := dep.MediaProcessClient()
+	sp := dep.SettingProvider()
+	isVideo := row.MediaType == mediaprocesstask.MediaTypeVideo
 
 	owner, err := dep.UserClient().GetByID(ctx, row.OwnerID)
 	if err != nil {
@@ -212,8 +242,12 @@ func (m *MediaCompressTask) compress(ctx context.Context, dep dependency.Dep, se
 	}
 	defer es.Close()
 
+	minSize := sp.MediaProcess(ctx).MinSize
+	if isVideo {
+		minSize = sp.MediaProcessVideo(ctx).MinSize
+	}
 	originalSize := es.Entity().Size()
-	if originalSize < settings.MinSize {
+	if originalSize < minSize {
 		_, _ = mpClient.SetStatus(ctx, row.ID, &inventory.MediaProcessStatusArgs{Status: mediaprocesstask.StatusSkipped})
 		return nil
 	}
@@ -227,15 +261,37 @@ func (m *MediaCompressTask) compress(ctx context.Context, dep dependency.Dep, se
 	}
 	sourceExt := strings.ToLower(strings.TrimPrefix(filepath.Ext(file.Name()), "."))
 
-	// Idempotency signature: engine + quality + format + original size.
-	signature := fmt.Sprintf("%s|q%d|%s|%d", settings.Engine, settings.Quality, settings.Format, originalSize)
+	// Idempotency signature + the props recorded on completion. Both branch by
+	// media type: image encodes engine+quality+format, video encodes the ffmpeg
+	// transcode parameters. A matching signature means the same parameters already
+	// ran against the same original bytes → skip.
+	var (
+		signature string
+		props     *types.MediaProcessTaskProps
+	)
+	if isVideo {
+		v := sp.MediaProcessVideo(ctx)
+		signature = fmt.Sprintf("ffmpeg|%s|crf%d|%s|%s|%s|%s|%d",
+			v.Codec, v.CRF, v.Preset, v.Container, v.MaxResolution, v.AudioCodec, originalSize)
+		props = &types.MediaProcessTaskProps{
+			Engine: "ffmpeg", Codec: v.Codec, Quality: v.CRF, Format: v.Container,
+			OriginalSize: originalSize, Signature: signature,
+		}
+	} else {
+		mp := sp.MediaProcess(ctx)
+		signature = fmt.Sprintf("%s|q%d|%s|%d", mp.Engine, mp.Quality, mp.Format, originalSize)
+		props = &types.MediaProcessTaskProps{
+			Engine: mp.Engine, Quality: mp.Quality, Format: mp.Format,
+			OriginalSize: originalSize, Signature: signature,
+		}
+	}
 	if row.Props != nil && row.Props.Signature == signature {
 		_, _ = mpClient.SetStatus(ctx, row.ID, &inventory.MediaProcessStatusArgs{Status: mediaprocesstask.StatusSkipped})
 		return nil
 	}
 
 	// Materialize a local input path (download if the blob is remote/encrypted).
-	tempDir := filepath.Join(util.DataPath(dep.SettingProvider().TempPath(ctx)), mediaCompressTempFolder)
+	tempDir := filepath.Join(util.DataPath(sp.TempPath(ctx)), mediaCompressTempFolder)
 	if err := util.CreatNestedFolder(tempDir); err != nil {
 		return fmt.Errorf("failed to create temp folder: %w", err)
 	}
@@ -245,11 +301,19 @@ func (m *MediaCompressTask) compress(ctx context.Context, dep dependency.Dep, se
 	}
 	defer cleanupInput()
 
-	// Compress.
-	outputPath, targetExt, err := compressImage(ctx, settings, dep.SettingProvider(), inputPath, sourceExt, tempDir)
+	// Compress/transcode.
+	var (
+		outputPath string
+		targetExt  string
+	)
+	if isVideo {
+		outputPath, targetExt, err = compressVideo(ctx, sp.MediaProcessVideo(ctx), sp, inputPath, sourceExt, tempDir)
+	} else {
+		outputPath, targetExt, err = compressImage(ctx, sp.MediaProcess(ctx), sp, inputPath, sourceExt, tempDir)
+	}
 	if err != nil {
 		if err == errUnsupportedFormat {
-			m.l.Info("Unsupported image format %q for row %d, skipping.", sourceExt, row.ID)
+			m.l.Info("Unsupported %s format %q for row %d, skipping.", row.MediaType, sourceExt, row.ID)
 			_, _ = mpClient.SetStatus(ctx, row.ID, &inventory.MediaProcessStatusArgs{Status: mediaprocesstask.StatusSkipped})
 			return nil
 		}
@@ -264,16 +328,14 @@ func (m *MediaCompressTask) compress(ctx context.Context, dep dependency.Dep, se
 	resultSize := outInfo.Size()
 
 	// No gain (or larger): keep the original, mark done with the signature so it
-	// is not retried with the same parameters.
+	// is not retried with the same parameters. This guard is more often hit for
+	// video (an already well-encoded clip may not shrink on re-encode).
 	if resultSize == 0 || resultSize >= originalSize {
 		m.l.Info("Compression yielded no gain for row %d (%d -> %d), keeping original.", row.ID, originalSize, resultSize)
 		_, _ = mpClient.SetStatus(ctx, row.ID, &inventory.MediaProcessStatusArgs{
 			Status:     mediaprocesstask.StatusDone,
 			ResultSize: originalSize,
-			Props: &types.MediaProcessTaskProps{
-				Engine: settings.Engine, Quality: settings.Quality, Format: settings.Format,
-				OriginalSize: originalSize, Signature: signature,
-			},
+			Props:      props,
 		})
 		return nil
 	}
@@ -305,16 +367,13 @@ func (m *MediaCompressTask) compress(ctx context.Context, dep dependency.Dep, se
 	_, err = mpClient.SetStatus(ctx, row.ID, &inventory.MediaProcessStatusArgs{
 		Status:     mediaprocesstask.StatusDone,
 		ResultSize: resultSize,
-		Props: &types.MediaProcessTaskProps{
-			Engine: settings.Engine, Quality: settings.Quality, Format: settings.Format,
-			OriginalSize: originalSize, Signature: signature,
-		},
+		Props:      props,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to mark done: %w", err)
 	}
 
-	m.l.Info("Compressed row %d: %s %d -> %d bytes (target .%s).", row.ID, sourceExt, originalSize, resultSize, targetExt)
+	m.l.Info("Compressed row %d (%s): %s %d -> %d bytes (target .%s).", row.ID, row.MediaType, sourceExt, originalSize, resultSize, targetExt)
 	return nil
 }
 
@@ -444,6 +503,101 @@ func ffmpegCompressArgs(inputPath, outputPath, targetExt string, quality int) ([
 	}
 }
 
+// compressVideo transcodes a local video with ffmpeg (the only video engine; vips
+// does not process video) and returns the output path + its extension. The target
+// container defaults to "keep" (same extension as the source, so the file is not
+// renamed). CPU is bounded by -threads and, when enabled, a low process priority
+// via nice (best effort, non-Windows only).
+func compressVideo(ctx context.Context, v *setting.MediaProcessVideoSetting, settings setting.Provider, inputPath, sourceExt, tempDir string) (string, string, error) {
+	targetExt := normalizeVideoContainer(v.Container, sourceExt)
+	if targetExt == "" {
+		return "", "", errUnsupportedFormat
+	}
+
+	outputPath := filepath.Join(tempDir, fmt.Sprintf("out_%s.%s", uuid.Must(uuid.NewV4()).String(), targetExt))
+
+	codec := strings.TrimSpace(v.Codec)
+	if codec == "" {
+		codec = "libx264"
+	}
+	args := []string{"-y", "-i", inputPath, "-c:v", codec, "-crf", strconv.Itoa(v.CRF)}
+	if preset := strings.TrimSpace(v.Preset); preset != "" {
+		args = append(args, "-preset", preset)
+	}
+	if scale := videoScaleFilter(v.MaxResolution); scale != "" {
+		args = append(args, "-vf", scale)
+	}
+	if ac := strings.TrimSpace(v.AudioCodec); ac != "" {
+		args = append(args, "-c:a", ac)
+		if ab := strings.TrimSpace(v.AudioBitrate); ab != "" {
+			args = append(args, "-b:a", ab)
+		}
+	}
+	if v.Threads > 0 {
+		args = append(args, "-threads", strconv.Itoa(v.Threads))
+	}
+	if extra := strings.TrimSpace(v.ExtraArgs); extra != "" {
+		args = append(args, strings.Fields(extra)...)
+	}
+	args = append(args, outputPath)
+
+	bin := settings.FFMpegPath(ctx)
+	// Yield CPU to real traffic by running the encode at low priority. `nice` is a
+	// POSIX tool; skip it on Windows where it is unavailable.
+	if v.Nice && runtime.GOOS != "windows" {
+		args = append([]string{"-n", "10", bin}, args...)
+		bin = "nice"
+	}
+
+	cmd := exec.CommandContext(ctx, bin, args...)
+	var stdErr bytes.Buffer
+	cmd.Stderr = &stdErr
+	if err := cmd.Run(); err != nil {
+		os.Remove(outputPath)
+		return "", "", fmt.Errorf("failed to invoke %s: %w, output: %s", bin, err, stdErr.String())
+	}
+
+	return outputPath, targetExt, nil
+}
+
+// normalizeVideoContainer resolves the output container/extension. "keep" (default)
+// preserves the source extension — but only for recognised video containers, so a
+// non-video file yields "" and is skipped. An explicit container overrides it (the
+// file is not renamed, matching the image caveat: the bytes change container but
+// the name/extension stays — hence "keep" is the recommended default).
+func normalizeVideoContainer(container, sourceExt string) string {
+	c := strings.ToLower(strings.TrimSpace(container))
+	if c == "" || c == "keep" {
+		c = strings.ToLower(strings.TrimSpace(sourceExt))
+	}
+	switch c {
+	case "mp4", "m4v", "mov", "mkv", "webm", "avi", "flv", "wmv", "mpeg", "mpg", "ts", "m2ts", "3gp", "ogv":
+		return c
+	default:
+		return ""
+	}
+}
+
+// videoScaleFilter builds an ffmpeg -vf scale filter that caps the output at the
+// given WxH without upscaling and keeping the aspect ratio, forcing even
+// dimensions (required by yuv420p). An empty or unparseable spec disables scaling.
+func videoScaleFilter(maxResolution string) string {
+	spec := strings.TrimSpace(maxResolution)
+	if spec == "" {
+		return ""
+	}
+	parts := strings.SplitN(strings.ToLower(spec), "x", 2)
+	if len(parts) != 2 {
+		return ""
+	}
+	w, errW := strconv.Atoi(strings.TrimSpace(parts[0]))
+	h, errH := strconv.Atoi(strings.TrimSpace(parts[1]))
+	if errW != nil || errH != nil || w <= 0 || h <= 0 {
+		return ""
+	}
+	return fmt.Sprintf("scale='min(%d,iw)':'min(%d,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2", w, h)
+}
+
 // entitySourceReader is the subset of entitysource.EntitySource the compression
 // pipeline consumes (kept local to avoid widening the import surface).
 type entitySourceReader interface {
@@ -466,11 +620,6 @@ func (m *manager) enqueueMediaProcessIfEligible(ctx context.Context, session *fs
 		return
 	}
 
-	mp := m.settings.MediaProcess(ctx)
-	if !mp.ImageEnabled || !m.user.Settings.AutoCompressImages {
-		return
-	}
-
 	mimeType := ""
 	if session != nil && session.Props != nil {
 		mimeType = session.Props.MimeType
@@ -478,12 +627,33 @@ func (m *manager) enqueueMediaProcessIfEligible(ctx context.Context, session *fs
 	if mimeType == "" {
 		mimeType = m.dep.MimeDetector(ctx).TypeByName(file.Name())
 	}
-	if !strings.HasPrefix(strings.ToLower(mimeType), "image/") {
+	mimeType = strings.ToLower(mimeType)
+
+	// Route by mime to the matching media type; each has its own master switch,
+	// per-user opt-in and min-size gate (APP-101 image, APP-103 video).
+	var (
+		mediaType mediaprocesstask.MediaType
+		minSize   int64
+	)
+	switch {
+	case strings.HasPrefix(mimeType, "image/"):
+		mp := m.settings.MediaProcess(ctx)
+		if !mp.ImageEnabled || !m.user.Settings.AutoCompressImages {
+			return
+		}
+		mediaType, minSize = mediaprocesstask.MediaTypeImage, mp.MinSize
+	case strings.HasPrefix(mimeType, "video/"):
+		v := m.settings.MediaProcessVideo(ctx)
+		if !v.Enabled || !m.user.Settings.AutoCompressVideos {
+			return
+		}
+		mediaType, minSize = mediaprocesstask.MediaTypeVideo, v.MinSize
+	default:
 		return
 	}
 
 	entity := file.PrimaryEntity()
-	if entity == nil || entity.Size() < mp.MinSize {
+	if entity == nil || entity.Size() < minSize {
 		return
 	}
 
@@ -499,7 +669,7 @@ func (m *manager) enqueueMediaProcessIfEligible(ctx context.Context, session *fs
 		EntityID:  entity.ID(),
 		FileID:    file.ID(),
 		OwnerID:   m.user.ID,
-		MediaType: mediaprocesstask.MediaTypeImage,
+		MediaType: mediaType,
 	}); err != nil {
 		m.l.Warning("media process: failed to enqueue pending row for entity %d: %s", entity.ID(), err)
 	}

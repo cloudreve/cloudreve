@@ -72,6 +72,54 @@ func TestMediaProcessEnqueueIdempotent(t *testing.T) {
 	assert.NotEqual(t, row1.ID, row3.ID, "a new pending row is created after the previous one is done")
 }
 
+// TestMediaProcessEnqueueVideo covers APP-103: video rows are enqueued and listed
+// independently of image rows via the media_type discriminator, sharing the same
+// idempotency (active-row) and terminal-state semantics.
+func TestMediaProcessEnqueueVideo(t *testing.T) {
+	ctx := context.Background()
+	client := newTestClient(t)
+	c := NewMediaProcessClient(client, "sqlite")
+
+	// An image and a video row coexist on the same table.
+	img, err := c.Enqueue(ctx, &MediaProcessEnqueueArgs{
+		EntityID: 10, FileID: 1, OwnerID: 1, MediaType: mediaprocesstask.MediaTypeImage,
+	})
+	require.NoError(t, err)
+	vid, err := c.Enqueue(ctx, &MediaProcessEnqueueArgs{
+		EntityID: 20, FileID: 2, OwnerID: 1, MediaType: mediaprocesstask.MediaTypeVideo,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, mediaprocesstask.MediaTypeVideo, vid.MediaType)
+
+	// ListPending is scoped by the discriminator: each lane sees only its own rows.
+	imgs, err := c.ListPending(ctx, mediaprocesstask.MediaTypeImage, 50)
+	require.NoError(t, err)
+	assert.Len(t, imgs, 1)
+	assert.Equal(t, img.ID, imgs[0].ID)
+
+	vids, err := c.ListPending(ctx, mediaprocesstask.MediaTypeVideo, 50)
+	require.NoError(t, err)
+	require.Len(t, vids, 1)
+	assert.Equal(t, vid.ID, vids[0].ID)
+
+	// Idempotency guard is per entity regardless of media type.
+	dup, err := c.Enqueue(ctx, &MediaProcessEnqueueArgs{
+		EntityID: 20, FileID: 2, OwnerID: 1, MediaType: mediaprocesstask.MediaTypeVideo,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, vid.ID, dup.ID, "duplicate video enqueue must reuse the active row")
+
+	// Completing the video drops it from its lane without touching the image lane.
+	_, err = c.SetStatus(ctx, vid.ID, &MediaProcessStatusArgs{Status: mediaprocesstask.StatusDone, ResultSize: 42})
+	require.NoError(t, err)
+	vids, err = c.ListPending(ctx, mediaprocesstask.MediaTypeVideo, 50)
+	require.NoError(t, err)
+	assert.Len(t, vids, 0)
+	imgs, err = c.ListPending(ctx, mediaprocesstask.MediaTypeImage, 50)
+	require.NoError(t, err)
+	assert.Len(t, imgs, 1, "the image lane is unaffected by video completion")
+}
+
 // TestMediaProcessHasHandledForFile covers APP-102: the backfill sweep skips
 // files that already have a terminal (done/skipped) row, so a re-run does not
 // re-compress already-processed files.

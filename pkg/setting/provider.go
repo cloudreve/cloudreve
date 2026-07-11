@@ -158,6 +158,8 @@ type (
 		Cron(ctx context.Context, t CronType) string
 		// MediaProcess returns the media post-processing (image compression) settings.
 		MediaProcess(ctx context.Context) *MediaProcessSetting
+		// MediaProcessVideo returns the deferred video transcoding settings (APP-103).
+		MediaProcessVideo(ctx context.Context) *MediaProcessVideoSetting
 		// Theme returns the theme settings.
 		Theme(ctx context.Context) *Theme
 		// Logo returns the logo settings.
@@ -456,6 +458,33 @@ func (s *settingProvider) MediaProcess(ctx context.Context) *MediaProcessSetting
 		ExtraArgs:    s.getString(ctx, "media_compress_image_args", ""),
 		ResultMode:   s.getString(ctx, "media_compress_result_mode", "version"),
 		MinSize:      s.getInt64(ctx, "media_compress_min_size", 204800),
+	}
+}
+
+func (s *settingProvider) MediaProcessVideo(ctx context.Context) *MediaProcessVideoSetting {
+	workerNum := s.getInt(ctx, "media_compress_video_worker_num", 1)
+	if workerNum <= 0 {
+		workerNum = 1
+	}
+	threads := s.getInt(ctx, "media_compress_video_threads", 1)
+	if threads <= 0 {
+		threads = 1
+	}
+	return &MediaProcessVideoSetting{
+		Enabled:       s.getBoolean(ctx, "media_compress_video_enabled", false),
+		Codec:         s.getString(ctx, "media_compress_video_codec", "libx264"),
+		CRF:           s.getInt(ctx, "media_compress_video_crf", 28),
+		Preset:        s.getString(ctx, "media_compress_video_preset", "medium"),
+		Container:     s.getString(ctx, "media_compress_video_container", "keep"),
+		MaxResolution: s.getString(ctx, "media_compress_video_max_resolution", "1920x1080"),
+		AudioCodec:    s.getString(ctx, "media_compress_video_audio_codec", "aac"),
+		AudioBitrate:  s.getString(ctx, "media_compress_video_audio_bitrate", "128k"),
+		ExtraArgs:     s.getString(ctx, "media_compress_video_args", ""),
+		WorkerNum:     workerNum,
+		BatchSize:     s.getInt(ctx, "media_compress_video_batch_size", 10),
+		Threads:       threads,
+		Nice:          s.getBoolean(ctx, "media_compress_video_nice", true),
+		MinSize:       s.getInt64(ctx, "media_compress_video_min_size", 10485760),
 	}
 }
 

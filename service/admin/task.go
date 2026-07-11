@@ -28,6 +28,7 @@ func GetQueueMetrics(c *gin.Context) ([]QueueMetric, error) {
 	remoteDownload := dep.RemoteDownloadQueue(c)
 	thumb := dep.ThumbQueue(c)
 	mediaProcess := dep.MediaProcessQueue(c)
+	mediaVideo := dep.MediaVideoQueue(c)
 
 	res = append(res, QueueMetric{
 		Name:            setting.QueueTypeMediaMeta,
@@ -76,6 +77,14 @@ func GetQueueMetrics(c *gin.Context) ([]QueueMetric, error) {
 		FailureTasks:    mediaProcess.FailureTasks(),
 		SubmittedTasks:  mediaProcess.SubmittedTasks(),
 		SuspendingTasks: mediaProcess.SuspendingTasks(),
+	})
+	res = append(res, QueueMetric{
+		Name:            setting.QueueTypeMediaProcessVideo,
+		BusyWorkers:     mediaVideo.BusyWorkers(),
+		SuccessTasks:    mediaVideo.SuccessTasks(),
+		FailureTasks:    mediaVideo.FailureTasks(),
+		SubmittedTasks:  mediaVideo.SubmittedTasks(),
+		SuspendingTasks: mediaVideo.SuspendingTasks(),
 	})
 
 	return res, nil

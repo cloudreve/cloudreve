@@ -122,6 +122,8 @@ type Dep interface {
 	EntityRecycleQueue(ctx context.Context) queue.Queue
 	// MediaProcessQueue Get a singleton queue.Queue instance for media post-processing (APP-101).
 	MediaProcessQueue(ctx context.Context) queue.Queue
+	// MediaVideoQueue Get a singleton queue.Queue instance for deferred video transcoding (APP-103).
+	MediaVideoQueue(ctx context.Context) queue.Queue
 	// MediaProcessClient Creates a new inventory.MediaProcessClient instance for the media_process_task store.
 	MediaProcessClient() inventory.MediaProcessClient
 	// MimeDetector Get a singleton fs.MimeDetector instance for MIME type detection.
@@ -186,6 +188,7 @@ type dependency struct {
 	mediaMetaQueue        queue.Queue
 	entityRecycleQueue    queue.Queue
 	mediaProcessQueue     queue.Queue
+	mediaVideoQueue       queue.Queue
 	slaveQueue            queue.Queue
 	remoteDownloadQueue   queue.Queue
 	ioIntenseQueueTask    queue.Task
@@ -785,6 +788,40 @@ func (d *dependency) MediaProcessQueue(ctx context.Context) queue.Queue {
 		queue.WithTaskPullInterval(10*time.Second),
 	)
 	return d.mediaProcessQueue
+}
+
+func (d *dependency) MediaVideoQueue(ctx context.Context) queue.Queue {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	_, reload := ctx.Value(ReloadCtx{}).(bool)
+	if d.mediaVideoQueue != nil && !reload {
+		return d.mediaVideoQueue
+	}
+
+	if d.mediaVideoQueue != nil {
+		d.mediaVideoQueue.Shutdown()
+	}
+
+	settings := d.SettingProvider()
+	queueSetting := settings.Queue(context.Background(), setting.QueueTypeMediaProcessVideo)
+	// Worker count comes from the dedicated media_compress_video_worker_num key
+	// (default 1) so a single long transcode stays CPU-bounded — the generic queue
+	// worker_num getter has an upstream key bug that always yields its fallback.
+	workerNum := settings.MediaProcessVideo(context.Background()).WorkerNum
+
+	d.mediaVideoQueue = queue.New(d.Logger(), d.TaskClient(), d.TaskRegistry(), d,
+		queue.WithBackoffFactor(queueSetting.BackoffFactor),
+		queue.WithMaxRetry(queueSetting.MaxRetry),
+		queue.WithBackoffMaxDuration(queueSetting.BackoffMaxDuration),
+		queue.WithRetryDelay(queueSetting.RetryDelay),
+		queue.WithWorkerCount(workerNum),
+		queue.WithName("MediaVideoQueue"),
+		queue.WithMaxTaskExecution(queueSetting.MaxExecution),
+		queue.WithResumeTaskType(queue.MediaCompressVideoTaskType),
+		queue.WithTaskPullInterval(10*time.Second),
+	)
+	return d.mediaVideoQueue
 }
 
 func (d *dependency) MediaProcessClient() inventory.MediaProcessClient {

@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
+	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -190,14 +192,26 @@ type (
 	GetSettingParamCtx struct{}
 )
 
+// cpuNumSettingKey is a virtual (non-DB) key: when requested, GetSetting returns
+// the CPU count visible to the process (runtime.NumCPU()) so the admin UI can cap
+// the "threads per compression" selector to the available cores (APP-103).
+const cpuNumSettingKey = "cpu_num"
+
 func (s *GetSettingService) GetSetting(c *gin.Context) (map[string]string, error) {
 	dep := dependency.FromContext(c)
 	res, err := dep.SettingClient().Gets(c, lo.Filter(s.Keys, func(item string, index int) bool {
+		if strings.ToLower(item) == cpuNumSettingKey {
+			return false
+		}
 		_, ok := inventory.RedactedSettings[strings.ToLower(item)]
 		return !ok
 	}))
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get settings", err)
+	}
+
+	if lo.ContainsBy(s.Keys, func(item string) bool { return strings.ToLower(item) == cpuNumSettingKey }) {
+		res[cpuNumSettingKey] = strconv.Itoa(runtime.NumCPU())
 	}
 
 	return res, nil
@@ -219,64 +233,70 @@ var (
 		"secret_key":   secretKeyPreProcessor,
 	}
 	postprocessors = map[string]SettingPostProcessor{
-		"mime_mapping":                               mimeMappingPostProcessor,
-		"media_meta_exif":                            mediaMetaPostProcessor,
-		"media_meta_music":                           mediaMetaPostProcessor,
-		"media_meta_ffprobe":                         mediaMetaPostProcessor,
-		"smtpUser":                                   emailPostProcessor,
-		"smtpPass":                                   emailPostProcessor,
-		"smtpHost":                                   emailPostProcessor,
-		"smtpPort":                                   emailPostProcessor,
-		"smtpEncryption":                             emailPostProcessor,
-		"smtpFrom":                                   emailPostProcessor,
-		"replyTo":                                    emailPostProcessor,
-		"fromName":                                   emailPostProcessor,
-		"fromAdress":                                 emailPostProcessor,
-		"queue_media_meta_worker_num":                mediaMetaQueuePostProcessor,
-		"queue_media_meta_max_execution":             mediaMetaQueuePostProcessor,
-		"queue_media_meta_backoff_factor":            mediaMetaQueuePostProcessor,
-		"queue_media_meta_backoff_max_duration":      mediaMetaQueuePostProcessor,
-		"queue_media_meta_max_retry":                 mediaMetaQueuePostProcessor,
-		"queue_media_meta_retry_delay":               mediaMetaQueuePostProcessor,
-		"queue_thumb_worker_num":                     thumbQueuePostProcessor,
-		"queue_thumb_max_execution":                  thumbQueuePostProcessor,
-		"queue_thumb_backoff_factor":                 thumbQueuePostProcessor,
-		"queue_thumb_backoff_max_duration":           thumbQueuePostProcessor,
-		"queue_thumb_max_retry":                      thumbQueuePostProcessor,
-		"queue_thumb_retry_delay":                    thumbQueuePostProcessor,
-		"queue_recycle_worker_num":                   entityRecycleQueuePostProcessor,
-		"queue_recycle_max_execution":                entityRecycleQueuePostProcessor,
-		"queue_recycle_backoff_factor":               entityRecycleQueuePostProcessor,
-		"queue_recycle_backoff_max_duration":         entityRecycleQueuePostProcessor,
-		"queue_recycle_max_retry":                    entityRecycleQueuePostProcessor,
-		"queue_recycle_retry_delay":                  entityRecycleQueuePostProcessor,
-		"queue_io_intense_worker_num":                ioIntenseQueuePostProcessor,
-		"queue_io_intense_max_execution":             ioIntenseQueuePostProcessor,
-		"queue_io_intense_backoff_factor":            ioIntenseQueuePostProcessor,
-		"queue_io_intense_backoff_max_duration":      ioIntenseQueuePostProcessor,
-		"queue_io_intense_max_retry":                 ioIntenseQueuePostProcessor,
-		"queue_io_intense_retry_delay":               ioIntenseQueuePostProcessor,
-		"queue_remote_download_worker_num":           remoteDownloadQueuePostProcessor,
-		"queue_remote_download_max_execution":        remoteDownloadQueuePostProcessor,
-		"queue_remote_download_backoff_factor":       remoteDownloadQueuePostProcessor,
-		"queue_remote_download_backoff_max_duration": remoteDownloadQueuePostProcessor,
-		"queue_remote_download_max_retry":            remoteDownloadQueuePostProcessor,
-		"queue_remote_download_retry_delay":          remoteDownloadQueuePostProcessor,
-		"media_compress_worker_num":                  mediaProcessQueuePostProcessor,
-		"queue_media_process_max_execution":          mediaProcessQueuePostProcessor,
-		"queue_media_process_backoff_factor":         mediaProcessQueuePostProcessor,
-		"queue_media_process_backoff_max_duration":   mediaProcessQueuePostProcessor,
-		"queue_media_process_max_retry":              mediaProcessQueuePostProcessor,
-		"queue_media_process_retry_delay":            mediaProcessQueuePostProcessor,
-		"secret_key":                                 secretKeyPostProcessor,
-		"fts_meilisearch_embed_config":               meilisearchPostProcessor,
-		"fts_meilisearch_endpoint":                   meilisearchPostProcessor,
-		"fts_meilisearch_api_key":                    meilisearchPostProcessor,
-		"fts_meilisearch_embed_enabled":              meilisearchPostProcessor,
-		"fts_meilisearch_page_size":                  meilisearchPostProcessor,
-		"fts_tika_endpoint":                          tikaPostProcessor,
-		"fts_tika_exts":                              tikaPostProcessor,
-		"fts_tika_max_file_size":                     tikaPostProcessor,
+		"mime_mapping":                                   mimeMappingPostProcessor,
+		"media_meta_exif":                                mediaMetaPostProcessor,
+		"media_meta_music":                               mediaMetaPostProcessor,
+		"media_meta_ffprobe":                             mediaMetaPostProcessor,
+		"smtpUser":                                       emailPostProcessor,
+		"smtpPass":                                       emailPostProcessor,
+		"smtpHost":                                       emailPostProcessor,
+		"smtpPort":                                       emailPostProcessor,
+		"smtpEncryption":                                 emailPostProcessor,
+		"smtpFrom":                                       emailPostProcessor,
+		"replyTo":                                        emailPostProcessor,
+		"fromName":                                       emailPostProcessor,
+		"fromAdress":                                     emailPostProcessor,
+		"queue_media_meta_worker_num":                    mediaMetaQueuePostProcessor,
+		"queue_media_meta_max_execution":                 mediaMetaQueuePostProcessor,
+		"queue_media_meta_backoff_factor":                mediaMetaQueuePostProcessor,
+		"queue_media_meta_backoff_max_duration":          mediaMetaQueuePostProcessor,
+		"queue_media_meta_max_retry":                     mediaMetaQueuePostProcessor,
+		"queue_media_meta_retry_delay":                   mediaMetaQueuePostProcessor,
+		"queue_thumb_worker_num":                         thumbQueuePostProcessor,
+		"queue_thumb_max_execution":                      thumbQueuePostProcessor,
+		"queue_thumb_backoff_factor":                     thumbQueuePostProcessor,
+		"queue_thumb_backoff_max_duration":               thumbQueuePostProcessor,
+		"queue_thumb_max_retry":                          thumbQueuePostProcessor,
+		"queue_thumb_retry_delay":                        thumbQueuePostProcessor,
+		"queue_recycle_worker_num":                       entityRecycleQueuePostProcessor,
+		"queue_recycle_max_execution":                    entityRecycleQueuePostProcessor,
+		"queue_recycle_backoff_factor":                   entityRecycleQueuePostProcessor,
+		"queue_recycle_backoff_max_duration":             entityRecycleQueuePostProcessor,
+		"queue_recycle_max_retry":                        entityRecycleQueuePostProcessor,
+		"queue_recycle_retry_delay":                      entityRecycleQueuePostProcessor,
+		"queue_io_intense_worker_num":                    ioIntenseQueuePostProcessor,
+		"queue_io_intense_max_execution":                 ioIntenseQueuePostProcessor,
+		"queue_io_intense_backoff_factor":                ioIntenseQueuePostProcessor,
+		"queue_io_intense_backoff_max_duration":          ioIntenseQueuePostProcessor,
+		"queue_io_intense_max_retry":                     ioIntenseQueuePostProcessor,
+		"queue_io_intense_retry_delay":                   ioIntenseQueuePostProcessor,
+		"queue_remote_download_worker_num":               remoteDownloadQueuePostProcessor,
+		"queue_remote_download_max_execution":            remoteDownloadQueuePostProcessor,
+		"queue_remote_download_backoff_factor":           remoteDownloadQueuePostProcessor,
+		"queue_remote_download_backoff_max_duration":     remoteDownloadQueuePostProcessor,
+		"queue_remote_download_max_retry":                remoteDownloadQueuePostProcessor,
+		"queue_remote_download_retry_delay":              remoteDownloadQueuePostProcessor,
+		"media_compress_worker_num":                      mediaProcessQueuePostProcessor,
+		"queue_media_process_max_execution":              mediaProcessQueuePostProcessor,
+		"queue_media_process_backoff_factor":             mediaProcessQueuePostProcessor,
+		"queue_media_process_backoff_max_duration":       mediaProcessQueuePostProcessor,
+		"queue_media_process_max_retry":                  mediaProcessQueuePostProcessor,
+		"queue_media_process_retry_delay":                mediaProcessQueuePostProcessor,
+		"media_compress_video_worker_num":                mediaVideoQueuePostProcessor,
+		"queue_media_process_video_max_execution":        mediaVideoQueuePostProcessor,
+		"queue_media_process_video_backoff_factor":       mediaVideoQueuePostProcessor,
+		"queue_media_process_video_backoff_max_duration": mediaVideoQueuePostProcessor,
+		"queue_media_process_video_max_retry":            mediaVideoQueuePostProcessor,
+		"queue_media_process_video_retry_delay":          mediaVideoQueuePostProcessor,
+		"secret_key":                                     secretKeyPostProcessor,
+		"fts_meilisearch_embed_config":                   meilisearchPostProcessor,
+		"fts_meilisearch_endpoint":                       meilisearchPostProcessor,
+		"fts_meilisearch_api_key":                        meilisearchPostProcessor,
+		"fts_meilisearch_embed_enabled":                  meilisearchPostProcessor,
+		"fts_meilisearch_page_size":                      meilisearchPostProcessor,
+		"fts_tika_endpoint":                              tikaPostProcessor,
+		"fts_tika_exts":                                  tikaPostProcessor,
+		"fts_tika_max_file_size":                         tikaPostProcessor,
 	}
 )
 
@@ -422,6 +442,12 @@ func thumbQueuePostProcessor(ctx context.Context, settings map[string]string) er
 func mediaProcessQueuePostProcessor(ctx context.Context, settings map[string]string) error {
 	dep := dependency.FromContext(ctx)
 	dep.MediaProcessQueue(context.WithValue(ctx, dependency.ReloadCtx{}, true)).Start()
+	return nil
+}
+
+func mediaVideoQueuePostProcessor(ctx context.Context, settings map[string]string) error {
+	dep := dependency.FromContext(ctx)
+	dep.MediaVideoQueue(context.WithValue(ctx, dependency.ReloadCtx{}, true)).Start()
 	return nil
 }
 

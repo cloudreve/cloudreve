@@ -231,6 +231,7 @@ type (
 		DisableViewSync         *bool     `json:"disable_view_sync" binding:"omitempty"`
 		ShareLinksInProfile     *string   `json:"share_links_in_profile" binding:"omitempty"`
 		AutoCompressImages      *bool     `json:"auto_compress_images" binding:"omitempty"`
+		AutoCompressVideos      *bool     `json:"auto_compress_videos" binding:"omitempty"`
 	}
 	PatchUserSettingParamsCtx struct{}
 )
@@ -279,6 +280,11 @@ func (s *PatchUserSetting) Patch(c *gin.Context) error {
 
 	if s.AutoCompressImages != nil {
 		u.Settings.AutoCompressImages = *s.AutoCompressImages
+		saveSetting = true
+	}
+
+	if s.AutoCompressVideos != nil {
+		u.Settings.AutoCompressVideos = *s.AutoCompressVideos
 		saveSetting = true
 	}
 
