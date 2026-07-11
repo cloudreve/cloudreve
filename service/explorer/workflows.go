@@ -481,3 +481,30 @@ func (service *RebuildFTSIndexWorkflowService) CreateRebuildFTSIndexTask(c *gin.
 
 	return BuildTaskResponse(t, nil, hasher), nil
 }
+
+type (
+	MediaBackfillWorkflowService struct {
+		FilteredStoragePolicy []int `json:"filtered_storage_policy"`
+	}
+	CreateMediaBackfillParamCtx struct{}
+)
+
+// CreateMediaBackfillTask seeds pending compression rows for the caller's existing
+// images (APP-102). Self-service: it backfills only the caller's own files, so no
+// admin permission is required.
+func (service *MediaBackfillWorkflowService) CreateMediaBackfillTask(c *gin.Context) (*TaskResponse, error) {
+	dep := dependency.FromContext(c)
+	user := inventory.UserFromContext(c)
+	hasher := dep.HashIDEncoder()
+
+	t, err := workflows.NewMediaBackfillTask(c, user, service.FilteredStoragePolicy)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeCreateTaskError, "Failed to create task", err)
+	}
+
+	if err := dep.MediaMetaQueue(c).QueueTask(c, t); err != nil {
+		return nil, serializer.NewError(serializer.CodeCreateTaskError, "Failed to queue task", err)
+	}
+
+	return BuildTaskResponse(t, nil, hasher), nil
+}

@@ -21,6 +21,10 @@ type MediaProcessClient interface {
 	// HasActive reports whether an active (pending/processing) row exists for the
 	// given entity id.
 	HasActive(ctx context.Context, entityID int) (bool, error)
+	// HasHandledForFile reports whether a terminal (done/skipped) row already
+	// exists for the given file id. Used by the backfill sweep to avoid
+	// re-enqueuing files it has already processed once.
+	HasHandledForFile(ctx context.Context, fileID int) (bool, error)
 	// ListPending returns up to limit pending rows of the given media type,
 	// oldest first.
 	ListPending(ctx context.Context, mediaType mediaprocesstask.MediaType, limit int) ([]*ent.MediaProcessTask, error)
@@ -71,6 +75,18 @@ func (c *mediaProcessClient) HasActive(ctx context.Context, entityID int) (bool,
 		Where(
 			mediaprocesstask.EntityID(entityID),
 			mediaprocesstask.StatusIn(mediaprocesstask.StatusPending, mediaprocesstask.StatusProcessing),
+		).
+		Exist(ctx)
+}
+
+func (c *mediaProcessClient) HasHandledForFile(ctx context.Context, fileID int) (bool, error) {
+	if fileID == 0 {
+		return false, nil
+	}
+	return c.client.MediaProcessTask.Query().
+		Where(
+			mediaprocesstask.FileID(fileID),
+			mediaprocesstask.StatusIn(mediaprocesstask.StatusDone, mediaprocesstask.StatusSkipped),
 		).
 		Exist(ctx)
 }

@@ -83,6 +83,21 @@ func RebuildFTSIndex(c *gin.Context) {
 	})
 }
 
+// MediaBackfill enqueues a task that seeds pending compression rows for the user's existing images
+func MediaBackfill(c *gin.Context) {
+	service := ParametersFromContext[*explorer.MediaBackfillWorkflowService](c, explorer.CreateMediaBackfillParamCtx{})
+	resp, err := service.CreateMediaBackfillTask(c)
+	if err != nil {
+		c.JSON(200, serializer.Err(c, err))
+		c.Abort()
+		return
+	}
+
+	c.JSON(200, serializer.Response{
+		Data: resp,
+	})
+}
+
 // ExtractArchive creates extract archive task
 func ExtractArchive(c *gin.Context) {
 	service := ParametersFromContext[*explorer.ArchiveWorkflowService](c, explorer.CreateArchiveParamCtx{})

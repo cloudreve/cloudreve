@@ -105,6 +105,7 @@ const (
 	RemoteDownloadTaskType        = "remote_download"
 	ImportTaskType                = "import"
 	MediaCompressTaskType         = "media_compress"
+	MediaBackfillTaskType         = "media_backfill"
 
 	FullTextIndexTaskType       = "full_text_index"
 	FullTextCopyTaskType        = "full_text_copy"

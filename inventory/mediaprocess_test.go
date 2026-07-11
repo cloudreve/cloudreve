@@ -71,3 +71,44 @@ func TestMediaProcessEnqueueIdempotent(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEqual(t, row1.ID, row3.ID, "a new pending row is created after the previous one is done")
 }
+
+// TestMediaProcessHasHandledForFile covers APP-102: the backfill sweep skips
+// files that already have a terminal (done/skipped) row, so a re-run does not
+// re-compress already-processed files.
+func TestMediaProcessHasHandledForFile(t *testing.T) {
+	ctx := context.Background()
+	client := newTestClient(t)
+	c := NewMediaProcessClient(client, "sqlite")
+
+	handled, err := c.HasHandledForFile(ctx, 500)
+	require.NoError(t, err)
+	assert.False(t, handled, "no rows yet")
+
+	// A pending row is not terminal → not handled.
+	row, err := c.Enqueue(ctx, &MediaProcessEnqueueArgs{EntityID: 900, FileID: 500, OwnerID: 1, MediaType: mediaprocesstask.MediaTypeImage})
+	require.NoError(t, err)
+	handled, err = c.HasHandledForFile(ctx, 500)
+	require.NoError(t, err)
+	assert.False(t, handled)
+
+	// Done counts as handled.
+	_, err = c.SetStatus(ctx, row.ID, &MediaProcessStatusArgs{Status: mediaprocesstask.StatusDone, ResultSize: 10})
+	require.NoError(t, err)
+	handled, err = c.HasHandledForFile(ctx, 500)
+	require.NoError(t, err)
+	assert.True(t, handled)
+
+	// Skipped also counts as handled.
+	row2, err := c.Enqueue(ctx, &MediaProcessEnqueueArgs{EntityID: 901, FileID: 501, OwnerID: 1, MediaType: mediaprocesstask.MediaTypeImage})
+	require.NoError(t, err)
+	_, err = c.SetStatus(ctx, row2.ID, &MediaProcessStatusArgs{Status: mediaprocesstask.StatusSkipped})
+	require.NoError(t, err)
+	handled, err = c.HasHandledForFile(ctx, 501)
+	require.NoError(t, err)
+	assert.True(t, handled)
+
+	// fileID 0 is never handled.
+	handled, err = c.HasHandledForFile(ctx, 0)
+	require.NoError(t, err)
+	assert.False(t, handled)
+}

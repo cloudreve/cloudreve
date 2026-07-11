@@ -214,6 +214,12 @@ type FileClient interface {
 	// ListIndexableFiles lists files suitable for FTS indexing, returning up to limit files
 	// with ID strictly greater than afterID. Use afterID=0 to start from the beginning.
 	ListIndexableFiles(ctx context.Context, afterID, limit int) ([]*ent.File, error)
+	// CountBackfillCandidateFiles counts files eligible for deferred media backfill (file type,
+	// has primary entity, size >= minSize), optionally scoped by owner and storage policy.
+	CountBackfillCandidateFiles(ctx context.Context, userID int, storagePolicyIDs []int, minSize int64) (int, error)
+	// ListBackfillCandidateFiles lists media backfill candidate files with ID strictly greater
+	// than afterID, up to limit. Use afterID=0 to start from the beginning.
+	ListBackfillCandidateFiles(ctx context.Context, afterID, limit, userID int, storagePolicyIDs []int, minSize int64) ([]*ent.File, error)
 	// CountByTimeRange counts files created in a given time range
 	CountByTimeRange(ctx context.Context, start, end *time.Time) (int, error)
 	// CountEntityByTimeRange counts entities created in a given time range
@@ -349,6 +355,33 @@ func (f *fileClient) indexableFilesQuery() *ent.FileQuery {
 		file.SizeGT(0),
 		file.FileChildrenNotNil(),
 	).Order(file.ByID())
+}
+
+func (f *fileClient) backfillCandidateQuery(userID int, storagePolicyIDs []int, minSize int64) *ent.FileQuery {
+	q := f.client.File.Query().Where(
+		file.Type(int(types.FileTypeFile)),
+		file.PrimaryEntityGT(0),
+		file.SizeGTE(minSize),
+	)
+	if userID > 0 {
+		q = q.Where(file.OwnerID(userID))
+	}
+	if len(storagePolicyIDs) > 0 {
+		q = q.Where(file.StoragePolicyFilesIn(storagePolicyIDs...))
+	}
+	return q.Order(file.ByID())
+}
+
+func (f *fileClient) CountBackfillCandidateFiles(ctx context.Context, userID int, storagePolicyIDs []int, minSize int64) (int, error) {
+	return f.backfillCandidateQuery(userID, storagePolicyIDs, minSize).Count(ctx)
+}
+
+func (f *fileClient) ListBackfillCandidateFiles(ctx context.Context, afterID, limit, userID int, storagePolicyIDs []int, minSize int64) ([]*ent.File, error) {
+	q := f.backfillCandidateQuery(userID, storagePolicyIDs, minSize)
+	if afterID > 0 {
+		q = q.Where(file.IDGT(afterID))
+	}
+	return q.Limit(limit).All(ctx)
 }
 
 func (f *fileClient) CountEntityByTimeRange(ctx context.Context, start, end *time.Time) (int, error) {

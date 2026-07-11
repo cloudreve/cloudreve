@@ -766,6 +766,12 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				controllers.FromJSON[explorer.RebuildFTSIndexWorkflowService](explorer.CreateRebuildFTSIndexParamCtx{}),
 				controllers.RebuildFTSIndex,
 			)
+			// Create task to backfill existing images for compression
+			wf.POST("mediaBackfill",
+				middleware.RequiredScopes(types.ScopeWorkflowWrite),
+				controllers.FromJSON[explorer.MediaBackfillWorkflowService](explorer.CreateMediaBackfillParamCtx{}),
+				controllers.MediaBackfill,
+			)
 
 			// 取得文件外链
 			source := file.Group("source")
