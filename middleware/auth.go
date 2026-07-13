@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"crypto/subtle"
 	"net/http"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
@@ -204,6 +205,13 @@ func uploadCallbackCheck(c *gin.Context, policyType types.PolicyType) error {
 	}
 
 	callbackSession := callbackSessionRaw.(fs.UploadSession)
+	if subtle.ConstantTimeCompare(
+		[]byte(callbackSession.CallbackSecret),
+		[]byte(c.Param("key")),
+	) != 1 {
+		return serializer.NewError(serializer.CodeCredentialInvalid, "Invalid callback secret", nil)
+	}
+
 	c.Set(manager.UploadSessionCtx, &callbackSession)
 	if callbackSession.Policy.Type != string(policyType) {
 		return serializer.NewError(serializer.CodePolicyNotAllowed, "", nil)
