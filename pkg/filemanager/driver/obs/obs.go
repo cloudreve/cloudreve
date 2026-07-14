@@ -2,7 +2,6 @@ package obs
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,9 +15,7 @@ import (
 	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/ent"
-	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/boolset"
-	"github.com/cloudreve/Cloudreve/v4/pkg/cluster/routes"
 	"github.com/cloudreve/Cloudreve/v4/pkg/conf"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/chunk"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/chunk/backoff"
@@ -38,7 +35,6 @@ const (
 	imageProcessHeader = "x-image-process"
 	trafficLimitHeader = "x-obs-traffic-limit"
 	partNumberParam    = "partNumber"
-	callbackParam      = "x-obs-callback"
 	uploadIdParam      = "uploadId"
 	mediaInfoTTL       = time.Duration(10) * time.Minute
 	imageInfoProcessor = "image/info"
@@ -52,11 +48,6 @@ var (
 )
 
 type (
-	CallbackPolicy struct {
-		CallbackURL      string `json:"callbackUrl"`
-		CallbackBody     string `json:"callbackBody"`
-		CallbackBodyType string `json:"callbackBodyType"`
-	}
 	JsonError struct {
 		Message string `json:"message"`
 		Code    string `json:"code"`
@@ -411,23 +402,8 @@ func (d *Driver) Token(ctx context.Context, uploadSession *fs.UploadSession, fil
 		return nil, fs.ErrFileExisted
 	}
 
-	// 生成回调地址
-	siteURL := d.settings.SiteURL(setting.UseFirstSiteUrl(ctx))
 	// 在从机端创建上传会话
 	uploadSession.ChunkSize = d.chunkSize
-	uploadSession.Callback = routes.MasterSlaveCallbackUrl(siteURL, types.PolicyTypeObs, uploadSession.Props.UploadSessionID, uploadSession.CallbackSecret).String()
-	// 回调策略
-	callbackPolicy := CallbackPolicy{
-		CallbackURL:      uploadSession.Callback,
-		CallbackBody:     `{"name":${key},"source_name":${fname},"size":${size}}`,
-		CallbackBodyType: "application/json",
-	}
-
-	callbackPolicyJSON, err := json.Marshal(callbackPolicy)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode callback policy: %w", err)
-	}
-	callbackPolicyEncoded := base64.StdEncoding.EncodeToString(callbackPolicyJSON)
 
 	mimeType := file.Props.MimeType
 	if mimeType == "" {
@@ -487,7 +463,6 @@ func (d *Driver) Token(ctx context.Context, uploadSession *fs.UploadSession, fil
 		Key:    file.Props.SavePath,
 		QueryParams: map[string]string{
 			uploadIdParam: uploadSession.UploadID,
-			callbackParam: callbackPolicyEncoded,
 		},
 		Headers: map[string]string{
 			"Content-Type": "application/octet-stream",
