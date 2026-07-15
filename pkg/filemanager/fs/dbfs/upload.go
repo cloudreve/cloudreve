@@ -71,8 +71,12 @@ func (f *DBFS) PreValidateUpload(ctx context.Context, dst *fs.URI, files ...fs.P
 }
 
 func (f *DBFS) PrepareUpload(ctx context.Context, req *fs.UploadRequest, opts ...fs.Option) (*fs.UploadSession, error) {
-	// Get navigator
-	navigator, err := f.getNavigator(ctx, req.Props.Uri, NavigatorCapabilityUploadFile, NavigatorCapabilityLockFile)
+	// Get navigator.
+	requiredCaps := []NavigatorCapability{NavigatorCapabilityUploadFile, NavigatorCapabilityLockFile}
+	if req.Props.EntityType != nil && *req.Props.EntityType == types.EntityTypeThumbnail {
+		requiredCaps = []NavigatorCapability{NavigatorCapabilityGenerateThumb, NavigatorCapabilityLockFile}
+	}
+	navigator, err := f.getNavigator(ctx, req.Props.Uri, requiredCaps...)
 	if err != nil {
 		return nil, err
 	}
