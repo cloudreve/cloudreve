@@ -524,6 +524,7 @@ var DefaultSettings = map[string]string{
 	"theme_options":                              `{"#1976d2":{"light":{"palette":{"primary":{"main":"#1976d2","light":"#42a5f5","dark":"#1565c0"},"secondary":{"main":"#9c27b0","light":"#ba68c8","dark":"#7b1fa2"}}},"dark":{"palette":{"primary":{"main":"#90caf9","light":"#e3f2fd","dark":"#42a5f5"},"secondary":{"main":"#ce93d8","light":"#f3e5f5","dark":"#ab47bc"}}}},"#3f51b5":{"light":{"palette":{"primary":{"main":"#3f51b5"},"secondary":{"main":"#f50057"}}},"dark":{"palette":{"primary":{"main":"#9fa8da"},"secondary":{"main":"#ff4081"}}}}}`,
 	"max_parallel_transfer":                      `4`,
 	"secret_key":                                 util.RandStringRunesCrypto(256),
+	"oidc_signing_private_key":                   "",
 	"temp_path":                                  "temp",
 	"avatar_path":                                "avatar",
 	"avatar_size":                                "4194304",
@@ -689,8 +690,9 @@ var DefaultSettings = map[string]string{
 }
 
 var RedactedSettings = map[string]struct{}{
-	"encrypt_master_key": {},
-	"secret_key":         {},
+	"encrypt_master_key":       {},
+	"secret_key":               {},
+	"oidc_signing_private_key": {},
 }
 
 func init() {
