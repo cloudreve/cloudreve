@@ -150,6 +150,14 @@ func (handler *Driver) Token(ctx context.Context, uploadSession *fs.UploadSessio
 		return nil, fmt.Errorf("failed to sign upload url: %w", err)
 	}
 
+	// When disk pre-allocation is disabled, concurrent chunk uploads must be 1
+	// to avoid disk fragmentation and write contention on slave storage.
+	if !handler.Policy.Settings.PreAllocate {
+		settings := *handler.Policy.Settings
+		settings.ChunkConcurrency = 1
+		handler.Policy.Settings = &settings
+	}
+
 	return &fs.UploadCredential{
 		SessionID:  uploadSession.Props.UploadSessionID,
 		ChunkSize:  handler.Policy.Settings.ChunkSize,
