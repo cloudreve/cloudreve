@@ -229,7 +229,9 @@ func (handler *Driver) Token(ctx context.Context, uploadSession *fs.UploadSessio
 	} else {
 		// When disk pre-allocation is disabled, concurrent chunk uploads must be 1
 		// to avoid disk fragmentation and write contention on local storage.
-		handler.Policy.Settings.ChunkConcurrency = 1
+ 		settings := *handler.Policy.Settings
+ 		settings.ChunkConcurrency = 1
+ 		handler.Policy.Settings = &settings
 	}
 
 	return &fs.UploadCredential{
