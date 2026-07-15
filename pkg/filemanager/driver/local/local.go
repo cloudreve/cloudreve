@@ -226,6 +226,10 @@ func (handler *Driver) Token(ctx context.Context, uploadSession *fs.UploadSessio
 		if err := Fallocate(f, 0, uploadSession.Props.Size); err != nil {
 			handler.l.Warning("Failed to preallocate file: %s", err)
 		}
+	} else {
+		// When disk pre-allocation is disabled, concurrent chunk uploads must be 1
+		// to avoid disk fragmentation and write contention on local storage.
+		handler.Policy.Settings.ChunkConcurrency = 1
 	}
 
 	return &fs.UploadCredential{
