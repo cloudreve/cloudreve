@@ -278,6 +278,10 @@ type (
 
 		LockToken string // Token of the locked placeholder file
 		Props     *UploadProps
+		// ChunksReceived records the set of chunk indices that have been fully
+		// uploaded. Used to safely trigger CompleteUpload only after every
+		// chunk has been received when the client uploads chunks concurrently.
+		ChunksReceived map[int]struct{}
 	}
 
 	// UploadProps properties of an upload session/request.

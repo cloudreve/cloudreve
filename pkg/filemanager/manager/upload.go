@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
@@ -40,8 +41,44 @@ type (
 		PrepareUpload(ctx context.Context, req *fs.UploadRequest, opts ...fs.Option) (*fs.UploadSession, error)
 		// PreValidateUpload pre-validates an upload request.
 		PreValidateUpload(ctx context.Context, dst *fs.URI, files ...fs.PreValidateFile) error
+		// MarkChunkUploaded atomically records the given chunk index as received on the
+		// shared upload session and reports whether every chunk of the file has been
+		// received. Callers must invoke CompleteUpload only when allReceived is true.
+		// It is used to avoid triggering CompleteUpload prematurely when the client
+		// uploads chunks concurrently and the last-indexed chunk arrives before some
+		// earlier chunks are still in flight.
+		MarkChunkUploaded(ctx context.Context, session *fs.UploadSession, chunkIndex int) (allReceived bool, err error)
 	}
 )
+
+// uploadSessionLocks holds per-session mutexes used to serialize chunk-progress
+// bookkeeping. Entries are removed on every terminal path (CompleteUpload,
+// CancelUploadSession, OnUploadFailed) to keep the map bounded to the number of
+// in-flight upload sessions on this process.
+var uploadSessionLocks sync.Map // map[string]*sync.Mutex
+
+func lockUploadSession(sessionID string) *sync.Mutex {
+	mu, _ := uploadSessionLocks.LoadOrStore(sessionID, &sync.Mutex{})
+	return mu.(*sync.Mutex)
+}
+
+func releaseUploadSessionLock(sessionID string) {
+	uploadSessionLocks.Delete(sessionID)
+}
+
+// expectedChunkCount returns the total number of chunks the client is expected
+// to upload for the given session. An empty file still produces a single
+// zero-byte chunk on the client side (see assets/.../utils/helper.ts::getChunks
+// which falls back to `file.slice(0)` when no chunks are produced).
+func expectedChunkCount(s *fs.UploadSession) int {
+	if s == nil || s.Props == nil {
+		return 1
+	}
+	if s.ChunkSize <= 0 || s.Props.Size == 0 {
+		return 1
+	}
+	return int((s.Props.Size + s.ChunkSize - 1) / s.ChunkSize)
+}
 
 func (m *manager) PreValidateUpload(ctx context.Context, dst *fs.URI, files ...fs.PreValidateFile) error {
 	return m.fs.PreValidateUpload(ctx, dst, files...)
@@ -220,6 +257,59 @@ func (m *manager) Upload(ctx context.Context, req *fs.UploadRequest, policy *ent
 	return nil
 }
 
+func (m *manager) MarkChunkUploaded(ctx context.Context, session *fs.UploadSession, chunkIndex int) (bool, error) {
+	if session == nil || session.Props == nil {
+		return false, fmt.Errorf("invalid upload session")
+	}
+
+	sessionID := session.Props.UploadSessionID
+	mu := lockUploadSession(sessionID)
+	mu.Lock()
+	defer mu.Unlock()
+
+	// Reload the session from KV so we observe progress recorded by concurrent
+	// chunk uploads for the same session. On slave nodes m.kv is the in-process
+	// MemoStore, on master it is either MemoStore or RedisStore; both are read
+	// through the same interface here.
+	raw, ok := m.kv.Get(UploadSessionCachePrefix + sessionID)
+	if !ok {
+		// Session already completed or cancelled elsewhere. Nothing to do —
+		// the caller must not trigger CompleteUpload again.
+		return false, nil
+	}
+	fresh, ok := raw.(fs.UploadSession)
+	if !ok {
+		return false, fmt.Errorf("unexpected upload session type in KV")
+	}
+	if fresh.ChunksReceived == nil {
+		fresh.ChunksReceived = make(map[int]struct{})
+	}
+
+	total := expectedChunkCount(&fresh)
+	// If completion has already been claimed by a previous caller (e.g. a
+	// duplicate chunk retry after the server-side write succeeded), do not
+	// re-trigger CompleteUpload.
+	alreadyComplete := len(fresh.ChunksReceived) >= total
+
+	// Idempotent add: recording the same chunk index twice is a no-op.
+	fresh.ChunksReceived[chunkIndex] = struct{}{}
+
+	// Persist the updated tracker unconditionally so retries, subsequent
+	// chunks, and completion state survive across requests.
+	ttl := max(1, int(time.Until(fresh.Props.ExpireAt).Seconds()))
+	if err := m.kv.Set(UploadSessionCachePrefix+sessionID, fresh, ttl); err != nil {
+		return false, fmt.Errorf("failed to persist upload session progress: %w", err)
+	}
+
+	// Only the caller that transitioned the tracker from incomplete to
+	// complete is allowed to trigger CompleteUpload.
+	if !alreadyComplete && len(fresh.ChunksReceived) >= total {
+		session.ChunksReceived = fresh.ChunksReceived
+		return true, nil
+	}
+	return false, nil
+}
+
 func (m *manager) CancelUploadSession(ctx context.Context, path *fs.URI, sessionID string) error {
 	// Get upload session
 	var session *fs.UploadSession
@@ -262,6 +352,7 @@ func (m *manager) CancelUploadSession(ctx context.Context, path *fs.URI, session
 		}
 
 		m.kv.Delete(UploadSessionCachePrefix, session.Props.UploadSessionID)
+		releaseUploadSessionLock(session.Props.UploadSessionID)
 	}
 
 	// Delete stale entities
@@ -320,6 +411,7 @@ func (m *manager) CompleteUpload(ctx context.Context, session *fs.UploadSession)
 	m.onNewEntityUploaded(ctx, session, d, ownerId)
 	// Remove upload session
 	_ = m.kv.Delete(UploadSessionCachePrefix, session.Props.UploadSessionID)
+	releaseUploadSessionLock(session.Props.UploadSessionID)
 	return file, nil
 }
 
@@ -368,6 +460,9 @@ func (m *manager) Update(ctx context.Context, req *fs.UploadRequest, opts ...fs.
 
 func (m *manager) OnUploadFailed(ctx context.Context, session *fs.UploadSession) {
 	ctx = context.WithoutCancel(ctx)
+	if session != nil && session.Props != nil {
+		defer releaseUploadSessionLock(session.Props.UploadSessionID)
+	}
 	if !m.stateless {
 		if session.LockToken != "" {
 			if err := m.Unlock(ctx, session.LockToken); err != nil {
