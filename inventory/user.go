@@ -42,6 +42,10 @@ var (
 	ErrorUnknownPasswordType = errors.New("unknown password type")
 	ErrorIncorrectPassword   = errors.New("incorrect password")
 	ErrInsufficientPoints    = errors.New("insufficient points")
+	// ErrInsufficientCapacity is returned by ReserveStorage when the atomic
+	// UPDATE would push the user's storage past their quota. The FS layer
+	// translates this into fs.ErrInsufficientCapacity for API consumers.
+	ErrInsufficientCapacity = errors.New("insufficient storage capacity")
 )
 
 type (
@@ -69,6 +73,15 @@ type (
 		SearchActive(ctx context.Context, limit int, keyword string) ([]*ent.User, error)
 		// ApplyStorageDiff apply storage diff to user.
 		ApplyStorageDiff(ctx context.Context, diffs StorageDiff) error
+		// ReserveStorage atomically adds size bytes to user uid's storage,
+		// enforcing storage + size <= maxTotal at the database level. When
+		// maxTotal <= 0 the guard is skipped (unlimited quota). Returns
+		// ErrInsufficientCapacity when the guard fails (0 rows affected).
+		// Negative size is treated as an unconditional release.
+		ReserveStorage(ctx context.Context, uid int, size int64, maxTotal int64) error
+		// ReleaseStorage unconditionally subtracts size bytes from user uid's
+		// storage. Used to undo a previous ReserveStorage on failure paths.
+		ReleaseStorage(ctx context.Context, uid int, size int64) error
 		// UpdateAvatar updates user avatar.
 		UpdateAvatar(ctx context.Context, u *ent.User, avatar string) (*ent.User, error)
 		// UpdateNickname updates user nickname.
@@ -226,33 +239,88 @@ func (c *userClient) Delete(ctx context.Context, uid int) error {
 func (c *userClient) ApplyStorageDiff(ctx context.Context, diffs StorageDiff) error {
 	ae := serializer.NewAggregateError()
 	for uid, diff := range diffs {
-		// Retry logic for MySQL deadlock (Error 1213)
-		// This is a temporary workaround. TODO: optimize storage mutation
-		maxRetries := 3
-		var lastErr error
-		for attempt := 0; attempt < maxRetries; attempt++ {
-			if err := c.client.User.Update().Where(user.ID(uid)).AddStorage(diff).Exec(ctx); err != nil {
-				lastErr = err
-				// Check if it's a MySQL deadlock error (Error 1213)
-				if strings.Contains(err.Error(), "Error 1213") && attempt < maxRetries-1 {
-					// Wait a bit before retrying with exponential backoff
-					time.Sleep(time.Duration(attempt+1) * 10 * time.Millisecond)
-					continue
-				}
-				ae.Add(fmt.Sprintf("%d", uid), fmt.Errorf("failed to apply storage diff for user %d: %w", uid, err))
-				break
-			}
-			// Success, break out of retry loop
-			lastErr = nil
-			break
-		}
-
-		if lastErr != nil {
-			ae.Add(fmt.Sprintf("%d", uid), fmt.Errorf("failed to apply storage diff for user %d: %w", uid, lastErr))
+		err := runWithDeadlockRetry(func() error {
+			return c.client.User.Update().Where(user.ID(uid)).AddStorage(diff).Exec(ctx)
+		})
+		if err != nil {
+			ae.Add(fmt.Sprintf("%d", uid), fmt.Errorf("failed to apply storage diff for user %d: %w", uid, err))
 		}
 	}
 
 	return ae.Aggregate()
+}
+
+// isMySQLDeadlock reports whether err is a MySQL Error 1213 deadlock.
+func isMySQLDeadlock(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "Error 1213")
+}
+
+// runWithDeadlockRetry runs fn up to maxRetries times, backing off between
+// attempts on MySQL Error 1213 (deadlock) errors. Any other error is returned
+// immediately.
+//
+// CAUTION: Only safe for statements that run in AUTO-COMMIT mode. A deadlock
+// on a statement running inside an explicit BEGIN/COMMIT causes InnoDB to
+// roll back the ENTIRE transaction server-side; re-issuing the same statement
+// against the dead tx handle will not resurrect the transaction — it will
+// either error out or silently apply outside the tx. Use this helper only
+// for ApplyStorageDiff (which issues one auto-commit UPDATE per user).
+func runWithDeadlockRetry(fn func() error) error {
+	const maxRetries = 3
+	var lastErr error
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		err := fn()
+		if err == nil {
+			return nil
+		}
+		lastErr = err
+		if !isMySQLDeadlock(err) || attempt == maxRetries-1 {
+			return err
+		}
+		time.Sleep(time.Duration(attempt+1) * 10 * time.Millisecond)
+	}
+	return lastErr
+}
+
+// ReserveStorage atomically adds size bytes to user uid's storage while
+// enforcing an optional quota. See UserClient.ReserveStorage.
+//
+// This method deliberately does NOT retry on MySQL deadlocks. Callers that
+// invoke it via a tx-scoped client (see Tx.ReserveStorage) must let a
+// deadlock propagate so the tx is aborted and the placeholder writes are
+// rolled back with it.
+func (c *userClient) ReserveStorage(ctx context.Context, uid int, size, maxTotal int64) error {
+	if size == 0 {
+		return nil
+	}
+	if size < 0 {
+		return c.ReleaseStorage(ctx, uid, -size)
+	}
+
+	q := c.client.User.Update().Where(user.ID(uid))
+	if maxTotal > 0 {
+		// storage + size <= maxTotal  <=>  storage <= maxTotal - size.
+		// When maxTotal < size the predicate is unsatisfiable (returns
+		// zero rows) and we correctly report ErrInsufficientCapacity.
+		q = q.Where(user.StorageLTE(maxTotal - size))
+	}
+	n, err := q.AddStorage(size).Save(ctx)
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrInsufficientCapacity
+	}
+	return nil
+}
+
+// ReleaseStorage unconditionally subtracts size bytes from user uid's
+// storage. Like ReserveStorage, it does not retry on MySQL deadlocks.
+func (c *userClient) ReleaseStorage(ctx context.Context, uid int, size int64) error {
+	if size == 0 {
+		return nil
+	}
+	return c.client.User.Update().Where(user.ID(uid)).AddStorage(-size).Exec(ctx)
 }
 
 func (c *userClient) CalculateStorage(ctx context.Context, uid int) (int64, error) {
