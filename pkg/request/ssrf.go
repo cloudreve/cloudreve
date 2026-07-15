@@ -1,7 +1,9 @@
 package request
 
 import (
+	"bytes"
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"net"
@@ -187,6 +189,9 @@ func parseCIDRs(raw []string) []*net.IPNet {
 }
 
 func checkIPWithAllowlist(ip net.IP, allowed []*net.IPNet) error {
+	// Normalize IPv4-in-IPv6 transition forms so both the allowlist and the
+	// class check operate on the address the packet actually reaches.
+	ip = effectiveIP(ip)
 	for _, n := range allowed {
 		if n.Contains(ip) {
 			return nil
@@ -195,7 +200,73 @@ func checkIPWithAllowlist(ip net.IP, allowed []*net.IPNet) error {
 	return checkIP(ip)
 }
 
+// nat64WellKnownPrefix is 64:ff9b::/96 (RFC 6052 §2.1), the 12-byte prefix
+// that wraps an IPv4 address in its last 32 bits for NAT64 gateways.
+var nat64WellKnownPrefix = []byte{
+	0x00, 0x64, 0xff, 0x9b,
+	0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00,
+}
+
+// teredoPrefix is 2001:0000::/32 (RFC 4380). In Teredo, the client's IPv4 is
+// the last 32 bits of the address XORed with 0xff.
+var teredoPrefix = []byte{0x20, 0x01, 0x00, 0x00}
+
+// effectiveIP unwraps IPv4-in-IPv6 transition forms to the IPv4 address the
+// packet ultimately reaches, so checkIP classifies the real target rather
+// than the (often globally-routable) IPv6 wrapper. Go's net.IP builtins
+// (IsLoopback, IsPrivate, IsLinkLocalUnicast, ...) inspect only the outer
+// address and would otherwise accept, for example, 64:ff9b::a9fe:a9fe as a
+// safe public IPv6 even though it routes to 169.254.169.254 on a NAT64 host.
+//
+// Covers:
+//   - IPv4-mapped     ::ffff:a.b.c.d          (RFC 4291 §2.5.5.2)
+//   - NAT64 WKP       64:ff9b::a.b.c.d        (RFC 6052 §2.1)
+//   - 6to4            2002:AABB:CCDD::        (RFC 3056)
+//   - Teredo          2001:0000:...           (RFC 4380)
+//   - IPv4-compatible ::a.b.c.d               (RFC 4291 §2.5.5.1, deprecated)
+func effectiveIP(ip net.IP) net.IP {
+	if ip == nil {
+		return nil
+	}
+	// IPv4 literal or IPv4-mapped ::ffff:a.b.c.d — To4 returns the embedded v4.
+	if v4 := ip.To4(); v4 != nil {
+		return v4
+	}
+	v6 := ip.To16()
+	if v6 == nil {
+		return ip
+	}
+
+	// NAT64 well-known prefix 64:ff9b::/96.
+	if bytes.HasPrefix(v6, nat64WellKnownPrefix) {
+		return net.IPv4(v6[12], v6[13], v6[14], v6[15]).To4()
+	}
+
+	// 6to4 2002::/16 — bytes 2-5 encode the embedded IPv4.
+	if v6[0] == 0x20 && v6[1] == 0x02 {
+		return net.IPv4(v6[2], v6[3], v6[4], v6[5]).To4()
+	}
+
+	// Teredo 2001:0000::/32 — client IPv4 is last 4 bytes XOR 0xff.
+	if bytes.HasPrefix(v6, teredoPrefix) {
+		return net.IPv4(v6[12]^0xff, v6[13]^0xff, v6[14]^0xff, v6[15]^0xff).To4()
+	}
+
+	// IPv4-compatible ::a.b.c.d — top 12 bytes are zero. Skip :: and ::1 so
+	// the outer classifier still catches them as unspecified/loopback IPv6.
+	var zero [12]byte
+	if bytes.Equal(v6[:12], zero[:]) {
+		if last := binary.BigEndian.Uint32(v6[12:16]); last > 1 {
+			return net.IPv4(v6[12], v6[13], v6[14], v6[15]).To4()
+		}
+	}
+
+	return ip
+}
+
 func checkIP(ip net.IP) error {
+	ip = effectiveIP(ip)
 	if ip == nil {
 		return fmt.Errorf("invalid IP: %w", ErrUnsafeURL)
 	}
