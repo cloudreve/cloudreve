@@ -166,9 +166,26 @@ func getOverrideConfFromEnv(l logging.Logger) string {
 
 		// split by key=value and get key
 		kv := strings.SplitN(env, "=", 2)
+		if len(kv) < 2 {
+			continue
+		}
 		configKey := strings.TrimPrefix(kv[0], envConfOverrideKey)
 		configValue := kv[1]
+
+		// Prefer the native "." separator. Fall back to "__" so that TOML-based
+		// deployment platforms (Fly.io, some Docker Compose variants) that
+		// mangle dotted env var names can still express Section/Key overrides
+		// as CR_CONF_Section__Key.
 		sectionKey := strings.SplitN(configKey, ".", 2)
+		if len(sectionKey) < 2 {
+			sectionKey = strings.SplitN(configKey, "__", 2)
+		}
+		if len(sectionKey) < 2 || sectionKey[0] == "" || sectionKey[1] == "" {
+			l.Warning("Skipping malformed %s override %q: expected %sSection.Key or %sSection__Key format",
+				envConfOverrideKey, kv[0], envConfOverrideKey, envConfOverrideKey)
+			continue
+		}
+
 		if confMaps[sectionKey[0]] == nil {
 			confMaps[sectionKey[0]] = make(map[string]string)
 		}
