@@ -45,6 +45,11 @@ type (
 		ListPhysical(ctx context.Context, path string, policyID int, recursive bool, progress driver.ListProgressFunc) ([]fs.PhysicalObject, error)
 		// ImportPhysical imports a physical file to a Cloudreve file
 		ImportPhysical(ctx context.Context, dst *fs.URI, policyId int, src fs.PhysicalObject, completeHook bool) error
+		// RelocateBlob transfers the blob of an entity into another storage policy, encrypting it
+		// on the fly if the destination policy has file encryption enabled. It returns the
+		// encryption metadata to be persisted onto the entity, or nil if the encryption state of
+		// the entity is unchanged.
+		RelocateBlob(ctx context.Context, args *RelocateBlobArgs) (*types.EncryptMetadata, error)
 	}
 	DirectLink struct {
 		File fs.File

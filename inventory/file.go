@@ -134,8 +134,12 @@ type (
 	}
 
 	RelocateEntityParameter struct {
-		Entity                   *ent.Entity
-		NewSource                string
+		Entity    *ent.Entity
+		NewSource string
+		// NewEncryptMetadata describes the encryption of the relocated blob. It is set when the
+		// blob has been encrypted or decrypted while being transferred, so that the entity is
+		// committed along with the key its new blob can be read with.
+		NewEncryptMetadata       *types.EncryptMetadata
 		ParentFiles              []int
 		PrimaryEntityParentFiles []int
 	}

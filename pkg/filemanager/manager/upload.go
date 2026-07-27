@@ -15,6 +15,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cluster"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/encrypt"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 	"github.com/cloudreve/Cloudreve/v4/pkg/queue"
@@ -229,29 +230,46 @@ func (m *manager) Upload(ctx context.Context, req *fs.UploadRequest, policy *ent
 	}
 
 	if session != nil && session.EncryptMetadata != nil && !req.Props.ClientSideEncrypted {
-		cryptor, err := m.dep.EncryptorFactory(ctx)(session.EncryptMetadata.Algorithm)
-		if err != nil {
-			return fmt.Errorf("failed to create cryptor: %w", err)
-		}
-
-		err = cryptor.LoadMetadata(ctx, session.EncryptMetadata)
-		if err != nil {
-			return fmt.Errorf("failed to load encrypt metadata: %w", err)
-		}
-
-		if err := cryptor.SetSource(req.File, req.Seeker, req.Props.Size, 0); err != nil {
-			return fmt.Errorf("failed to set source: %w", err)
-		}
-
-		req.File = cryptor
-
-		if req.Seeker != nil {
-			req.Seeker = cryptor
+		if err := encryptUploadRequest(ctx, m.dep.EncryptorFactory(ctx), req, session.EncryptMetadata, req.Offset); err != nil {
+			return err
 		}
 	}
 
 	if err := d.Put(ctx, req); err != nil {
 		return serializer.NewError(serializer.CodeIOFailed, "Failed to upload file", err)
+	}
+
+	return nil
+}
+
+// encryptUploadRequest wraps the file stream of req with a cryptor described by metadata, so
+// that the stream is encrypted on the fly while being written into a storage policy.
+//
+// counterOffset is the absolute offset of the stream within the blob it belongs to. It has to
+// be given so that the keystream stays aligned when only a part of the blob is being written,
+// and so that a retried chunk resumes from the right position.
+func encryptUploadRequest(ctx context.Context, factory encrypt.CryptorFactory, req *fs.UploadRequest,
+	metadata *types.EncryptMetadata, counterOffset int64) error {
+	cryptor, err := factory(metadata.Algorithm)
+	if err != nil {
+		return fmt.Errorf("failed to create cryptor: %w", err)
+	}
+
+	if err := cryptor.LoadMetadata(ctx, metadata); err != nil {
+		return fmt.Errorf("failed to load encrypt metadata: %w", err)
+	}
+
+	if err := cryptor.SetSource(req.File, req.Seeker, req.Props.Size, counterOffset); err != nil {
+		return fmt.Errorf("failed to set source: %w", err)
+	}
+
+	req.File = cryptor
+
+	// The seeker has to be replaced along with the file stream: chunked drivers rewind the
+	// request on retry, and rewinding the plaintext without rewinding the keystream would
+	// silently produce corrupted ciphertext.
+	if req.Seeker != nil {
+		req.Seeker = cryptor
 	}
 
 	return nil
