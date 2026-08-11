@@ -7,7 +7,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/auth"
-	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
+	"github.com/cloudreve/Cloudreve/v4/pkg/cluster/routes"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,10 +19,10 @@ func (s *DiscoveryService) Get(c *gin.Context) *DiscoveryResponse {
 	issuer := oidcIssuer(c)
 	return &DiscoveryResponse{
 		Issuer:                issuer.String(),
-		AuthorizationEndpoint: oidcEndpoint(issuer, "/session/authorize"),
-		TokenEndpoint:         oidcEndpoint(issuer, constants.APIPrefix+"/session/oauth/token"),
-		UserInfoEndpoint:      oidcEndpoint(issuer, constants.APIPrefix+"/session/oauth/userinfo"),
-		JWKSURI:               oidcEndpoint(issuer, constants.APIPrefix+"/session/oauth/jwks"),
+		AuthorizationEndpoint: routes.MasterOIDCEndpointUrl(issuer, "/session/authorize"),
+		TokenEndpoint:         routes.MasterOIDCEndpointUrl(issuer, constants.APIPrefix+"/session/oauth/token"),
+		UserInfoEndpoint:      routes.MasterOIDCEndpointUrl(issuer, constants.APIPrefix+"/session/oauth/userinfo"),
+		JWKSURI:               routes.MasterOIDCEndpointUrl(issuer, constants.APIPrefix+"/session/oauth/jwks"),
 		ResponseTypesSupported: []string{
 			"code",
 		},
@@ -60,18 +60,13 @@ func (s *DiscoveryService) Get(c *gin.Context) *DiscoveryResponse {
 
 func (s *JWKService) Get(c *gin.Context) (*auth.JWKSet, error) {
 	dep := dependency.FromContext(c)
-	return auth.OIDCJWKSet(c, dep.SettingClient())
+	return auth.OIDCJWKSet(dep.SettingProvider().OIDCSigningPrivateKey(c))
 }
 
 func oidcIssuer(c *gin.Context) *url.URL {
 	dep := dependency.FromContext(c)
-	issuer := *dep.SettingProvider().SiteURL(setting.UseFirstSiteUrl(c))
+	issuer := *dep.SettingProvider().SiteURL(c)
 	issuer.RawQuery = ""
 	issuer.Fragment = ""
 	return &issuer
-}
-
-func oidcEndpoint(issuer *url.URL, endpoint string) string {
-	route, _ := url.Parse(endpoint)
-	return issuer.ResolveReference(route).String()
 }

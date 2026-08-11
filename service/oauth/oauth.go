@@ -132,7 +132,7 @@ type (
 		ClientSecret string `form:"client_secret" binding:"required"`
 		GrantType    string `form:"grant_type" binding:"required,eq=authorization_code"`
 		Code         string `form:"code" binding:"required"`
-		RedirectURI  string `form:"redirect_uri" binding:"required"`
+		RedirectURI  string `form:"redirect_uri"`
 		CodeVerifier string `form:"code_verifier"`
 	}
 )
@@ -163,7 +163,9 @@ func (s *ExchangeTokenService) Exchange(c *gin.Context) (*TokenResponse, error) 
 	if authCode.ClientID != s.ClientID {
 		return nil, serializer.NewError(serializer.CodeCredentialInvalid, "Client ID mismatch", nil)
 	}
-	if authCode.RedirectURI != s.RedirectURI {
+	if s.RedirectURI == "" {
+		dep.Logger().Warning("OAuth client %q did not provide redirect_uri in token request; it may become required in a future release", s.ClientID)
+	} else if authCode.RedirectURI != s.RedirectURI {
 		return nil, serializer.NewError(serializer.CodeCredentialInvalid, "Redirect URI mismatch", nil)
 	}
 
@@ -275,7 +277,7 @@ func buildIDToken(c *gin.Context, dep dependency.Dep, user *ent.User, clientID s
 		}
 	}
 
-	return auth.SignOIDCIDToken(c, dep.SettingClient(), claims)
+	return auth.SignOIDCIDToken(dep.SettingProvider().OIDCSigningPrivateKey(c), claims)
 }
 
 type (
