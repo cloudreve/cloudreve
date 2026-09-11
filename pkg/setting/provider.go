@@ -663,7 +663,7 @@ func (s *settingProvider) FTSChunkSize(ctx context.Context) int {
 func (s *settingProvider) Queue(ctx context.Context, queueType QueueType) *QueueSetting {
 	queueTypeStr := string(queueType)
 	return &QueueSetting{
-		WorkerNum:          s.getInt(ctx, "queue_"+queueTypeStr+"_worker_num,", 15),
+		WorkerNum:          s.getInt(ctx, "queue_"+queueTypeStr+"_worker_num", 15),
 		MaxExecution:       time.Duration(s.getInt(ctx, "queue_"+queueTypeStr+"_max_execution", 86400)) * time.Second,
 		BackoffFactor:      s.getFloat64(ctx, "queue_"+queueTypeStr+"_backoff_factor", 4),
 		BackoffMaxDuration: time.Duration(s.getInt(ctx, "queue_"+queueTypeStr+"_backoff_max_duration", 3600)) * time.Second,
