@@ -34,6 +34,8 @@ type User struct {
 	Password string `json:"-"`
 	// Status holds the value of the "status" field.
 	Status user.Status `json:"status,omitempty"`
+	// BanExpires holds the value of the "ban_expires" field.
+	BanExpires *time.Time `json:"ban_expires,omitempty"`
 	// Storage holds the value of the "storage" field.
 	Storage int64 `json:"storage,omitempty"`
 	// TwoFactorSecret holds the value of the "two_factor_secret" field.
@@ -171,7 +173,7 @@ func (*User) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case user.FieldEmail, user.FieldNick, user.FieldPassword, user.FieldStatus, user.FieldTwoFactorSecret, user.FieldAvatar:
 			values[i] = new(sql.NullString)
-		case user.FieldCreatedAt, user.FieldUpdatedAt, user.FieldDeletedAt:
+		case user.FieldCreatedAt, user.FieldUpdatedAt, user.FieldDeletedAt, user.FieldBanExpires:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -236,6 +238,13 @@ func (u *User) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
 				u.Status = user.Status(value.String)
+			}
+		case user.FieldBanExpires:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field ban_expires", values[i])
+			} else if value.Valid {
+				u.BanExpires = new(time.Time)
+				*u.BanExpires = value.Time
 			}
 		case user.FieldStorage:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -371,6 +380,11 @@ func (u *User) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(fmt.Sprintf("%v", u.Status))
+	builder.WriteString(", ")
+	if v := u.BanExpires; v != nil {
+		builder.WriteString("ban_expires=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("storage=")
 	builder.WriteString(fmt.Sprintf("%v", u.Storage))

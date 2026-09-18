@@ -258,6 +258,9 @@ func (service *SSOExchangeService) SSOExchange(c *gin.Context) (any, error) {
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeUserNotFound, "User not found", err)
 	}
+	if u, err = dep.UserClient().LiftExpiredBan(c, u); err != nil {
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to lift expired ban", err)
+	}
 	if err := checkUserStatus(u); err != nil {
 		return nil, err
 	}
@@ -272,6 +275,9 @@ func ssoResolveUser(c *gin.Context, dep dependency.Dep, sso *setting.SSO, email,
 
 	u, err := userClient.GetByEmail(c, email)
 	if err == nil {
+		if u, err = userClient.LiftExpiredBan(c, u); err != nil {
+			return nil, serializer.NewError(serializer.CodeDBError, "Failed to lift expired ban", err)
+		}
 		if err := checkUserStatus(u); err != nil {
 			return nil, err
 		}

@@ -85,6 +85,11 @@ func Password(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldPassword, v))
 }
 
+// BanExpires applies equality check predicate on the "ban_expires" field. It's identical to BanExpiresEQ.
+func BanExpires(v time.Time) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldBanExpires, v))
+}
+
 // Storage applies equality check predicate on the "storage" field. It's identical to StorageEQ.
 func Storage(v int64) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldStorage, v))
@@ -458,6 +463,56 @@ func StatusIn(vs ...Status) predicate.User {
 // StatusNotIn applies the NotIn predicate on the "status" field.
 func StatusNotIn(vs ...Status) predicate.User {
 	return predicate.User(sql.FieldNotIn(FieldStatus, vs...))
+}
+
+// BanExpiresEQ applies the EQ predicate on the "ban_expires" field.
+func BanExpiresEQ(v time.Time) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldBanExpires, v))
+}
+
+// BanExpiresNEQ applies the NEQ predicate on the "ban_expires" field.
+func BanExpiresNEQ(v time.Time) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldBanExpires, v))
+}
+
+// BanExpiresIn applies the In predicate on the "ban_expires" field.
+func BanExpiresIn(vs ...time.Time) predicate.User {
+	return predicate.User(sql.FieldIn(FieldBanExpires, vs...))
+}
+
+// BanExpiresNotIn applies the NotIn predicate on the "ban_expires" field.
+func BanExpiresNotIn(vs ...time.Time) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldBanExpires, vs...))
+}
+
+// BanExpiresGT applies the GT predicate on the "ban_expires" field.
+func BanExpiresGT(v time.Time) predicate.User {
+	return predicate.User(sql.FieldGT(FieldBanExpires, v))
+}
+
+// BanExpiresGTE applies the GTE predicate on the "ban_expires" field.
+func BanExpiresGTE(v time.Time) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldBanExpires, v))
+}
+
+// BanExpiresLT applies the LT predicate on the "ban_expires" field.
+func BanExpiresLT(v time.Time) predicate.User {
+	return predicate.User(sql.FieldLT(FieldBanExpires, v))
+}
+
+// BanExpiresLTE applies the LTE predicate on the "ban_expires" field.
+func BanExpiresLTE(v time.Time) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldBanExpires, v))
+}
+
+// BanExpiresIsNil applies the IsNil predicate on the "ban_expires" field.
+func BanExpiresIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldBanExpires))
+}
+
+// BanExpiresNotNil applies the NotNil predicate on the "ban_expires" field.
+func BanExpiresNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldBanExpires))
 }
 
 // StorageEQ applies the EQ predicate on the "storage" field.

@@ -114,6 +114,20 @@ func (uc *UserCreate) SetNillableStatus(u *user.Status) *UserCreate {
 	return uc
 }
 
+// SetBanExpires sets the "ban_expires" field.
+func (uc *UserCreate) SetBanExpires(t time.Time) *UserCreate {
+	uc.mutation.SetBanExpires(t)
+	return uc
+}
+
+// SetNillableBanExpires sets the "ban_expires" field if the given value is not nil.
+func (uc *UserCreate) SetNillableBanExpires(t *time.Time) *UserCreate {
+	if t != nil {
+		uc.SetBanExpires(*t)
+	}
+	return uc
+}
+
 // SetStorage sets the "storage" field.
 func (uc *UserCreate) SetStorage(i int64) *UserCreate {
 	uc.mutation.SetStorage(i)
@@ -468,6 +482,10 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		_spec.SetField(user.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
+	if value, ok := uc.mutation.BanExpires(); ok {
+		_spec.SetField(user.FieldBanExpires, field.TypeTime, value)
+		_node.BanExpires = &value
+	}
 	if value, ok := uc.mutation.Storage(); ok {
 		_spec.SetField(user.FieldStorage, field.TypeInt64, value)
 		_node.Storage = value
@@ -765,6 +783,24 @@ func (u *UserUpsert) UpdateStatus() *UserUpsert {
 	return u
 }
 
+// SetBanExpires sets the "ban_expires" field.
+func (u *UserUpsert) SetBanExpires(v time.Time) *UserUpsert {
+	u.Set(user.FieldBanExpires, v)
+	return u
+}
+
+// UpdateBanExpires sets the "ban_expires" field to the value that was provided on create.
+func (u *UserUpsert) UpdateBanExpires() *UserUpsert {
+	u.SetExcluded(user.FieldBanExpires)
+	return u
+}
+
+// ClearBanExpires clears the value of the "ban_expires" field.
+func (u *UserUpsert) ClearBanExpires() *UserUpsert {
+	u.SetNull(user.FieldBanExpires)
+	return u
+}
+
 // SetStorage sets the "storage" field.
 func (u *UserUpsert) SetStorage(v int64) *UserUpsert {
 	u.Set(user.FieldStorage, v)
@@ -989,6 +1025,27 @@ func (u *UserUpsertOne) SetStatus(v user.Status) *UserUpsertOne {
 func (u *UserUpsertOne) UpdateStatus() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateStatus()
+	})
+}
+
+// SetBanExpires sets the "ban_expires" field.
+func (u *UserUpsertOne) SetBanExpires(v time.Time) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetBanExpires(v)
+	})
+}
+
+// UpdateBanExpires sets the "ban_expires" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateBanExpires() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateBanExpires()
+	})
+}
+
+// ClearBanExpires clears the value of the "ban_expires" field.
+func (u *UserUpsertOne) ClearBanExpires() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearBanExpires()
 	})
 }
 
@@ -1401,6 +1458,27 @@ func (u *UserUpsertBulk) SetStatus(v user.Status) *UserUpsertBulk {
 func (u *UserUpsertBulk) UpdateStatus() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateStatus()
+	})
+}
+
+// SetBanExpires sets the "ban_expires" field.
+func (u *UserUpsertBulk) SetBanExpires(v time.Time) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetBanExpires(v)
+	})
+}
+
+// UpdateBanExpires sets the "ban_expires" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateBanExpires() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateBanExpires()
+	})
+}
+
+// ClearBanExpires clears the value of the "ban_expires" field.
+func (u *UserUpsertBulk) ClearBanExpires() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearBanExpires()
 	})
 }
 

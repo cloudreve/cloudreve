@@ -61,6 +61,9 @@ type (
 		GetActiveByID(ctx context.Context, id int) (*ent.User, error)
 		// SetStatus Set user to given status
 		SetStatus(ctx context.Context, u *ent.User, status user.Status) (*ent.User, error)
+		// LiftExpiredBan restores a banned user whose ban_expires has passed.
+		// It returns the (possibly updated) user; permanent bans are untouched.
+		LiftExpiredBan(ctx context.Context, u *ent.User) (*ent.User, error)
 		// AnonymousUser returns the anonymous user.
 		AnonymousUser(ctx context.Context) (*ent.User, error)
 		// GetLoginUserByID returns the login user by its ID. It emits some errors and fallback to anonymous user.
@@ -364,6 +367,24 @@ func (c *userClient) SetStatus(ctx context.Context, u *ent.User, status user.Sta
 	return c.client.User.UpdateOne(u).SetStatus(status).Save(ctx)
 }
 
+func (c *userClient) LiftExpiredBan(ctx context.Context, u *ent.User) (*ent.User, error) {
+	banned := u.Status == user.StatusManualBanned || u.Status == user.StatusSysBanned
+	if !banned || u.BanExpires == nil || u.BanExpires.After(time.Now()) {
+		return u, nil
+	}
+
+	if err := c.client.User.UpdateOneID(u.ID).
+		SetStatus(user.StatusActive).
+		ClearBanExpires().
+		Exec(ctx); err != nil {
+		return nil, err
+	}
+
+	u.Status = user.StatusActive
+	u.BanExpires = nil
+	return u, nil
+}
+
 func (c *userClient) Create(ctx context.Context, args *NewUserArgs) (*ent.User, error) {
 	// Try to check if there's user with same email.
 	if existedUser, err := c.GetByEmail(ctx, args.Email); err == nil {
@@ -578,6 +599,12 @@ func (c *userClient) Upsert(ctx context.Context, u *ent.User, password, twoFa st
 		SetAvatar(u.Avatar).
 		SetStatus(u.Status).
 		SetGroupID(u.GroupUsers)
+
+	if u.Status == user.StatusManualBanned || u.Status == user.StatusSysBanned {
+		q.SetNillableBanExpires(u.BanExpires)
+	} else {
+		q.ClearBanExpires()
+	}
 
 	if password != "" {
 		pwdDigest, err := digestPassword(password)

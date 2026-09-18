@@ -1384,7 +1384,9 @@
     "deleteXUsers": "Delete {{num}} users",
     "confirmBatchDelete": "Are you sure you want to delete {{num}} users?",
     "calibrateStorage": "Calibrate storage",
-    "calibrateStorageSuccess": "Storage calibrated successfully."
+    "calibrateStorageSuccess": "Storage calibrated successfully.",
+    "banExpires": "Ban expires",
+    "banExpiresDes": "Optional. The ban lifts automatically after this time; empty means permanent."
   },
   "file": {
     "deleteXFiles": "Delete {{num}} files",

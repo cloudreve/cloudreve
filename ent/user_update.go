@@ -126,6 +126,26 @@ func (uu *UserUpdate) SetNillableStatus(u *user.Status) *UserUpdate {
 	return uu
 }
 
+// SetBanExpires sets the "ban_expires" field.
+func (uu *UserUpdate) SetBanExpires(t time.Time) *UserUpdate {
+	uu.mutation.SetBanExpires(t)
+	return uu
+}
+
+// SetNillableBanExpires sets the "ban_expires" field if the given value is not nil.
+func (uu *UserUpdate) SetNillableBanExpires(t *time.Time) *UserUpdate {
+	if t != nil {
+		uu.SetBanExpires(*t)
+	}
+	return uu
+}
+
+// ClearBanExpires clears the value of the "ban_expires" field.
+func (uu *UserUpdate) ClearBanExpires() *UserUpdate {
+	uu.mutation.ClearBanExpires()
+	return uu
+}
+
 // SetStorage sets the "storage" field.
 func (uu *UserUpdate) SetStorage(i int64) *UserUpdate {
 	uu.mutation.ResetStorage()
@@ -623,6 +643,12 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := uu.mutation.Status(); ok {
 		_spec.SetField(user.FieldStatus, field.TypeEnum, value)
+	}
+	if value, ok := uu.mutation.BanExpires(); ok {
+		_spec.SetField(user.FieldBanExpires, field.TypeTime, value)
+	}
+	if uu.mutation.BanExpiresCleared() {
+		_spec.ClearField(user.FieldBanExpires, field.TypeTime)
 	}
 	if value, ok := uu.mutation.Storage(); ok {
 		_spec.SetField(user.FieldStorage, field.TypeInt64, value)
@@ -1142,6 +1168,26 @@ func (uuo *UserUpdateOne) SetNillableStatus(u *user.Status) *UserUpdateOne {
 	if u != nil {
 		uuo.SetStatus(*u)
 	}
+	return uuo
+}
+
+// SetBanExpires sets the "ban_expires" field.
+func (uuo *UserUpdateOne) SetBanExpires(t time.Time) *UserUpdateOne {
+	uuo.mutation.SetBanExpires(t)
+	return uuo
+}
+
+// SetNillableBanExpires sets the "ban_expires" field if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableBanExpires(t *time.Time) *UserUpdateOne {
+	if t != nil {
+		uuo.SetBanExpires(*t)
+	}
+	return uuo
+}
+
+// ClearBanExpires clears the value of the "ban_expires" field.
+func (uuo *UserUpdateOne) ClearBanExpires() *UserUpdateOne {
+	uuo.mutation.ClearBanExpires()
 	return uuo
 }
 
@@ -1672,6 +1718,12 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 	}
 	if value, ok := uuo.mutation.Status(); ok {
 		_spec.SetField(user.FieldStatus, field.TypeEnum, value)
+	}
+	if value, ok := uuo.mutation.BanExpires(); ok {
+		_spec.SetField(user.FieldBanExpires, field.TypeTime, value)
+	}
+	if uuo.mutation.BanExpiresCleared() {
+		_spec.ClearField(user.FieldBanExpires, field.TypeTime)
 	}
 	if value, ok := uuo.mutation.Storage(); ok {
 		_spec.SetField(user.FieldStorage, field.TypeInt64, value)

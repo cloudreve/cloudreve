@@ -25,6 +25,10 @@ func (User) Fields() []ent.Field {
 		field.Enum("status").
 			Values("active", "inactive", "manual_banned", "sys_banned").
 			Default("active"),
+		// ban_expires lifts a banned status after this time; nil = permanent.
+		field.Time("ban_expires").
+			Optional().
+			Nillable(),
 		field.Int64("storage").
 			Default(0),
 		field.String("two_factor_secret").

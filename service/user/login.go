@@ -88,6 +88,10 @@ func (service *UserResetEmailService) Reset(c *gin.Context) error {
 		return serializer.NewError(serializer.CodeUserNotFound, "User not found", err)
 	}
 
+	if u, err = userClient.LiftExpiredBan(c, u); err != nil {
+		return serializer.NewError(serializer.CodeDBError, "Failed to lift expired ban", err)
+	}
+
 	if u.Status == user.StatusManualBanned || u.Status == user.StatusSysBanned {
 		return serializer.NewError(serializer.CodeUserBaned, "This user is banned", nil)
 	}
@@ -127,6 +131,9 @@ func (service *UserLoginService) Login(c *gin.Context) (*ent.User, string, error
 
 	ctx := context.WithValue(c, inventory.LoadUserGroup{}, true)
 	expectedUser, err := userClient.GetByEmail(ctx, service.UserName)
+	if err == nil {
+		expectedUser, err = userClient.LiftExpiredBan(ctx, expectedUser)
+	}
 
 	// 一系列校验
 	if err != nil {

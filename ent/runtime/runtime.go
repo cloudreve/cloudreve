@@ -415,11 +415,11 @@ func init() {
 	// user.NickValidator is a validator for the "nick" field. It is called by the builders before save.
 	user.NickValidator = userDescNick.Validators[0].(func(string) error)
 	// userDescStorage is the schema descriptor for storage field.
-	userDescStorage := userFields[4].Descriptor()
+	userDescStorage := userFields[5].Descriptor()
 	// user.DefaultStorage holds the default value on creation for the storage field.
 	user.DefaultStorage = userDescStorage.Default.(int64)
 	// userDescSettings is the schema descriptor for settings field.
-	userDescSettings := userFields[7].Descriptor()
+	userDescSettings := userFields[8].Descriptor()
 	// user.DefaultSettings holds the default value on creation for the settings field.
 	user.DefaultSettings = userDescSettings.Default.(*types.UserSetting)
 }

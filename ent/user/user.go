@@ -31,6 +31,8 @@ const (
 	FieldPassword = "password"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
+	// FieldBanExpires holds the string denoting the ban_expires field in the database.
+	FieldBanExpires = "ban_expires"
 	// FieldStorage holds the string denoting the storage field in the database.
 	FieldStorage = "storage"
 	// FieldTwoFactorSecret holds the string denoting the two_factor_secret field in the database.
@@ -136,6 +138,7 @@ var Columns = []string{
 	FieldNick,
 	FieldPassword,
 	FieldStatus,
+	FieldBanExpires,
 	FieldStorage,
 	FieldTwoFactorSecret,
 	FieldAvatar,
@@ -246,6 +249,11 @@ func ByPassword(opts ...sql.OrderTermOption) OrderOption {
 // ByStatus orders the results by the status field.
 func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatus, opts...).ToFunc()
+}
+
+// ByBanExpires orders the results by the ban_expires field.
+func ByBanExpires(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBanExpires, opts...).ToFunc()
 }
 
 // ByStorage orders the results by the storage field.

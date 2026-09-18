@@ -1384,7 +1384,9 @@
     "deleteXUsers": "删除 {{num}} 个用户",
     "confirmBatchDelete": "确认要删除 {{num}} 个用户？",
     "calibrateStorage": "校准存储空间",
-    "calibrateStorageSuccess": "存储空间校准成功"
+    "calibrateStorageSuccess": "存储空间校准成功",
+    "banExpires": "封禁截止时间",
+    "banExpiresDes": "可选。到期后自动解除封禁；留空表示永久封禁。"
   },
   "file": {
     "deleteXFiles": "删除 {{num}} 个文件",
