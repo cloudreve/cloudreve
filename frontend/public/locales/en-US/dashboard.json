@@ -1392,7 +1392,13 @@
     "banExpires": "Ban expires",
     "banExpiresDes": "Optional. The ban lifts automatically after this time; empty means permanent.",
     "banReason": "Ban reason",
-    "banReasonDes": "Optional. Shown to the user when a banned login is rejected."
+    "banReasonDes": "Optional. Shown to the user when a banned login is rejected.",
+    "lastLogin": "Last login",
+    "uids": "User IDs",
+    "uidsPlaceholder": "Comma-separated IDs, e.g. 2,3,5",
+    "editXUsers": "Edit {{num}} users",
+    "batchEditXUsers": "Batch edit {{num}} users",
+    "noChange": "No change"
   },
   "file": {
     "deleteXFiles": "Delete {{num}} files",

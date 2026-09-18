@@ -1392,7 +1392,13 @@
     "banExpires": "封禁截止时间",
     "banExpiresDes": "可选。到期后自动解除封禁；留空表示永久封禁。",
     "banReason": "封禁原因",
-    "banReasonDes": "可选。封禁用户登录被拒绝时向其展示。"
+    "banReasonDes": "可选。封禁用户登录被拒绝时向其展示。",
+    "lastLogin": "上次登录",
+    "uids": "用户 ID",
+    "uidsPlaceholder": "逗号分隔的 ID，如 2,3,5",
+    "editXUsers": "编辑 {{num}} 个用户",
+    "batchEditXUsers": "批量编辑 {{num}} 个用户",
+    "noChange": "不修改"
   },
   "file": {
     "deleteXFiles": "删除 {{num}} 个文件",

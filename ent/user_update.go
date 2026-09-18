@@ -166,6 +166,26 @@ func (uu *UserUpdate) ClearBanReason() *UserUpdate {
 	return uu
 }
 
+// SetLastLogin sets the "last_login" field.
+func (uu *UserUpdate) SetLastLogin(t time.Time) *UserUpdate {
+	uu.mutation.SetLastLogin(t)
+	return uu
+}
+
+// SetNillableLastLogin sets the "last_login" field if the given value is not nil.
+func (uu *UserUpdate) SetNillableLastLogin(t *time.Time) *UserUpdate {
+	if t != nil {
+		uu.SetLastLogin(*t)
+	}
+	return uu
+}
+
+// ClearLastLogin clears the value of the "last_login" field.
+func (uu *UserUpdate) ClearLastLogin() *UserUpdate {
+	uu.mutation.ClearLastLogin()
+	return uu
+}
+
 // SetStorage sets the "storage" field.
 func (uu *UserUpdate) SetStorage(i int64) *UserUpdate {
 	uu.mutation.ResetStorage()
@@ -675,6 +695,12 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if uu.mutation.BanReasonCleared() {
 		_spec.ClearField(user.FieldBanReason, field.TypeString)
+	}
+	if value, ok := uu.mutation.LastLogin(); ok {
+		_spec.SetField(user.FieldLastLogin, field.TypeTime, value)
+	}
+	if uu.mutation.LastLoginCleared() {
+		_spec.ClearField(user.FieldLastLogin, field.TypeTime)
 	}
 	if value, ok := uu.mutation.Storage(); ok {
 		_spec.SetField(user.FieldStorage, field.TypeInt64, value)
@@ -1237,6 +1263,26 @@ func (uuo *UserUpdateOne) ClearBanReason() *UserUpdateOne {
 	return uuo
 }
 
+// SetLastLogin sets the "last_login" field.
+func (uuo *UserUpdateOne) SetLastLogin(t time.Time) *UserUpdateOne {
+	uuo.mutation.SetLastLogin(t)
+	return uuo
+}
+
+// SetNillableLastLogin sets the "last_login" field if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableLastLogin(t *time.Time) *UserUpdateOne {
+	if t != nil {
+		uuo.SetLastLogin(*t)
+	}
+	return uuo
+}
+
+// ClearLastLogin clears the value of the "last_login" field.
+func (uuo *UserUpdateOne) ClearLastLogin() *UserUpdateOne {
+	uuo.mutation.ClearLastLogin()
+	return uuo
+}
+
 // SetStorage sets the "storage" field.
 func (uuo *UserUpdateOne) SetStorage(i int64) *UserUpdateOne {
 	uuo.mutation.ResetStorage()
@@ -1776,6 +1822,12 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 	}
 	if uuo.mutation.BanReasonCleared() {
 		_spec.ClearField(user.FieldBanReason, field.TypeString)
+	}
+	if value, ok := uuo.mutation.LastLogin(); ok {
+		_spec.SetField(user.FieldLastLogin, field.TypeTime, value)
+	}
+	if uuo.mutation.LastLoginCleared() {
+		_spec.ClearField(user.FieldLastLogin, field.TypeTime)
 	}
 	if value, ok := uuo.mutation.Storage(); ok {
 		_spec.SetField(user.FieldStorage, field.TypeInt64, value)

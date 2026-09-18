@@ -170,6 +170,12 @@ type (
 func IssueToken(c *gin.Context) (*BuiltinLoginResponse, error) {
 	dep := dependency.FromContext(c)
 	u := inventory.UserFromContext(c)
+
+	// Best-effort last-login stamp; a failed update must not block sign-in.
+	if err := dep.UserClient().UpdateLastLogin(c, u.ID); err != nil {
+		dep.Logger().Warning("Failed to update last_login for user %d: %s", u.ID, err)
+	}
+
 	token, err := dep.TokenAuth().Issue(c, &auth.IssueTokenArgs{
 		User:        u,
 		RootTokenID: nil,

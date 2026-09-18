@@ -1862,6 +1862,26 @@ export function batchDeleteUser(args: BatchIDService): ThunkResponse<void> {
   };
 }
 
+export interface BatchUserUpdateService {
+  ids: number[];
+  status?: "active" | "inactive" | "manual_banned";
+  group_id?: number;
+}
+
+export function batchUpdateUser(args: BatchUserUpdateService): ThunkResponse<void> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/admin/user/batch/update`,
+        { method: "POST", data: args },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
 export function getFlattenFileList(args: AdminListService): ThunkResponse<ListFileResponse> {
   return async (dispatch, _getState) => {
     return await dispatch(

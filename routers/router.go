@@ -1200,6 +1200,12 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 							controllers.FromJSON[adminsvc.BatchUserService](adminsvc.BatchUserParamCtx{}),
 							controllers.AdminDeleteUser,
 						)
+						// 批量更新用户
+						batch.POST("update",
+							middleware.RequiredScopes(types.ScopeAdminWrite),
+							controllers.FromJSON[adminsvc.BatchUserUpdateService](adminsvc.BatchUserUpdateParamCtx{}),
+							controllers.AdminBatchUpdateUser,
+						)
 					}
 					user.POST(":id/calibrate",
 						middleware.RequiredScopes(types.ScopeAdminWrite),

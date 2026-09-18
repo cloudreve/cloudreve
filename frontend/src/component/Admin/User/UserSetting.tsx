@@ -1,4 +1,4 @@
-import { Delete } from "@mui/icons-material";
+import { Delete, Edit } from "@mui/icons-material";
 import {
   Badge,
   Box,
@@ -33,6 +33,7 @@ import PageContainer from "../../Pages/PageContainer";
 import PageHeader from "../../Pages/PageHeader";
 import TablePagination from "../Common/TablePagination";
 import { OrderByQuery, OrderDirectionQuery, PageQuery, PageSizeQuery } from "../StoragePolicy/StoragePolicySetting";
+import BatchUserDialog from "./BatchUserDialog";
 import NewUserDialog from "./NewUserDialog";
 import UserDialog from "./UserDialog/UserDialog";
 import UserFilterPopover from "./UserFilterPopover";
@@ -41,6 +42,7 @@ export const EmailQuery = "email";
 export const NickQuery = "nick";
 export const GroupQuery = "group";
 export const StatusQuery = "status";
+export const UidsQuery = "uids";
 
 const UserSetting = () => {
   const { t } = useTranslation("dashboard");
@@ -61,9 +63,11 @@ const UserSetting = () => {
   const [nick, setNick] = useQueryState(NickQuery, { defaultValue: "" });
   const [group, setGroup] = useQueryState(GroupQuery, { defaultValue: "" });
   const [status, setStatus] = useQueryState(StatusQuery, { defaultValue: "" });
+  const [uids, setUids] = useQueryState(UidsQuery, { defaultValue: "" });
   const [count, setCount] = useState(0);
   const [selected, setSelected] = useState<readonly number[]>([]);
   const [createNewOpen, setCreateNewOpen] = useState(false);
+  const [batchEditOpen, setBatchEditOpen] = useState(false);
   const filterPopupState = usePopupState({
     variant: "popover",
     popupId: "userFilterPopover",
@@ -81,11 +85,12 @@ const UserSetting = () => {
     setNick("");
     setGroup("");
     setStatus("");
-  }, [setEmail, setNick, setGroup, setStatus]);
+    setUids("");
+  }, [setEmail, setNick, setGroup, setStatus, setUids]);
 
   useEffect(() => {
     fetchUsers();
-  }, [page, pageSize, orderBy, orderDirection, email, nick, group, status]);
+  }, [page, pageSize, orderBy, orderDirection, email, nick, group, status, uids]);
 
   const fetchUsers = () => {
     setLoading(true);
@@ -101,6 +106,7 @@ const UserSetting = () => {
           user_nick: nick,
           user_group: group,
           user_status: status,
+          user_ids: uids,
         },
       }),
     )
@@ -169,8 +175,8 @@ const UserSetting = () => {
   };
 
   const hasActiveFilters = useMemo(() => {
-    return !!(email || nick || group || status);
-  }, [email, nick, group, status]);
+    return !!(email || nick || group || status || uids);
+  }, [email, nick, group, status, uids]);
 
   const handleUserDialogOpen = (id: number) => {
     setUserDialogID(id);
@@ -193,6 +199,12 @@ const UserSetting = () => {
         userID={userDialogID}
         onUpdated={() => fetchUsers()}
       />
+      <BatchUserDialog
+        open={batchEditOpen}
+        onClose={() => setBatchEditOpen(false)}
+        ids={Array.from(selected)}
+        onUpdated={() => fetchUsers()}
+      />
       <Container maxWidth="xl">
         <PageHeader title={t("dashboard:nav.users")} />
         <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
@@ -210,6 +222,8 @@ const UserSetting = () => {
             setGroup={setGroup}
             status={status}
             setStatus={setStatus}
+            uids={uids}
+            setUids={setUids}
             clearFilters={clearFilters}
           />
 
@@ -226,6 +240,9 @@ const UserSetting = () => {
           {selected.length > 0 && !isMobile && (
             <>
               <Divider orientation="vertical" flexItem />
+              <Button startIcon={<Edit />} variant="contained" onClick={() => setBatchEditOpen(true)}>
+                {t("user.editXUsers", { num: selected.length })}
+              </Button>
               <Button startIcon={<Delete />} variant="contained" color="error" onClick={handleDelete}>
                 {t("user.deleteXUsers", { num: selected.length })}
               </Button>
@@ -234,6 +251,9 @@ const UserSetting = () => {
         </Stack>
         {isMobile && selected.length > 0 && (
           <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+            <Button startIcon={<Edit />} variant="contained" onClick={() => setBatchEditOpen(true)}>
+              {t("user.editXUsers", { num: selected.length })}
+            </Button>
             <Button startIcon={<Delete />} variant="contained" color="error" onClick={handleDelete}>
               {t("user.deleteXUsers", { num: selected.length })}
             </Button>
@@ -272,6 +292,15 @@ const UserSetting = () => {
                 <NoWrapTableCell width={100}>
                   <TableSortLabel active={orderBy === "storage"} direction={direction} onClick={onSortClick("storage")}>
                     {t("user.usedStorage")}
+                  </TableSortLabel>
+                </NoWrapTableCell>
+                <NoWrapTableCell width={150}>
+                  <TableSortLabel
+                    active={orderBy === "last_login"}
+                    direction={direction}
+                    onClick={onSortClick("last_login")}
+                  >
+                    {t("user.lastLogin")}
                   </TableSortLabel>
                 </NoWrapTableCell>
                 <NoWrapTableCell width={100} align="right"></NoWrapTableCell>

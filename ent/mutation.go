@@ -15174,6 +15174,7 @@ type UserMutation struct {
 	status              *user.Status
 	ban_expires         *time.Time
 	ban_reason          *string
+	last_login          *time.Time
 	storage             *int64
 	addstorage          *int64
 	two_factor_secret   *string
@@ -15683,6 +15684,55 @@ func (m *UserMutation) BanReasonCleared() bool {
 func (m *UserMutation) ResetBanReason() {
 	m.ban_reason = nil
 	delete(m.clearedFields, user.FieldBanReason)
+}
+
+// SetLastLogin sets the "last_login" field.
+func (m *UserMutation) SetLastLogin(t time.Time) {
+	m.last_login = &t
+}
+
+// LastLogin returns the value of the "last_login" field in the mutation.
+func (m *UserMutation) LastLogin() (r time.Time, exists bool) {
+	v := m.last_login
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastLogin returns the old "last_login" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldLastLogin(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastLogin is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastLogin requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastLogin: %w", err)
+	}
+	return oldValue.LastLogin, nil
+}
+
+// ClearLastLogin clears the value of the "last_login" field.
+func (m *UserMutation) ClearLastLogin() {
+	m.last_login = nil
+	m.clearedFields[user.FieldLastLogin] = struct{}{}
+}
+
+// LastLoginCleared returns if the "last_login" field was cleared in this mutation.
+func (m *UserMutation) LastLoginCleared() bool {
+	_, ok := m.clearedFields[user.FieldLastLogin]
+	return ok
+}
+
+// ResetLastLogin resets all changes to the "last_login" field.
+func (m *UserMutation) ResetLastLogin() {
+	m.last_login = nil
+	delete(m.clearedFields, user.FieldLastLogin)
 }
 
 // SetStorage sets the "storage" field.
@@ -16430,7 +16480,7 @@ func (m *UserMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 14)
+	fields := make([]string, 0, 15)
 	if m.created_at != nil {
 		fields = append(fields, user.FieldCreatedAt)
 	}
@@ -16457,6 +16507,9 @@ func (m *UserMutation) Fields() []string {
 	}
 	if m.ban_reason != nil {
 		fields = append(fields, user.FieldBanReason)
+	}
+	if m.last_login != nil {
+		fields = append(fields, user.FieldLastLogin)
 	}
 	if m.storage != nil {
 		fields = append(fields, user.FieldStorage)
@@ -16499,6 +16552,8 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 		return m.BanExpires()
 	case user.FieldBanReason:
 		return m.BanReason()
+	case user.FieldLastLogin:
+		return m.LastLogin()
 	case user.FieldStorage:
 		return m.Storage()
 	case user.FieldTwoFactorSecret:
@@ -16536,6 +16591,8 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldBanExpires(ctx)
 	case user.FieldBanReason:
 		return m.OldBanReason(ctx)
+	case user.FieldLastLogin:
+		return m.OldLastLogin(ctx)
 	case user.FieldStorage:
 		return m.OldStorage(ctx)
 	case user.FieldTwoFactorSecret:
@@ -16617,6 +16674,13 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetBanReason(v)
+		return nil
+	case user.FieldLastLogin:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastLogin(v)
 		return nil
 	case user.FieldStorage:
 		v, ok := value.(int64)
@@ -16710,6 +16774,9 @@ func (m *UserMutation) ClearedFields() []string {
 	if m.FieldCleared(user.FieldBanReason) {
 		fields = append(fields, user.FieldBanReason)
 	}
+	if m.FieldCleared(user.FieldLastLogin) {
+		fields = append(fields, user.FieldLastLogin)
+	}
 	if m.FieldCleared(user.FieldTwoFactorSecret) {
 		fields = append(fields, user.FieldTwoFactorSecret)
 	}
@@ -16744,6 +16811,9 @@ func (m *UserMutation) ClearField(name string) error {
 		return nil
 	case user.FieldBanReason:
 		m.ClearBanReason()
+		return nil
+	case user.FieldLastLogin:
+		m.ClearLastLogin()
 		return nil
 	case user.FieldTwoFactorSecret:
 		m.ClearTwoFactorSecret()
@@ -16788,6 +16858,9 @@ func (m *UserMutation) ResetField(name string) error {
 		return nil
 	case user.FieldBanReason:
 		m.ResetBanReason()
+		return nil
+	case user.FieldLastLogin:
+		m.ResetLastLogin()
 		return nil
 	case user.FieldStorage:
 		m.ResetStorage()

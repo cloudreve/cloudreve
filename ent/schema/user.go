@@ -32,6 +32,10 @@ func (User) Fields() []ent.Field {
 		// ban_reason is shown to the user when a banned login is rejected.
 		field.Text("ban_reason").
 			Optional(),
+		field.Time("last_login").
+			Optional().
+			Nillable().
+			Comment("Time of the last successful sign-in"),
 		field.Int64("storage").
 			Default(0),
 		field.String("two_factor_secret").

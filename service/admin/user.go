@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"strconv"
+	"strings"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/ent"
@@ -38,6 +39,8 @@ const (
 	userGroupCondition  = "user_group"
 	userNickCondition   = "user_nick"
 	userEmailCondition  = "user_email"
+	// userIDsCondition filters by a comma-separated list of numeric user IDs.
+	userIDsCondition = "user_ids"
 )
 
 func (service *AdminListService) Users(c *gin.Context) (*ListUserResponse, error) {
@@ -51,11 +54,26 @@ func (service *AdminListService) Users(c *gin.Context) (*ListUserResponse, error
 	var (
 		err     error
 		groupID int
+		ids     []int
 	)
 	if service.Conditions[userGroupCondition] != "" {
 		groupID, err = strconv.Atoi(service.Conditions[userGroupCondition])
 		if err != nil {
 			return nil, serializer.NewError(serializer.CodeParamErr, "Invalid group ID", err)
+		}
+	}
+
+	if service.Conditions[userIDsCondition] != "" {
+		for _, part := range strings.Split(service.Conditions[userIDsCondition], ",") {
+			part = strings.TrimSpace(part)
+			if part == "" {
+				continue
+			}
+			id, err := strconv.Atoi(part)
+			if err != nil {
+				return nil, serializer.NewError(serializer.CodeParamErr, "Invalid user ID list", err)
+			}
+			ids = append(ids, id)
 		}
 	}
 
@@ -70,6 +88,7 @@ func (service *AdminListService) Users(c *gin.Context) (*ListUserResponse, error
 		GroupID: groupID,
 		Nick:    service.Conditions[userNickCondition],
 		Email:   service.Conditions[userEmailCondition],
+		IDs:     ids,
 	})
 
 	if err != nil {
@@ -267,6 +286,49 @@ func (s *BatchUserService) Delete(c *gin.Context) error {
 			ae.Add(strconv.Itoa(id), serializer.NewError(serializer.CodeDBError, "Failed to commit transaction", err))
 			continue
 		}
+	}
+
+	return ae.Aggregate()
+}
+
+type (
+	// BatchUserUpdateService applies a status and/or group change to a set of
+	// users. At least one of the two fields must be set.
+	BatchUserUpdateService struct {
+		IDs     []int  `json:"ids" binding:"min=1"`
+		Status  string `json:"status" binding:"omitempty,oneof=active inactive manual_banned"`
+		GroupID int    `json:"group_id" binding:"omitempty,min=1"`
+	}
+	BatchUserUpdateParamCtx struct{}
+)
+
+func (s *BatchUserUpdateService) Update(c *gin.Context) error {
+	if s.Status == "" && s.GroupID == 0 {
+		return serializer.NewError(serializer.CodeParamErr, "Nothing to update", nil)
+	}
+
+	dep := dependency.FromContext(c)
+	userClient := dep.UserClient()
+	current := inventory.UserFromContext(c)
+
+	// The caller and the reserved initial admin cannot be modified in bulk.
+	ae := serializer.NewAggregateError()
+	ids := lo.Filter(s.IDs, func(id int, _ int) bool {
+		if id == current.ID || id == 1 {
+			ae.Add(strconv.Itoa(id), serializer.NewError(serializer.CodeInvalidActionOnDefaultUser, "Cannot modify this user in bulk", nil))
+			return false
+		}
+		return true
+	})
+
+	var status *user.Status
+	if s.Status != "" {
+		st := user.Status(s.Status)
+		status = &st
+	}
+
+	if _, err := userClient.BatchUpdate(c, ids, status, s.GroupID); err != nil {
+		return serializer.NewError(serializer.CodeDBError, "Failed to update users", err)
 	}
 
 	return ae.Aggregate()

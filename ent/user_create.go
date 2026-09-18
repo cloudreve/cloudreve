@@ -142,6 +142,20 @@ func (uc *UserCreate) SetNillableBanReason(s *string) *UserCreate {
 	return uc
 }
 
+// SetLastLogin sets the "last_login" field.
+func (uc *UserCreate) SetLastLogin(t time.Time) *UserCreate {
+	uc.mutation.SetLastLogin(t)
+	return uc
+}
+
+// SetNillableLastLogin sets the "last_login" field if the given value is not nil.
+func (uc *UserCreate) SetNillableLastLogin(t *time.Time) *UserCreate {
+	if t != nil {
+		uc.SetLastLogin(*t)
+	}
+	return uc
+}
+
 // SetStorage sets the "storage" field.
 func (uc *UserCreate) SetStorage(i int64) *UserCreate {
 	uc.mutation.SetStorage(i)
@@ -504,6 +518,10 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		_spec.SetField(user.FieldBanReason, field.TypeString, value)
 		_node.BanReason = value
 	}
+	if value, ok := uc.mutation.LastLogin(); ok {
+		_spec.SetField(user.FieldLastLogin, field.TypeTime, value)
+		_node.LastLogin = &value
+	}
 	if value, ok := uc.mutation.Storage(); ok {
 		_spec.SetField(user.FieldStorage, field.TypeInt64, value)
 		_node.Storage = value
@@ -837,6 +855,24 @@ func (u *UserUpsert) ClearBanReason() *UserUpsert {
 	return u
 }
 
+// SetLastLogin sets the "last_login" field.
+func (u *UserUpsert) SetLastLogin(v time.Time) *UserUpsert {
+	u.Set(user.FieldLastLogin, v)
+	return u
+}
+
+// UpdateLastLogin sets the "last_login" field to the value that was provided on create.
+func (u *UserUpsert) UpdateLastLogin() *UserUpsert {
+	u.SetExcluded(user.FieldLastLogin)
+	return u
+}
+
+// ClearLastLogin clears the value of the "last_login" field.
+func (u *UserUpsert) ClearLastLogin() *UserUpsert {
+	u.SetNull(user.FieldLastLogin)
+	return u
+}
+
 // SetStorage sets the "storage" field.
 func (u *UserUpsert) SetStorage(v int64) *UserUpsert {
 	u.Set(user.FieldStorage, v)
@@ -1103,6 +1139,27 @@ func (u *UserUpsertOne) UpdateBanReason() *UserUpsertOne {
 func (u *UserUpsertOne) ClearBanReason() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
 		s.ClearBanReason()
+	})
+}
+
+// SetLastLogin sets the "last_login" field.
+func (u *UserUpsertOne) SetLastLogin(v time.Time) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetLastLogin(v)
+	})
+}
+
+// UpdateLastLogin sets the "last_login" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateLastLogin() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateLastLogin()
+	})
+}
+
+// ClearLastLogin clears the value of the "last_login" field.
+func (u *UserUpsertOne) ClearLastLogin() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearLastLogin()
 	})
 }
 
@@ -1557,6 +1614,27 @@ func (u *UserUpsertBulk) UpdateBanReason() *UserUpsertBulk {
 func (u *UserUpsertBulk) ClearBanReason() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
 		s.ClearBanReason()
+	})
+}
+
+// SetLastLogin sets the "last_login" field.
+func (u *UserUpsertBulk) SetLastLogin(v time.Time) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetLastLogin(v)
+	})
+}
+
+// UpdateLastLogin sets the "last_login" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateLastLogin() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateLastLogin()
+	})
+}
+
+// ClearLastLogin clears the value of the "last_login" field.
+func (u *UserUpsertBulk) ClearLastLogin() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearLastLogin()
 	})
 }
 

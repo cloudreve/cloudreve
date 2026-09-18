@@ -16,6 +16,8 @@ export interface UserFilterPopoverProps extends PopoverProps {
   setGroup: (group: string) => void;
   status: string;
   setStatus: (status: string) => void;
+  uids: string;
+  setUids: (uids: string) => void;
   clearFilters: () => void;
 }
 
@@ -28,6 +30,8 @@ const UserFilterPopover = ({
   setGroup,
   status,
   setStatus,
+  uids,
+  setUids,
   clearFilters,
   onClose,
   open,
@@ -40,6 +44,7 @@ const UserFilterPopover = ({
   const [localNick, setLocalNick] = useState(nick);
   const [localGroup, setLocalGroup] = useState(group);
   const [localStatus, setLocalStatus] = useState(status);
+  const [localUids, setLocalUids] = useState(uids);
 
   // Initialize local state when popup opens
   useEffect(() => {
@@ -48,6 +53,7 @@ const UserFilterPopover = ({
       setLocalNick(nick);
       setLocalGroup(group);
       setLocalStatus(status);
+      setLocalUids(uids);
     }
   }, [open]);
 
@@ -57,6 +63,7 @@ const UserFilterPopover = ({
     setNick(localNick);
     setGroup(localGroup == " " ? "" : localGroup);
     setStatus(localStatus == " " ? "" : localStatus);
+    setUids(localUids);
     onClose?.({}, "backdropClick");
   };
 
@@ -66,6 +73,7 @@ const UserFilterPopover = ({
     setLocalNick("");
     setLocalGroup("");
     setLocalStatus("");
+    setLocalUids("");
     clearFilters();
     onClose?.({}, "backdropClick");
   };
@@ -110,6 +118,16 @@ const UserFilterPopover = ({
             value={localNick}
             onChange={(e) => setLocalNick(e.target.value)}
             placeholder={t("user.emptyNoFilter")}
+            size="small"
+          />
+        </SettingForm>
+
+        <SettingForm title={t("user.uids")} noContainer lgWidth={12}>
+          <DenseFilledTextField
+            fullWidth
+            value={localUids}
+            onChange={(e) => setLocalUids(e.target.value)}
+            placeholder={t("user.uidsPlaceholder")}
             size="small"
           />
         </SettingForm>

@@ -427,6 +427,17 @@ func AdminDeleteUser(c *gin.Context) {
 	c.JSON(200, serializer.Response{})
 }
 
+// AdminBatchUpdateUser 批量更新用户
+func AdminBatchUpdateUser(c *gin.Context) {
+	service := ParametersFromContext[*admin.BatchUserUpdateService](c, admin.BatchUserUpdateParamCtx{})
+	err := service.Update(c)
+	if err != nil {
+		c.JSON(200, serializer.Err(c, err))
+		return
+	}
+	c.JSON(200, serializer.Response{})
+}
+
 func AdminListFiles(c *gin.Context) {
 	service := ParametersFromContext[*admin.AdminListService](c, admin.AdminListServiceParamsCtx{})
 	res, err := service.Files(c)
