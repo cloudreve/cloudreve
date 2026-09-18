@@ -291,6 +291,11 @@ type (
 		// that entry with a conflict (#3565). An empty string entry skips
 		// the check for that position.
 		ExpectIDs []string `json:"expect_ids"`
+		// OnConflict selects the behaviour when a destination child with
+		// the same name exists: "skip" drops the colliding source,
+		// "overwrite" deletes the destination object first. Empty keeps
+		// the default fail-fast behaviour (#3159).
+		OnConflict string `json:"on_conflict" binding:"omitempty,eq=skip|eq=overwrite"`
 	}
 )
 
@@ -330,6 +335,10 @@ func (s *MoveFileService) Move(c *gin.Context) error {
 			ids[i] = id
 		}
 		util.WithValue(c, dbfs.ExpectedSourceIDsCtxKey{}, ids)
+	}
+
+	if s.OnConflict != "" {
+		util.WithValue(c, dbfs.MoveConflictCtxKey{}, s.OnConflict)
 	}
 
 	return m.MoveOrCopy(c, uris, dst, s.Copy)

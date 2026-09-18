@@ -294,6 +294,7 @@ export interface MoveFileService extends MultipleUriService {
   dst: string;
   copy?: boolean;
   expect_ids?: string[];
+  on_conflict?: "skip" | "overwrite";
 }
 
 export interface MetadataPatch {

@@ -468,10 +468,21 @@ export function sendMoveFile(req: MoveFileService): ThunkResponse<void> {
         {
           ...defaultOpts,
           skipBatchError: req.uris.length == 1,
+          // Leave conflict failures silent: the caller prompts for
+          // overwrite/skip first (#3159).
+          bypassSnackbar: isNameConflictBatchError,
         },
       ),
     );
   };
+}
+
+export function isNameConflictBatchError(e: Error): boolean {
+  return (
+    e instanceof AppError &&
+    e.code == Code.BatchOperationNotFullyCompleted &&
+    Object.values(e.aggregatedError ?? {}).some((r) => r.code == Code.ObjectExist)
+  );
 }
 
 export function sendRestoreFile(req: DeleteFileService): ThunkResponse<void> {

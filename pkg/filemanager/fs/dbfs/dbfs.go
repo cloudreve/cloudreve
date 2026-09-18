@@ -47,7 +47,22 @@ type (
 	// for move/copy/rename: a []int positionally aligned with the source
 	// URI list. An entry of 0 disables the check for that position (#3565).
 	ExpectedSourceIDsCtxKey struct{}
+	// MoveConflictCtxKey carries the on-conflict policy for move/copy:
+	// "skip" drops colliding entries, "overwrite" deletes the colliding
+	// destination first. Empty keeps the fail-fast default (#3159).
+	MoveConflictCtxKey struct{}
 )
+
+const (
+	MoveConflictSkip      = "skip"
+	MoveConflictOverwrite = "overwrite"
+)
+
+// moveConflictMode returns the configured on-conflict policy.
+func moveConflictMode(ctx context.Context) string {
+	mode, _ := ctx.Value(MoveConflictCtxKey{}).(string)
+	return mode
+}
 
 // WithExpectedSourceIDs records the expected database IDs of the source
 // files so a delayed/retried request cannot silently operate on a new

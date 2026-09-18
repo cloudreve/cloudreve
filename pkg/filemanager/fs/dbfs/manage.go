@@ -562,6 +562,7 @@ func (f *DBFS) MoveOrCopy(ctx context.Context, path []*fs.URI, dst *fs.URI, isCo
 
 	ae := serializer.NewAggregateError()
 	fileNavGroup := make(map[Navigator][]*File)
+	navOf := make(map[*File]Navigator)
 	dstRootPath := destination.Uri(true)
 	ctx = context.WithValue(ctx, inventory.LoadFileEntity{}, true)
 	ctx = context.WithValue(ctx, inventory.LoadFileMetadata{}, true)
@@ -617,12 +618,20 @@ func (f *DBFS) MoveOrCopy(ctx context.Context, path []*fs.URI, dst *fs.URI, isCo
 		}
 
 		targets = append(targets, target)
+		navOf[target] = navigator
 		if isCopy {
 			if _, ok := fileNavGroup[navigator]; !ok {
 				fileNavGroup[navigator] = make([]*File, 0)
 			}
 			fileNavGroup[navigator] = append(fileNavGroup[navigator], target)
 		}
+	}
+
+	// Resolve name conflicts against existing destination children before
+	// locking: skip drops the colliding target, overwrite deletes the
+	// colliding destination object first (#3159).
+	if mode := moveConflictMode(ctx); mode != "" && len(targets) > 0 {
+		targets, fileNavGroup = f.resolveMoveConflicts(ctx, targets, navOf, destination, isCopy, mode, ae)
 	}
 
 	indexDiff := &fs.IndexDiff{}
@@ -1052,4 +1061,49 @@ func (f *DBFS) moveFiles(ctx context.Context, targets []*File, destination *File
 	}
 
 	return storageDiff, nil, nil
+}
+
+// resolveMoveConflicts filters or replaces targets whose names collide
+// with existing destination children (#3159). "skip" drops the colliding
+// target with a per-file ErrFileExisted; "overwrite" deletes the
+// colliding destination object through the regular Delete path first.
+func (f *DBFS) resolveMoveConflicts(ctx context.Context, targets []*File, navOf map[*File]Navigator, destination *File, isCopy bool, mode string, ae *serializer.AggregateError) ([]*File, map[Navigator][]*File) {
+	surviving := make([]*File, 0, len(targets))
+	group := make(map[Navigator][]*File)
+	dstBase := destination.Uri(true)
+
+	for _, target := range targets {
+		dstName := target.Name()
+		if !isCopy {
+			if _, ok := target.Metadata()[MetadataRestoreUri]; ok {
+				dstName = target.DisplayName()
+			}
+		}
+
+		_, err := f.fileClient.GetChildFile(ctx, destination.Model, destination.OwnerID(), dstName, false)
+		if err != nil && !ent.IsNotFound(err) {
+			ae.Add(target.Uri(true).String(), fmt.Errorf("failed to check destination conflict: %w", err))
+			continue
+		}
+
+		if err == nil {
+			// Destination already holds an object under the same name.
+			if mode == MoveConflictSkip {
+				ae.Add(target.Uri(true).String(), fs.ErrFileExisted)
+				continue
+			}
+			if _, _, err := f.Delete(ctx, []*fs.URI{dstBase.Join(dstName)}); err != nil {
+				ae.Add(target.Uri(true).String(), err)
+				continue
+			}
+		}
+
+		surviving = append(surviving, target)
+		if isCopy {
+			nav := navOf[target]
+			group[nav] = append(group[nav], target)
+		}
+	}
+
+	return surviving, group
 }
