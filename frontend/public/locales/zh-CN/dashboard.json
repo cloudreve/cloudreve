@@ -1269,6 +1269,8 @@
     "initialStorageQuotaDes": "用户组下的用户初始可用最大容量。",
     "isAdmin": "管理员用户组",
     "isAdminDes": "开启后，用户组下的用户将拥有管理员权限。",
+    "loginIPWhitelist": "登录 IP 白名单",
+    "loginIPWhitelistDes": "仅允许以下 IP 或 CIDR 网段登录，每行一条。留空则不限制。",
     "share": "分享",
     "allowCreateShareLink": "创建分享链接",
     "allowCreateShareLinkDes": "关闭后，用户无法创建分享链接。",

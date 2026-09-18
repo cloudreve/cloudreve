@@ -1269,6 +1269,8 @@
     "initialStorageQuotaDes": "Max storage can used by single user under this group.",
     "isAdmin": "Admin group",
     "isAdminDes": "When enabled, users under this group will have admin permissions.",
+    "loginIPWhitelist": "Login IP whitelist",
+    "loginIPWhitelistDes": "Restrict sign-in to these IPs or CIDR ranges, one per line. Leave empty to allow all.",
     "share": "Share",
     "allowCreateShareLink": "Create share link",
     "allowCreateShareLinkDes": "If disabled, users cannot create sharing links.",

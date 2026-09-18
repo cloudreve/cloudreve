@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
@@ -254,14 +255,15 @@ func (service *SSOExchangeService) SSOExchange(c *gin.Context) (any, error) {
 		return nil, serializer.NewError(serializer.CodeCredentialInvalid, "Invalid SSO ticket", nil)
 	}
 
-	u, err := dep.UserClient().GetByID(c, uid)
+	ctx := context.WithValue(c, inventory.LoadUserGroup{}, true)
+	u, err := dep.UserClient().GetByID(ctx, uid)
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeUserNotFound, "User not found", err)
 	}
 	if u, err = dep.UserClient().LiftExpiredBan(c, u); err != nil {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to lift expired ban", err)
 	}
-	if err := checkUserStatus(u); err != nil {
+	if err := checkUserStatus(c, u); err != nil {
 		return nil, err
 	}
 
@@ -273,12 +275,12 @@ func (service *SSOExchangeService) SSOExchange(c *gin.Context) (any, error) {
 func ssoResolveUser(c *gin.Context, dep dependency.Dep, sso *setting.SSO, email, name, preferred string) (*ent.User, error) {
 	userClient := dep.UserClient()
 
-	u, err := userClient.GetByEmail(c, email)
+	u, err := userClient.GetByEmail(context.WithValue(c, inventory.LoadUserGroup{}, true), email)
 	if err == nil {
 		if u, err = userClient.LiftExpiredBan(c, u); err != nil {
 			return nil, serializer.NewError(serializer.CodeDBError, "Failed to lift expired ban", err)
 		}
-		if err := checkUserStatus(u); err != nil {
+		if err := checkUserStatus(c, u); err != nil {
 			return nil, err
 		}
 		return u, nil
@@ -323,14 +325,14 @@ func banError(u *ent.User, fallback string) error {
 	return serializer.NewError(serializer.CodeUserBaned, msg, nil)
 }
 
-func checkUserStatus(u *ent.User) error {
+func checkUserStatus(c *gin.Context, u *ent.User) error {
 	switch u.Status {
 	case user.StatusSysBanned, user.StatusManualBanned:
 		return banError(u, "User is banned")
 	case user.StatusInactive:
 		return serializer.NewError(serializer.CodeUserNotActivated, "User is not activated", nil)
 	}
-	return nil
+	return checkLoginIPWhitelist(c.ClientIP(), u.Edges.Group)
 }
 
 // CheckEmailAllowed enforces the sign-up email filter. Shared by the classic

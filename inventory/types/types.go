@@ -39,6 +39,9 @@ type (
 		MaxWalkedFiles        int                    `json:"max_walked_files,omitempty"`
 		TrashRetention        int                    `json:"trash_retention,omitempty"`
 		RedirectedSource      bool                   `json:"redirected_source,omitempty"`
+		// LoginIPWhitelist restricts sign-in to the given IPs/CIDR ranges.
+		// Empty means no restriction.
+		LoginIPWhitelist []string `json:"login_ip_whitelist,omitempty"`
 	}
 
 	// PolicySetting 非公有的存储策略属性

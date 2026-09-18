@@ -3,6 +3,8 @@ package user
 import (
 	"context"
 	"fmt"
+	"net/netip"
+	"strings"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/ent"
@@ -144,6 +146,8 @@ func (service *UserLoginService) Login(c *gin.Context) (*ent.User, string, error
 		err = banError(expectedUser, "This account has been blocked")
 	} else if expectedUser.Status == user.StatusInactive {
 		err = serializer.NewError(serializer.CodeUserNotActivated, "This account is not activated", nil)
+	} else if ipErr := checkLoginIPWhitelist(c.ClientIP(), expectedUser.Edges.Group); ipErr != nil {
+		err = ipErr
 	}
 
 	if err != nil {
@@ -269,4 +273,36 @@ func (service *PrepareLoginService) Prepare(c *gin.Context) (*PrepareLoginRespon
 		WebAuthnEnabled: len(expectedUser.Edges.Passkey) > 0,
 		PasswordEnabled: expectedUser.Password != "",
 	}, nil
+}
+
+// checkLoginIPWhitelist enforces a group's login IP whitelist. Entries are
+// exact IPs or CIDR ranges; an empty or nil list allows all addresses.
+// Malformed entries are ignored so a bad admin value cannot lock everyone out.
+func checkLoginIPWhitelist(clientIP string, group *ent.Group) error {
+	if group == nil || group.Settings == nil || len(group.Settings.LoginIPWhitelist) == 0 {
+		return nil
+	}
+
+	addr, err := netip.ParseAddr(clientIP)
+	if err != nil {
+		return serializer.NewError(serializer.CodeNoPermissionErr, "Cannot determine client IP", err)
+	}
+
+	for _, entry := range group.Settings.LoginIPWhitelist {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+		if prefix, perr := netip.ParsePrefix(entry); perr == nil {
+			if prefix.Contains(addr) {
+				return nil
+			}
+			continue
+		}
+		if entryAddr, aerr := netip.ParseAddr(entry); aerr == nil && entryAddr == addr {
+			return nil
+		}
+	}
+
+	return serializer.NewError(serializer.CodeNoPermissionErr, "Login from this IP address is not allowed", nil)
 }

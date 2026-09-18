@@ -3,6 +3,8 @@ package user
 import (
 	"testing"
 
+	"github.com/cloudreve/Cloudreve/v4/ent"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
 	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
 	"github.com/stretchr/testify/require"
@@ -171,4 +173,26 @@ func TestFirstEmailClaim(t *testing.T) {
 	require.Equal(t, "user@corp.com", firstEmailClaim("", `CORP\user`, "user@corp.com"))
 	require.Equal(t, "", firstEmailClaim("", `CORP\user`, "not-an-email"))
 	require.Equal(t, "", firstEmailClaim())
+}
+
+func TestCheckLoginIPWhitelist(t *testing.T) {
+	group := func(list ...string) *ent.Group {
+		return &ent.Group{Settings: &types.GroupSetting{LoginIPWhitelist: list}}
+	}
+
+	// Empty whitelist allows everything.
+	require.NoError(t, checkLoginIPWhitelist("1.2.3.4", nil))
+	require.NoError(t, checkLoginIPWhitelist("1.2.3.4", group()))
+
+	// Exact IP match.
+	require.NoError(t, checkLoginIPWhitelist("10.0.0.5", group("10.0.0.5", "192.168.0.0/16")))
+	require.Error(t, checkLoginIPWhitelist("10.0.0.6", group("10.0.0.5")))
+
+	// CIDR ranges, v4 and v6.
+	require.NoError(t, checkLoginIPWhitelist("192.168.1.9", group("192.168.0.0/16")))
+	require.NoError(t, checkLoginIPWhitelist("fd00::42", group("fd00::/8")))
+	require.Error(t, checkLoginIPWhitelist("8.8.8.8", group("192.168.0.0/16", "fd00::/8")))
+
+	// Malformed entries are skipped rather than locking everyone out.
+	require.NoError(t, checkLoginIPWhitelist("1.2.3.4", group("not-an-ip", "1.2.3.4")))
 }

@@ -61,6 +61,7 @@ export interface GroupSetting {
   max_walked_files?: number;
   trash_retention?: number;
   redirected_source?: boolean;
+  login_ip_whitelist?: string[];
 }
 
 export interface AdminListGroupResponse {

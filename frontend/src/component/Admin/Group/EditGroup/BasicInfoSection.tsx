@@ -57,6 +57,20 @@ const BasicInfoSection = () => {
     [setGroup],
   );
 
+  const onWhitelistChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const list = e.target.value
+        .split("\n")
+        .map((l) => l.trim())
+        .filter((l) => l != "");
+      setGroup((p: GroupEnt) => ({
+        ...p,
+        settings: { ...p.settings, login_ip_whitelist: list.length > 0 ? list : undefined },
+      }));
+    },
+    [setGroup],
+  );
+
   return (
     <SettingSection>
       <Typography variant="h6" gutterBottom>
@@ -103,6 +117,18 @@ const BasicInfoSection = () => {
                   label={t("group.isAdmin")}
                 />
                 <NoMarginHelperText>{t("group.isAdminDes")}</NoMarginHelperText>
+              </FormControl>
+            </SettingForm>
+            <SettingForm title={t("group.loginIPWhitelist")} lgWidth={5}>
+              <FormControl fullWidth>
+                <DenseFilledTextField
+                  multiline
+                  minRows={2}
+                  value={(values?.settings?.login_ip_whitelist ?? []).join("\n")}
+                  onChange={onWhitelistChange}
+                  placeholder={"10.0.0.0/8"}
+                />
+                <NoMarginHelperText>{t("group.loginIPWhitelistDes")}</NoMarginHelperText>
               </FormControl>
             </SettingForm>
           </>
