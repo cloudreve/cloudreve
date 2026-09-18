@@ -41,6 +41,8 @@ type TaskClient interface {
 	GetTaskByID(ctx context.Context, taskID int) (*ent.Task, error)
 	// SetCompleteByID sets the task with the given ID to complete.
 	SetCompleteByID(ctx context.Context, taskID int) error
+	// SetStatusByID sets the status of the task with the given ID.
+	SetStatusByID(ctx context.Context, taskID int, status task.Status) error
 	// List returns a list of tasks with the given args.
 	List(ctx context.Context, args *ListTaskArgs) (*ListTaskResult, error)
 	// DeleteByIDs deletes the tasks with the given IDs.
@@ -195,6 +197,13 @@ func (c *taskClient) GetTaskByID(ctx context.Context, taskID int) (*ent.Task, er
 func (c *taskClient) SetCompleteByID(ctx context.Context, taskID int) error {
 	_, err := c.client.Task.UpdateOneID(taskID).
 		SetStatus(task.StatusCompleted).
+		Save(ctx)
+	return err
+}
+
+func (c *taskClient) SetStatusByID(ctx context.Context, taskID int, status task.Status) error {
+	_, err := c.client.Task.UpdateOneID(taskID).
+		SetStatus(status).
 		Save(ctx)
 	return err
 }

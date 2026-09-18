@@ -24,7 +24,8 @@ import (
 // captureQueue records submitted tasks without running workers.
 type captureQueue struct {
 	queue.Queue
-	submitted []queue.Task
+	submitted  []queue.Task
+	cancelable bool
 }
 
 func (q *captureQueue) QueueTask(ctx context.Context, t queue.Task) error {
@@ -32,7 +33,11 @@ func (q *captureQueue) QueueTask(ctx context.Context, t queue.Task) error {
 	return nil
 }
 
-// retryDepStub exposes only the dependencies RetryTask touches.
+func (q *captureQueue) CancelTask(ctx context.Context, taskID int) bool {
+	return q.cancelable
+}
+
+// retryDepStub exposes only the dependencies RetryTask/CancelTask touch.
 type retryDepStub struct {
 	dependency.Dep
 	taskClient inventory.TaskClient
@@ -40,6 +45,7 @@ type retryDepStub struct {
 	downloadQ  queue.Queue
 	recycleQ   queue.Queue
 	mediaMetaQ queue.Queue
+	registry   queue.TaskRegistry
 }
 
 func (d *retryDepStub) TaskClient() inventory.TaskClient                { return d.taskClient }
@@ -47,6 +53,12 @@ func (d *retryDepStub) IoIntenseQueue(context.Context) queue.Queue      { return
 func (d *retryDepStub) RemoteDownloadQueue(context.Context) queue.Queue { return d.downloadQ }
 func (d *retryDepStub) EntityRecycleQueue(context.Context) queue.Queue  { return d.recycleQ }
 func (d *retryDepStub) MediaMetaQueue(context.Context) queue.Queue      { return d.mediaMetaQ }
+func (d *retryDepStub) TaskRegistry() queue.TaskRegistry {
+	if d.registry == nil {
+		d.registry = queue.NewTaskRegistry()
+	}
+	return d.registry
+}
 
 // TestRetryTask verifies failed-task retry: owner/admin gating, status gate,
 // and queue routing by task type (upstream #2823).
@@ -126,5 +138,90 @@ func TestRetryTask(t *testing.T) {
 	t.Run("slave task type not retryable", func(t *testing.T) {
 		m := newTask(owner.ID, queue.SlaveUploadTaskType, enttask.StatusError)
 		require.Error(t, RetryTask(newCtx(owner), m.ID))
+	})
+}
+
+// TestCancelTask verifies queued-task cancellation falls back to a persisted
+// status update when the task is not in the queue's in-memory registry
+// (upstream #2270).
+func TestCancelTask(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	client := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared")
+	t.Cleanup(func() { require.NoError(t, client.Close()) })
+	ctx := context.Background()
+
+	group := client.Group.Create().SetName("g").SetPermissions(&boolset.BooleanSet{}).SaveX(ctx)
+	owner := client.User.Create().SetEmail("cancel-owner@example.com").SetNick("u").SetStatus("active").SetGroup(group).SaveX(ctx)
+	owner = client.User.Query().WithGroup().Where(entuser.ID(owner.ID)).OnlyX(ctx)
+	other := client.User.Create().SetEmail("cancel-other@example.com").SetNick("u").SetStatus("active").SetGroup(group).SaveX(ctx)
+	other = client.User.Query().WithGroup().Where(entuser.ID(other.ID)).OnlyX(ctx)
+
+	ioQ := &captureQueue{}
+	dep := &retryDepStub{
+		taskClient: inventory.NewTaskClient(client, conf.SQLiteDB, nil),
+		ioQueue:    ioQ,
+		downloadQ:  &captureQueue{},
+		recycleQ:   &captureQueue{},
+		mediaMetaQ: &captureQueue{},
+	}
+
+	newCtx := func(u *ent.User) *gin.Context {
+		engine := gin.New()
+		engine.ContextWithFallback = true
+		c := gin.CreateTestContextOnly(httptest.NewRecorder(), engine)
+		c.Request = httptest.NewRequest("POST", "/", nil)
+		util.WithValue(c, dependency.DepCtx{}, dep)
+		util.WithValue(c, inventory.UserCtx{}, u)
+		return c
+	}
+
+	newTask := func(ownerID int, taskType string, status enttask.Status) *ent.Task {
+		return client.Task.Create().
+			SetType(taskType).
+			SetStatus(status).
+			SetPublicState(&types.TaskPublicState{}).
+			SetCorrelationID(uuid.Must(uuid.NewV4())).
+			SetUserTasks(ownerID).
+			SaveX(ctx)
+	}
+
+	t.Run("queued task canceled via registry", func(t *testing.T) {
+		ioQ.cancelable = true
+		m := newTask(owner.ID, queue.ExtractArchiveTaskType, enttask.StatusQueued)
+		require.NoError(t, CancelTask(newCtx(owner), m.ID))
+	})
+
+	t.Run("queued task falls back to persisted cancel", func(t *testing.T) {
+		ioQ.cancelable = false
+		m := newTask(owner.ID, queue.ExtractArchiveTaskType, enttask.StatusQueued)
+		require.NoError(t, CancelTask(newCtx(owner), m.ID))
+		require.Equal(t, enttask.StatusCanceled, client.Task.GetX(ctx, m.ID).Status)
+	})
+
+	t.Run("suspending task cancelable", func(t *testing.T) {
+		ioQ.cancelable = false
+		m := newTask(owner.ID, queue.ExtractArchiveTaskType, enttask.StatusSuspending)
+		require.NoError(t, CancelTask(newCtx(owner), m.ID))
+		require.Equal(t, enttask.StatusCanceled, client.Task.GetX(ctx, m.ID).Status)
+	})
+
+	t.Run("completed task rejected", func(t *testing.T) {
+		m := newTask(owner.ID, queue.ExtractArchiveTaskType, enttask.StatusCompleted)
+		require.Error(t, CancelTask(newCtx(owner), m.ID))
+	})
+
+	t.Run("processing non-download task rejected", func(t *testing.T) {
+		m := newTask(owner.ID, queue.ExtractArchiveTaskType, enttask.StatusProcessing)
+		require.Error(t, CancelTask(newCtx(owner), m.ID))
+	})
+
+	t.Run("other user's task rejected", func(t *testing.T) {
+		m := newTask(owner.ID, queue.ExtractArchiveTaskType, enttask.StatusQueued)
+		require.Error(t, CancelTask(newCtx(other), m.ID))
+	})
+
+	t.Run("slave task type not cancelable", func(t *testing.T) {
+		m := newTask(owner.ID, queue.SlaveUploadTaskType, enttask.StatusQueued)
+		require.Error(t, CancelTask(newCtx(owner), m.ID))
 	})
 }

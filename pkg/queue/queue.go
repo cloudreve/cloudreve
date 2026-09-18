@@ -23,6 +23,10 @@ type (
 		Shutdown()
 		// SubmitTask submits a Task to the queue.
 		QueueTask(ctx context.Context, t Task) error
+		// CancelTask marks a queued or suspending task as canceled. The
+		// scheduler entry is left in place; workers skip canceled tasks at
+		// pickup. Returns false if the task is not in this queue's registry.
+		CancelTask(ctx context.Context, taskID int) bool
 		// BusyWorkers returns the numbers of workers in the running process.
 		BusyWorkers() int
 		// BusyWorkers returns the numbers of success tasks.
@@ -218,6 +222,22 @@ func (q *queue) newContext(t Task) context.Context {
 	return ctx
 }
 
+// CancelTask marks a queued or suspending task as canceled. The scheduler
+// heap entry is not removed; workers skip canceled tasks at pickup.
+func (q *queue) CancelTask(ctx context.Context, taskID int) bool {
+	if q.registry == nil {
+		return false
+	}
+	t, found := q.registry.Get(taskID)
+	if !found {
+		return false
+	}
+	if t.Status() != task.StatusQueued && t.Status() != task.StatusSuspending {
+		return false
+	}
+	return q.transitStatus(ctx, t, task.StatusCanceled) == nil
+}
+
 func (q *queue) work(t Task) {
 	ctx := q.newContext(t)
 	l := logging.FromContext(ctx)
@@ -237,6 +257,11 @@ func (q *queue) work(t Task) {
 		}
 		q.schedule()
 	}()
+
+	// Canceled while waiting in the scheduler; nothing to run.
+	if t.Status() == task.StatusCanceled {
+		return
+	}
 
 	err = q.transitStatus(ctx, t, task.StatusProcessing)
 	if err != nil {

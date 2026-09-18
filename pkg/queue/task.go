@@ -393,6 +393,12 @@ func init() {
 				q.metric.IncFailureTask()
 				return persistTask(ctx, task, newStatus, q)
 			},
+			task.StatusCanceled: func(ctx context.Context, task Task, newStatus task.Status, q *queue) error {
+				if q.registry != nil {
+					q.registry.Delete(task.ID())
+				}
+				return persistTask(ctx, task, newStatus, q)
+			},
 		},
 		task.StatusProcessing: {
 			task.StatusQueued: persistTask,
@@ -466,6 +472,13 @@ func init() {
 			},
 			task.StatusError: func(ctx context.Context, task Task, newStatus task.Status, q *queue) error {
 				q.metric.IncFailureTask()
+				return persistTask(ctx, task, newStatus, q)
+			},
+			task.StatusCanceled: func(ctx context.Context, task Task, newStatus task.Status, q *queue) error {
+				q.metric.DecSuspendingTask()
+				if q.registry != nil {
+					q.registry.Delete(task.ID())
+				}
 				return persistTask(ctx, task, newStatus, q)
 			},
 		},

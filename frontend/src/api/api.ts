@@ -919,6 +919,22 @@ export function getTasks(req: ListTaskService): ThunkResponse<TaskListResponse> 
   };
 }
 
+export function sendCancelTask(id: string): ThunkResponse<undefined> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/workflow/${id}/cancel`,
+        {
+          method: "POST",
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
 export function sendRetryTask(id: string): ThunkResponse<undefined> {
   return async (dispatch, _getState) => {
     return await dispatch(

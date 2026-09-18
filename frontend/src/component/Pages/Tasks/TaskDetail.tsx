@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { sendRetryTask } from "../../../api/api.ts";
+import { sendCancelTask, sendRetryTask } from "../../../api/api.ts";
 import { TaskResponse, TaskStatus } from "../../../api/workflow.ts";
 import { useAppDispatch } from "../../../redux/hooks.ts";
 import { SecondaryLoadingButton, StyledTableContainerPaper } from "../../Common/StyledComponents.tsx";
@@ -30,6 +30,7 @@ const TaskDetail = ({ task, downloading, onRetried }: TaskDetailProps) => {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const [retrying, setRetrying] = useState(false);
+  const [canceling, setCanceling] = useState(false);
 
   const retry = () => {
     setRetrying(true);
@@ -38,6 +39,16 @@ const TaskDetail = ({ task, downloading, onRetried }: TaskDetailProps) => {
       .catch(() => {})
       .finally(() => setRetrying(false));
   };
+
+  const cancel = () => {
+    setCanceling(true);
+    dispatch(sendCancelTask(task.id))
+      .then(() => onRetried?.())
+      .catch(() => {})
+      .finally(() => setCanceling(false));
+  };
+
+  const cancelable = task.status == TaskStatus.queued || task.status == TaskStatus.suspending;
   return (
     <Stack spacing={2}>
       <Stack spacing={1}>
@@ -59,6 +70,18 @@ const TaskDetail = ({ task, downloading, onRetried }: TaskDetailProps) => {
               num: task.summary?.props?.failed,
             })}
           </Alert>
+        )}
+        {cancelable && (
+          <SecondaryLoadingButton
+            size="small"
+            variant="outlined"
+            color="error"
+            loading={canceling}
+            onClick={cancel}
+            sx={{ alignSelf: "flex-start" }}
+          >
+            {t("common:cancel")}
+          </SecondaryLoadingButton>
         )}
         {task.status == TaskStatus.error && (
           <Alert

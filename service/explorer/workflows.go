@@ -470,6 +470,55 @@ func RetryTask(c *gin.Context, taskID int) error {
 	return nil
 }
 
+// CancelTask terminates a queued or suspending task; running remote
+// downloads are canceled through their downloader handle (#2270).
+func CancelTask(c *gin.Context, taskID int) error {
+	dep := dependency.FromContext(c)
+	u := inventory.UserFromContext(c)
+	taskClient := dep.TaskClient()
+
+	ctx := context.WithValue(c, inventory.LoadTaskUser{}, true)
+	model, err := taskClient.GetTaskByID(ctx, taskID)
+	if err != nil {
+		return serializer.NewError(serializer.CodeNotFound, "Task not found", err)
+	}
+
+	if model.UserTasks != u.ID && !u.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+		return serializer.NewError(serializer.CodeNotFound, "Task not found", nil)
+	}
+
+	switch model.Status {
+	case task.StatusQueued, task.StatusSuspending:
+		q, err := queueForTaskType(c, dep, model.Type)
+		if err != nil {
+			return serializer.NewError(serializer.CodeParamErr, "Task type cannot be canceled", err)
+		}
+		if q.CancelTask(ctx, taskID) {
+			return nil
+		}
+		// Not in the in-memory registry (e.g. after a restart before
+		// resume); persist the cancel so it won't be picked up later.
+		if err := taskClient.SetStatusByID(ctx, taskID, task.StatusCanceled); err != nil {
+			return serializer.NewError(serializer.CodeDBError, "Failed to cancel task", err)
+		}
+		return nil
+	case task.StatusProcessing:
+		// Only remote downloads expose a runtime cancel handle; other
+		// running tasks cannot be interrupted safely.
+		if t, found := dep.TaskRegistry().Get(taskID); found {
+			if dl, ok := t.(*workflows.RemoteDownloadTask); ok {
+				if err := dl.CancelDownload(c); err != nil {
+					return serializer.NewError(serializer.CodeInternalSetting, "Failed to cancel download task", err)
+				}
+				return nil
+			}
+		}
+		return serializer.NewError(serializer.CodeParamErr, "Running task cannot be canceled", nil)
+	default:
+		return serializer.NewError(serializer.CodeParamErr, "Only queued or running tasks can be canceled", nil)
+	}
+}
+
 type (
 	SetDownloadFilesService struct {
 		Files []*downloader.SetFileToDownloadArgs `json:"files" binding:"required"`
