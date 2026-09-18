@@ -173,6 +173,16 @@ const GalleryImage = memo((props: FileBlockProps) => {
           </Fade>
         )}
       </TransitionGroup>
+      {file.type == FileType.folder && !isLoadingIndicator && !file.placeholder && (
+        <ImageListItemBar
+          title={file.name}
+          position="bottom"
+          sx={{
+            background: "linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.25) 60%, rgba(0,0,0,0) 100%)",
+            "& .MuiImageListItemBar-titleWrap": { px: 1 },
+          }}
+        />
+      )}
       <Fade in={!isLoadingIndicator && (hovered || !!isSelected)}>
         <ImageListItemBar
           sx={{
