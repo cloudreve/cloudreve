@@ -111,3 +111,48 @@ func mustWebDAVTestURI(t *testing.T, raw string) *fs.URI {
 	}
 	return uri
 }
+
+func TestParseContentRange(t *testing.T) {
+	tests := []struct {
+		header string
+		want   *contentRange
+		err    bool
+	}{
+		{"", nil, false},
+		{"bytes 0-1048575/3145728", &contentRange{0, 1048575, 3145728}, false},
+		{"bytes 1048576-2097151/3145728", &contentRange{1048576, 2097151, 3145728}, false},
+		{"bytes 0-99/100", &contentRange{0, 99, 100}, false},
+		{" bytes 0-9/10 ", &contentRange{0, 9, 10}, false},
+		{"bytes 0-9/*", nil, true},
+		{"items 0-9/10", nil, true},
+		{"bytes 0-9", nil, true},
+		{"bytes */10", nil, true},
+		{"bytes 9-0/10", nil, true},
+		{"bytes 0-10/10", nil, true},
+		{"bytes -1-9/10", nil, true},
+		{"bytes 0-9/0", nil, true},
+		{"bytes a-b/c", nil, true},
+	}
+
+	for _, tt := range tests {
+		got, err := parseContentRange(tt.header)
+		if tt.err {
+			if err == nil {
+				t.Fatalf("header %q: expected error, got %+v", tt.header, got)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("header %q: unexpected error: %v", tt.header, err)
+		}
+		if tt.want == nil {
+			if got != nil {
+				t.Fatalf("header %q: expected nil, got %+v", tt.header, got)
+			}
+			continue
+		}
+		if got == nil || *got != *tt.want {
+			t.Fatalf("header %q: got %+v, want %+v", tt.header, got, tt.want)
+		}
+	}
+}

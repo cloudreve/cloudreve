@@ -59,6 +59,16 @@ func TestValidateExternalURL_IPLiterals(t *testing.T) {
 		"http://100.64.0.1/cgnat",
 		"http://[::ffff:127.0.0.1]/v4mapped",
 		"http://[::ffff:10.0.0.1]/v4mappedpriv",
+		// IPv4-in-IPv6 transition forms wrapping internal targets.
+		"http://[64:ff9b::127.0.0.1]/nat64-loopback",
+		"http://[64:ff9b::a9fe:a9fe]/nat64-metadata",
+		"http://[64:ff9b::169.254.169.254]/nat64-metadata-dec",
+		"http://[64:ff9b::a00:1]/nat64-private",
+		"http://[2002:7f00:0001::]/6to4-loopback",
+		"http://[2002:a9fe:a9fe::]/6to4-metadata",
+		"http://[2002:0a00:0001::]/6to4-private",
+		"http://[2001:0000:4136:e378:8000:63bf:f5ff:fffe]/teredo-10.0.0.1",
+		"http://[::127.0.0.1]/v4compatible",
 		"http://224.0.0.1/multicast",
 	}
 	for _, raw := range cases {
@@ -73,6 +83,9 @@ func TestValidateExternalURL_PublicIP(t *testing.T) {
 		"http://1.1.1.1/",
 		"https://8.8.8.8/",
 		"http://[2606:4700:4700::1111]/",
+		// Transition forms wrapping *public* IPv4 remain allowed.
+		"http://[64:ff9b::808:808]/nat64-public",
+		"http://[2002:0808:0808::]/6to4-public",
 	}
 	for _, raw := range cases {
 		err := request.ValidateExternalURL(ctx, raw, request.SSRFOptions{})

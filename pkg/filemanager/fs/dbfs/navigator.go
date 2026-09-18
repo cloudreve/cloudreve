@@ -274,6 +274,12 @@ func (b *baseNavigator) children(ctx context.Context, parent *File, args *ListAr
 	}, nil
 }
 
+// walkFetchPageSize caps how many child rows a single GetChildFiles query
+// may return during walk. Bounding the page (instead of fetching a whole
+// level at once) keeps peak memory proportional to page size + folder
+// count rather than tree size.
+const walkFetchPageSize = 2000
+
 func (b *baseNavigator) walk(ctx context.Context, levelFiles []*File, limit, depth int, f WalkFunc) error {
 	walked := 0
 	if len(levelFiles) == 0 {
@@ -281,79 +287,91 @@ func (b *baseNavigator) walk(ctx context.Context, levelFiles []*File, limit, dep
 	}
 
 	owner := levelFiles[0].Owner()
-
 	level := 0
-	for walked <= limit && depth >= 0 {
-		if len(levelFiles) == 0 {
-			break
-		}
 
-		stop := false
+	// Files still to emit at the current level. For level 0 this is the
+	// caller-provided slice; deeper levels are paged from the DB below.
+	pending := levelFiles
+	var parentMap map[int]*File
+	var parentModels []*ent.File
+	token := ""
+
+	for depth >= 0 {
 		depth--
-		if len(levelFiles) > limit-walked {
-			levelFiles = levelFiles[:limit-walked]
-			stop = true
-		}
-		if err := f(levelFiles, level); err != nil {
-			return err
-		}
+		folders := make([]*File, 0, 64)
 
-		if stop {
-			return ErrFileCountLimitedReached
-		}
-
-		walked += len(levelFiles)
-		folders := lo.Filter(levelFiles, func(f *File, index int) bool {
-			return f.Model.Type == int(types.FileTypeFolder) && !f.IsSymbolic()
-		})
-
-		if walked >= limit || len(folders) == 0 {
-			break
-		}
-
-		levelFiles = levelFiles[:0]
-		leftCredit := limit - walked
-		parents := lo.SliceToMap(folders, func(file *File) (int, *File) {
-			return file.Model.ID, file
-		})
-		for leftCredit > 0 {
-			token := ""
-			res, err := b.fileClient.GetChildFiles(ctx,
-				&inventory.ListFileParameters{
-					PaginationArgs: &inventory.PaginationArgs{
-						UseCursorPagination: true,
-						PageToken:           token,
-						PageSize:            leftCredit,
+		// Emit this level in bounded batches, tracking folder nodes for
+		// the next level.
+		for {
+			var batch []*File
+			if parentModels == nil {
+				if len(pending) == 0 {
+					break
+				}
+				remaining := limit - walked
+				if remaining <= 0 {
+					return ErrFileCountLimitedReached
+				}
+				batch = pending[:min(len(pending), remaining)]
+				pending = pending[len(batch):]
+			} else {
+				remaining := limit - walked
+				if remaining <= 0 {
+					return ErrFileCountLimitedReached
+				}
+				res, err := b.fileClient.GetChildFiles(ctx,
+					&inventory.ListFileParameters{
+						PaginationArgs: &inventory.PaginationArgs{
+							UseCursorPagination: true,
+							PageToken:           token,
+							PageSize:            min(remaining, walkFetchPageSize),
+						},
+						MixedType: true,
 					},
-					MixedType: true,
-				},
-				owner.ID,
-				lo.Map(folders, func(item *File, index int) *ent.File {
-					return item.Model
-				})...)
-			if err != nil {
-				return serializer.NewError(serializer.CodeDBError, "Failed to list children", err)
+					owner.ID,
+					parentModels...)
+				if err != nil {
+					return serializer.NewError(serializer.CodeDBError, "Failed to list children", err)
+				}
+				if len(res.Files) == 0 {
+					break
+				}
+				batch = lo.Map(res.Files, func(model *ent.File, index int) *File {
+					return newFile(parentMap[model.FileChildren], model)
+				})
+				token = res.NextPageToken
 			}
 
-			leftCredit -= len(res.Files)
+			if err := f(batch, level); err != nil {
+				return err
+			}
+			walked += len(batch)
+			for _, file := range batch {
+				if file.Model.Type == int(types.FileTypeFolder) && !file.IsSymbolic() {
+					folders = append(folders, file)
+				}
+			}
 
-			levelFiles = append(levelFiles, lo.Map(res.Files, func(model *ent.File, index int) *File {
-				p := parents[model.FileChildren]
-				return newFile(p, model)
-			})...)
-
-			// All files listed
-			if res.NextPageToken == "" {
+			if parentModels == nil {
+				continue
+			}
+			if token == "" {
 				break
 			}
-
-			token = res.NextPageToken
 		}
-		level++
-	}
 
-	if walked >= limit {
-		return ErrFileCountLimitedReached
+		if len(folders) == 0 {
+			return nil
+		}
+
+		level++
+		parentMap = lo.SliceToMap(folders, func(file *File) (int, *File) {
+			return file.Model.ID, file
+		})
+		parentModels = lo.Map(folders, func(item *File, index int) *ent.File {
+			return item.Model
+		})
+		token = ""
 	}
 
 	return nil

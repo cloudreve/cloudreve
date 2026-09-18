@@ -1,4 +1,4 @@
-import { Box, DialogContent, FormControl, FormControlLabel, Stack, Switch, Typography } from "@mui/material";
+import { Box, DialogContent, FormControl, FormControlLabel, ListItemText, Stack, Switch, Typography } from "@mui/material";
 import { useSnackbar } from "notistack";
 import { useContext, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -6,9 +6,10 @@ import { sendTestSMTP } from "../../../../api/api.ts";
 import { useAppDispatch } from "../../../../redux/hooks.ts";
 import { isTrueVal } from "../../../../session/utils.ts";
 import { DefaultCloseAction } from "../../../Common/Snackbar/snackbar.tsx";
-import { DenseFilledTextField, SecondaryButton } from "../../../Common/StyledComponents.tsx";
+import { DenseFilledTextField, DenseSelect, SecondaryButton } from "../../../Common/StyledComponents.tsx";
 import DraggableDialog, { StyledDialogContentText } from "../../../Dialogs/DraggableDialog.tsx";
 import MailOutlined from "../../../Icons/MailOutlined.tsx";
+import { SquareMenuItem } from "../../../FileManager/ContextMenu/ContextMenu.tsx";
 import SettingForm from "../../../Pages/Setting/SettingForm.tsx";
 import { NoMarginHelperText, SettingSection, SettingSectionContent } from "../Settings.tsx";
 import { SettingContext } from "../SettingWrapper.tsx";
@@ -171,6 +172,39 @@ const Email = () => {
                   label={t("settings.enforceSSL")}
                 />
                 <NoMarginHelperText>{t("settings.enforceSSLDes")}</NoMarginHelperText>
+              </FormControl>
+            </SettingForm>
+
+            <SettingForm title={t("settings.smtpAuthMethod")} lgWidth={5}>
+              <FormControl>
+                <DenseSelect
+                  value={values.smtp_auth ?? "autodiscover"}
+                  onChange={(e) => setSettings({ smtp_auth: e.target.value as string })}
+                >
+                  {[
+                    "autodiscover",
+                    "plain",
+                    "plain-noenc",
+                    "login",
+                    "login-noenc",
+                    "cram-md5",
+                    "scram-sha-1",
+                    "scram-sha-256",
+                    "xoauth2",
+                    "noauth",
+                  ].map((v) => (
+                    <SquareMenuItem key={v} value={v}>
+                      <ListItemText
+                        slotProps={{
+                          primary: { variant: "body2" },
+                        }}
+                      >
+                        {t(`settings.smtpAuth_${v.replace(/-/g, "_")}`)}
+                      </ListItemText>
+                    </SquareMenuItem>
+                  ))}
+                </DenseSelect>
+                <NoMarginHelperText>{t("settings.smtpAuthMethodDes")}</NoMarginHelperText>
               </FormControl>
             </SettingForm>
 

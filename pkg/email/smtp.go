@@ -102,6 +102,36 @@ func (client *SMTPPool) Send(ctx context.Context, to, title, body string) error 
 	return nil
 }
 
+// SMTPAuthType maps the admin-configured auth method to a go-mail mechanism.
+// The library's own auto-discovery never picks plaintext mechanisms
+// (PLAIN/LOGIN) on unencrypted connections, so relays that only advertise
+// them need the explicit *-noenc choices. Anything unrecognized falls back
+// to auto-discovery.
+func SMTPAuthType(configured string) mail.SMTPAuthType {
+	switch strings.ToUpper(strings.TrimSpace(configured)) {
+	case string(mail.SMTPAuthPlain):
+		return mail.SMTPAuthPlain
+	case string(mail.SMTPAuthPlainNoEnc):
+		return mail.SMTPAuthPlainNoEnc
+	case string(mail.SMTPAuthLogin):
+		return mail.SMTPAuthLogin
+	case string(mail.SMTPAuthLoginNoEnc):
+		return mail.SMTPAuthLoginNoEnc
+	case string(mail.SMTPAuthCramMD5):
+		return mail.SMTPAuthCramMD5
+	case string(mail.SMTPAuthSCRAMSHA1):
+		return mail.SMTPAuthSCRAMSHA1
+	case string(mail.SMTPAuthSCRAMSHA256):
+		return mail.SMTPAuthSCRAMSHA256
+	case string(mail.SMTPAuthXOAUTH2):
+		return mail.SMTPAuthXOAUTH2
+	case string(mail.SMTPAuthNoAuth):
+		return mail.SMTPAuthNoAuth
+	default:
+		return mail.SMTPAuthAutoDiscover
+	}
+}
+
 // Close 关闭发送队列
 func (client *SMTPPool) Close() {
 	if client.ch != nil {
@@ -125,7 +155,7 @@ func (client *SMTPPool) Init() {
 		opts := []mail.Option{
 			mail.WithPort(client.config.Port),
 			mail.WithTimeout(time.Duration(client.config.Keepalive+5) * time.Second),
-			mail.WithSMTPAuth(mail.SMTPAuthAutoDiscover), mail.WithTLSPortPolicy(mail.TLSOpportunistic),
+			mail.WithSMTPAuth(SMTPAuthType(client.config.AuthType)), mail.WithTLSPortPolicy(mail.TLSOpportunistic),
 			mail.WithUsername(client.config.User), mail.WithPassword(client.config.Password),
 		}
 		if client.config.ForceEncryption {

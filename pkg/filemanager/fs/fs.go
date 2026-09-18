@@ -282,6 +282,10 @@ type (
 		// uploaded. Used to safely trigger CompleteUpload only after every
 		// chunk has been received when the client uploads chunks concurrently.
 		ChunksReceived map[int]struct{}
+		// RangesReceived records merged byte intervals [start,end) written for
+		// arbitrary-range uploads (e.g. WebDAV Content-Range PUTs). Used to
+		// trigger CompleteUpload only after the whole file is covered.
+		RangesReceived [][2]int64
 	}
 
 	// UploadProps properties of an upload session/request.

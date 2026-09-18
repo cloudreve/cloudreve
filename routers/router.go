@@ -2,6 +2,7 @@ package routers
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/application/constants"
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
@@ -289,6 +290,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 			{
 				// 用户登录
 				token.POST("",
+					middleware.RateLimitByIP("login", 10, time.Minute),
 					middleware.CaptchaRequired(func(c *gin.Context) bool {
 						return dep.SettingProvider().LoginCaptchaEnabled(c)
 					}),
@@ -298,11 +300,13 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				)
 				// 2-factor authentication
 				token.POST("2fa",
+					middleware.RateLimitByIP("login_2fa", 10, time.Minute),
 					controllers.FromJSON[usersvc.OtpValidationService](usersvc.OtpValidationParameterCtx{}),
 					controllers.UserLogin2FAValidation,
 					controllers.UserIssueToken,
 				)
 				token.POST("refresh",
+					middleware.RateLimitByIP("token_refresh", 30, time.Minute),
 					middleware.RequiredScopes(types.ScopeOfflineAccess),
 					controllers.FromJSON[usersvc.RefreshTokenService](usersvc.RefreshTokenParameterCtx{}),
 					controllers.UserRefreshToken,
@@ -331,6 +335,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					controllers.UserSSOCallback,
 				)
 				ssoRouter.POST("exchange",
+					middleware.RateLimitByIP("sso_exchange", 20, time.Minute),
 					controllers.FromJSON[usersvc.SSOExchangeService](usersvc.SSOExchangeParameterCtx{}),
 					controllers.UserSSOExchange,
 				)
@@ -348,6 +353,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					controllers.GrantAppConsent,
 				)
 				oauthRouter.POST("token",
+					middleware.RateLimitByIP("oauth_token", 20, time.Minute),
 					controllers.FromForm[oauth.ExchangeTokenService](oauth.ExchangeTokenParamCtx{}),
 					controllers.ExchangeToken,
 				)
@@ -369,6 +375,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 			{
 				// WebAuthn login prepare
 				authn.PUT("",
+					middleware.RateLimitByIP("authn", 20, time.Minute),
 					middleware.IsFunctionEnabled(func(c *gin.Context) bool {
 						return dep.SettingProvider().AuthnEnabled(c)
 					}),
@@ -376,6 +383,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				)
 				// WebAuthn finish login
 				authn.POST("",
+					middleware.RateLimitByIP("authn", 20, time.Minute),
 					middleware.IsFunctionEnabled(func(c *gin.Context) bool {
 						return dep.SettingProvider().AuthnEnabled(c)
 					}),
@@ -391,6 +399,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 		{
 			// 用户注册 Done
 			user.POST("",
+				middleware.RateLimitByIP("register", 5, time.Minute),
 				middleware.IsFunctionEnabled(func(c *gin.Context) bool {
 					return dep.SettingProvider().RegisterEnabled(c)
 				}),
@@ -402,12 +411,14 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 			)
 			// 通过邮件里的链接重设密码
 			user.PATCH("reset/:id",
+				middleware.RateLimitByIP("reset_apply", 10, time.Minute),
 				middleware.HashID(hashid.UserID),
 				controllers.FromJSON[usersvc.UserResetService](usersvc.UserResetParameterCtx{}),
 				controllers.UserReset,
 			)
 			// 发送密码重设邮件
 			user.POST("reset",
+				middleware.RateLimitByIP("reset_mail", 5, time.Minute),
 				middleware.CaptchaRequired(func(c *gin.Context) bool {
 					return dep.SettingProvider().ForgotPasswordCaptchaEnabled(c)
 				}),

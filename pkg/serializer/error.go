@@ -257,6 +257,8 @@ const (
 	CodeAnonymouseAccessDenied = 40088
 	// CodeInsufficientScope OAuth token scope insufficient
 	CodeInsufficientScope = 40089
+	// CodeRateLimited 请求频率超限
+	CodeRateLimited = 40090
 	// CodeDBError 数据库操作失败
 	CodeDBError = 50001
 	// CodeEncryptError 加密失败

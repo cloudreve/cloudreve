@@ -10,6 +10,7 @@ import (
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/pkg/boolset"
+	"github.com/cloudreve/Cloudreve/v4/pkg/email"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager"
 	request2 "github.com/cloudreve/Cloudreve/v4/pkg/request"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
@@ -142,7 +143,7 @@ func (s *TestSMTPService) Test(c *gin.Context) error {
 
 	opts := []mail.Option{
 		mail.WithPort(port),
-		mail.WithSMTPAuth(mail.SMTPAuthAutoDiscover), mail.WithTLSPortPolicy(mail.TLSOpportunistic),
+		mail.WithSMTPAuth(email.SMTPAuthType(s.Settings["smtp_auth"])), mail.WithTLSPortPolicy(mail.TLSOpportunistic),
 		mail.WithUsername(s.Settings["smtpUser"]), mail.WithPassword(s.Settings["smtpPass"]),
 	}
 	if setting.IsTrueValue(s.Settings["smtpEncryption"]) {

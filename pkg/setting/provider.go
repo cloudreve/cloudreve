@@ -807,6 +807,7 @@ func (s *settingProvider) SMTP(ctx context.Context) *SMTP {
 		ForceEncryption: s.getBoolean(ctx, "smtpEncryption", false),
 		Port:            s.getInt(ctx, "smtpPort", 25),
 		Keepalive:       s.getInt(ctx, "mail_keepalive", 30),
+		AuthType:        s.getString(ctx, "smtp_auth", "autodiscover"),
 	}
 }
 

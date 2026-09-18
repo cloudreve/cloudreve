@@ -48,6 +48,12 @@ type (
 		// uploads chunks concurrently and the last-indexed chunk arrives before some
 		// earlier chunks are still in flight.
 		MarkChunkUploaded(ctx context.Context, session *fs.UploadSession, chunkIndex int) (allReceived bool, err error)
+		// MarkRangeUploaded atomically records the given byte range [offset, offset+length)
+		// as received on the shared upload session and reports whether the whole file
+		// is covered. Callers must invoke CompleteUpload only when allReceived is true.
+		// It is used for arbitrary-range uploads (e.g. WebDAV Content-Range PUTs) where
+		// chunks are addressed by byte offset rather than a fixed chunk index.
+		MarkRangeUploaded(ctx context.Context, session *fs.UploadSession, offset, length int64) (allReceived bool, err error)
 	}
 )
 
@@ -305,6 +311,77 @@ func (m *manager) MarkChunkUploaded(ctx context.Context, session *fs.UploadSessi
 	// complete is allowed to trigger CompleteUpload.
 	if !alreadyComplete && len(fresh.ChunksReceived) >= total {
 		session.ChunksReceived = fresh.ChunksReceived
+		return true, nil
+	}
+	return false, nil
+}
+
+// mergeByteRanges inserts [start,end) into the sorted interval list and
+// coalesces overlapping or adjacent intervals.
+func mergeByteRanges(ranges [][2]int64, start, end int64) [][2]int64 {
+	res := make([][2]int64, 0, len(ranges)+1)
+	inserted := false
+	for _, r := range ranges {
+		if r[1] < start {
+			res = append(res, r)
+			continue
+		}
+		if r[0] > end {
+			if !inserted {
+				res = append(res, [2]int64{start, end})
+				inserted = true
+			}
+			res = append(res, r)
+			continue
+		}
+		// Overlapping or adjacent — extend the pending interval.
+		if r[0] < start {
+			start = r[0]
+		}
+		if r[1] > end {
+			end = r[1]
+		}
+	}
+	if !inserted {
+		res = append(res, [2]int64{start, end})
+	}
+	return res
+}
+
+// rangesCoverFull reports whether merged intervals cover [0,total).
+func rangesCoverFull(ranges [][2]int64, total int64) bool {
+	return len(ranges) == 1 && ranges[0][0] <= 0 && ranges[0][1] >= total
+}
+
+func (m *manager) MarkRangeUploaded(ctx context.Context, session *fs.UploadSession, offset, length int64) (bool, error) {
+	if session == nil || session.Props == nil || length < 0 || offset < 0 {
+		return false, fmt.Errorf("invalid upload session or range")
+	}
+
+	sessionID := session.Props.UploadSessionID
+	mu := lockUploadSession(sessionID)
+	mu.Lock()
+	defer mu.Unlock()
+
+	raw, ok := m.kv.Get(UploadSessionCachePrefix + sessionID)
+	if !ok {
+		// Session already completed or cancelled elsewhere.
+		return false, nil
+	}
+	fresh, ok := raw.(fs.UploadSession)
+	if !ok {
+		return false, fmt.Errorf("unexpected upload session type in KV")
+	}
+
+	fresh.RangesReceived = mergeByteRanges(fresh.RangesReceived, offset, offset+length)
+
+	ttl := max(1, int(time.Until(fresh.Props.ExpireAt).Seconds()))
+	if err := m.kv.Set(UploadSessionCachePrefix+sessionID, fresh, ttl); err != nil {
+		return false, fmt.Errorf("failed to persist upload session progress: %w", err)
+	}
+
+	if rangesCoverFull(fresh.RangesReceived, fresh.Props.Size) {
+		session.RangesReceived = fresh.RangesReceived
 		return true, nil
 	}
 	return false, nil

@@ -302,6 +302,7 @@ const Settings = () => {
                     "smtpUser",
                     "smtpPass",
                     "smtpEncryption",
+                    "smtp_auth",
                     "fromName",
                     "mail_activation_template",
                     "mail_reset_template",
