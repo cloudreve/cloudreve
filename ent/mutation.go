@@ -14158,6 +14158,7 @@ type TaskMutation struct {
 	public_state   **types.TaskPublicState
 	private_state  *string
 	correlation_id *uuid.UUID
+	hidden         *bool
 	clearedFields  map[string]struct{}
 	user           *int
 	cleareduser    bool
@@ -14640,6 +14641,42 @@ func (m *TaskMutation) ResetUserTasks() {
 	delete(m.clearedFields, task.FieldUserTasks)
 }
 
+// SetHidden sets the "hidden" field.
+func (m *TaskMutation) SetHidden(b bool) {
+	m.hidden = &b
+}
+
+// Hidden returns the value of the "hidden" field in the mutation.
+func (m *TaskMutation) Hidden() (r bool, exists bool) {
+	v := m.hidden
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHidden returns the old "hidden" field's value of the Task entity.
+// If the Task object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskMutation) OldHidden(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldHidden is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldHidden requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHidden: %w", err)
+	}
+	return oldValue.Hidden, nil
+}
+
+// ResetHidden resets all changes to the "hidden" field.
+func (m *TaskMutation) ResetHidden() {
+	m.hidden = nil
+}
+
 // SetUserID sets the "user" edge to the User entity by id.
 func (m *TaskMutation) SetUserID(id int) {
 	m.user = &id
@@ -14714,7 +14751,7 @@ func (m *TaskMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TaskMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 10)
 	if m.created_at != nil {
 		fields = append(fields, task.FieldCreatedAt)
 	}
@@ -14742,6 +14779,9 @@ func (m *TaskMutation) Fields() []string {
 	if m.user != nil {
 		fields = append(fields, task.FieldUserTasks)
 	}
+	if m.hidden != nil {
+		fields = append(fields, task.FieldHidden)
+	}
 	return fields
 }
 
@@ -14768,6 +14808,8 @@ func (m *TaskMutation) Field(name string) (ent.Value, bool) {
 		return m.CorrelationID()
 	case task.FieldUserTasks:
 		return m.UserTasks()
+	case task.FieldHidden:
+		return m.Hidden()
 	}
 	return nil, false
 }
@@ -14795,6 +14837,8 @@ func (m *TaskMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldCorrelationID(ctx)
 	case task.FieldUserTasks:
 		return m.OldUserTasks(ctx)
+	case task.FieldHidden:
+		return m.OldHidden(ctx)
 	}
 	return nil, fmt.Errorf("unknown Task field %s", name)
 }
@@ -14866,6 +14910,13 @@ func (m *TaskMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetUserTasks(v)
+		return nil
+	case task.FieldHidden:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHidden(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Task field %s", name)
@@ -14972,6 +15023,9 @@ func (m *TaskMutation) ResetField(name string) error {
 		return nil
 	case task.FieldUserTasks:
 		m.ResetUserTasks()
+		return nil
+	case task.FieldHidden:
+		m.ResetHidden()
 		return nil
 	}
 	return fmt.Errorf("unknown Task field %s", name)

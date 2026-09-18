@@ -47,6 +47,9 @@ type TaskClient interface {
 	List(ctx context.Context, args *ListTaskArgs) (*ListTaskResult, error)
 	// DeleteByIDs deletes the tasks with the given IDs.
 	DeleteByIDs(ctx context.Context, ids ...int) error
+
+	// HideByIDs marks tasks owned by the given user as hidden.
+	HideByIDs(ctx context.Context, ownerID int, ids ...int) error
 	// DeleteBy deletes the tasks with the given args.
 	DeleteBy(ctx context.Context, args *DeleteTaskArgs) error
 }
@@ -58,6 +61,8 @@ type (
 		Status        []task.Status
 		UserID        int
 		CorrelationID *uuid.UUID
+		// ExcludeHidden filters out tasks hidden by their owner.
+		ExcludeHidden bool
 	}
 
 	ListTaskResult struct {
@@ -121,6 +126,15 @@ func (c *taskClient) New(ctx context.Context, task *TaskArgs) (*ent.Task, error)
 
 func (c *taskClient) DeleteByIDs(ctx context.Context, ids ...int) error {
 	_, err := c.client.Task.Delete().Where(task.IDIn(ids...)).Exec(ctx)
+	return err
+}
+
+func (c *taskClient) HideByIDs(ctx context.Context, ownerID int, ids ...int) error {
+	_, err := c.client.Task.
+		Update().
+		Where(task.IDIn(ids...), task.UserTasks(ownerID)).
+		SetHidden(true).
+		Save(ctx)
 	return err
 }
 
@@ -224,6 +238,10 @@ func (c *taskClient) List(ctx context.Context, args *ListTaskArgs) (*ListTaskRes
 
 	if args.CorrelationID != nil {
 		q.Where(task.CorrelationID(*args.CorrelationID))
+	}
+
+	if args.ExcludeHidden {
+		q.Where(task.Hidden(false))
 	}
 
 	q = withTaskEagerLoading(ctx, q)

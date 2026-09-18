@@ -135,6 +135,20 @@ func (tc *TaskCreate) SetNillableUserTasks(i *int) *TaskCreate {
 	return tc
 }
 
+// SetHidden sets the "hidden" field.
+func (tc *TaskCreate) SetHidden(b bool) *TaskCreate {
+	tc.mutation.SetHidden(b)
+	return tc
+}
+
+// SetNillableHidden sets the "hidden" field if the given value is not nil.
+func (tc *TaskCreate) SetNillableHidden(b *bool) *TaskCreate {
+	if b != nil {
+		tc.SetHidden(*b)
+	}
+	return tc
+}
+
 // SetUserID sets the "user" edge to the User entity by ID.
 func (tc *TaskCreate) SetUserID(id int) *TaskCreate {
 	tc.mutation.SetUserID(id)
@@ -209,6 +223,10 @@ func (tc *TaskCreate) defaults() error {
 		v := task.DefaultStatus
 		tc.mutation.SetStatus(v)
 	}
+	if _, ok := tc.mutation.Hidden(); !ok {
+		v := task.DefaultHidden
+		tc.mutation.SetHidden(v)
+	}
 	return nil
 }
 
@@ -233,6 +251,9 @@ func (tc *TaskCreate) check() error {
 	}
 	if _, ok := tc.mutation.PublicState(); !ok {
 		return &ValidationError{Name: "public_state", err: errors.New(`ent: missing required field "Task.public_state"`)}
+	}
+	if _, ok := tc.mutation.Hidden(); !ok {
+		return &ValidationError{Name: "hidden", err: errors.New(`ent: missing required field "Task.hidden"`)}
 	}
 	return nil
 }
@@ -299,6 +320,10 @@ func (tc *TaskCreate) createSpec() (*Task, *sqlgraph.CreateSpec) {
 	if value, ok := tc.mutation.CorrelationID(); ok {
 		_spec.SetField(task.FieldCorrelationID, field.TypeUUID, value)
 		_node.CorrelationID = value
+	}
+	if value, ok := tc.mutation.Hidden(); ok {
+		_spec.SetField(task.FieldHidden, field.TypeBool, value)
+		_node.Hidden = value
 	}
 	if nodes := tc.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -471,6 +496,18 @@ func (u *TaskUpsert) ClearUserTasks() *TaskUpsert {
 	return u
 }
 
+// SetHidden sets the "hidden" field.
+func (u *TaskUpsert) SetHidden(v bool) *TaskUpsert {
+	u.Set(task.FieldHidden, v)
+	return u
+}
+
+// UpdateHidden sets the "hidden" field to the value that was provided on create.
+func (u *TaskUpsert) UpdateHidden() *TaskUpsert {
+	u.SetExcluded(task.FieldHidden)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create.
 // Using this option is equivalent to using:
 //
@@ -635,6 +672,20 @@ func (u *TaskUpsertOne) UpdateUserTasks() *TaskUpsertOne {
 func (u *TaskUpsertOne) ClearUserTasks() *TaskUpsertOne {
 	return u.Update(func(s *TaskUpsert) {
 		s.ClearUserTasks()
+	})
+}
+
+// SetHidden sets the "hidden" field.
+func (u *TaskUpsertOne) SetHidden(v bool) *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetHidden(v)
+	})
+}
+
+// UpdateHidden sets the "hidden" field to the value that was provided on create.
+func (u *TaskUpsertOne) UpdateHidden() *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateHidden()
 	})
 }
 
@@ -973,6 +1024,20 @@ func (u *TaskUpsertBulk) UpdateUserTasks() *TaskUpsertBulk {
 func (u *TaskUpsertBulk) ClearUserTasks() *TaskUpsertBulk {
 	return u.Update(func(s *TaskUpsert) {
 		s.ClearUserTasks()
+	})
+}
+
+// SetHidden sets the "hidden" field.
+func (u *TaskUpsertBulk) SetHidden(v bool) *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetHidden(v)
+	})
+}
+
+// UpdateHidden sets the "hidden" field to the value that was provided on create.
+func (u *TaskUpsertBulk) UpdateHidden() *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateHidden()
 	})
 }
 

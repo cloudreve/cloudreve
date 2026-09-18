@@ -602,6 +602,12 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				middleware.HashID(hashid.TaskID),
 				controllers.CancelTask,
 			)
+			// Delete (hide) a finished task record
+			wf.DELETE(":id",
+				middleware.RequiredScopes(types.ScopeWorkflowWrite),
+				middleware.HashID(hashid.TaskID),
+				controllers.DeleteTask,
+			)
 			// Create task to create an archive file
 			wf.POST("archive",
 				middleware.RequiredScopes(types.ScopeWorkflowWrite),

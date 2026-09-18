@@ -335,8 +335,9 @@ func (service *ListTaskService) ListTasks(c *gin.Context) (*TaskListResponse, er
 			PageToken:           service.NextPageToken,
 			PageSize:            service.PageSize,
 		},
-		Types:  []string{queue.CreateArchiveTaskType, queue.ExtractArchiveTaskType, queue.RelocateTaskType, queue.ImportTaskType},
-		UserID: user.ID,
+		Types:         []string{queue.CreateArchiveTaskType, queue.ExtractArchiveTaskType, queue.RelocateTaskType, queue.ImportTaskType},
+		UserID:        user.ID,
+		ExcludeHidden: true,
 	}
 
 	if service.Category != "general" {
@@ -517,6 +518,34 @@ func CancelTask(c *gin.Context, taskID int) error {
 	default:
 		return serializer.NewError(serializer.CodeParamErr, "Only queued or running tasks can be canceled", nil)
 	}
+}
+
+// DeleteTask hides a finished task record from its owner's list. The row
+// is kept so admins retain the history (#2270 follow-up, user request).
+func DeleteTask(c *gin.Context, taskID int) error {
+	dep := dependency.FromContext(c)
+	u := inventory.UserFromContext(c)
+	taskClient := dep.TaskClient()
+
+	model, err := taskClient.GetTaskByID(c, taskID)
+	if err != nil {
+		return serializer.NewError(serializer.CodeNotFound, "Task not found", err)
+	}
+
+	if model.UserTasks != u.ID && !u.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+		return serializer.NewError(serializer.CodeNotFound, "Task not found", nil)
+	}
+
+	switch model.Status {
+	case task.StatusCompleted, task.StatusError, task.StatusCanceled:
+	default:
+		return serializer.NewError(serializer.CodeParamErr, "Only finished tasks can be deleted", nil)
+	}
+
+	if err := taskClient.HideByIDs(c, model.UserTasks, taskID); err != nil {
+		return serializer.NewError(serializer.CodeDBError, "Failed to delete task", err)
+	}
+	return nil
 }
 
 type (

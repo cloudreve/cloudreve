@@ -80,6 +80,19 @@ func CancelTask(c *gin.Context) {
 	c.JSON(200, serializer.Response{})
 }
 
+// DeleteTask hides a finished task record from the owner's list.
+func DeleteTask(c *gin.Context) {
+	taskId := hashid.FromContext(c)
+	err := explorer.DeleteTask(c, taskId)
+	if err != nil {
+		c.JSON(200, serializer.Err(c, err))
+		c.Abort()
+		return
+	}
+
+	c.JSON(200, serializer.Response{})
+}
+
 // RetryTask re-queues a failed task with its original args.
 func RetryTask(c *gin.Context) {
 	taskId := hashid.FromContext(c)

@@ -102,5 +102,6 @@
     "50005": "Internal error.",
     "50010": "Desired node is unavailable.",
     "50011": "Failed to query file metadata."
-  }
+  },
+  "delete": "Delete"
 }

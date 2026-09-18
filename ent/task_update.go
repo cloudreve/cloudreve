@@ -130,6 +130,20 @@ func (tu *TaskUpdate) ClearUserTasks() *TaskUpdate {
 	return tu
 }
 
+// SetHidden sets the "hidden" field.
+func (tu *TaskUpdate) SetHidden(b bool) *TaskUpdate {
+	tu.mutation.SetHidden(b)
+	return tu
+}
+
+// SetNillableHidden sets the "hidden" field if the given value is not nil.
+func (tu *TaskUpdate) SetNillableHidden(b *bool) *TaskUpdate {
+	if b != nil {
+		tu.SetHidden(*b)
+	}
+	return tu
+}
+
 // SetUserID sets the "user" edge to the User entity by ID.
 func (tu *TaskUpdate) SetUserID(id int) *TaskUpdate {
 	tu.mutation.SetUserID(id)
@@ -250,6 +264,9 @@ func (tu *TaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if tu.mutation.CorrelationIDCleared() {
 		_spec.ClearField(task.FieldCorrelationID, field.TypeUUID)
+	}
+	if value, ok := tu.mutation.Hidden(); ok {
+		_spec.SetField(task.FieldHidden, field.TypeBool, value)
 	}
 	if tu.mutation.UserCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -397,6 +414,20 @@ func (tuo *TaskUpdateOne) SetNillableUserTasks(i *int) *TaskUpdateOne {
 // ClearUserTasks clears the value of the "user_tasks" field.
 func (tuo *TaskUpdateOne) ClearUserTasks() *TaskUpdateOne {
 	tuo.mutation.ClearUserTasks()
+	return tuo
+}
+
+// SetHidden sets the "hidden" field.
+func (tuo *TaskUpdateOne) SetHidden(b bool) *TaskUpdateOne {
+	tuo.mutation.SetHidden(b)
+	return tuo
+}
+
+// SetNillableHidden sets the "hidden" field if the given value is not nil.
+func (tuo *TaskUpdateOne) SetNillableHidden(b *bool) *TaskUpdateOne {
+	if b != nil {
+		tuo.SetHidden(*b)
+	}
 	return tuo
 }
 
@@ -550,6 +581,9 @@ func (tuo *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) 
 	}
 	if tuo.mutation.CorrelationIDCleared() {
 		_spec.ClearField(task.FieldCorrelationID, field.TypeUUID)
+	}
+	if value, ok := tuo.mutation.Hidden(); ok {
+		_spec.SetField(task.FieldHidden, field.TypeBool, value)
 	}
 	if tuo.mutation.UserCleared() {
 		edge := &sqlgraph.EdgeSpec{

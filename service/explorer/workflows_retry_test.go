@@ -225,3 +225,73 @@ func TestCancelTask(t *testing.T) {
 		require.Error(t, CancelTask(newCtx(owner), m.ID))
 	})
 }
+
+func TestDeleteTask(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	client := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared")
+	t.Cleanup(func() { require.NoError(t, client.Close()) })
+	ctx := context.Background()
+
+	group := client.Group.Create().SetName("g").SetPermissions(&boolset.BooleanSet{}).SaveX(ctx)
+	owner := client.User.Create().SetEmail("del-owner@example.com").SetNick("u").SetStatus("active").SetGroup(group).SaveX(ctx)
+	owner = client.User.Query().WithGroup().Where(entuser.ID(owner.ID)).OnlyX(ctx)
+	other := client.User.Create().SetEmail("del-other@example.com").SetNick("u").SetStatus("active").SetGroup(group).SaveX(ctx)
+	other = client.User.Query().WithGroup().Where(entuser.ID(other.ID)).OnlyX(ctx)
+
+	tc := inventory.NewTaskClient(client, conf.SQLiteDB, nil)
+	dep := &retryDepStub{
+		taskClient: tc,
+		ioQueue:    &captureQueue{},
+		downloadQ:  &captureQueue{},
+		recycleQ:   &captureQueue{},
+		mediaMetaQ: &captureQueue{},
+	}
+
+	newCtx := func(u *ent.User) *gin.Context {
+		engine := gin.New()
+		engine.ContextWithFallback = true
+		c := gin.CreateTestContextOnly(httptest.NewRecorder(), engine)
+		c.Request = httptest.NewRequest("DELETE", "/", nil)
+		util.WithValue(c, dependency.DepCtx{}, dep)
+		util.WithValue(c, inventory.UserCtx{}, u)
+		return c
+	}
+
+	newTask := func(ownerID int, status enttask.Status) *ent.Task {
+		return client.Task.Create().
+			SetType(queue.ExtractArchiveTaskType).
+			SetStatus(status).
+			SetPublicState(&types.TaskPublicState{}).
+			SetCorrelationID(uuid.Must(uuid.NewV4())).
+			SetUserTasks(ownerID).
+			SaveX(ctx)
+	}
+
+	t.Run("finished task hidden from owner list", func(t *testing.T) {
+		m := newTask(owner.ID, enttask.StatusCompleted)
+		require.NoError(t, DeleteTask(newCtx(owner), m.ID))
+		require.True(t, client.Task.GetX(ctx, m.ID).Hidden)
+
+		res, err := tc.List(ctx, &inventory.ListTaskArgs{
+			PaginationArgs: &inventory.PaginationArgs{PageSize: 10},
+			UserID:         owner.ID,
+			ExcludeHidden:  true,
+		})
+		require.NoError(t, err)
+		for _, task := range res.Tasks {
+			require.NotEqual(t, m.ID, task.ID)
+		}
+	})
+
+	t.Run("running task rejected", func(t *testing.T) {
+		m := newTask(owner.ID, enttask.StatusProcessing)
+		require.Error(t, DeleteTask(newCtx(owner), m.ID))
+		require.False(t, client.Task.GetX(ctx, m.ID).Hidden)
+	})
+
+	t.Run("other user's task rejected", func(t *testing.T) {
+		m := newTask(owner.ID, enttask.StatusCompleted)
+		require.Error(t, DeleteTask(newCtx(other), m.ID))
+		require.False(t, client.Task.GetX(ctx, m.ID).Hidden)
+	})
+}

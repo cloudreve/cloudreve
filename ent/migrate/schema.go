@@ -455,6 +455,7 @@ var (
 		{Name: "public_state", Type: field.TypeJSON},
 		{Name: "private_state", Type: field.TypeString, Nullable: true, Size: 2147483647},
 		{Name: "correlation_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "hidden", Type: field.TypeBool, Default: false},
 		{Name: "user_tasks", Type: field.TypeInt, Nullable: true},
 	}
 	// TasksTable holds the schema information for the "tasks" table.
@@ -465,7 +466,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "tasks_users_tasks",
-				Columns:    []*schema.Column{TasksColumns[9]},
+				Columns:    []*schema.Column{TasksColumns[10]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},

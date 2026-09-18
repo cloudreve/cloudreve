@@ -935,6 +935,22 @@ export function sendCancelTask(id: string): ThunkResponse<undefined> {
   };
 }
 
+export function sendDeleteTask(id: string): ThunkResponse<undefined> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/workflow/${id}`,
+        {
+          method: "DELETE",
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
 export function sendRetryTask(id: string): ThunkResponse<undefined> {
   return async (dispatch, _getState) => {
     return await dispatch(

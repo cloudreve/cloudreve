@@ -383,6 +383,10 @@ func init() {
 	task.DefaultUpdatedAt = taskDescUpdatedAt.Default.(func() time.Time)
 	// task.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	task.UpdateDefaultUpdatedAt = taskDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// taskDescHidden is the schema descriptor for hidden field.
+	taskDescHidden := taskFields[6].Descriptor()
+	// task.DefaultHidden holds the default value on creation for the hidden field.
+	task.DefaultHidden = taskDescHidden.Default.(bool)
 	userMixin := schema.User{}.Mixin()
 	userMixinHooks0 := userMixin[0].Hooks()
 	user.Hooks[0] = userMixinHooks0[0]

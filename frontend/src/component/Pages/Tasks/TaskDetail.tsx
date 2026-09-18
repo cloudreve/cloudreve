@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { sendCancelTask, sendRetryTask } from "../../../api/api.ts";
+import { sendCancelTask, sendDeleteTask, sendRetryTask } from "../../../api/api.ts";
 import { TaskResponse, TaskStatus } from "../../../api/workflow.ts";
 import { useAppDispatch } from "../../../redux/hooks.ts";
 import { SecondaryLoadingButton, StyledTableContainerPaper } from "../../Common/StyledComponents.tsx";
@@ -48,7 +48,19 @@ const TaskDetail = ({ task, downloading, onRetried }: TaskDetailProps) => {
       .finally(() => setCanceling(false));
   };
 
+  const [deleting, setDeleting] = useState(false);
+
+  const deleteRecord = () => {
+    setDeleting(true);
+    dispatch(sendDeleteTask(task.id))
+      .then(() => onRetried?.())
+      .catch(() => {})
+      .finally(() => setDeleting(false));
+  };
+
   const cancelable = task.status == TaskStatus.queued || task.status == TaskStatus.suspending;
+  const deletable =
+    task.status == TaskStatus.completed || task.status == TaskStatus.error || task.status == TaskStatus.canceled;
   return (
     <Stack spacing={2}>
       <Stack spacing={1}>
@@ -81,6 +93,18 @@ const TaskDetail = ({ task, downloading, onRetried }: TaskDetailProps) => {
             sx={{ alignSelf: "flex-start" }}
           >
             {t("common:cancel")}
+          </SecondaryLoadingButton>
+        )}
+        {deletable && (
+          <SecondaryLoadingButton
+            size="small"
+            variant="outlined"
+            color="error"
+            loading={deleting}
+            onClick={deleteRecord}
+            sx={{ alignSelf: "flex-start" }}
+          >
+            {t("common:delete")}
           </SecondaryLoadingButton>
         )}
         {task.status == TaskStatus.error && (
