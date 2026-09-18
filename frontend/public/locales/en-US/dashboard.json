@@ -820,7 +820,13 @@
     "ftsTikaExts": "Supported extensions",
     "ftsTikaExtsDes": "Comma-separated list of file extensions. Tika will process files of these types.",
     "ftsTikaMaxFileSize": "Maximum file size",
-    "ftsTikaMaxFileSizeDes": "Maximum file size to send to Tika for content extraction."
+    "ftsTikaMaxFileSizeDes": "Maximum file size to send to Tika for content extraction.",
+    "ssoIssuer": "Issuer URL",
+    "ssoIssuerDes": "Base URL of the OIDC issuer, e.g. <0>https://keycloak.example.com/realms/master</0>. The provider metadata is fetched from <1>.well-known/openid-configuration</1> under this URL.",
+    "ssoRegisterEnabled": "Allow automatic registration",
+    "ssoRegisterEnabledDes": "Automatically create a local account when a user signs in via SSO for the first time. The sign-up email filter below also applies.",
+    "ssoCallbackUrl": "Callback URL",
+    "ssoCallbackUrlDes": "Register this URL as the redirect/callback URL in your identity provider: <0>{{url}}</0>"
   },
   "giftCodes": {
     "giftCodesSettings": "Gift Codes",
@@ -1597,7 +1603,7 @@
     "filterEmailProviderDisabled": "Disabled",
     "filterEmailProviderWhitelist": "Whitelist",
     "filterEmailProviderBlacklist": "Blacklist",
-    "filterEmailProviderDes": "Restrict the email provider for registration, third-party SSO login is not restricted.",
+    "filterEmailProviderDes": "Restrict the email provider for new registrations, including accounts provisioned via SSO.",
     "filterEmailProviderRule": "Email domain filter rules",
     "filterEmailProviderRuleDes": "Separate multiple fields with a semi-colon comma.",
     "qqConnect": "QQ Connect",

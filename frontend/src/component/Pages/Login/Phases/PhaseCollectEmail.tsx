@@ -8,6 +8,7 @@ import { useQuery } from "../../../../util";
 import { OutlineIconTextField } from "../../../Common/Form/OutlineIconTextField.tsx";
 import MailOutlined from "../../../Icons/MailOutlined.tsx";
 import PasskeyLoginButton from "../Signin/PasskeyLoginButton.tsx";
+import SSOLoginButton from "../Signin/SSOLoginButton.tsx";
 import { Control } from "../Signin/SignIn.tsx";
 
 export const LegalLinks = () => {
@@ -52,11 +53,11 @@ interface PhaseCollectEmailProps {
 const PhaseCollectEmail = ({ email, setEmail, control, onOAuthPasskeyLogin }: PhaseCollectEmailProps) => {
   const { t } = useTranslation();
   const query = useQuery();
-  const { register_enabled, authn } = useAppSelector((state) => state.siteConfig.login.config);
+  const { register_enabled, authn, sso_enabled } = useAppSelector((state) => state.siteConfig.login.config);
   const tos = useAppSelector((state) => state.siteConfig.login.config.tos_url);
   const privacyPolicy = useAppSelector((state) => state.siteConfig.login.config.privacy_policy_url);
 
-  const showFooter = tos || privacyPolicy || authn;
+  const showFooter = tos || privacyPolicy || authn || sso_enabled;
 
   useEffect(() => {
     if (!!query.get("email")) {
@@ -97,7 +98,10 @@ const PhaseCollectEmail = ({ email, setEmail, control, onOAuthPasskeyLogin }: Ph
       {showFooter && (
         <>
           <Divider sx={{ my: 2 }} />
-          <Stack spacing={1}>{authn && <PasskeyLoginButton autoComplete onLoginSuccess={onOAuthPasskeyLogin} />}</Stack>
+          <Stack spacing={1}>
+            {authn && <PasskeyLoginButton autoComplete onLoginSuccess={onOAuthPasskeyLogin} />}
+            <SSOLoginButton />
+          </Stack>
           <LegalLinks />
         </>
       )}

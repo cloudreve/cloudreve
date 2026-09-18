@@ -52,7 +52,22 @@
     "signingOut": "正在退出登录...",
     "loggedOut": "您已退出登录",
     "clickToRefresh": "点击刷新验证码",
-    "switchLanguage": "切换语言"
+    "switchLanguage": "切换语言",
+    "signInWith": "使用 {{name}} 登录",
+    "ssoFailed": "单点登录失败，请重试或选择其他登录方式。",
+    "ssoError": {
+      "generic": "单点登录失败，请重试。",
+      "sso_not_configured": "单点登录尚未配置，请联系管理员。",
+      "sso_discovery_failed": "无法连接到身份提供方，请稍后重试。",
+      "sso_state_failed": "无法创建登录会话，请重试。",
+      "sso_denied": "身份提供方拒绝了登录请求。",
+      "sso_invalid_response": "身份提供方返回了无效的响应。",
+      "sso_state_expired": "登录会话已过期，请重试。",
+      "sso_exchange_failed": "无法完成与身份提供方的登录交换。",
+      "sso_token_invalid": "身份响应验证失败。",
+      "sso_no_email": "身份提供方未返回邮箱地址。",
+      "sso_account_unavailable": "此身份没有可用账号，注册可能受限。"
+    }
   },
   "oauth": {
     "authorize": "授权应用",
@@ -999,7 +1014,12 @@
     "validDurationDays": "{{num}} 天",
     "reportTarget": "举报对象",
     "reportReason": "原因",
-    "reportReasonOptions": ["侵权", "有害内容", "垃圾信息", "其他"],
+    "reportReasonOptions": [
+      "侵权",
+      "有害内容",
+      "垃圾信息",
+      "其他"
+    ],
     "reportDescription": "补充说明",
     "reportAbuseSuccess": "举报已提交"
   }

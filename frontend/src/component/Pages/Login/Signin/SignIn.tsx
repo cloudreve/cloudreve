@@ -303,6 +303,15 @@ const EmailLogin = ({ oauthConsent }: SignInProps) => {
 
   // Initial load for OAuth or regular login
   useEffect(() => {
+    const ssoError = query.get("sso_error");
+    if (ssoError) {
+      enqueueSnackbar({
+        message: t(`login.ssoError.${ssoError}`, t("login.ssoError.generic")),
+        variant: "error",
+        action: DefaultCloseAction,
+      });
+    }
+
     const init = async () => {
       if (isOAuthFlow) {
         const registration = await loadAppRegistration();

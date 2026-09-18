@@ -279,6 +279,14 @@ func (s *SetSettingService) SetSetting(c *gin.Context) (map[string]string, error
 	kv := dep.KV()
 	settingClient := dep.SettingClient()
 
+	// Redacted secrets are never returned to the client, so an empty value
+	// means "keep current" — otherwise saving the form would wipe the secret.
+	for k, v := range s.Settings {
+		if _, redacted := inventory.RedactedSettings[strings.ToLower(k)]; redacted && v == "" {
+			delete(s.Settings, k)
+		}
+	}
+
 	// Preprocess settings
 	allPreprocessors := make(map[string]SettingPreProcessor)
 	allPostprocessors := make(map[string]SettingPostProcessor)

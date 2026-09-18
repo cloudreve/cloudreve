@@ -128,6 +128,8 @@ Order = user-visible value first; each ships with backend + UI + tests.
    - [ ] Share ACL — per-user/group grants on shares (#3517); paid share links deferred to VAS phase; default shares for new users (#3390) open
 2. **Storage policy advanced** — multiple policies per group (group→policies join table), per-directory binding, load-balancer policy, file migration between policies (fixes #3518, #2961, #2262)
 3. **SSO** — generic OIDC provider (PR #3472 base), Logto connector, multi-account switching, sign-up email filtering (fixes #3464, #3056, #3505)
+   - [x] PR #141 — inbound OIDC consumer (auth-code + nonce, JWKS-verified RS256 id_tokens, userinfo fallback, auto-provisioning, one-time ticket handoff, SSRF-validated endpoints, redacted secret); covers Keycloak/Authentik/Logto/generic IdPs; sign-up email domain filtering (whitelist/blacklist + sub-address block) enforced at registration and SSO provisioning; multi-account lands via existing session `upsert` (fixes #3464, #3056)
+   - [ ] QQ Connect (non-OIDC protocol, separate integration), account linking UI for existing local accounts, group/role claim mapping
 4. **VAS/monetization-free** — credits + redemption codes as *free* features (gift codes for admin use), storage/membership plan definitions; skip payment processor integration initially — YAGNI until a real user asks (fixes #3231)
 5. **System extensions** — activity/audit log surfaced in admin, site announcements, report-abuse queue (fixes #3480, #3479 IP whitelist)
 

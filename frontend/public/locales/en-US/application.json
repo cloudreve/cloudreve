@@ -52,7 +52,22 @@
     "signingOut": "Signing out...",
     "loggedOut": "You are signed out now.",
     "clickToRefresh": "Click to refresh",
-    "switchLanguage": "Switch Language"
+    "switchLanguage": "Switch Language",
+    "signInWith": "Sign in with {{name}}",
+    "ssoFailed": "Single sign-on failed. Please try again or use another sign-in method.",
+    "ssoError": {
+      "generic": "Single sign-on failed. Please try again.",
+      "sso_not_configured": "Single sign-on is not configured. Please contact the administrator.",
+      "sso_discovery_failed": "Failed to reach the identity provider. Please try again later.",
+      "sso_state_failed": "Failed to start the sign-in session. Please try again.",
+      "sso_denied": "Sign-in was denied by the identity provider.",
+      "sso_invalid_response": "Invalid response from the identity provider.",
+      "sso_state_expired": "The sign-in session has expired. Please try again.",
+      "sso_exchange_failed": "Failed to complete sign-in with the identity provider.",
+      "sso_token_invalid": "Failed to verify the identity response.",
+      "sso_no_email": "The identity provider did not return an email address.",
+      "sso_account_unavailable": "No account is available for this identity. Registration may be restricted."
+    }
   },
   "oauth": {
     "authorize": "Authorize Application",
@@ -999,7 +1014,12 @@
     "validDurationDays": "{{num}} days",
     "reportTarget": "Report target",
     "reportReason": "Reason",
-    "reportReasonOptions": ["Copyright infringement", "Harmful content", "Spam", "Other"],
+    "reportReasonOptions": [
+      "Copyright infringement",
+      "Harmful content",
+      "Spam",
+      "Other"
+    ],
     "reportDescription": "Additional description",
     "reportAbuseSuccess": "Report submitted."
   }

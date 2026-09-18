@@ -191,6 +191,17 @@ const Settings = () => {
                     "avatar_size",
                     "avatar_size_l",
                     "gravatar_server",
+                    "sso_enabled",
+                    "sso_display_name",
+                    "sso_issuer",
+                    "sso_client_id",
+                    "sso_client_secret",
+                    "sso_scopes",
+                    "sso_register_enabled",
+                    "email_filter_mode",
+                    "email_filter_list",
+                    "email_disable_subaddress",
+                    "siteURL",
                   ]}
                 >
                   <UserSession />
