@@ -351,7 +351,7 @@ func (handler *Driver) Delete(ctx context.Context, files ...string) ([]string, e
 		// 统计未删除的文件
 		failed = append(
 			failed,
-			util.SliceDifference(files,
+			util.SliceDifference(group,
 				lo.Map(delRes.DeletedObjects, func(v oss.DeletedInfo, i int) string {
 					return *v.Key
 				}),

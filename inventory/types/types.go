@@ -179,6 +179,10 @@ type (
 	EntityProps struct {
 		UnlinkOnly      bool             `json:"unlink_only,omitempty"`
 		EncryptMetadata *EncryptMetadata `json:"encrypt_metadata,omitempty"`
+		// RecycleFailCount tracks consecutive driver-delete failures during
+		// entity recycling. Entities reaching the threshold are force-removed
+		// from the DB so one un-deletable blob cannot stall the sweep forever.
+		RecycleFailCount int `json:"recycle_fail_count,omitempty"`
 	}
 
 	Cipher string

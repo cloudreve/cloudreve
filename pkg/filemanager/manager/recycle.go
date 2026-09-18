@@ -40,6 +40,10 @@ type (
 	}
 )
 
+// RecycleFailThreshold is the number of consecutive sweeps an entity may fail
+// driver deletion before its DB row is force-removed (blob orphaned).
+const RecycleFailThreshold = 5
+
 func init() {
 	queue.RegisterResumableTaskFactory(queue.ExplicitEntityRecycleTaskType, NewExplicitEntityRecycleTaskFromModel)
 	queue.RegisterResumableTaskFactory(queue.EntityRecycleRoutineTaskType, NewEntityRecycleRoutineTaskFromModel)
@@ -226,14 +230,19 @@ func (m *manager) RecycleEntities(ctx context.Context, force bool, entityIDs ...
 			}), func(entity fs.Entity, index int) string {
 				return entity.Source()
 			})
+			var failedSrcs []string
 			if len(toBeDeletedSrc) > 0 {
-				res, err := d.Delete(ctx, toBeDeletedSrc...)
-				if err != nil {
-					for _, src := range res {
-						ae.Add(strconv.Itoa(mapSrcToId[src]), err)
+				var deleteErr error
+				failedSrcs, deleteErr = d.Delete(ctx, toBeDeletedSrc...)
+				if deleteErr != nil {
+					for _, src := range failedSrcs {
+						ae.Add(strconv.Itoa(mapSrcToId[src]), deleteErr)
 					}
 				}
 			}
+			// A failure covering every source signals an infrastructure outage
+			// (driver/bucket down) — per-entity badness only counts on partial failure.
+			partialFailure := len(failedSrcs) < len(toBeDeletedSrc)
 
 			// Delete upload session if it's still valid
 			for _, entity := range chunk {
@@ -253,24 +262,52 @@ func (m *manager) RecycleEntities(ctx context.Context, force bool, entityIDs ...
 
 			// Filtering out entities that are successfully deleted
 			rawAe := ae.Raw()
-			successEntities := lo.FilterMap(chunk, func(entity fs.Entity, index int) (int, bool) {
+			successEntities := make([]int, 0, len(chunk))
+			var dirtyProps []*ent.Entity
+			for _, entity := range chunk {
 				entityIdStr := fmt.Sprintf("%d", entity.ID())
-				_, ok := rawAe[entityIdStr]
-				if !ok {
-					// No error, deleted
-					return entity.ID(), true
+				if _, ok := rawAe[entityIdStr]; !ok {
+					successEntities = append(successEntities, entity.ID())
+					continue
 				}
 
 				if force {
 					ae.Remove(entityIdStr)
+					successEntities = append(successEntities, entity.ID())
+					continue
 				}
-				return entity.ID(), force
-			})
+
+				// Count consecutive per-entity delete failures; past the
+				// threshold the row is force-removed so one un-deletable blob
+				// (e.g. an illegal over-long path) cannot stall every sweep.
+				if partialFailure {
+					model := entity.Model()
+					if model.Props == nil {
+						model.Props = &types.EntityProps{}
+					}
+					model.Props.RecycleFailCount++
+					if model.Props.RecycleFailCount >= RecycleFailThreshold {
+						m.l.Warning(
+							"Entity %d failed blob deletion %d times; removing DB row and orphaning blob %q",
+							entity.ID(), model.Props.RecycleFailCount, entity.Source())
+						ae.Remove(entityIdStr)
+						successEntities = append(successEntities, entity.ID())
+						continue
+					}
+					dirtyProps = append(dirtyProps, model)
+				}
+			}
 
 			// Remove entities from DB
 			fc, tx, ctx, err := inventory.WithTx(ctx, m.dep.FileClient())
 			if err != nil {
 				return fmt.Errorf("failed to start transaction: %w", err)
+			}
+			if len(dirtyProps) > 0 {
+				if err := fc.UpdateEntityProps(ctx, dirtyProps...); err != nil {
+					_ = inventory.Rollback(tx)
+					return fmt.Errorf("failed to persist recycle failure counts: %w", err)
+				}
 			}
 			storageReduced, err := fc.RemoveEntitiesByID(ctx, successEntities...)
 			if err != nil {

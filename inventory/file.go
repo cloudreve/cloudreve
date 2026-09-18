@@ -187,6 +187,8 @@ type FileClient interface {
 	RemoveStaleEntities(ctx context.Context, file *ent.File) (StorageDiff, error)
 	// RemoveEntitiesByID hard-delete entities by IDs.
 	RemoveEntitiesByID(ctx context.Context, ids ...int) (map[int]int64, error)
+	// UpdateEntityProps persists mutated EntityProps back to the given entities.
+	UpdateEntityProps(ctx context.Context, entities ...*ent.Entity) error
 	// CapEntities caps the number of entities of a given file. The oldest entities will be unlinked
 	// if entity count exceed limit.
 	CapEntities(ctx context.Context, file *ent.File, owner *ent.User, max int, entityType types.EntityType) (StorageDiff, error)
@@ -456,6 +458,15 @@ func (f *fileClient) RemoveEntitiesByID(ctx context.Context, ids ...int) (map[in
 	}
 
 	return storageReduced, nil
+}
+
+func (f *fileClient) UpdateEntityProps(ctx context.Context, entities ...*ent.Entity) error {
+	for _, e := range entities {
+		if err := f.client.Entity.UpdateOne(e).SetProps(e.Props).Exec(ctx); err != nil {
+			return fmt.Errorf("failed to update props of entity %d: %w", e.ID, err)
+		}
+	}
+	return nil
 }
 
 func (f *fileClient) StaleEntities(ctx context.Context, ids ...int) ([]*ent.Entity, error) {
