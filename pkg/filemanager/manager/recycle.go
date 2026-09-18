@@ -213,11 +213,18 @@ func (m *manager) RecycleEntities(ctx context.Context, force bool, entityIDs ...
 			m.l.Info("Start to recycle batch #%d, %d entities", batch, len(chunk))
 			mapSrcToId := make(map[string]int, len(chunk))
 			_, d, err := m.getEntityPolicyDriver(ctx, chunk[0], nil)
-			if err != nil {
+			if err != nil && !force {
 				for _, entity := range chunk {
 					ae.Add(strconv.Itoa(entity.ID()), err)
 				}
 				continue
+			}
+			if err != nil {
+				// Force delete: the policy/driver is broken (e.g. deleted or
+				// misconfigured), so physical blobs are unreachable anyway —
+				// drop the DB rows instead of deadlocking the policy.
+				m.l.Warning("Skipping driver init failure under force recycle: %s", err)
+				d = nil
 			}
 
 			for _, entity := range chunk {
@@ -231,7 +238,7 @@ func (m *manager) RecycleEntities(ctx context.Context, force bool, entityIDs ...
 				return entity.Source()
 			})
 			var failedSrcs []string
-			if len(toBeDeletedSrc) > 0 {
+			if len(toBeDeletedSrc) > 0 && d != nil {
 				var deleteErr error
 				failedSrcs, deleteErr = d.Delete(ctx, toBeDeletedSrc...)
 				if deleteErr != nil {
@@ -253,8 +260,10 @@ func (m *manager) RecycleEntities(ctx context.Context, force bool, entityIDs ...
 
 				if session, ok := m.kv.Get(UploadSessionCachePrefix + sid.String()); ok {
 					session := session.(fs.UploadSession)
-					if err := d.CancelToken(ctx, &session); err != nil {
-						m.l.Warning("Failed to cancel upload session for %q: %s, this is expected if it's remote policy.", session.Props.Uri.String(), err)
+					if d != nil {
+						if err := d.CancelToken(ctx, &session); err != nil {
+							m.l.Warning("Failed to cancel upload session for %q: %s, this is expected if it's remote policy.", session.Props.Uri.String(), err)
+						}
 					}
 					_ = m.kv.Delete(UploadSessionCachePrefix, sid.String())
 				}
