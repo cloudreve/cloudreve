@@ -666,7 +666,7 @@
     "preparing": "Preparing...",
     "processing": "Processing...",
     "progressDescription": "{{uploaded}} uploaded, {{total}} total - {{percentage}}%",
-    "progressDescriptionFull": "{{uploaded}} uploaded, {{total}} total - {{percentage}}% ({{speed}})",
+    "progressDescriptionFull": "{{uploaded}} uploaded, {{total}} total - {{percentage}}% ({{speed}}){{eta}}",
     "progressDescriptionPlaceHolder": " - uploaded",
     "uploaded": "Uploaded",
     "rootFolder": "Root folder",
@@ -725,7 +725,8 @@
     "upyunUploadFailed": "Upload failed: {{msg}}",
     "parseResponseError": "Unable to parse response: {{msg}} ({{content}})",
     "concurrentTaskNumber": "Concurrent task limit",
-    "dropFileHere": "Drop file to upload"
+    "dropFileHere": "Drop file to upload",
+    "etaSuffix": ", ETA {{eta}}"
   },
   "share": {
     "statistics": "Statistics",

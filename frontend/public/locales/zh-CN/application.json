@@ -666,7 +666,7 @@
     "preparing": "准备中...",
     "processing": "处理中...",
     "progressDescription": "已上传 {{uploaded}}，共 {{total}} - {{percentage}}%",
-    "progressDescriptionFull": "{{speed}} 已上传 {{uploaded}}，共 {{total}} - {{percentage}}%",
+    "progressDescriptionFull": "{{speed}} 已上传 {{uploaded}}，共 {{total}} - {{percentage}}%{{eta}}",
     "progressDescriptionPlaceHolder": "已上传 - ",
     "uploaded": "已上传",
     "rootFolder": "根目录",
@@ -725,7 +725,8 @@
     "upyunUploadFailed": "上传失败：{{msg}}",
     "parseResponseError": "无法解析响应：{{msg}} ({{content}})",
     "concurrentTaskNumber": "同时上传的任务数量",
-    "dropFileHere": "松开鼠标开始上传"
+    "dropFileHere": "松开鼠标开始上传",
+    "etaSuffix": "，预计剩余 {{eta}}"
   },
   "share": {
     "statistics": "统计",
