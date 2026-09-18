@@ -151,6 +151,9 @@ type (
 	SlaveThumbService  struct {
 		Src string `uri:"src" binding:"required"`
 		Ext string `uri:"ext" binding:"required"`
+		// Eid optionally carries the entity ID of the requested blob so the
+		// slave can resolve encryption metadata from the shared DB (#3164).
+		Eid int `form:"eid"`
 	}
 )
 
@@ -165,12 +168,32 @@ func (s *SlaveThumbService) Thumb(c *gin.Context) error {
 	}
 
 	settings := dep.SettingProvider()
-	var entity fs.Entity
-	entity, err = local.NewLocalFileEntity(types.EntityTypeThumbnail, string(src)+settings.ThumbSlaveSidecarSuffix(c))
+	var (
+		entity    fs.Entity
+		srcEntity fs.Entity
+	)
+	// Resolve the DB entity when the caller knows its ID: it carries the
+	// encryption metadata needed to serve/generate encrypted thumbnails.
+	if s.Eid > 0 {
+		if e, err := dep.FileClient().GetEntityByID(c, s.Eid); err == nil {
+			dbEntity := fs.NewEntity(e)
+			if dbEntity.Type() == types.EntityTypeThumbnail {
+				entity = dbEntity
+			} else {
+				srcEntity = dbEntity
+			}
+		}
+	}
+
+	if entity == nil {
+		entity, err = local.NewLocalFileEntity(types.EntityTypeThumbnail, string(src)+settings.ThumbSlaveSidecarSuffix(c))
+	}
 	if err != nil {
-		srcEntity, err := local.NewLocalFileEntity(types.EntityTypeVersion, string(src))
-		if err != nil {
-			return fs.ErrPathNotExist.WithError(err)
+		if srcEntity == nil {
+			srcEntity, err = local.NewLocalFileEntity(types.EntityTypeVersion, string(src))
+			if err != nil {
+				return fs.ErrPathNotExist.WithError(err)
+			}
 		}
 
 		entity, err = m.SubmitAndAwaitThumbnailTask(c, nil, s.Ext, srcEntity)

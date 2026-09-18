@@ -203,11 +203,16 @@ func SlaveFileListRoute(srcPath string, recursive bool) string {
 	return fmt.Sprintf("%s?%s", base, query.Encode())
 }
 
-func SlaveThumbUrl(base *url.URL, srcPath, ext string) *url.URL {
+func SlaveThumbUrl(base *url.URL, srcPath, ext string, entityID int) *url.URL {
 	srcPath = url.PathEscape(base64.URLEncoding.EncodeToString([]byte(srcPath)))
 	ext = url.PathEscape(ext)
 	route, _ := url.Parse(constants.APIPrefixSlave + fmt.Sprintf("/file/thumb/%s/%s", srcPath, ext))
 	base = base.ResolveReference(route)
+	if entityID > 0 {
+		query := base.Query()
+		query.Set("eid", strconv.Itoa(entityID))
+		base.RawQuery = query.Encode()
+	}
 	return base
 }
 
