@@ -13,13 +13,20 @@ import (
 
 const MaxFileNameLength = 256
 
-// validateFileName validates the file name.
-func validateFileName(name string) error {
+// validateFileName validates the file name. When the policy allows native
+// names, characters only forbidden on Windows filesystems are accepted;
+// path separators and dot-names stay illegal regardless (#3065).
+func validateFileName(name string, policy *ent.StoragePolicy) error {
 	if len(name) >= MaxFileNameLength || len(name) == 0 {
 		return fmt.Errorf("length of name must be between 1 and 255")
 	}
 
-	if strings.ContainsAny(name, "\\/:*?\"<>|") {
+	if strings.ContainsAny(name, "\\/") {
+		return fmt.Errorf("name contains path separators")
+	}
+
+	nativeAllowed := policy != nil && policy.Settings.AllowNativeName
+	if !nativeAllowed && strings.ContainsAny(name, ":*?\"<>|") {
 		return fmt.Errorf("name contains illegal characters")
 	}
 
@@ -74,7 +81,7 @@ func validateFileSize(size int64, policy *ent.StoragePolicy) error {
 
 // validateNewFile validates the upload request.
 func validateNewFile(fileName string, size int64, policy *ent.StoragePolicy) error {
-	if err := validateFileName(fileName); err != nil {
+	if err := validateFileName(fileName, policy); err != nil {
 		return fs.ErrIllegalObjectName.WithError(err)
 	}
 

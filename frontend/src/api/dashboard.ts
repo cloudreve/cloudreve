@@ -217,6 +217,7 @@ export interface PolicySetting {
   is_file_type_deny_list?: boolean;
   file_regexp?: string;
   is_name_regexp_deny_list?: boolean;
+  allow_native_name?: boolean;
   od_redirect?: string;
   custom_proxy?: boolean;
   proxy_server?: string;

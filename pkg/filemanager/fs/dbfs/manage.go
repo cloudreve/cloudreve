@@ -83,8 +83,9 @@ func (f *DBFS) Create(ctx context.Context, path *fs.URI, fileType types.FileType
 			return nil, fs.ErrNotSupportedAction.WithError(fmt.Errorf("parent must be a valid folder"))
 		}
 
-		// Validate object name
-		if err := validateFileName(desired[i]); err != nil {
+		// Validate object name — folder segments keep the strict rule set
+		// since their governing policy is ambiguous.
+		if err := validateFileName(desired[i], nil); err != nil {
 			return nil, fs.ErrIllegalObjectName.WithError(err)
 		}
 
@@ -174,16 +175,17 @@ func (f *DBFS) Rename(ctx context.Context, path *fs.URI, newName string) (fs.Fil
 		return nil, nil, fs.ErrNotSupportedAction.WithError(fmt.Errorf("cannot modify root folder"))
 	}
 
-	// Validate new name
-	if err := validateFileName(newName); err != nil {
-		return nil, nil, fs.ErrIllegalObjectName.WithError(err)
-	}
-
-	// If target is a file, validate file extension
 	policy, err := f.getPreferredPolicy(ctx, target)
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// Validate new name
+	if err := validateFileName(newName, policy); err != nil {
+		return nil, nil, fs.ErrIllegalObjectName.WithError(err)
+	}
+
+	// If target is a file, validate file extension
 
 	if target.Type() == types.FileTypeFile {
 		if err := validateExtension(newName, policy); err != nil {

@@ -1022,6 +1022,8 @@
     "blacklist": "拒绝",
     "fileNameRegex": "文件名正则规则",
     "fileNameRegexDes": "用于匹配文件名的正则表达式，留空表示无限制。",
+    "allowNativeName": "允许原生文件名字符",
+    "allowNativeNameDes": "允许文件名包含仅在 Windows 文件系统中非法的字符（: * ? \" < > |）。可能影响 Windows 客户端挂载使用。路径分隔符仍然禁止。",
     "chunkSizeDes": "请指定分片上传时的分片大小，填写为 0 表示不使用分片上传，但最大上传大小可能受限于 Web 服务器。",
     "chunkSizeDesSuffix": "{{prefix}}通过分片上传，用户上传的文件将会被切分成分片逐个上传到存储端，当上传中断后，用户可以选择从上次上传的分片后继续开始上传。",
     "chunkSize": "上传分片大小",

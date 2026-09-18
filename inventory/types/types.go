@@ -50,6 +50,10 @@ type (
 		NameRegexp string `json:"file_regexp,omitempty"`
 		// IsNameRegexp Whether above regexp is a deny list.
 		IsNameRegexpDenyList bool `json:"is_name_regexp_deny_list,omitempty"`
+		// AllowNativeName permits characters only illegal on Windows
+		// filesystems (:*?"<>|) in file names. Path separators and dot-names
+		// stay illegal (#3065).
+		AllowNativeName bool `json:"allow_native_name,omitempty"`
 		// OauthRedirect Oauth 重定向地址
 		OauthRedirect string `json:"od_redirect,omitempty"`
 		// CustomProxy whether to use custom-proxy to get file content

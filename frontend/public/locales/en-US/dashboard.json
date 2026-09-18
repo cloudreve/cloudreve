@@ -1022,6 +1022,8 @@
     "blacklist": "Deny",
     "fileNameRegex": "File name regex rules",
     "fileNameRegexDes": "Regular expression to match file names, leave blank for no restriction.",
+    "allowNativeName": "Allow native file name characters",
+    "allowNativeNameDes": "Permit characters only illegal on Windows filesystems (: * ? \" < > |) in file names. May break clients mounting on Windows. Path separators remain forbidden.",
     "chunkSizeDes": "Specify the chunk size for chunked uploads. A value of 0 means no chunked uploads are used, but the maximum upload size may be limited by the web server.",
     "chunkSizeDesSuffix": "{{prefix}} With chunked upload, the files uploaded by users will be sliced into chunks and uploaded to the storage side one by one. After the upload is interrupted, users can choose to continue uploading from the last uploaded chunk.",
     "chunkSize": "Chunk size",

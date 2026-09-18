@@ -170,6 +170,16 @@ const StorageAndUploadSection = () => {
     [setPolicy],
   );
 
+  const onNativeNameChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setPolicy((p: StoragePolicy) => ({
+        ...p,
+        settings: { ...p.settings, allow_native_name: e.target.checked ? true : undefined },
+      }));
+    },
+    [setPolicy],
+  );
+
   const onChunkSizeChange = useCallback(
     (size: number) => {
       setPolicy((p: StoragePolicy) => ({
@@ -328,6 +338,17 @@ const StorageAndUploadSection = () => {
               }}
             />
             <NoMarginHelperText>{t("policy.fileNameRegexDes")}</NoMarginHelperText>
+          </FormControl>
+        </SettingForm>
+        <SettingForm lgWidth={5}>
+          <FormControl fullWidth>
+            <FormControlLabel
+              control={
+                <Switch checked={values.settings?.allow_native_name ?? false} onChange={onNativeNameChange} />
+              }
+              label={t("policy.allowNativeName")}
+            />
+            <NoMarginHelperText>{t("policy.allowNativeNameDes")}</NoMarginHelperText>
           </FormControl>
         </SettingForm>
         {values.type !== PolicyType.upyun && (
