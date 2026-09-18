@@ -3,6 +3,8 @@ package inventory
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -90,6 +92,16 @@ type (
 		EntityType      *types.EntityType
 		UserID          int
 		StoragePolicyID int
+		ReferenceCount  *ReferenceCountFilter
+	}
+
+	// ReferenceCountFilter compares entity reference_count against a value.
+	// Stale selects entities awaiting recycle (reference_count <= 0) and
+	// ignores Value.
+	ReferenceCountFilter struct {
+		Op    string
+		Value int
+		Stale bool
 	}
 
 	ListEntityResult struct {
@@ -1213,6 +1225,25 @@ func (f *fileClient) FlattenListFiles(ctx context.Context, args *FlattenListFile
 	}, nil
 }
 
+// ParseReferenceCountFilter parses a reference-count filter expression:
+// "stale" for entities awaiting recycle, or "gt:N" / "lt:N" / "eq:N".
+func ParseReferenceCountFilter(expr string) (*ReferenceCountFilter, error) {
+	if expr == "stale" {
+		return &ReferenceCountFilter{Stale: true}, nil
+	}
+
+	op, valStr, ok := strings.Cut(expr, ":")
+	if !ok || (op != "gt" && op != "lt" && op != "eq") {
+		return nil, fmt.Errorf("invalid reference count filter %q", expr)
+	}
+
+	v, err := strconv.Atoi(valStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid reference count filter %q: %w", expr, err)
+	}
+	return &ReferenceCountFilter{Op: op, Value: v}, nil
+}
+
 func (f *fileClient) ListEntities(ctx context.Context, args *ListEntityParameters) (*ListEntityResult, error) {
 	query := f.client.Entity.Query()
 	if args.EntityType != nil {
@@ -1225,6 +1256,19 @@ func (f *fileClient) ListEntities(ctx context.Context, args *ListEntityParameter
 
 	if args.StoragePolicyID > 0 {
 		query = query.Where(entity.StoragePolicyEntities(args.StoragePolicyID))
+	}
+
+	if args.ReferenceCount != nil {
+		switch {
+		case args.ReferenceCount.Stale:
+			query = query.Where(entity.ReferenceCountLTE(0))
+		case args.ReferenceCount.Op == "gt":
+			query = query.Where(entity.ReferenceCountGT(args.ReferenceCount.Value))
+		case args.ReferenceCount.Op == "lt":
+			query = query.Where(entity.ReferenceCountLT(args.ReferenceCount.Value))
+		case args.ReferenceCount.Op == "eq":
+			query = query.Where(entity.ReferenceCountEQ(args.ReferenceCount.Value))
+		}
 	}
 
 	query.Order(getEntityOrderOption(args)...)

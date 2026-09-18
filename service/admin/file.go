@@ -398,6 +398,9 @@ const (
 	entityUserCondition   = "entity_user"
 	entityPolicyCondition = "entity_policy"
 	entityTypeCondition   = "entity_type"
+	// entityRefCountCondition filters by reference count: "stale" (<=0, i.e.
+	// awaiting recycle) or "gt:N" / "lt:N" / "eq:N" comparisons.
+	entityRefCountCondition = "entity_ref_count"
 )
 
 func (s *AdminListService) Entities(c *gin.Context) (*ListEntityResponse, error) {
@@ -412,6 +415,7 @@ func (s *AdminListService) Entities(c *gin.Context) (*ListEntityResponse, error)
 		policyID   int
 		err        error
 		entityType *types.EntityType
+		refCount   *inventory.ReferenceCountFilter
 	)
 
 	if s.Conditions[entityUserCondition] != "" {
@@ -438,6 +442,13 @@ func (s *AdminListService) Entities(c *gin.Context) (*ListEntityResponse, error)
 		entityType = &t
 	}
 
+	if s.Conditions[entityRefCountCondition] != "" {
+		refCount, err = inventory.ParseReferenceCountFilter(s.Conditions[entityRefCountCondition])
+		if err != nil {
+			return nil, serializer.NewError(serializer.CodeParamErr, "Invalid reference count filter", err)
+		}
+	}
+
 	res, err := fileClient.ListEntities(ctx, &inventory.ListEntityParameters{
 		PaginationArgs: &inventory.PaginationArgs{
 			Page:     s.Page - 1,
@@ -448,6 +459,7 @@ func (s *AdminListService) Entities(c *gin.Context) (*ListEntityResponse, error)
 		UserID:          userID,
 		StoragePolicyID: policyID,
 		EntityType:      entityType,
+		ReferenceCount:  refCount,
 	})
 
 	if err != nil {
