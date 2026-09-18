@@ -41,7 +41,13 @@ const (
 )
 
 func stripPrefix(p string, u *ent.User) (string, *fs.URI, int, error) {
-	base, err := fs.NewUriFromString(u.Edges.DavAccounts[0].URI)
+	// Bearer-authenticated users carry no dav account; mount them at their
+	// "my" root. Basic-auth users keep their configured mount point (#3548).
+	baseUri := fs.NewMyUri("")
+	if len(u.Edges.DavAccounts) > 0 {
+		baseUri = u.Edges.DavAccounts[0].URI
+	}
+	base, err := fs.NewUriFromString(baseUri)
 	if err != nil {
 		return "", nil, http.StatusInternalServerError, err
 	}
@@ -262,7 +268,8 @@ func handlePut(c *gin.Context, user *ent.User, fm manager.FileManager) (status i
 		return purposeStatusCodeFromError(err), err
 	}
 
-	if user.Edges.DavAccounts[0].Options.Enabled(int(types.DavAccountDisableSysFiles)) {
+	if len(user.Edges.DavAccounts) > 0 &&
+		user.Edges.DavAccounts[0].Options.Enabled(int(types.DavAccountDisableSysFiles)) {
 		if strings.HasPrefix(reqPath.Name(), ".") {
 			return http.StatusMethodNotAllowed, nil
 		}
@@ -560,7 +567,8 @@ func handleGetHeadPost(c *gin.Context, user *ent.User, fm manager.FileManager) (
 
 	es.Apply(entitysource.WithSpeedLimit(int64(user.Edges.Group.SpeedLimit)))
 	if es.ShouldInternalProxy() ||
-		(user.Edges.DavAccounts[0].Options.Enabled(int(types.DavAccountProxy)) &&
+		(len(user.Edges.DavAccounts) > 0 &&
+			user.Edges.DavAccounts[0].Options.Enabled(int(types.DavAccountProxy)) &&
 			user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionWebDAVProxy))) {
 		es.Serve(c.Writer, c.Request)
 	} else {
