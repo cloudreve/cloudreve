@@ -142,6 +142,7 @@ export enum TaskType {
   full_text_change_owner = "full_text_change_owner",
   full_text_delete = "full_text_delete",
   full_text_rebuild = "full_text_rebuild",
+  blob_audit = "blob_audit",
 }
 
 export enum TaskStatus {
@@ -174,4 +175,9 @@ export interface SetDownloadFilesService {
 
 export interface RebuildFTSIndexWorkflowService {
   filtered_storage_policy?: number[];
+}
+
+export interface BlobAuditWorkflowService {
+  policy_id: number;
+  delete?: boolean;
 }

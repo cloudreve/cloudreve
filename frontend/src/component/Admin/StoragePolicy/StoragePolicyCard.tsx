@@ -1,4 +1,5 @@
-import { Box, Divider, IconButton, Link, Skeleton, Typography } from "@mui/material";
+import { FindInPage } from "@mui/icons-material";
+import { Box, Divider, IconButton, Link, Skeleton, Tooltip, Typography } from "@mui/material";
 import Grid from "@mui/material/Grid2";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -12,6 +13,7 @@ import { NoWrapBox, SquareChip } from "../../Common/StyledComponents";
 import Delete from "../../Icons/Delete";
 import Info from "../../Icons/Info";
 import { BorderedCardClickableBaImg } from "../Common/AdminCard";
+import BlobAuditDialog from "./BlobAuditDialog";
 import { PolicyPropsMap } from "./StoragePolicySetting";
 
 export interface StoragePolicyCardProps {
@@ -26,7 +28,13 @@ const StoragePolicyCard = ({ policy, onRefresh, loading }: StoragePolicyCardProp
   const [detail, setDetail] = useState<StoragePolicy | undefined>(undefined);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [auditOpen, setAuditOpen] = useState(false);
   const navigate = useNavigate();
+
+  const handleAuditOpen = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    setAuditOpen(true);
+  }, []);
 
   const loadDetail = useCallback(
     (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -169,11 +177,19 @@ const StoragePolicyCard = ({ policy, onRefresh, loading }: StoragePolicyCardProp
             )}
           </Typography>
 
-          <IconButton size="small" onClick={handleDelete}>
-            <Delete fontSize="small" />
-          </IconButton>
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <Tooltip title={t("policy.blobAudit", { name: policy?.name ?? "" })}>
+              <IconButton size="small" onClick={handleAuditOpen} disabled={deleteLoading}>
+                <FindInPage fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <IconButton size="small" onClick={handleDelete}>
+              <Delete fontSize="small" />
+            </IconButton>
+          </Box>
         </Box>
       </BorderedCardClickableBaImg>
+      <BlobAuditDialog open={auditOpen} onClose={() => setAuditOpen(false)} policy={policy} />
     </Grid>
   );
 };

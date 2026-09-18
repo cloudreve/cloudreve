@@ -645,3 +645,37 @@ func (service *RebuildFTSIndexWorkflowService) CreateRebuildFTSIndexTask(c *gin.
 
 	return BuildTaskResponse(t, nil, hasher), nil
 }
+
+type (
+	BlobAuditWorkflowService struct {
+		PolicyID int  `json:"policy_id" binding:"required,min=1"`
+		Delete   bool `json:"delete"`
+	}
+	BlobAuditParamCtx struct{}
+)
+
+// CreateBlobAuditTask queues a blob-vs-database audit for one storage policy.
+func (service *BlobAuditWorkflowService) CreateBlobAuditTask(c *gin.Context) (*TaskResponse, error) {
+	dep := dependency.FromContext(c)
+	user := inventory.UserFromContext(c)
+	hasher := dep.HashIDEncoder()
+
+	if !user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+		return nil, serializer.NewError(serializer.CodeGroupNotAllowed, "Only admin can run a blob audit", nil)
+	}
+
+	if _, err := dep.StoragePolicyClient().GetPolicyByID(c, service.PolicyID); err != nil {
+		return nil, serializer.NewError(serializer.CodeNotFound, "Storage policy not found", err)
+	}
+
+	t, err := workflows.NewBlobAuditTask(c, user, service.PolicyID, service.Delete)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeCreateTaskError, "Failed to create task", err)
+	}
+
+	if err := dep.IoIntenseQueue(c).QueueTask(c, t); err != nil {
+		return nil, serializer.NewError(serializer.CodeCreateTaskError, "Failed to queue task", err)
+	}
+
+	return BuildTaskResponse(t, nil, hasher), nil
+}

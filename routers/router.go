@@ -814,6 +814,13 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				controllers.FromJSON[explorer.RebuildFTSIndexWorkflowService](explorer.CreateRebuildFTSIndexParamCtx{}),
 				controllers.RebuildFTSIndex,
 			)
+			// Create task to audit physical blobs against the entities table
+			wf.POST("blobAudit",
+				middleware.IsAdmin(),
+				middleware.RequiredScopes(types.ScopeWorkflowWrite, types.ScopeAdminWrite),
+				controllers.FromJSON[explorer.BlobAuditWorkflowService](explorer.BlobAuditParamCtx{}),
+				controllers.BlobAudit,
+			)
 
 			// 取得文件外链
 			source := file.Group("source")

@@ -83,6 +83,21 @@ func RebuildFTSIndex(c *gin.Context) {
 	})
 }
 
+// BlobAudit creates a blob-vs-database audit task
+func BlobAudit(c *gin.Context) {
+	service := ParametersFromContext[*explorer.BlobAuditWorkflowService](c, explorer.BlobAuditParamCtx{})
+	resp, err := service.CreateBlobAuditTask(c)
+	if err != nil {
+		c.JSON(200, serializer.Err(c, err))
+		c.Abort()
+		return
+	}
+
+	c.JSON(200, serializer.Response{
+		Data: resp,
+	})
+}
+
 // ExtractArchive creates extract archive task
 func ExtractArchive(c *gin.Context) {
 	service := ParametersFromContext[*explorer.ArchiveWorkflowService](c, explorer.CreateArchiveParamCtx{})

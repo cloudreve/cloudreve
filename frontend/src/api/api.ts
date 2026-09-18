@@ -106,6 +106,7 @@ import {
   DownloadWorkflowService,
   ImportWorkflowService,
   ListTaskService,
+  BlobAuditWorkflowService,
   RebuildFTSIndexWorkflowService,
   SetDownloadFilesService,
   TaskListResponse,
@@ -2278,6 +2279,23 @@ export function sendFullTextSearch(query: string, offset?: number): ThunkRespons
         {
           method: "GET",
           params,
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function sendBlobAuditTask(req: BlobAuditWorkflowService): ThunkResponse<TaskResponse> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/workflow/blobAudit",
+        {
+          data: req,
+          method: "POST",
         },
         {
           ...defaultOpts,
