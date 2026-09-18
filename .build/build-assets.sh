@@ -6,7 +6,7 @@ export NODE_OPTIONS="--max-old-space-size=8192"
 cd frontend
 rm -rf build
 yarn install --network-timeout 1000000
-yarn version --new-version $1 --no-git-tag-version
+yarn version --new-version "${1:-0.0.0-dev}" --no-git-tag-version
 yarn run build
 
 # Copy the build files to the application directory.

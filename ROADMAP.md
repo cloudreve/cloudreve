@@ -112,10 +112,12 @@ cloudreve/           Go backend (existing code, repo root)
 
 ## 3. Phase A — foundation hardening (first weeks)
 
-- Sync-upstream automation: weekly `upstream → fork` merge workflow so security fixes keep landing
-- Dependabot/renovate on the fork (Go, npm, cargo)
-- `docker-compose` dev stack (postgres + app + frontend hot reload)
-- Remove `ProDialog`/`ProChip` gates in `frontend/` — UI skeleton already exists, backend fills it
+- [x] Sync-upstream automation: weekly `upstream → fork` merge workflow (`.github/workflows/upstream-sync.yml`)
+- [x] Dependabot on the fork (Go, npm, cargo — `.github/dependabot.yml`)
+- [x] `docker-compose.dev.yml` dev stack (postgres + redis + backend built from source; frontend via `yarn dev` hot reload)
+- [x] Remove `ProDialog`/`ProChip` gates in `frontend/` — all upsell interception stripped, `ProDialog.tsx` deleted (backend feature work remains, Phase B)
+- [x] `NOTICE` attribution file — upstream authorship + independent-Pro-implementation statement
+- [x] `go vet ./...` clean (upstream lint debt repaired: lock-by-value receivers, unkeyed literals, GobDecode signature)
 
 ## 4. Phase B — Pro features, free (the big one)
 

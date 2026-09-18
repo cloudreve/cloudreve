@@ -1,0 +1,23 @@
+Cloudreve — community-maintained open-source distribution
+=========================================================
+
+This repository is a fork of Cloudreve, originally created and
+maintained by the Cloudreve authors:
+
+  https://github.com/cloudreve/cloudreve
+  https://cloudreve.org
+
+Upstream components vendored into this repository:
+
+  frontend/   — Cloudreve Web UI (github.com/cloudreve/frontend)
+  desktop/    — Cloudreve Desktop (github.com/cloudreve/desktop)
+
+All upstream code remains under its original license (GPLv3 unless
+otherwise noted in the component). Original copyright notices are
+preserved in the respective source trees.
+
+This distribution is maintained independently and is not affiliated
+with or endorsed by the original Cloudreve authors. Functionality
+equivalent to Cloudreve Pro is implemented independently in this
+repository and released under the same open-source license — no
+private Pro code is used.

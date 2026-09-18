@@ -1,0 +1,45 @@
+# Development stack: backend built from source + postgres + redis.
+# Usage: docker compose -f docker-compose.dev.yml up
+# For frontend hot reload, run `yarn dev` in ./frontend separately and
+# point it at the backend on :5212.
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cloudreve-dev-backend
+    depends_on:
+      - postgresql
+      - redis
+    ports:
+      - 5212:5212
+    environment:
+      - CR_CONF_Database.Type=postgres
+      - CR_CONF_Database.Host=postgresql
+      - CR_CONF_Database.User=cloudreve
+      - CR_CONF_Database.Name=cloudreve
+      - CR_CONF_Database.Port=5432
+      - CR_CONF_Redis.Server=redis:6379
+    volumes:
+      - backend_data:/cloudreve/data
+
+  postgresql:
+    image: postgres:17
+    container_name: cloudreve-dev-postgres
+    environment:
+      - POSTGRES_USER=cloudreve
+      - POSTGRES_DB=cloudreve
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    volumes:
+      - database_postgres:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: cloudreve-dev-redis
+    volumes:
+      - redis_data:/data
+
+volumes:
+  backend_data:
+  database_postgres:
+  redis_data:
