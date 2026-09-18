@@ -42,6 +42,7 @@ func migrate(l logging.Logger, client *ent.Client, ctx context.Context, kv cache
 	l.Info("Start initializing database schema...")
 	l.Info("Creating basic table schema...")
 	repairLegacyUserGroupColumn(l, client, ctx)
+	RepairHeatWaveNotSecondary(l, client, ctx)
 	if err := client.Schema.Create(ctx); err != nil {
 		return fmt.Errorf("Failed creating schema resources: %w", err)
 	}
@@ -92,6 +93,128 @@ func repairLegacyUserGroupColumn(l logging.Logger, client *ent.Client, ctx conte
 		}
 		l.Debug("Skip legacy group_users backfill: %s", err)
 	}
+}
+
+// RepairHeatWaveNotSecondary strips the MySQL HeatWave `NOT SECONDARY` column
+// attribute before ent's schema migration. Atlas treats it as an unknown EXTRA
+// value and aborts schema inspection (upstream #3452). For every flagged column
+// we replay its own definition from SHOW CREATE TABLE minus the attribute via
+// ALTER TABLE ... MODIFY COLUMN, which clears it without touching the logical
+// schema. On non-MySQL backends the INFORMATION_SCHEMA query fails and the whole
+// function is a no-op.
+func RepairHeatWaveNotSecondary(l logging.Logger, client *ent.Client, ctx context.Context) {
+	rows, err := client.QueryContext(ctx,
+		`SELECT TABLE_NAME, COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+		 WHERE TABLE_SCHEMA = DATABASE() AND UPPER(EXTRA) LIKE '%NOT SECONDARY%'`)
+	if err != nil {
+		l.Debug("Skip HeatWave NOT SECONDARY repair: %s", err)
+		return
+	}
+
+	var flagged [][2]string
+	for rows.Next() {
+		var table, column string
+		if err := rows.Scan(&table, &column); err != nil {
+			l.Debug("Skip HeatWave NOT SECONDARY repair scan: %s", err)
+			rows.Close()
+			return
+		}
+		flagged = append(flagged, [2]string{table, column})
+	}
+	rows.Close()
+
+	for _, tc := range flagged {
+		def, err := heatWaveColumnDef(client, ctx, tc[0], tc[1])
+		if err != nil {
+			l.Warning("Skip NOT SECONDARY repair for %s.%s: %s", tc[0], tc[1], err)
+			continue
+		}
+
+		stm := fmt.Sprintf("ALTER TABLE `%s` MODIFY COLUMN %s",
+			strings.ReplaceAll(tc[0], "`", "``"), def)
+		if _, err := client.ExecContext(ctx, stm); err != nil {
+			l.Warning("Failed to strip NOT SECONDARY on %s.%s: %s", tc[0], tc[1], err)
+			continue
+		}
+		l.Info("Stripped HeatWave NOT SECONDARY attribute on %s.%s", tc[0], tc[1])
+	}
+}
+
+// heatWaveColumnDef extracts a column's full definition from SHOW CREATE TABLE
+// and returns it without the `NOT SECONDARY` attribute, ready for use after
+// ALTER TABLE ... MODIFY COLUMN.
+func heatWaveColumnDef(client *ent.Client, ctx context.Context, table, column string) (string, error) {
+	rows, err := client.QueryContext(ctx,
+		fmt.Sprintf("SHOW CREATE TABLE `%s`", strings.ReplaceAll(table, "`", "``")))
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+
+	var name, ddl string
+	if !rows.Next() {
+		return "", fmt.Errorf("table %s not found", table)
+	}
+	if err := rows.Scan(&name, &ddl); err != nil {
+		return "", err
+	}
+
+	return extractColumnDef(ddl, column)
+}
+
+// extractColumnDef finds `column`'s definition line in SHOW CREATE TABLE output
+// and returns it without the `NOT SECONDARY` attribute.
+func extractColumnDef(ddl, column string) (string, error) {
+	quoted := "`" + strings.ReplaceAll(column, "`", "``") + "`"
+	for _, line := range strings.Split(ddl, "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, quoted+" ") {
+			continue
+		}
+		def := stripNotSecondary(strings.TrimSuffix(line, ","))
+		if findNotSecondary(def) >= 0 {
+			return "", fmt.Errorf("failed to strip NOT SECONDARY from column %s", column)
+		}
+		return def, nil
+	}
+	return "", fmt.Errorf("column %s not found in table definition", column)
+}
+
+func stripNotSecondary(def string) string {
+	// Remove the `NOT SECONDARY` attribute clause, but not the same words
+	// inside a quoted literal (e.g. DEFAULT 'not secondary').
+	out := def
+	for {
+		idx := findNotSecondary(out)
+		if idx < 0 {
+			return strings.TrimSpace(out)
+		}
+		out = out[:idx] + out[idx+len("NOT SECONDARY"):]
+	}
+}
+
+// findNotSecondary returns the index of the first `NOT SECONDARY` occurrence
+// outside single-quoted string literals, or -1.
+func findNotSecondary(def string) int {
+	const marker = "NOT SECONDARY"
+	upper := strings.ToUpper(def)
+	inQuote := false
+	for i := 0; i+len(marker) <= len(upper); i++ {
+		if upper[i] == '\'' {
+			if inQuote && i+1 < len(upper) && upper[i+1] == '\'' {
+				i++ // escaped '' inside a literal
+				continue
+			}
+			inQuote = !inQuote
+		}
+		if !inQuote && strings.HasPrefix(upper[i:], marker) {
+			end := i + len(marker)
+			if (i == 0 || upper[i-1] == ' ') && (end == len(upper) || upper[end] == ' ' || upper[end] == ',') {
+				return i
+			}
+		}
+	}
+	return -1
 }
 
 func migrateDefaultSettings(l logging.Logger, client *ent.Client, ctx context.Context, kv cache.Driver) {

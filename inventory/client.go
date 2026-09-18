@@ -39,6 +39,7 @@ func InitializeDBClient(l logging.Logger,
 	} else {
 		// Version is current, but additive schema changes (new columns)
 		// still need to reach existing databases between releases.
+		RepairHeatWaveNotSecondary(l, client, ctx)
 		if err := client.Schema.Create(ctx); err != nil {
 			return nil, fmt.Errorf("failed to apply additive schema changes: %w", err)
 		}
