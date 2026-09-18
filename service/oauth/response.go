@@ -19,6 +19,22 @@ type AppRegistration struct {
 	ConstentedScopes []string `json:"consented_scopes,omitempty"`
 }
 
+type DiscoveryResponse struct {
+	Issuer                           string   `json:"issuer"`
+	AuthorizationEndpoint            string   `json:"authorization_endpoint"`
+	TokenEndpoint                    string   `json:"token_endpoint"`
+	UserInfoEndpoint                 string   `json:"userinfo_endpoint"`
+	JWKSURI                          string   `json:"jwks_uri"`
+	ResponseTypesSupported           []string `json:"response_types_supported"`
+	GrantTypesSupported              []string `json:"grant_types_supported"`
+	SubjectTypesSupported            []string `json:"subject_types_supported"`
+	IDTokenSigningAlgValuesSupported []string `json:"id_token_signing_alg_values_supported"`
+	TokenEndpointAuthMethods         []string `json:"token_endpoint_auth_methods_supported"`
+	CodeChallengeMethodsSupported    []string `json:"code_challenge_methods_supported"`
+	ScopesSupported                  []string `json:"scopes_supported"`
+	ClaimsSupported                  []string `json:"claims_supported"`
+}
+
 func BuildAppRegistration(app *ent.OAuthClient, grant *ent.OAuthGrant) *AppRegistration {
 	res := &AppRegistration{
 		ID:          app.GUID,
@@ -50,6 +66,7 @@ type TokenResponse struct {
 	ExpiresIn             int64  `json:"expires_in"`
 	RefreshTokenExpiresIn int64  `json:"refresh_token_expires_in"`
 	RefreshToken          string `json:"refresh_token,omitempty"`
+	IDToken               string `json:"id_token,omitempty"`
 	Scope                 string `json:"scope"`
 }
 
@@ -77,6 +94,7 @@ type AuthorizationCode struct {
 	UserID        int      `json:"user_id"`
 	Scopes        []string `json:"scopes"`
 	RedirectURI   string   `json:"redirect_uri"`
+	Nonce         string   `json:"nonce"`
 	CodeChallenge string   `json:"code_challenge"`
 }
 

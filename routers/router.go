@@ -208,6 +208,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 	*/
 	r.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedPaths([]string{"/api/"})))
 	r.Use(middleware.SharePreview(dep))
+	r.GET(".well-known/openid-configuration", controllers.OpenIDConfiguration)
 	r.Use(middleware.FrontendFileHandler(dep))
 	r.GET("manifest.json", controllers.Manifest)
 
@@ -333,6 +334,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					controllers.FromForm[oauth.ExchangeTokenService](oauth.ExchangeTokenParamCtx{}),
 					controllers.ExchangeToken,
 				)
+				oauthRouter.GET("jwks", controllers.OpenIDJWKS)
 				oauthRouter.GET("userinfo",
 					middleware.LoginRequired(),
 					controllers.FromQuery[oauth.UserInfoService](oauth.UserInfoParamCtx{}),

@@ -43,6 +43,11 @@ func MasterPingUrl(base *url.URL) *url.URL {
 	return base.ResolveReference(masterPing)
 }
 
+func MasterOIDCEndpointUrl(base *url.URL, endpoint string) string {
+	route, _ := url.Parse(endpoint)
+	return base.ResolveReference(route).String()
+}
+
 func MasterSlaveCallbackUrl(base *url.URL, driver, id, secret string) *url.URL {
 	apiBaseURI, _ := url.Parse(path.Join(constants.APIPrefix+"/callback", driver, id, secret))
 	return base.ResolveReference(apiBaseURI)

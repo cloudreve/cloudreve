@@ -6,6 +6,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func OpenIDConfiguration(c *gin.Context) {
+	service := &oauth.DiscoveryService{}
+	c.JSON(200, service.Get(c))
+}
+
+func OpenIDJWKS(c *gin.Context) {
+	service := &oauth.JWKService{}
+	res, err := service.Get(c)
+	if err != nil {
+		c.JSON(500, serializer.Err(c, err))
+		c.Abort()
+		return
+	}
+
+	c.JSON(200, res)
+}
+
 func GetAppRegistration(c *gin.Context) {
 	service := ParametersFromContext[*oauth.GetAppRegistrationService](c, oauth.GetAppRegistrationParamCtx{})
 	app, err := service.Get(c)
