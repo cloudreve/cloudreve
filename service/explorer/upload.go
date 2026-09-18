@@ -205,6 +205,15 @@ func processChunkUpload(c *gin.Context, m manager.FileManager, session *fs.Uploa
 	if err != nil {
 		return err
 	}
+	if !allReceived {
+		// A missing session record (expired TTL, eviction, or a racing
+		// cancel) means completion can never trigger — fail loudly so the
+		// client retries instead of leaving a permanently stuck placeholder.
+		dep := dependency.FromContext(c)
+		if _, ok := dep.KV().Get(manager.UploadSessionCachePrefix + session.Props.UploadSessionID); !ok {
+			return serializer.NewError(serializer.CodeUploadSessionExpired, "", nil)
+		}
+	}
 	if allReceived {
 		_, err := m.CompleteUpload(ctx, session)
 		if err != nil {
