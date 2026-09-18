@@ -38,3 +38,5 @@ tmp/
 .devcontainer/
 cloudreve
 .DS_Store
+# Playwright MCP snapshots
+.playwright-mcp/

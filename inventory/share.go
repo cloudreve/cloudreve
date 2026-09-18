@@ -237,6 +237,13 @@ func IsValidShare(share *ent.Share) error {
 		return ErrOwnerInactive
 	}
 
+	// Check the owner's current share permission.
+	ownerGroup, err := owner.Edges.GroupOrErr()
+	if err != nil || ownerGroup.Permissions == nil ||
+		!ownerGroup.Permissions.Enabled(int(types.GroupPermissionShare)) {
+		return ErrSourceFileInvalid
+	}
+
 	// Check source file status
 	file, err := share.Edges.FileOrErr()
 	if err != nil || file.FileChildren == 0 || file.OwnerID != owner.ID {
@@ -426,7 +433,8 @@ func withShareEagerLoading(ctx context.Context, q *ent.ShareQuery) *ent.ShareQue
 	}
 	if v, ok := ctx.Value(LoadShareUser{}).(bool); ok && v {
 		q.WithUser(func(q *ent.UserQuery) {
-			withUserEagerLoading(ctx, q)
+			userCtx := context.WithValue(ctx, LoadUserGroup{}, true)
+			withUserEagerLoading(userCtx, q)
 		})
 	}
 

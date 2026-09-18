@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"github.com/cloudreve/Cloudreve/v4/pkg/auth"
-	"github.com/cloudreve/Cloudreve/v4/pkg/cache"
 	"github.com/stretchr/testify/assert"
 	testMock "github.com/stretchr/testify/mock"
 	"io"
@@ -54,7 +53,7 @@ func TestWithContext(t *testing.T) {
 
 func TestHTTPClient_Request(t *testing.T) {
 	asserts := assert.New(t)
-	client := NewClientDeprecated(WithSlaveMeta("test"))
+	client := NewClientDeprecated(WithSlaveMeta(1))
 
 	// 正常
 	{
@@ -230,7 +229,6 @@ func TestNopRSCloser_SetFirstFakeChunk(t *testing.T) {
 
 func TestBlackHole(t *testing.T) {
 	a := assert.New(t)
-	cache.Set("setting_reset_after_upload_failed", "true", 0)
 	a.NotPanics(func() {
 		BlackHole(strings.NewReader("TestBlackHole"))
 	})

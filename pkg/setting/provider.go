@@ -52,6 +52,8 @@ type (
 		SiteURL(ctx context.Context) *url.URL
 		// SecretKey returns the secret key for general signature.
 		SecretKey(ctx context.Context) string
+		// OIDCSigningPrivateKey returns the private key used to sign OIDC ID tokens.
+		OIDCSigningPrivateKey(ctx context.Context) string
 		// ActivationEmailTemplate returns the email template for activation.
 		ActivationEmailTemplate(ctx context.Context) []EmailTemplate
 		// ResetEmailTemplate returns the email template for reset password.
@@ -738,6 +740,10 @@ func (s *settingProvider) ActivationEmailTemplate(ctx context.Context) []EmailTe
 
 func (s *settingProvider) SecretKey(ctx context.Context) string {
 	return s.getString(ctx, "secret_key", "")
+}
+
+func (s *settingProvider) OIDCSigningPrivateKey(ctx context.Context) string {
+	return s.getString(ctx, "oidc_signing_private_key", "")
 }
 
 func (s *settingProvider) AllSiteURLs(ctx context.Context) []*url.URL {

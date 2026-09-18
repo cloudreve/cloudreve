@@ -27,6 +27,14 @@ import (
 // needMigration exams if required schema version is satisfied.
 func needMigration(client *ent.Client, ctx context.Context, requiredDbVersion string) bool {
 	c, _ := client.Setting.Query().Where(setting.NameEQ(DBVersionPrefix + requiredDbVersion)).Count(ctx)
+	if c == 0 {
+		return true
+	}
+
+	c, _ = client.Setting.Query().Where(
+		setting.NameEQ(OIDCSigningPrivateKeySetting),
+		setting.ValueNEQ(""),
+	).Count(ctx)
 	return c == 0
 }
 
@@ -66,19 +74,22 @@ func migrateDefaultSettings(l logging.Logger, client *ent.Client, ctx context.Co
 	}
 
 	// List existing settings into a map
-	existingSettings := make(map[string]struct{})
+	existingSettings := make(map[string]*ent.Setting)
 	settings, err := client.Setting.Query().All(ctx)
 	if err != nil {
 		l.Warning("Failed to query existing settings: %s", err)
 	}
 
 	for _, s := range settings {
-		existingSettings[s.Name] = struct{}{}
+		existingSettings[s.Name] = s
 	}
 
 	l.Info("Insert default settings...")
 	for k, v := range DefaultSettings {
-		if _, ok := existingSettings[k]; ok {
+		if existing, ok := existingSettings[k]; ok {
+			if k == OIDCSigningPrivateKeySetting && existing.Value == "" {
+				client.Setting.UpdateOne(existing).SetValue(v).SaveX(ctx)
+			}
 			l.Debug("Skip inserting setting %s, already exists.", k)
 			continue
 		}
