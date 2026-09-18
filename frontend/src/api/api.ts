@@ -587,6 +587,23 @@ export function sendDeleteShare(id: string): ThunkResponse<void> {
   };
 }
 
+export function sendDeleteShares(ids: string[]): ThunkResponse<void> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/share",
+        {
+          method: "DELETE",
+          data: { ids },
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
 export function getShareInfo(
   id: string,
   password?: string,

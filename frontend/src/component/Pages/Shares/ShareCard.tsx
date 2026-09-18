@@ -1,5 +1,6 @@
 import {
   Box,
+  Checkbox,
   Chip,
   Grid,
   ListItemIcon,
@@ -42,6 +43,9 @@ export interface ShareCardProps {
   onLoad?: () => void;
   loading?: boolean;
   onShareDeleted: (id: string) => void;
+  selecting?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
 interface ActionMenuProps extends MenuProps {
@@ -127,7 +131,7 @@ const ActionMenu = ({ share, onShareDeleted, onClose, ...rest }: ActionMenuProps
   );
 };
 
-const ShareCard = ({ share, onShareDeleted, onLoad, loading }: ShareCardProps) => {
+const ShareCard = ({ share, onShareDeleted, onLoad, loading, selecting, selected, onToggleSelect }: ShareCardProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { ref, inView } = useInView({
@@ -162,18 +166,27 @@ const ShareCard = ({ share, onShareDeleted, onLoad, loading }: ShareCardProps) =
           expanded={false}
           onContextMenu={(e) => {
             e.preventDefault();
+            if (selecting) {
+              return;
+            }
             if (share?.owner?.id === user?.user.id) {
               popupState.open(e);
             }
           }}
           sx={{ p: 0, minHeight: 0, width: "100%", textAlign: "left" }}
-          {...(share?.owner?.id != user?.user.id
+          {...(selecting && share?.owner?.id == user?.user.id
             ? {
                 onClick: () => {
-                  window.open(share?.url ?? "#", "_blank");
+                  share && onToggleSelect?.(share.id);
                 },
               }
-            : bindTrigger(popupState))}
+            : share?.owner?.id != user?.user.id
+              ? {
+                  onClick: () => {
+                    window.open(share?.url ?? "#", "_blank");
+                  },
+                }
+              : bindTrigger(popupState))}
         >
           <Box
             sx={{
@@ -187,7 +200,9 @@ const ShareCard = ({ share, onShareDeleted, onLoad, loading }: ShareCardProps) =
                 p: 1.5,
               }}
             >
-              {share ? (
+              {selecting ? (
+                <Checkbox size="small" checked={selected ?? false} disableRipple sx={{ p: 0, mt: 0.5 }} />
+              ) : share ? (
                 <FileTypeIcon
                   sx={{
                     fontSize: 32,
