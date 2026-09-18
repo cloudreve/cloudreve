@@ -908,6 +908,7 @@ func (s *settingProvider) SSO(ctx context.Context) *SSO {
 		ClientSecret:    s.getString(ctx, "sso_client_secret", ""),
 		Scopes:          strings.Join(scopeList, " "),
 		RegisterEnabled: s.getBoolean(ctx, "sso_register_enabled", true),
+		AutoRedirect:    s.getBoolean(ctx, "sso_auto_redirect", false),
 	}
 }
 

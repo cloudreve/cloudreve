@@ -47,6 +47,7 @@ type SiteConfig struct {
 	PrivacyPolicyUrl string              `json:"privacy_policy_url,omitempty"`
 	SSOEnabled       bool                `json:"sso_enabled,omitempty"`
 	SSODisplayName   string              `json:"sso_display_name,omitempty"`
+	SSOAutoRedirect  bool                `json:"sso_auto_redirect,omitempty"`
 
 	// Explorer section
 	Icons                string                     `json:"icons,omitempty"`
@@ -106,6 +107,7 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 			TosUrl:           legalDocs.TermsOfService,
 			SSOEnabled:       sso.Enabled && sso.Issuer != "" && sso.ClientID != "",
 			SSODisplayName:   sso.DisplayName,
+			SSOAutoRedirect:  sso.AutoRedirect,
 		}, nil
 	case "explorer":
 		explorerSettings := settings.ExplorerFrontendSettings(c)

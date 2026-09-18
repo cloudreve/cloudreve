@@ -30,6 +30,7 @@ export interface SiteConfig {
   register_enabled?: boolean;
   sso_enabled?: boolean;
   sso_display_name?: string;
+  sso_auto_redirect?: boolean;
   logo?: string;
   logo_light?: string;
   tos_url?: string;

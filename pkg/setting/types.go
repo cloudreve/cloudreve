@@ -82,6 +82,7 @@ type SSO struct {
 	ClientSecret    string
 	Scopes          string
 	RegisterEnabled bool
+	AutoRedirect    bool
 }
 
 type EmailFilterMode int

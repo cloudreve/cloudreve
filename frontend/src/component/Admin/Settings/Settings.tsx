@@ -198,6 +198,7 @@ const Settings = () => {
                     "sso_client_secret",
                     "sso_scopes",
                     "sso_register_enabled",
+                    "sso_auto_redirect",
                     "email_filter_mode",
                     "email_filter_list",
                     "email_disable_subaddress",

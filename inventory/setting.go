@@ -558,6 +558,7 @@ var DefaultSettings = map[string]string{
 	"sso_client_secret":                          "",
 	"sso_scopes":                                 "",
 	"sso_register_enabled":                       "1",
+	"sso_auto_redirect":                          "0",
 	"email_filter_mode":                          "0",
 	"email_filter_list":                          "",
 	"email_disable_subaddress":                   "0",
