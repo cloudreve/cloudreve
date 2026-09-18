@@ -375,7 +375,7 @@ func (m *ExtractArchiveTask) masterExtractArchive(ctx context.Context, dep depen
 			return nil
 		}
 
-		rawPath := util.FormSlash(f.NameInArchive)
+		rawPath := util.FormSlash(strings.ToValidUTF8(f.NameInArchive, "�"))
 		savePath := dst.JoinRaw(rawPath)
 
 		// If file mask is not empty, check if the path is in the mask
@@ -751,7 +751,7 @@ func (m *SlaveExtractArchiveTask) Do(ctx context.Context) (task.Status, error) {
 			return nil
 		}
 
-		rawPath := util.FormSlash(f.NameInArchive)
+		rawPath := util.FormSlash(strings.ToValidUTF8(f.NameInArchive, "�"))
 		savePath := dst.JoinRaw(rawPath)
 
 		// If file mask is not empty, check if the path is in the mask

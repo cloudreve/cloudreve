@@ -283,7 +283,7 @@ func getZipFileList(ctx context.Context, file io.ReaderAt, size int64, textEncod
 		info := f.FileInfo()
 		modTime := info.ModTime()
 		fileList = append(fileList, ArchivedFile{
-			Name:        util.FormSlash(hdr.Name),
+			Name:        util.FormSlash(strings.ToValidUTF8(hdr.Name, "�")),
 			Size:        info.Size(),
 			UpdatedAt:   &modTime,
 			IsDirectory: info.IsDir(),
@@ -303,7 +303,7 @@ func get7zFileList(ctx context.Context, file io.ReaderAt, size int64, extEncodin
 		info := f.FileInfo()
 		modTime := info.ModTime()
 		fileList = append(fileList, ArchivedFile{
-			Name:        util.FormSlash(f.Name),
+			Name:        util.FormSlash(strings.ToValidUTF8(f.Name, "�")),
 			Size:        info.Size(),
 			UpdatedAt:   &modTime,
 			IsDirectory: info.IsDir(),
