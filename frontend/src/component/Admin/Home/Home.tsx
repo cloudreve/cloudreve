@@ -29,7 +29,7 @@ import { getDashboardSummary } from "../../../api/api.ts";
 import { HomepageSummary } from "../../../api/dashboard.ts";
 import { useAppDispatch } from "../../../redux/hooks.ts";
 import FacebookCircularProgress from "../../Common/CircularProgress.tsx";
-import { SecondaryButton, SquareChip } from "../../Common/StyledComponents.tsx";
+import { SecondaryButton } from "../../Common/StyledComponents.tsx";
 import TimeBadge from "../../Common/TimeBadge.tsx";
 import Book from "../../Icons/Book.tsx";
 import BoxMultipleFilled from "../../Icons/BoxMultipleFilled.tsx";
@@ -39,11 +39,9 @@ import HomeIcon from "../../Icons/Home.tsx";
 import OpenFilled from "../../Icons/OpenFilled.tsx";
 import PeopleFilled from "../../Icons/PeopleFilled.tsx";
 import ShareFilled from "../../Icons/ShareFilled.tsx";
-import SparkleFilled from "../../Icons/SparkleFilled.tsx";
 import Telegram from "../../Icons/Telegram.tsx";
 import PageContainer from "../../Pages/PageContainer.tsx";
 import PageHeader from "../../Pages/PageHeader.tsx";
-import ProDialog from "../Common/ProDialog.tsx";
 import SiteUrlWarning from "./SiteUrlWarning.tsx";
 import CommentMultiple from "../../Icons/CommentMultiple.tsx";
 
@@ -64,7 +62,6 @@ const Home = () => {
   const [summary, setSummary] = useState<HomepageSummary | undefined>();
   const [chartLoading, setChartLoading] = useState(false);
   const [siteUrlWarning, setSiteUrlWarning] = useState(false);
-  const [proDialogOpen, setProDialogOpen] = useState(false);
   useEffect(() => {
     loadSummary(false);
   }, []);
@@ -90,7 +87,6 @@ const Home = () => {
 
   return (
     <PageContainer>
-      <ProDialog open={proDialogOpen} onClose={() => setProDialogOpen(false)} />
       <SiteUrlWarning
         open={siteUrlWarning}
         onClose={() => setSiteUrlWarning(false)}
@@ -313,9 +309,6 @@ const Home = () => {
                 <Box sx={{ ml: 2 }}>
                   <Typography variant={"h5"} fontWeight={600}>
                     Cloudreve
-                    {summary && summary.version.pro && (
-                      <SquareChip sx={{ ml: 1, height: "initial" }} size={"small"} color={"primary"} label={"Pro"} />
-                    )}
                   </Typography>
                   <Typography variant={"subtitle2"} color={"text.secondary"}>
                     {summary ? summary.version.version : <Skeleton variant={"text"} width={70} />}
@@ -383,14 +376,7 @@ const Home = () => {
                     <OpenFilled />
                   </StyledListItemIcon>
                 </ListItemButton>
-                {summary && !summary.version.pro && (
-                  <ListItemButton onClick={() => setProDialogOpen(true)}>
-                    <ListItemIcon>
-                      <SparkleFilled color={"primary"} />
-                    </ListItemIcon>
-                    <ListItemText primary={t("summary.buyPro")} />
-                  </ListItemButton>
-                )}
+
               </List>
               <Divider />
             </StyledPaper>

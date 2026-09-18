@@ -6,7 +6,7 @@ import { GroupPermission } from "../../../../api/user";
 import Boolset from "../../../../util/boolset";
 import SizeInput from "../../../Common/SizeInput";
 import { DenseFilledTextField } from "../../../Common/StyledComponents";
-import SettingForm, { ProChip } from "../../../Pages/Setting/SettingForm";
+import SettingForm from "../../../Pages/Setting/SettingForm";
 import { NoMarginHelperText, SettingSection, SettingSectionContent } from "../../Settings/Settings";
 import { AnonymousGroupID } from "../GroupRow";
 import { GroupSettingContext } from "./GroupSettingWrapper";
@@ -160,14 +160,13 @@ const UploadDownloadSection = () => {
                       <NoMarginHelperText>{t("group.reuseDirectLinkDes")}</NoMarginHelperText>
                     </FormControl>
                   </SettingForm>
-                  <SettingForm lgWidth={5} pro>
+                  <SettingForm lgWidth={5}>
                     <FormControl fullWidth>
                       <FormControlLabel
                         control={<Switch checked={false} />}
                         label={
                           <Box sx={{ display: "flex", alignItems: "center" }}>
                             {t("group.folderDirectLink")}
-                            <ProChip size="small" label="Pro" />
                           </Box>
                         }
                       />

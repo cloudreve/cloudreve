@@ -1,14 +1,13 @@
 import { Icon as Iconify } from "@iconify/react";
 import { Box, SvgIconProps, useTheme } from "@mui/material";
 import SvgIcon from "@mui/material/SvgIcon/SvgIcon";
-import { memo, useMemo, useState } from "react";
+import { memo, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { GroupPermission } from "../../../api/user.ts";
 import { useAppSelector } from "../../../redux/hooks.ts";
 import SessionManager from "../../../session";
 import { GroupBS } from "../../../session/utils.ts";
-import ProDialog from "../../Admin/Common/ProDialog.tsx";
 import BoxMultiple from "../../Icons/BoxMultiple.tsx";
 import BoxMultipleFilled from "../../Icons/BoxMultipleFilled.tsx";
 import CloudDownload from "../../Icons/CloudDownload.tsx";
@@ -45,7 +44,6 @@ import StorageOutlined from "../../Icons/StorageOutlined.tsx";
 import Warning from "../../Icons/Warning.tsx";
 import WarningOutlined from "../../Icons/WarningOutlined.tsx";
 import WrenchSettings from "../../Icons/WrenchSettings.tsx";
-import { ProChip } from "../../Pages/Setting/SettingForm.tsx";
 import NavIconTransition from "./NavIconTransition.tsx";
 import SideNavItem from "./SideNavItem.tsx";
 
@@ -54,7 +52,6 @@ export interface NavigationItem {
   icon?: ((props: SvgIconProps) => JSX.Element)[] | (typeof SvgIcon)[];
   iconifyName?: string;
   path: string;
-  pro?: boolean;
 }
 
 let NavigationItems: NavigationItem[];
@@ -89,36 +86,15 @@ export const SideNavItemComponent = ({ item }: { item: NavigationItem }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
-  const [proOpen, setProOpen] = useState(false);
   const active = useMemo(() => {
     return location.pathname == item.path || location.pathname.startsWith(item.path + "/");
   }, [location.pathname, item.path]);
   return (
     <>
-      {item.pro && <ProDialog open={proOpen} onClose={() => setProOpen(false)} />}
       <SideNavItem
         key={item.label}
-        onClick={() =>
-          item.pro ? setProOpen(true) : item.iconifyName ? window.open(item.path, "_blank") : navigate(item.path)
-        }
-        label={
-          item.pro ? (
-            <Box sx={{ display: "flex", alignItems: "center" }}>
-              {t(item.label)}
-              <ProChip
-                sx={{
-                  height: "16px",
-                  fontSize: (t) => t.typography.caption.fontSize,
-                }}
-                label="Pro"
-                color="primary"
-                size="small"
-              />
-            </Box>
-          ) : (
-            t(item.label)
-          )
-        }
+        onClick={() => (item.iconifyName ? window.open(item.path, "_blank") : navigate(item.path))}
+        label={t(item.label)}
         active={active}
         icon={
           !item.icon ? (
@@ -211,19 +187,16 @@ AdminNavigationItems = [
     label: "dashboard:vas.orders",
     icon: [PaymentFilled, Payment],
     path: "/admin/payment",
-    pro: true,
   },
   {
     label: "dashboard:nav.events",
     icon: [SendLoggingFilled, SendLogging],
     path: "/admin/event",
-    pro: true,
   },
   {
     label: "dashboard:nav.abuseReport",
     icon: [Warning, WarningOutlined],
     path: "/admin/abuse",
-    pro: true,
   },
   {
     label: "dashboard:nav.oauthClients",
@@ -253,7 +226,6 @@ export const AdminPageNavigation = memo(() => {
 });
 
 const PageNavigation = () => {
-  const shopNavEnabled = useAppSelector((state) => state.siteConfig.basic.config.shop_nav_enabled);
   const appPromotionEnabled = useAppSelector((state) => state.siteConfig.basic.config.app_promotion);
   const user = SessionManager.currentLoginOrNull();
   const isAdmin = useMemo(() => {

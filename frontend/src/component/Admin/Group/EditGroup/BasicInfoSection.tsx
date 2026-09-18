@@ -7,7 +7,7 @@ import Boolset from "../../../../util/boolset";
 import SizeInput from "../../../Common/SizeInput";
 import { DenseFilledTextField } from "../../../Common/StyledComponents";
 import InPrivate from "../../../Icons/InPrivate";
-import SettingForm, { ProChip } from "../../../Pages/Setting/SettingForm";
+import SettingForm from "../../../Pages/Setting/SettingForm";
 import { NoMarginHelperText, SettingSection, SettingSectionContent } from "../../Settings/Settings";
 import { AnonymousGroupID } from "../GroupRow";
 import { GroupSettingContext } from "./GroupSettingWrapper";
@@ -81,8 +81,7 @@ const BasicInfoSection = () => {
             <SettingForm title={t("group.availablePolicies")} lgWidth={5}>
               <PolicySelectionInput value={values.edges.storage_policies?.id ?? 0} onChange={onPolicyChange} />
               <NoMarginHelperText>{t("group.availablePoliciesDes")}</NoMarginHelperText>
-              <NoMarginHelperText>
-                <ProChip size="small" label="Pro" sx={{ ml: 0 }} /> {t("group.availablePolicyDesPro")}
+              <NoMarginHelperText> {t("group.availablePolicyDesPro")}
               </NoMarginHelperText>
             </SettingForm>
             <SettingForm title={t("group.initialStorageQuota")} lgWidth={5}>

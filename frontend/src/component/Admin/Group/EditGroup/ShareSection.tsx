@@ -1,11 +1,10 @@
 import { Box, FormControl, FormControlLabel, Switch, Typography } from "@mui/material";
-import { useCallback, useContext, useMemo, useState } from "react";
+import { useCallback, useContext, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { GroupEnt } from "../../../../api/dashboard";
 import { GroupPermission } from "../../../../api/user";
 import Boolset from "../../../../util/boolset";
-import SettingForm, { ProChip } from "../../../Pages/Setting/SettingForm";
-import ProDialog from "../../Common/ProDialog";
+import SettingForm from "../../../Pages/Setting/SettingForm";
 import { NoMarginHelperText, SettingSection, SettingSectionContent } from "../../Settings/Settings";
 import { AnonymousGroupID } from "../GroupRow";
 import { GroupSettingContext } from "./GroupSettingWrapper";
@@ -13,7 +12,6 @@ import { GroupSettingContext } from "./GroupSettingWrapper";
 const ShareSection = () => {
   const { t } = useTranslation("dashboard");
   const { values, setGroup } = useContext(GroupSettingContext);
-  const [proOpen, setProOpen] = useState(false);
 
   const permission = useMemo(() => {
     return new Boolset(values.permissions ?? "");
@@ -39,14 +37,8 @@ const ShareSection = () => {
     [setGroup],
   );
 
-  const onProClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-    setProOpen(true);
-  };
-
   return (
     <SettingSection>
-      <ProDialog open={proOpen} onClose={() => setProOpen(false)} />
       <Typography variant="h6" gutterBottom>
         {t("group.share")}
       </Typography>
@@ -65,13 +57,12 @@ const ShareSection = () => {
           </SettingForm>
         )}
         <SettingForm lgWidth={5}>
-          <FormControl fullWidth onClick={onProClick}>
+          <FormControl fullWidth>
             <FormControlLabel
               control={<Switch checked={false} />}
               label={
                 <Box sx={{ display: "flex", alignItems: "center" }}>
                   {t("group.shareFree")}
-                  <ProChip size="small" label="Pro" />
                 </Box>
               }
             />
@@ -91,13 +82,12 @@ const ShareSection = () => {
         </SettingForm>
         {values?.id != AnonymousGroupID && (
           <SettingForm lgWidth={5}>
-            <FormControl fullWidth onClick={onProClick}>
+            <FormControl fullWidth>
               <FormControlLabel
                 control={<Switch checked={false} />}
                 label={
                   <Box sx={{ display: "flex", alignItems: "center" }}>
                     {t("group.esclateAnonymity")}
-                    <ProChip size="small" label="Pro" />
                   </Box>
                 }
               />

@@ -61,7 +61,6 @@ export interface PolicyProps {
   credentialDes?: React.ReactNode;
   corsExposedHeaders?: string[];
   endpointNotEnforcePrefix?: boolean;
-  pro?: boolean;
   regionCode?: string;
   regionCodeDes?: React.ReactNode;
 }
@@ -78,7 +77,6 @@ export const PolicyPropsMap: Record<PolicyType, PolicyProps> = {
     name: "policy.load_balance",
     img: "/static/img/lb.svg",
     wizardSize: "sm",
-    pro: true,
   },
   [PolicyType.remote]: {
     name: "policy.remote",

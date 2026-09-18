@@ -6,7 +6,7 @@ import { isTrueVal } from "../../../../session/utils.ts";
 import SizeInput from "../../../Common/SizeInput.tsx";
 import { DenseFilledTextField, DenseSelect } from "../../../Common/StyledComponents.tsx";
 import { SquareMenuItem } from "../../../FileManager/ContextMenu/ContextMenu.tsx";
-import SettingForm, { ProChip } from "../../../Pages/Setting/SettingForm.tsx";
+import SettingForm from "../../../Pages/Setting/SettingForm.tsx";
 import { Code } from "../../../Common/Code.tsx";
 import GroupSelectionInput from "../../Common/GroupSelectionInput.tsx";
 import SharesInput from "../../Common/SharesInput.tsx";
@@ -127,7 +127,7 @@ const UserSession = () => {
                 <NoMarginHelperText>{t("settings.defaultGroupDes")}</NoMarginHelperText>
               </FormControl>
             </SettingForm>
-            <SettingForm title={t("settings.defaultSymbolics")} lgWidth={5} pro>
+            <SettingForm title={t("settings.defaultSymbolics")} lgWidth={5}>
               <FormControl>
                 <SharesInput />
                 <NoMarginHelperText>
@@ -139,7 +139,7 @@ const UserSession = () => {
                 </NoMarginHelperText>
               </FormControl>
             </SettingForm>
-            <SettingForm title={t("vas.filterEmailProvider")} lgWidth={5} pro>
+            <SettingForm title={t("vas.filterEmailProvider")} lgWidth={5}>
               <FormControl>
                 <DenseSelect value={0}>
                   {["filterEmailProviderDisabled", "filterEmailProviderWhitelist", "filterEmailProviderBlacklist"].map(
@@ -159,14 +159,13 @@ const UserSession = () => {
                 <NoMarginHelperText>{t("vas.filterEmailProviderDes")}</NoMarginHelperText>
               </FormControl>
             </SettingForm>
-            <SettingForm lgWidth={5} pro>
+            <SettingForm lgWidth={5}>
               <FormControl fullWidth>
                 <FormControlLabel
                   control={<Switch checked={false} />}
                   label={
                     <>
                       {t("vas.disableSubAddressEmail")}
-                      <ProChip label="Pro" color="primary" size="small" />
                     </>
                   }
                 />
@@ -179,7 +178,7 @@ const UserSession = () => {
         </SettingSection>
         <SettingSection>
           <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center" }}>
-            {t("settings.thirdPartySignIn")} <ProChip label="Pro" color="primary" size="small" />
+            {t("settings.thirdPartySignIn")}
           </Typography>
           <SettingSectionContent>
             <SettingForm lgWidth={5}>

@@ -45,7 +45,6 @@ export interface FieldTypeProps {
   maxDes?: string;
   maxRequired?: boolean;
   showOptions?: boolean;
-  pro?: boolean;
 }
 
 export const FieldTypes: Record<CustomPropsType, FieldTypeProps> = {
@@ -82,7 +81,6 @@ export const FieldTypes: Record<CustomPropsType, FieldTypeProps> = {
   [CustomPropsType.user]: {
     title: "customProps.user",
     icon: PersonOutlined,
-    pro: true,
   },
   [CustomPropsType.link]: {
     title: "customProps.link",

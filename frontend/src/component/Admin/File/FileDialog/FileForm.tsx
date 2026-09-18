@@ -141,7 +141,7 @@ const FileForm = () => {
             )}
             {fileParentLoading && <Skeleton variant="text" width={100} height={40} />}
           </SettingForm>
-          <SettingForm title={t("file.primaryStoragePolicy")} noContainer lgWidth={3} pro>
+          <SettingForm title={t("file.primaryStoragePolicy")} noContainer lgWidth={3}>
             <SinglePolicySelectionInput simplified value={values.storage_policy_files ?? 0} onChange={() => {}} />
           </SettingForm>
           <SettingForm title={t("file.metadata")} noContainer lgWidth={6}>

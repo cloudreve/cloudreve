@@ -14,8 +14,9 @@ import {
   useTheme,
 } from "@mui/material";
 import { useSnackbar } from "notistack";
-import { useCallback, useContext, useState } from "react";
+import { useCallback, useContext } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { sendCalibrateUserStorage } from "../../../../api/api";
 import { UserStatus } from "../../../../api/dashboard";
 import { useAppDispatch } from "../../../../redux/hooks";
@@ -24,10 +25,9 @@ import { DenseFilledTextField, DenseSelect, SecondaryButton } from "../../../Com
 import UserAvatar from "../../../Common/User/UserAvatar";
 import { SquareMenuItem } from "../../../FileManager/ContextMenu/ContextMenu";
 import Delete from "../../../Icons/Delete";
-import SettingForm, { ProChip } from "../../../Pages/Setting/SettingForm";
+import SettingForm from "../../../Pages/Setting/SettingForm";
 import { CapacityBar } from "../../../Pages/Setting/StorageSetting";
 import GroupSelectionInput from "../../Common/GroupSelectionInput";
-import ProDialog from "../../Common/ProDialog";
 import { NoMarginHelperText } from "../../Settings/Settings";
 import { UserDialogContext } from "./UserDialog";
 
@@ -37,8 +37,8 @@ const UserForm = ({ reload, setLoading }: { reload: () => void; setLoading: (loa
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const { t } = useTranslation("dashboard");
+  const navigate = useNavigate();
   const { formRef, values, setUser } = useContext(UserDialogContext);
-  const [proOpen, setProOpen] = useState(false);
 
   const removeAvatar = useCallback(() => {
     setUser((prev) => ({ ...prev, avatar: undefined }));
@@ -109,7 +109,6 @@ const UserForm = ({ reload, setLoading }: { reload: () => void; setLoading: (loa
 
   return (
     <Box component={"form"} ref={formRef} onSubmit={(e) => e.preventDefault()}>
-      <ProDialog open={proOpen} onClose={() => setProOpen(false)} />
       <Stack spacing={isMobile ? 2 : 3} direction={isMobile ? "column" : "row"}>
         <Stack spacing={isMobile ? 2 : 3} direction={"column"} sx={{ minWidth: 200 }}>
           <SettingForm title={t("user.avatar")} noContainer lgWidth={12}>
@@ -150,11 +149,11 @@ const UserForm = ({ reload, setLoading }: { reload: () => void; setLoading: (loa
           <Box>
             <SecondaryButton
               sx={{ mt: 1 }}
-              onClick={() => setProOpen(true)}
+              onClick={() => navigate(`/admin/file?owner=${values.id}`)}
               variant="contained"
               startIcon={<OpenInNew />}
             >
-              {t("user.openUserFiles")} <ProChip label="Pro" color="primary" size="small" />
+              {t("user.openUserFiles")}
             </SecondaryButton>
           </Box>
         </Stack>
@@ -183,7 +182,7 @@ const UserForm = ({ reload, setLoading }: { reload: () => void; setLoading: (loa
             <SettingForm title={t("user.group")} noContainer lgWidth={6}>
               <GroupSelectionInput value={values.group_users?.toString() ?? ""} onChange={onGroupChange} fullWidth />
             </SettingForm>
-            <SettingForm title={t("application:vas.points")} noContainer lgWidth={6} pro>
+            <SettingForm title={t("application:vas.points")} noContainer lgWidth={6}>
               <DenseFilledTextField
                 slotProps={{
                   htmlInput: {
@@ -210,7 +209,7 @@ const UserForm = ({ reload, setLoading }: { reload: () => void; setLoading: (loa
                 type={"password"}
               />
             </SettingForm>
-            <SettingForm title={t("user.originUserGroup")} noContainer lgWidth={6} pro>
+            <SettingForm title={t("user.originUserGroup")} noContainer lgWidth={6}>
               <GroupSelectionInput
                 value={" "}
                 onChange={() => {}}
@@ -220,7 +219,7 @@ const UserForm = ({ reload, setLoading }: { reload: () => void; setLoading: (loa
               />
               <NoMarginHelperText>{t("user.originUserGroupDes")}</NoMarginHelperText>
             </SettingForm>
-            <SettingForm title={t("user.groupExpired")} noContainer lgWidth={6} pro>
+            <SettingForm title={t("user.groupExpired")} noContainer lgWidth={6}>
               <DenseFilledTextField fullWidth value={""} />
               <NoMarginHelperText>{t("user.groupExpiredDes")}</NoMarginHelperText>
             </SettingForm>

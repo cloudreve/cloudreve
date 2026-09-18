@@ -4,7 +4,6 @@ import MuiAccordionSummary, { AccordionSummaryProps } from "@mui/material/Accord
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyledCheckbox } from "../../../Common/StyledComponents.tsx";
-import ProDialog from "../../Common/ProDialog.tsx";
 
 export const AccordionSummary = styled((props: AccordionSummaryProps) => <MuiAccordionSummary {...props} />)(
   ({ theme }) => ({
@@ -38,7 +37,6 @@ const SSOSettings = () => {
   }, []);
   return (
     <>
-      <ProDialog open={open} onClose={() => setOpen(false)} />
       <div onClick={onClick}>
         <StyledAccordion expanded={false} disableGutters>
           <AccordionSummary expandIcon={<ExpandMoreRounded />}>

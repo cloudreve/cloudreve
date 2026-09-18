@@ -19,8 +19,6 @@ import { CustomProps, CustomPropsType } from "../../../../api/explorer";
 import { NoWrapCell, SecondaryButton, StyledTableContainerPaper } from "../../../Common/StyledComponents";
 import { SquareMenuItem } from "../../../FileManager/ContextMenu/ContextMenu";
 import Add from "../../../Icons/Add";
-import { ProChip } from "../../../Pages/Setting/SettingForm";
-import ProDialog from "../../Common/ProDialog";
 import { SettingContext } from "../../Settings/SettingWrapper";
 import DraggableCustomPropsRow, { FieldTypes } from "./DraggableCustomPropsRow";
 import EditPropsDialog from "./EditPropsDialog";
@@ -32,7 +30,6 @@ const CustomPropsSetting = () => {
   const [open, setOpen] = useState(false);
   const [isNew, setIsNew] = useState(false);
   const [editProps, setEditProps] = useState<CustomProps | undefined>(undefined);
-  const [proOpen, setProOpen] = useState(false);
   const newPropsPopupState = usePopupState({
     variant: "popover",
     popupId: "newProp",
@@ -117,7 +114,6 @@ const CustomPropsSetting = () => {
   return (
     <Box component={"form"} ref={formRef} onSubmit={(e) => e.preventDefault()}>
       <Stack spacing={1}>
-        <ProDialog open={proOpen} onClose={() => setProOpen(false)} />
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
           <SecondaryButton variant="contained" startIcon={<Add />} {...bindTrigger(newPropsPopupState)}>
             {t("customProps.add")}
@@ -138,12 +134,11 @@ const CustomPropsSetting = () => {
               const fieldType = FieldTypes[type];
               const Icon = fieldType.icon;
               return (
-                <SquareMenuItem dense key={index} onClick={() => (fieldType.pro ? setProOpen(true) : onNewProp(type))}>
+                <SquareMenuItem dense key={index} onClick={() => onNewProp(type)}>
                   <ListItemIcon>
                     <Icon />
                   </ListItemIcon>
                   {t(fieldType.title)}
-                  {fieldType.pro && <ProChip label="Pro" color="primary" size="small" />}
                 </SquareMenuItem>
               );
             })}

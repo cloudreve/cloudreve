@@ -3,7 +3,7 @@ import { useContext } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link as RouterLink } from "react-router-dom";
 import SharesInput from "../../Common/SharesInput";
-import SettingForm, { ProChip } from "../../../Pages/Setting/SettingForm";
+import SettingForm from "../../../Pages/Setting/SettingForm";
 import { NoMarginHelperText, SettingSection, SettingSectionContent } from "../../Settings/Settings";
 import { AnonymousGroupID } from "../GroupRow";
 import { GroupSettingContext } from "./GroupSettingWrapper";
@@ -19,10 +19,10 @@ const DefaultPinnedSection = () => {
   return (
     <SettingSection>
       <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center" }}>
-        {t("group.defaultPinned")} <ProChip label="Pro" color="primary" size="small" />
+        {t("group.defaultPinned")}
       </Typography>
       <SettingSectionContent>
-        <SettingForm lgWidth={5} pro>
+        <SettingForm lgWidth={5}>
           <FormControl fullWidth>
             <SharesInput />
             <NoMarginHelperText>

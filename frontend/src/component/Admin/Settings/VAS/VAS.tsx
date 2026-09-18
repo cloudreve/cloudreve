@@ -10,11 +10,10 @@ import {
   Typography,
 } from "@mui/material";
 import { bindTrigger, usePopupState } from "material-ui-popup-state/hooks";
-import { useContext, useMemo, useState } from "react";
+import { useContext, useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { DenseFilledTextField } from "../../../Common/StyledComponents.tsx";
-import SettingForm, { ProChip } from "../../../Pages/Setting/SettingForm.tsx";
-import ProDialog from "../../Common/ProDialog.tsx";
+import SettingForm from "../../../Pages/Setting/SettingForm.tsx";
 import { NoMarginHelperText, SettingSection, SettingSectionContent } from "../Settings.tsx";
 import { SettingContext } from "../SettingWrapper.tsx";
 import GiftCodes from "./GiftCodes.tsx";
@@ -30,7 +29,6 @@ interface CurrencyOption {
 
 const VAS = () => {
   const { t } = useTranslation("dashboard");
-  const [proOpen, setProOpen] = useState(false);
   const { formRef, setSettings, values } = useContext(SettingContext);
   const currencyPopupState = usePopupState({
     variant: "popover",
@@ -40,20 +38,14 @@ const VAS = () => {
   const storageProducts = useMemo(() => values.storage_products || "[]", [values.storage_products]);
   const groupSellData = useMemo(() => values.group_sell_data || "[]", [values.group_sell_data]);
 
-  const onProClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setProOpen(true);
-  };
-
   return (
     <Box component={"form"} ref={formRef}>
-      <ProDialog open={proOpen} onClose={() => setProOpen(false)} />
       <Stack spacing={5}>
         <SettingSection>
           <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center" }}>
-            {t("settings.creditAndVAS")} <ProChip label="Pro" color="primary" size="small" />
+            {t("settings.creditAndVAS")}
           </Typography>
-          <SettingSectionContent onClick={onProClick}>
+          <SettingSectionContent>
             <SettingForm lgWidth={5}>
               <FormControl fullWidth>
                 <FormControlLabel control={<Switch checked={false} />} label={t("settings.enableCredit")} />
@@ -134,9 +126,9 @@ const VAS = () => {
 
         <SettingSection>
           <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center" }}>
-            {t("settings.paymentSettings")} <ProChip label="Pro" color="primary" size="small" />
+            {t("settings.paymentSettings")}
           </Typography>
-          <SettingSectionContent onClick={onProClick}>
+          <SettingSectionContent>
             <SettingForm title={t("settings.currencyCode")} lgWidth={5}>
               <FormControl fullWidth>
                 <DenseFilledTextField
@@ -183,9 +175,9 @@ const VAS = () => {
 
         <SettingSection>
           <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center" }}>
-            {t("settings.storageProductSettings")} <ProChip label="Pro" color="primary" size="small" />
+            {t("settings.storageProductSettings")}
           </Typography>
-          <SettingSectionContent onClick={onProClick}>
+          <SettingSectionContent>
             <SettingForm lgWidth={12}>
               <FormControl fullWidth>
                 <StorageProducts />
@@ -197,9 +189,9 @@ const VAS = () => {
 
         <SettingSection>
           <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center" }}>
-            {t("settings.groupProductSettings")} <ProChip label="Pro" color="primary" size="small" />
+            {t("settings.groupProductSettings")}
           </Typography>
-          <SettingSectionContent onClick={onProClick}>
+          <SettingSectionContent>
             <SettingForm lgWidth={12}>
               <FormControl fullWidth>
                 <GroupProducts />
@@ -211,9 +203,9 @@ const VAS = () => {
 
         <SettingSection>
           <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center" }}>
-            {t("giftCodes.giftCodesSettings")} <ProChip label="Pro" color="primary" size="small" />
+            {t("giftCodes.giftCodesSettings")}
           </Typography>
-          <SettingSectionContent onClick={onProClick}>
+          <SettingSectionContent>
             <GiftCodes storageProductsConfig={storageProducts} groupProductsConfig={groupSellData} />
           </SettingSectionContent>
         </SettingSection>
