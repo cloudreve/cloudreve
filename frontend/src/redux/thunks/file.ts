@@ -380,6 +380,7 @@ export function submitRenameFile(index: number, file: FileResponse, newName: str
         sendRenameFile({
           uri: file.path,
           new_name: newName,
+          expect_id: file.id,
         }),
       );
     } catch (e) {
@@ -668,7 +669,9 @@ export function moveFiles(index: number, src: FileResponse[], dst: string, isCop
     let success = true;
     try {
       await longRunningTaskWithSnackbar(
-        dispatch(sendMoveFile({ uris: src.map((f) => f.path), dst, copy: isCopy })),
+        dispatch(
+          sendMoveFile({ uris: src.map((f) => f.path), dst, copy: isCopy, expect_ids: src.map((f) => f.id) }),
+        ),
         isCopy ? "application:modals.processingCopying" : "application:modals.processingMoving",
       );
     } catch (e) {

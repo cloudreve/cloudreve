@@ -160,6 +160,9 @@ func (f *DBFS) Rename(ctx context.Context, path *fs.URI, newName string) (fs.Fil
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get target file: %w", err)
 	}
+	if sourceIDMismatch(ctx, 0, target.Model.ID) {
+		return nil, nil, fs.ErrModified.WithError(fmt.Errorf("source file no longer matches the expected file"))
+	}
 	oldName := target.Name()
 
 	if _, ok := ctx.Value(ByPassOwnerCheckCtxKey{}).(bool); !ok && !f.writePermitted(target, NavigatorCapabilityRenameFile) {
@@ -561,7 +564,7 @@ func (f *DBFS) MoveOrCopy(ctx context.Context, path []*fs.URI, dst *fs.URI, isCo
 	ctx = context.WithValue(ctx, inventory.LoadFileEntity{}, true)
 	ctx = context.WithValue(ctx, inventory.LoadFileMetadata{}, true)
 
-	for _, p := range path {
+	for i, p := range path {
 		// Get navigator
 		navigator, err := f.getNavigator(ctx, p, NavigatorCapabilityLockFile)
 		if err != nil {
@@ -579,6 +582,11 @@ func (f *DBFS) MoveOrCopy(ctx context.Context, path []*fs.URI, dst *fs.URI, isCo
 		target, err := f.getFileByPath(ctx, navigator, p)
 		if err != nil {
 			ae.Add(p.String(), fmt.Errorf("failed to get file: %w", err))
+			continue
+		}
+
+		if sourceIDMismatch(ctx, i, target.Model.ID) {
+			ae.Add(p.String(), fs.ErrModified.WithError(fmt.Errorf("source file no longer matches the expected file")))
 			continue
 		}
 

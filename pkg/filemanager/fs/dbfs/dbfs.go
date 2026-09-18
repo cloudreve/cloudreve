@@ -43,7 +43,28 @@ type (
 	// IsDownloadCtxKey marks the request as an explicit file download (as
 	// opposed to an inline preview fetch). Navigator hooks consult it.
 	IsDownloadCtxKey struct{}
+	// ExpectedSourceIDsCtxKey carries source-file identity preconditions
+	// for move/copy/rename: a []int positionally aligned with the source
+	// URI list. An entry of 0 disables the check for that position (#3565).
+	ExpectedSourceIDsCtxKey struct{}
 )
+
+// WithExpectedSourceIDs records the expected database IDs of the source
+// files so a delayed/retried request cannot silently operate on a new
+// file that reused the same path.
+func WithExpectedSourceIDs(ctx context.Context, ids []int) context.Context {
+	return context.WithValue(ctx, ExpectedSourceIDsCtxKey{}, ids)
+}
+
+// sourceIDMismatch reports whether the resolved file violates the
+// expected-source precondition at the given position.
+func sourceIDMismatch(ctx context.Context, pos int, actual int) bool {
+	expected, ok := ctx.Value(ExpectedSourceIDsCtxKey{}).([]int)
+	if !ok || pos >= len(expected) || expected[pos] == 0 {
+		return false
+	}
+	return expected[pos] != actual
+}
 
 // writePermitted reports whether the user may mutate file under the given
 // capability. File owners are always permitted; non-owners (e.g. share

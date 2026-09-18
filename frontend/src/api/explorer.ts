@@ -264,6 +264,7 @@ export interface UnlockFileService {
 export interface RenameFileService {
   uri: string;
   new_name: string;
+  expect_id?: string;
 }
 
 export const NavigatorCapability = {
@@ -292,6 +293,7 @@ export interface PinFileService {
 export interface MoveFileService extends MultipleUriService {
   dst: string;
   copy?: boolean;
+  expect_ids?: string[];
 }
 
 export interface MetadataPatch {
