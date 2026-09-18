@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/ent"
@@ -184,6 +185,8 @@ func (handler *Driver) Delete(ctx context.Context, files ...string) ([]string, e
 				handler.l.Warning("Failed to delete file: %s", err)
 				retErr = err
 				deleteFailed = append(deleteFailed, value)
+			} else {
+				handler.pruneEmptyAncestors(filePath)
 			}
 		}
 
@@ -192,6 +195,23 @@ func (handler *Driver) Delete(ctx context.Context, files ...string) ([]string, e
 	}
 
 	return deleteFailed, retErr
+}
+
+// pruneEmptyAncestors removes empty parent directories left behind by a
+// deleted blob (#3290). os.Remove fails on non-empty directories, so the
+// walk self-terminates; the climb is also bounded to the application
+// root so it can never escape the storage tree.
+func (handler *Driver) pruneEmptyAncestors(filePath string) {
+	root := filepath.Dir(util.RelativePath("x"))
+	for dir := filepath.Dir(filePath); ; dir = filepath.Dir(dir) {
+		rel, err := filepath.Rel(root, dir)
+		if err != nil || rel == "." || strings.HasPrefix(rel, "..") {
+			return
+		}
+		if err := os.Remove(dir); err != nil {
+			return
+		}
+	}
 }
 
 // Thumb 获取文件缩略图
