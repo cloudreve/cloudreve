@@ -42,3 +42,4 @@ cloudreve
 .playwright-mcp/
 # Monorepo staging dir for asset packaging (transient)
 /assets/
+pkg/util/test/
