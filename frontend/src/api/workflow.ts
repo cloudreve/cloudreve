@@ -101,6 +101,9 @@ export interface DownloadWorkflowService {
   src?: string[];
   src_file?: string;
   dst: string;
+  file_name?: string;
+  username?: string;
+  password?: string;
 }
 
 export interface ImportWorkflowService {

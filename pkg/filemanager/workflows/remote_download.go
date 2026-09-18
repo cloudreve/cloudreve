@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -45,6 +47,9 @@ type (
 		SrcFileUri         string                 `json:"src_file_uri,omitempty"`
 		SrcUri             string                 `json:"src_uri,omitempty"`
 		Dst                string                 `json:"dst,omitempty"`
+		FileName           string                 `json:"file_name,omitempty"`
+		HTTPUsername       string                 `json:"http_username,omitempty"`
+		HTTPPassword       string                 `json:"http_password,omitempty"`
 		Handle             *downloader.TaskHandle `json:"handle,omitempty"`
 		Status             *downloader.TaskStatus `json:"status,omitempty"`
 		NodeState          `json:",inline"`
@@ -81,13 +86,27 @@ func init() {
 	queue.RegisterResumableTaskFactory(queue.RemoteDownloadTaskType, NewRemoteDownloadTaskFromModel)
 }
 
+// RemoteDownloadTaskOption carries optional per-task parameters supplied by
+// the user: a custom output file name and HTTP basic-auth credentials for
+// plain HTTP(S) sources.
+type RemoteDownloadTaskOption struct {
+	FileName     string
+	HTTPUsername string
+	HTTPPassword string
+}
+
 // NewRemoteDownloadTask creates a new RemoteDownloadTask
-func NewRemoteDownloadTask(ctx context.Context, src string, srcFile, dst string) (queue.Task, error) {
+func NewRemoteDownloadTask(ctx context.Context, src string, srcFile, dst string, opts *RemoteDownloadTaskOption) (queue.Task, error) {
 	state := &RemoteDownloadTaskState{
 		SrcUri:     src,
 		SrcFileUri: srcFile,
 		Dst:        dst,
 		NodeState:  NodeState{},
+	}
+	if opts != nil {
+		state.FileName = sanitizeFileName(opts.FileName)
+		state.HTTPUsername = opts.HTTPUsername
+		state.HTTPPassword = opts.HTTPPassword
 	}
 	stateBytes, err := json.Marshal(state)
 	if err != nil {
@@ -214,8 +233,10 @@ func (m *RemoteDownloadTask) createDownloadTask(ctx context.Context, dep depende
 		torrentUrl = torrentUrls[0].Url
 	}
 
+	options, taskUrl := m.buildDownloadOptions(ctx, user.Edges.Group.Settings.RemoteDownloadOptions, torrentUrl)
+
 	// Create download task
-	handle, err := m.d.CreateTask(ctx, torrentUrl, user.Edges.Group.Settings.RemoteDownloadOptions)
+	handle, err := m.d.CreateTask(ctx, taskUrl, options)
 	if err != nil {
 		return task.StatusError, fmt.Errorf("failed to create download task: %w", err)
 	}
@@ -223,6 +244,44 @@ func (m *RemoteDownloadTask) createDownloadTask(ctx context.Context, dep depende
 	m.state.Handle = handle
 	m.state.Phase = RemoteDownloadTaskPhaseMonitor
 	return task.StatusSuspending, nil
+}
+
+// buildDownloadOptions overlays per-task options (custom file name, HTTP
+// credentials) onto the group's remote-download options. Custom name and
+// credentials only apply to plain HTTP(S) source URLs on aria2; qBittorrent
+// accepts a torrent rename and carries HTTP auth in the URL userinfo.
+func (m *RemoteDownloadTask) buildDownloadOptions(ctx context.Context, base map[string]interface{}, srcUrl string) (map[string]interface{}, string) {
+	if m.state.FileName == "" && m.state.HTTPUsername == "" {
+		return base, srcUrl
+	}
+
+	options := maps.Clone(base)
+	if options == nil {
+		options = map[string]interface{}{}
+	}
+
+	isHttpSrc := m.state.SrcFileUri == "" && (strings.HasPrefix(m.state.SrcUri, "http://") || strings.HasPrefix(m.state.SrcUri, "https://"))
+	switch m.node.Settings(ctx).Provider {
+	case types.DownloaderProviderQBittorrent:
+		if m.state.FileName != "" {
+			options["rename"] = m.state.FileName
+		}
+		if m.state.HTTPUsername != "" && isHttpSrc {
+			if u, err := url.Parse(srcUrl); err == nil {
+				u.User = url.UserPassword(m.state.HTTPUsername, m.state.HTTPPassword)
+				srcUrl = u.String()
+			}
+		}
+	default:
+		if m.state.FileName != "" && isHttpSrc {
+			options["out"] = m.state.FileName
+		}
+		if m.state.HTTPUsername != "" && isHttpSrc {
+			options["http-user"] = m.state.HTTPUsername
+			options["http-passwd"] = m.state.HTTPPassword
+		}
+	}
+	return options, srcUrl
 }
 
 // buildSSRFOptions composes the SSRF policy for a download: the assigned
@@ -679,6 +738,6 @@ func (m *RemoteDownloadTask) Progress(ctx context.Context) queue.Progresses {
 }
 
 func sanitizeFileName(name string) string {
-	r := strings.NewReplacer("\\", "_", ":", "_", "*", "_", "?", "_", "\"", "_", "<", "_", ">", "_", "|", "_")
+	r := strings.NewReplacer("\\", "_", "/", "_", ":", "_", "*", "_", "?", "_", "\"", "_", "<", "_", ">", "_", "|", "_")
 	return r.Replace(name)
 }

@@ -13,7 +13,10 @@ import { OutlineIconTextField } from "../../Common/Form/OutlineIconTextField.tsx
 import { PathSelectorForm } from "../../Common/Form/PathSelectorForm.tsx";
 import { ViewTaskAction } from "../../Common/Snackbar/snackbar.tsx";
 import DraggableDialog from "../../Dialogs/DraggableDialog.tsx";
+import Edit from "../../Icons/Edit.tsx";
 import Link from "../../Icons/Link.tsx";
+import LockClosedKey from "../../Icons/LockClosedKey.tsx";
+import PersonOutlined from "../../Icons/PersonOutlined.tsx";
 import { FileManagerIndex } from "../FileManager.tsx";
 
 const CreateRemoteDownload = () => {
@@ -26,6 +29,9 @@ const CreateRemoteDownload = () => {
   const [loading, setLoading] = useState(false);
   const [path, setPath] = useState("");
   const [url, setUrl] = useState("");
+  const [fileName, setFileName] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
 
   const open = useAppSelector((state) => state.globalState.remoteDownloadDialogOpen);
   const target = useAppSelector((state) => state.globalState.remoteDownloadDialogFile);
@@ -37,6 +43,9 @@ const CreateRemoteDownload = () => {
       const fs = initialPath.fs();
       setPath(fs == Filesystem.shared_with_me || fs == Filesystem.trash ? defaultPath : initialPath.toString());
       setUrl("");
+      setFileName("");
+      setUsername("");
+      setPassword("");
     }
   }, [open]);
 
@@ -55,6 +64,9 @@ const CreateRemoteDownload = () => {
         src_file: target ? getFileLinkedUri(target) : undefined,
         dst: path,
         src: url ? url.split("\n") : undefined,
+        file_name: fileName || undefined,
+        username: username || undefined,
+        password: password || undefined,
       }),
     )
       .then(() => {
@@ -68,7 +80,7 @@ const CreateRemoteDownload = () => {
       .finally(() => {
         setLoading(false);
       });
-  }, [target, url, path]);
+  }, [target, url, path, fileName, username, password]);
 
   return (
     <DraggableDialog
@@ -111,6 +123,38 @@ const CreateRemoteDownload = () => {
               label={t("modals.remoteDownloadDst")}
             />
           </Stack>
+          <Stack spacing={3} direction={isMobile ? "column" : "row"}>
+            <OutlineIconTextField
+              icon={<Edit />}
+              variant="outlined"
+              value={fileName}
+              onChange={(e) => setFileName(e.target.value)}
+              label={t("application:modals.remoteDownloadFileName")}
+              placeholder={t("modals.remoteDownloadFileNameDescription")}
+              fullWidth
+            />
+          </Stack>
+          {!target && (
+            <Stack spacing={3} direction={isMobile ? "column" : "row"}>
+              <OutlineIconTextField
+                icon={<PersonOutlined />}
+                variant="outlined"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                label={t("application:modals.remoteDownloadHttpUser")}
+                fullWidth
+              />
+              <OutlineIconTextField
+                icon={<LockClosedKey />}
+                variant="outlined"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                label={t("application:modals.remoteDownloadHttpPassword")}
+                fullWidth
+              />
+            </Stack>
+          )}
         </Stack>
       </DialogContent>
     </DraggableDialog>

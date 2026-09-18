@@ -73,9 +73,12 @@ func init() {
 
 type (
 	DownloadWorkflowService struct {
-		Src     []string `json:"src"`
-		SrcFile string   `json:"src_file"`
-		Dst     string   `json:"dst" binding:"required"`
+		Src      []string `json:"src"`
+		SrcFile  string   `json:"src_file"`
+		Dst      string   `json:"dst" binding:"required"`
+		FileName string   `json:"file_name" binding:"omitempty,max=255"`
+		Username string   `json:"username" binding:"omitempty,max=255"`
+		Password string   `json:"password" binding:"omitempty,max=255"`
 	}
 	CreateDownloadParamCtx struct{}
 )
@@ -131,6 +134,20 @@ func (service *DownloadWorkflowService) CreateDownloadTask(c *gin.Context) ([]*T
 		}
 	}
 
+	// Custom file name only applies to single-source tasks; HTTP credentials
+	// only apply to plain HTTP(S) source URLs.
+	taskOpts := &workflows.RemoteDownloadTaskOption{
+		HTTPUsername: service.Username,
+		HTTPPassword: service.Password,
+	}
+	if len(service.Src) <= 1 {
+		taskOpts.FileName = service.FileName
+	}
+	if service.SrcFile != "" {
+		taskOpts.HTTPUsername = ""
+		taskOpts.HTTPPassword = ""
+	}
+
 	// batch creating tasks
 	ae := serializer.NewAggregateError()
 	tasks := make([]queue.Task, 0, len(service.Src))
@@ -139,7 +156,7 @@ func (service *DownloadWorkflowService) CreateDownloadTask(c *gin.Context) ([]*T
 			continue
 		}
 
-		t, err := workflows.NewRemoteDownloadTask(c, src, service.SrcFile, service.Dst)
+		t, err := workflows.NewRemoteDownloadTask(c, src, service.SrcFile, service.Dst, taskOpts)
 		if err != nil {
 			ae.Add(src, err)
 			continue
@@ -153,7 +170,7 @@ func (service *DownloadWorkflowService) CreateDownloadTask(c *gin.Context) ([]*T
 	}
 
 	if service.SrcFile != "" {
-		t, err := workflows.NewRemoteDownloadTask(c, "", service.SrcFile, service.Dst)
+		t, err := workflows.NewRemoteDownloadTask(c, "", service.SrcFile, service.Dst, taskOpts)
 		if err != nil {
 			ae.Add(service.SrcFile, err)
 		}
