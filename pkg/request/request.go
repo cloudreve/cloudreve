@@ -156,8 +156,7 @@ func (c *HTTPClient) Request(method, target string, body io.Reader, opts ...Opti
 		req.Header.Add(CorrelationHeader, logging.CorrelationID(options.ctx).String())
 	}
 
-	mode := c.config.System().Mode
-	if options.masterMeta && mode == conf.MasterMode {
+	if c.config != nil && options.masterMeta && c.config.System().Mode == conf.MasterMode {
 		req.Header.Add(SiteURLHeader, options.siteURL)
 		req.Header.Add(SiteIDHeader, options.siteID)
 		req.Header.Add(SiteVersionHeader, constants.BackendVersion)
