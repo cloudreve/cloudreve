@@ -37,6 +37,11 @@ func InitializeDBClient(l logging.Logger,
 			return nil, fmt.Errorf("failed to migrate database: %w", err)
 		}
 	} else {
+		// Version is current, but additive schema changes (new columns)
+		// still need to reach existing databases between releases.
+		if err := client.Schema.Create(ctx); err != nil {
+			return nil, fmt.Errorf("failed to apply additive schema changes: %w", err)
+		}
 		l.Info("Database schema is up to date.")
 	}
 
