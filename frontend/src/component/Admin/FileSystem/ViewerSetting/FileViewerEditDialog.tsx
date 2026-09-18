@@ -170,7 +170,7 @@ function DraggableTemplateRow({
       hover
     >
       <NoWrapTableCell>
-        <DenseSelect value={template.ext} required onChange={onExtChange}>
+        <DenseSelect value={template.ext} required onChange={onExtChange} fullWidth>
           {extList.map((ext) => (
             <SquareMenuItem value={ext} key={ext}>
               <ListItemText slotProps={{ primary: { variant: "body2" } }}>{ext}</ListItemText>
