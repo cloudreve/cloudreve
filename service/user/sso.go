@@ -170,9 +170,18 @@ func (service *SSOCallbackService) SSOCallback(c *gin.Context) {
 		return
 	}
 
-	email := strings.ToLower(strings.TrimSpace(claims.Email))
+	// Profile claims resolve across standard and AD FS-style alternates;
+	// AD FS userinfo returns only sub, so the ID token is the primary
+	// source for name/email/upn (#3572).
+	email := firstEmailClaim(claims.Email, claims.UPN, claims.UniqueName)
 	name := claims.Name
+	if name == "" {
+		name = strings.TrimSpace(claims.GivenName + " " + claims.FamilyName)
+	}
 	preferred := claims.PreferredUsername
+	if preferred == "" {
+		preferred = claims.UniqueName
+	}
 
 	// Some providers omit email from the ID token; fall back to userinfo.
 	if email == "" && tokens.AccessToken != "" && discovery.UserinfoEndpoint != "" {
@@ -180,12 +189,18 @@ func (service *SSOCallbackService) SSOCallback(c *gin.Context) {
 		if err != nil {
 			dep.Logger().Warning("SSO userinfo request failed: %s", err)
 		} else {
-			email = strings.ToLower(strings.TrimSpace(info.Email))
+			email = firstEmailClaim(info.Email, info.UPN, info.UniqueName)
 			if name == "" {
 				name = info.Name
+				if name == "" {
+					name = strings.TrimSpace(info.GivenName + " " + info.FamilyName)
+				}
 			}
 			if preferred == "" {
 				preferred = info.PreferredUsername
+				if preferred == "" {
+					preferred = info.UniqueName
+				}
 			}
 		}
 	}
@@ -581,4 +596,17 @@ func fetchOIDCUserInfo(c *gin.Context, client request.Client, endpoint, accessTo
 	}
 
 	return &info, nil
+}
+
+// firstEmailClaim returns the first candidate usable as an email address.
+// AD FS upn/unique_name are accepted only when email-shaped, since
+// DOMAIN\user and non-routable identifiers cannot serve as addresses.
+func firstEmailClaim(candidates ...string) string {
+	for _, c := range candidates {
+		c = strings.ToLower(strings.TrimSpace(c))
+		if strings.Contains(c, "@") {
+			return c
+		}
+	}
+	return ""
 }

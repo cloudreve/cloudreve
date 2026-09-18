@@ -135,3 +135,11 @@ func TestSanitizeSSORedirect(t *testing.T) {
 	require.Equal(t, "/home", sanitizeSSORedirect("/home"))
 	require.Equal(t, "/share/s/abc", sanitizeSSORedirect("/share/s/abc"))
 }
+
+func TestFirstEmailClaim(t *testing.T) {
+	require.Equal(t, "user@corp.com", firstEmailClaim("User@Corp.com"))
+	require.Equal(t, "user@corp.com", firstEmailClaim("  User@Corp.COM  "))
+	require.Equal(t, "user@corp.com", firstEmailClaim("", `CORP\user`, "user@corp.com"))
+	require.Equal(t, "", firstEmailClaim("", `CORP\user`, "not-an-email"))
+	require.Equal(t, "", firstEmailClaim())
+}

@@ -89,6 +89,23 @@ func TestVerifyOIDCIDToken(t *testing.T) {
 		_, err := VerifyOIDCIDToken("not-a-jwt", "https://idp.example.com", "cloudreve", "nonce-1", jwks)
 		require.Error(t, err)
 	})
+
+	t.Run("adfs profile claims", func(t *testing.T) {
+		claims := validClaims()
+		claims.Email = ""
+		claims.UPN = "user@corp.example.com"
+		claims.UniqueName = `CORP\user`
+		claims.GivenName = "Jane"
+		claims.FamilyName = "Doe"
+		claims.Name = "Jane Doe"
+		token := signConsumerToken(t, pemKey, claims)
+		parsed, err := VerifyOIDCIDToken(token, "https://idp.example.com", "cloudreve", "nonce-1", jwks)
+		require.NoError(t, err)
+		require.Equal(t, "user@corp.example.com", parsed.UPN)
+		require.Equal(t, `CORP\user`, parsed.UniqueName)
+		require.Equal(t, "Jane", parsed.GivenName)
+		require.Equal(t, "Doe", parsed.FamilyName)
+	})
 }
 
 func TestOIDCDiscoveryValidate(t *testing.T) {

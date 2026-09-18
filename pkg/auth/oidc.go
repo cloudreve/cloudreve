@@ -21,6 +21,12 @@ type OIDCIDTokenClaims struct {
 	UpdatedAt         int64  `json:"updated_at,omitempty"`
 	Email             string `json:"email,omitempty"`
 	EmailVerified     bool   `json:"email_verified,omitempty"`
+	// AD FS and similar providers emit these instead of the standard
+	// profile claims; their userinfo endpoints often return only sub.
+	UPN        string `json:"upn,omitempty"`
+	UniqueName string `json:"unique_name,omitempty"`
+	GivenName  string `json:"given_name,omitempty"`
+	FamilyName string `json:"family_name,omitempty"`
 }
 
 type JWKSet struct {
