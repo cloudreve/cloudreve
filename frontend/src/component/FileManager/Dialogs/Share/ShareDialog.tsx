@@ -18,11 +18,36 @@ import Share from "../../../Icons/Share.tsx";
 import { FileManagerIndex } from "../../FileManager.tsx";
 import ShareSettingContent, { downloadOptions, expireOptions, ShareSetting } from "./ShareSetting.tsx";
 
+const shareSettingStorageKey = "cloudreve.share_setting";
+
 const initialSetting = (privateByDefault: boolean): ShareSetting => ({
   is_private: privateByDefault || undefined,
   expires_val: expireOptions[2],
   downloads_val: downloadOptions[0],
 });
+
+// lastUsedSetting hydrates the dialog from the previously saved share
+// settings (#2519). Password fields are never persisted.
+const lastUsedSetting = (privateByDefault: boolean): ShareSetting => {
+  try {
+    const raw = localStorage.getItem(shareSettingStorageKey);
+    if (raw) {
+      return { ...initialSetting(privateByDefault), ...JSON.parse(raw) };
+    }
+  } catch {
+    // corrupted or unavailable storage falls back to defaults
+  }
+  return initialSetting(privateByDefault);
+};
+
+const rememberSetting = (setting: ShareSetting) => {
+  try {
+    const { password, use_custom_password, ...rest } = setting;
+    localStorage.setItem(shareSettingStorageKey, JSON.stringify(rest));
+  } catch {
+    // storage unavailable; remembering is best-effort
+  }
+};
 
 interface ShareLinkPassword {
   shareLink: string;
@@ -104,7 +129,7 @@ const ShareDialog = () => {
       if (editTarget) {
         setSetting(shareToSetting(editTarget, t));
       } else {
-        setSetting(initialSetting(privateByDefault));
+        setSetting(lastUsedSetting(privateByDefault));
       }
       setShareLink("");
       setIncludePassword(true);
@@ -135,6 +160,7 @@ const ShareDialog = () => {
         const shareLink = await dispatch(
           createOrUpdateShareLink(FileManagerIndex.main, target, setting, editTarget?.id),
         );
+        rememberSetting(setting);
         setShareLink(shareLink);
       } catch (e) {
       } finally {
