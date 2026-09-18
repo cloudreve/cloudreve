@@ -245,6 +245,7 @@ export interface GlobalStateSlice {
   pdfViewer?: GeneralViewerState;
   customViewer?: CustomViewerState;
   epubViewer?: GeneralViewerState;
+  modelViewer?: GeneralViewerState;
   musicPlayer?: MusicPlayerState;
   excalidrawViewer?: GeneralViewerState;
   archiveViewer?: GeneralViewerState;
@@ -423,6 +424,7 @@ export const globalStateSlice = createSlice({
       state.pdfViewer = undefined;
       state.customViewer = undefined;
       state.epubViewer = undefined;
+      state.modelViewer = undefined;
       state.excalidrawViewer = undefined;
       state.archiveViewer = undefined;
     },
@@ -574,6 +576,12 @@ export const globalStateSlice = createSlice({
     },
     closeEpubViewer: (state) => {
       state.epubViewer && (state.epubViewer.open = false);
+    },
+    setModelViewer: (state, action: PayloadAction<GeneralViewerState>) => {
+      state.modelViewer = action.payload;
+    },
+    closeModelViewer: (state) => {
+      state.modelViewer && (state.modelViewer.open = false);
     },
     setCustomViewer: (state, action: PayloadAction<CustomViewerState>) => {
       state.customViewer = action.payload;
@@ -874,6 +882,8 @@ export const {
   closeMusicPlayer,
   setEpubViewer,
   closeEpubViewer,
+  setModelViewer,
+  closeModelViewer,
   setCustomViewer,
   closeCustomViewer,
   setPdfViewer,

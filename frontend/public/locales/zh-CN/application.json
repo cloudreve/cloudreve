@@ -235,6 +235,8 @@
     "subtitleStyles": "字幕样式",
     "subtitles": "字幕",
     "markdownEditor": "Markdown 编辑器",
+    "modelViewer": "3D 模型查看器",
+    "modelLoadFailed": "3D 模型加载失败",
     "saveSuccess": "在 {{time}} 保存成功",
     "drawioLng": "zh",
     "charset": "编码",

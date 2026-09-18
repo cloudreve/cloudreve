@@ -729,6 +729,47 @@ var patches = []Patch{
 		},
 	},
 	{
+		Name:       "apply_default_model3d_viewer",
+		EndVersion: "4.15.0",
+		Func: func(l logging.Logger, client *ent.Client, ctx context.Context) error {
+			fileViewersSetting, err := client.Setting.Query().Where(setting.Name("file_viewers")).First(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to query file_viewers setting: %w", err)
+			}
+
+			var fileViewers []types.ViewerGroup
+			if err := json.Unmarshal([]byte(fileViewersSetting.Value), &fileViewers); err != nil {
+				return fmt.Errorf("failed to unmarshal file_viewers setting: %w", err)
+			}
+
+			for _, viewer := range fileViewers[0].Viewers {
+				if viewer.ID == "model3d" {
+					return nil
+				}
+			}
+
+			var defaultModelViewer types.Viewer
+			for _, viewer := range defaultFileViewers[0].Viewers {
+				if viewer.ID == "model3d" {
+					defaultModelViewer = viewer
+					break
+				}
+			}
+
+			fileViewers[0].Viewers = append(fileViewers[0].Viewers, defaultModelViewer)
+			newFileViewersSetting, err := json.Marshal(fileViewers)
+			if err != nil {
+				return fmt.Errorf("failed to marshal file_viewers setting: %w", err)
+			}
+
+			if _, err := client.Setting.UpdateOne(fileViewersSetting).SetValue(string(newFileViewersSetting)).Save(ctx); err != nil {
+				return fmt.Errorf("failed to update file_viewers setting: %w", err)
+			}
+
+			return nil
+		},
+	},
+	{
 		Name:       "reset_secret_key",
 		EndVersion: "4.13.0",
 		Func: func(l logging.Logger, client *ent.Client, ctx context.Context) error {

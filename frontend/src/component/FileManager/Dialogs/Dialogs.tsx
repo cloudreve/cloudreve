@@ -22,6 +22,7 @@ import VideoViewer from "../../Viewers/Video/VideoViewer.tsx";
 import PdfViewer from "../../Viewers/PdfViewer.tsx";
 import CustomViewer from "../../Viewers/CustomViewer.tsx";
 import EpubViewer from "../../Viewers/EpubViewer/EpubViewer.tsx";
+import ModelViewer from "../../Viewers/ModelViewer/ModelViewer.tsx";
 import ExcalidrawViewer from "../../Viewers/Excalidraw/ExcalidrawViewer.tsx";
 import CreateNew from "./CreateNew.tsx";
 import { useAppSelector } from "../../../redux/hooks.ts";
@@ -71,6 +72,7 @@ const Dialogs = () => {
       <PdfViewer />
       <CustomViewer />
       <EpubViewer />
+      <ModelViewer />
       {showCreateArchive != undefined && <CreateArchive />}
       {showExtractArchive != undefined && <ExtractArchive />}
       {showRemoteDownload != undefined && <CreateRemoteDownload />}

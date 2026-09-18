@@ -235,6 +235,8 @@
     "subtitleStyles": "Subtitle styles",
     "subtitles": "Subtitles",
     "markdownEditor": "Markdown Editor",
+    "modelViewer": "3D Model Viewer",
+    "modelLoadFailed": "Failed to load 3D model",
     "saveSuccess": "Saved successfully at {{time}}",
     "drawioLng": "en",
     "charset": "Charset",

@@ -23,6 +23,7 @@ import {
   setImageEditor,
   setImageViewer,
   setMarkdownViewer,
+  setModelViewer,
   setMusicPlayer,
   setPdfViewer,
   setPhotopeaViewer,
@@ -54,6 +55,7 @@ export const builtInViewers = {
   music: "music",
   excalidraw: "excalidraw",
   archive: "archive",
+  model3d: "model3d",
 };
 
 export function openViewers(
@@ -236,6 +238,15 @@ export function openViewer(
               open: true,
               file,
               version: preferredVersion,
+            }),
+          );
+          break;
+        case builtInViewers.model3d:
+          dispatch(
+            setModelViewer({
+              open: true,
+              file,
+              version: preferredVersion ?? primaryEntity,
             }),
           );
           break;

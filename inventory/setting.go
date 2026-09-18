@@ -295,6 +295,12 @@ var (
 					Exts:        []string{"bmp", "png", "gif", "jpg", "jpeg", "svg", "webp", "heic", "heif"},
 				},
 				{
+					ID:          "model3d",
+					Type:        types.ViewerTypeBuiltin,
+					DisplayName: "fileManager.modelViewer",
+					Exts:        []string{"fbx", "obj", "gltf", "glb"},
+				},
+				{
 					ID:          "monaco",
 					Type:        types.ViewerTypeBuiltin,
 					Icon:        "/static/img/viewers/monaco.svg",
