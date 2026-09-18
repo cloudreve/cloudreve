@@ -8,6 +8,7 @@ import { Share as ShareModel } from "../../../../api/explorer.ts";
 import { closeShareLinkDialog } from "../../../../redux/globalStateSlice.ts";
 import { useAppDispatch, useAppSelector } from "../../../../redux/hooks.ts";
 import { createOrUpdateShareLink } from "../../../../redux/thunks/share.ts";
+import SessionManager from "../../../../session";
 import { copyToClipboard, sendLink } from "../../../../util";
 import AutoHeight from "../../../Common/AutoHeight.tsx";
 import { FilledTextField, SmallFormControlLabel } from "../../../Common/StyledComponents.tsx";
@@ -17,10 +18,11 @@ import Share from "../../../Icons/Share.tsx";
 import { FileManagerIndex } from "../../FileManager.tsx";
 import ShareSettingContent, { downloadOptions, expireOptions, ShareSetting } from "./ShareSetting.tsx";
 
-const initialSetting: ShareSetting = {
+const initialSetting = (privateByDefault: boolean): ShareSetting => ({
+  is_private: privateByDefault || undefined,
   expires_val: expireOptions[2],
   downloads_val: downloadOptions[0],
-};
+});
 
 interface ShareLinkPassword {
   shareLink: string;
@@ -75,8 +77,12 @@ const ShareDialog = () => {
   const dispatch = useAppDispatch();
   const theme = useTheme();
 
+  const sitePrivateDefault = useAppSelector((state) => state.siteConfig.basic.config.share_default_private);
+  const userPrivateDefault = SessionManager.currentLoginOrNull()?.user.share_default_private;
+  const privateByDefault = userPrivateDefault ?? !!sitePrivateDefault;
+
   const [loading, setLoading] = useState(false);
-  const [setting, setSetting] = useState<ShareSetting>(initialSetting);
+  const [setting, setSetting] = useState<ShareSetting>(() => initialSetting(privateByDefault));
   const [shareLink, setShareLink] = useState<string>("");
   const [includePassword, setIncludePassword] = useState(true);
   const shareLinkPassword = useMemo(() => {
@@ -98,7 +104,7 @@ const ShareDialog = () => {
       if (editTarget) {
         setSetting(shareToSetting(editTarget, t));
       } else {
-        setSetting(initialSetting);
+        setSetting(initialSetting(privateByDefault));
       }
       setShareLink("");
       setIncludePassword(true);

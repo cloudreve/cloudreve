@@ -162,11 +162,20 @@ func (s *ListShareService) ListInUserProfile(c *gin.Context, uid int) (*ListShar
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get user", err)
 	}
 
-	if targetUser.Settings != nil && targetUser.Settings.ShareLinksInProfile == types.ProfileHideShare {
+	// An unset user preference ("") inherits the site-wide default; explicit
+	// values (public_share/all_share/hide_share) always win.
+	level := types.ProfilePublicShareOnly
+	if targetUser.Settings != nil {
+		level = targetUser.Settings.ShareLinksInProfile
+	}
+	if level == types.ProfilePublicShareOnly {
+		level = dep.SettingProvider().ShareDefaults(c).LinksInProfile
+	}
+	if level == types.ProfileHideShare {
 		return nil, serializer.NewError(serializer.CodeParamErr, "User has disabled share links in profile", nil)
 	}
 
-	publicOnly := targetUser.Settings == nil || targetUser.Settings.ShareLinksInProfile == types.ProfilePublicShareOnly
+	publicOnly := level != types.ProfileAllShare
 	args := &inventory.ListShareArgs{
 		PaginationArgs: &inventory.PaginationArgs{
 			UseCursorPagination: true,

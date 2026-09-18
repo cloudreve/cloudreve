@@ -1012,7 +1012,13 @@
     "relocateFileTo": "将 <0></0>{{more}} 的存储策略转移至 {{policy}}",
     "extractFileTo": "将 <0></0>{{more}} 解压缩至 <1></1>",
     "createArchiveTo": "将 <0></0>{{more}} 打包至 <1></1>",
-    "importFileTo": "将 {{policy}} 中的文件导入至 <0></0>"
+    "importFileTo": "将 {{policy}} 中的文件导入至 <0></0>",
+    "shareSiteDefault": "跟随站点默认",
+    "shareSiteDefaultDes": "使用管理员配置的站点级默认值。",
+    "shareDefaultPrivate": "默认分享隐私",
+    "shareDefaultPrivateDes": "新建分享默认启用私密分享（密码保护）。",
+    "sharePrivateOn": "私密",
+    "sharePrivateOff": "公开"
   },
   "vas": {
     "points": "积分",

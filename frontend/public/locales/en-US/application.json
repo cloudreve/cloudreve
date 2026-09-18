@@ -1012,7 +1012,13 @@
     "relocateFileTo": "Relocate storage policy to {{policy}} for <0></0>{{more}}",
     "extractFileTo": "Extract <0></0>{{more}} to <1></1>",
     "createArchiveTo": "Create archive file to <1></1> for <0></0>{{more}}",
-    "importFileTo": "Import files from {{policy}} to <0></0>"
+    "importFileTo": "Import files from {{policy}} to <0></0>",
+    "shareSiteDefault": "Site default",
+    "shareSiteDefaultDes": "Follow the site-wide default configured by the administrator.",
+    "shareDefaultPrivate": "Default share privacy",
+    "shareDefaultPrivateDes": "New shares default to private (password protected).",
+    "sharePrivateOn": "Private",
+    "sharePrivateOff": "Public"
   },
   "vas": {
     "points": "Points",

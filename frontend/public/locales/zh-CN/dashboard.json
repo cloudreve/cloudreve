@@ -842,7 +842,14 @@
     "ssoRegisterEnabledDes": "用户首次通过 SSO 登录时自动创建本地账号。下方的注册邮箱过滤规则同样适用。",
     "ssoCallbackUrl": "回调地址",
     "ssoCallbackUrlDes": "请在身份提供方中将此 URL 注册为 Redirect/Callback URL：<0>{{url}}</0>",
-    "themeVisible": "可见"
+    "themeVisible": "可见",
+    "shareDefaultPrivate": "默认私密分享",
+    "shareDefaultPrivateDes": "新建分享默认启用私密分享（密码保护）。用户仍可在个人设置中覆盖此默认值。",
+    "defaultShareLinksInProfile": "默认个人主页分享可见性",
+    "defaultShareLinksInProfileDes": "当用户未自行选择时，控制其公开个人主页上显示哪些分享。",
+    "profileSharePublicOnly": "仅无密码分享",
+    "profileShareAll": "所有分享",
+    "profileShareHide": "隐藏所有分享"
   },
   "giftCodes": {
     "giftCodesSettings": "礼品码",

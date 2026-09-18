@@ -17,6 +17,9 @@ type (
 		DisableViewSync     bool                     `json:"disable_view_sync,omitempty"`
 		FsViewMap           map[string]ExplorerView  `json:"fs_view_map,omitempty"`
 		ShareLinksInProfile ShareLinksInProfileLevel `json:"share_links_in_profile,omitempty"`
+		// ShareDefaultPrivate overrides the site-wide private-share default
+		// for this user. nil means inherit the site default.
+		ShareDefaultPrivate *bool `json:"share_default_private,omitempty"`
 	}
 
 	ShareLinksInProfileLevel string
@@ -409,6 +412,11 @@ const (
 	ProfilePublicShareOnly = ShareLinksInProfileLevel("")
 	ProfileAllShare        = ShareLinksInProfileLevel("all_share")
 	ProfileHideShare       = ShareLinksInProfileLevel("hide_share")
+	// ProfileSharePublic is the explicit "password-free shares only" choice.
+	// The empty value (ProfilePublicShareOnly) doubles as "inherit the
+	// site-wide default"; ProfileSharePublic lets a user force public-only
+	// visibility even when the site default differs (#3390).
+	ProfileSharePublic = ShareLinksInProfileLevel("public_share")
 )
 
 const (

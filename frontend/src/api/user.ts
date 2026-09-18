@@ -24,6 +24,7 @@ export interface User {
   language?: string;
   disable_view_sync?: boolean;
   share_links_in_profile?: ShareLinksInProfileLevel;
+  share_default_private?: boolean;
 }
 export interface Group {
   id: string;
@@ -105,6 +106,7 @@ export interface UserSettings {
   passkeys?: Passkey[];
   disable_view_sync: boolean;
   share_links_in_profile: ShareLinksInProfileLevel;
+  share_default_private?: boolean;
   oauth_grants?: OAuthGrant[];
 }
 
@@ -129,6 +131,8 @@ export interface PatchUserSetting {
   two_fa_code?: string;
   disable_view_sync?: boolean;
   share_links_in_profile?: ShareLinksInProfileLevel;
+  // Tri-state: "true" / "false" / "" (inherit the site default).
+  share_default_private?: string;
 }
 
 export interface PasskeyCredentialOption {
@@ -206,7 +210,8 @@ export interface ResetPasswordService {
 }
 
 export enum ShareLinksInProfileLevel {
-  public_share_only = "",
+  site_default = "",
+  public_share_only = "public_share",
   all_share = "all_share",
   hide_share = "hide_share",
 }

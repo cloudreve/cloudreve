@@ -1,5 +1,5 @@
 import { LoadingButton } from "@mui/lab";
-import { Collapse, Grid2, Stack, Typography, useMediaQuery, useTheme, styled } from "@mui/material";
+import { Collapse, FormHelperText, Grid2, ListItemText, Stack, Typography, useMediaQuery, useTheme, styled } from "@mui/material";
 import { bindPopover, bindTrigger, usePopupState } from "material-ui-popup-state/hooks";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -7,7 +7,8 @@ import { sendUpdateUserSetting } from "../../../api/api.ts";
 import { UserSettings, ShareLinksInProfileLevel } from "../../../api/user.ts";
 import { useAppDispatch } from "../../../redux/hooks.ts";
 import SessionManager from "../../../session";
-import { DefaultButton, DenseFilledTextField } from "../../Common/StyledComponents.tsx";
+import { DefaultButton, DenseFilledTextField, DenseSelect } from "../../Common/StyledComponents.tsx";
+import { SquareMenuItem } from "../../FileManager/ContextMenu/ContextMenu.tsx";
 import TimeBadge from "../../Common/TimeBadge.tsx";
 import CaretDown from "../../Icons/CaretDown.tsx";
 import AvatarSetting from "./AvatarSetting.tsx";
@@ -153,6 +154,39 @@ const ProfileSetting = ({ setting, setSetting }: ProfileSettingProps) => {
                   onValueChange={onProfileSettingChange}
                   {...bindPopover(profileSettingPopup)}
                 />
+              </SettingForm>
+
+              <SettingForm title={t("setting.shareDefaultPrivate")} noContainer lgWidth={6}>
+                <DenseSelect
+                  fullWidth
+                  value={
+                    setting.share_default_private === undefined || setting.share_default_private === null
+                      ? ""
+                      : setting.share_default_private
+                        ? "true"
+                        : "false"
+                  }
+                  onChange={(e) => {
+                    const v = e.target.value as string;
+                    dispatch(sendUpdateUserSetting({ share_default_private: v })).then(() => {
+                      setSetting({
+                        ...setting,
+                        share_default_private: v === "" ? undefined : v === "true",
+                      });
+                    });
+                  }}
+                >
+                  <SquareMenuItem value="">
+                    <ListItemText primary={t("setting.shareSiteDefault")} />
+                  </SquareMenuItem>
+                  <SquareMenuItem value="true">
+                    <ListItemText primary={t("setting.sharePrivateOn")} />
+                  </SquareMenuItem>
+                  <SquareMenuItem value="false">
+                    <ListItemText primary={t("setting.sharePrivateOff")} />
+                  </SquareMenuItem>
+                </DenseSelect>
+                <FormHelperText>{t("setting.shareDefaultPrivateDes")}</FormHelperText>
               </SettingForm>
             </Grid2>
           </Stack>

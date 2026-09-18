@@ -139,6 +139,49 @@ const UserSession = () => {
                 </NoMarginHelperText>
               </FormControl>
             </SettingForm>
+            <SettingForm lgWidth={5}>
+              <FormControl fullWidth>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={isTrueVal(values.share_default_private)}
+                      onChange={(e) =>
+                        setSettings({
+                          share_default_private: e.target.checked ? "1" : "0",
+                        })
+                      }
+                    />
+                  }
+                  label={t("settings.shareDefaultPrivate")}
+                />
+                <NoMarginHelperText>{t("settings.shareDefaultPrivateDes")}</NoMarginHelperText>
+              </FormControl>
+            </SettingForm>
+            <SettingForm title={t("settings.defaultShareLinksInProfile")} lgWidth={5}>
+              <FormControl>
+                <DenseSelect
+                  value={values.default_share_links_in_profile ?? ""}
+                  onChange={(e) =>
+                    setSettings({
+                      default_share_links_in_profile: e.target.value as string,
+                    })
+                  }
+                >
+                  {["profileSharePublicOnly", "profileShareAll", "profileShareHide"].map((v, i) => (
+                    <SquareMenuItem key={v} value={["", "all_share", "hide_share"][i]}>
+                      <ListItemText
+                        slotProps={{
+                          primary: { variant: "body2" },
+                        }}
+                      >
+                        {t(`settings.${v}`)}
+                      </ListItemText>
+                    </SquareMenuItem>
+                  ))}
+                </DenseSelect>
+                <NoMarginHelperText>{t("settings.defaultShareLinksInProfileDes")}</NoMarginHelperText>
+              </FormControl>
+            </SettingForm>
             <SettingForm title={t("vas.filterEmailProvider")} lgWidth={5}>
               <FormControl>
                 <DenseSelect

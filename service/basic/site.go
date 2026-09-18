@@ -27,6 +27,10 @@ type SiteConfig struct {
 	CustomNavItems []setting.CustomNavItem `json:"custom_nav_items,omitempty"`
 	CustomHTML     *setting.CustomHTML     `json:"custom_html,omitempty"`
 
+	// Share section
+	ShareDefaultPrivate        bool   `json:"share_default_private,omitempty"`
+	DefaultShareLinksInProfile string `json:"default_share_links_in_profile,omitempty"`
+
 	// Login Section
 	LoginCaptcha     bool                `json:"login_captcha,omitempty"`
 	RegCaptcha       bool                `json:"reg_captcha,omitempty"`
@@ -196,23 +200,26 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 	appSetting := settings.AppSetting(c)
 	customNavItems := settings.CustomNavItems(c)
 	customHTML := settings.CustomHTML(c)
+	shareDefaults := settings.ShareDefaults(c)
 	return &SiteConfig{
-		InstanceID:      siteBasic.ID,
-		SiteName:        siteBasic.Name,
-		Themes:          themes.Themes,
-		DefaultTheme:    themes.DefaultTheme,
-		User:            &userRes,
-		Logo:            logo.Normal,
-		LogoLight:       logo.Light,
-		CaptchaType:     settings.CaptchaType(c),
-		TurnstileSiteID: settings.TurnstileCaptcha(c).Key,
-		ReCaptchaKey:    reCaptcha.Key,
-		CapInstanceURL:  capCaptcha.InstanceURL,
-		CapSiteKey:      capCaptcha.SiteKey,
-		CapAssetServer:  capCaptcha.AssetServer,
-		AppPromotion:    appSetting.Promotion,
-		CustomNavItems:  customNavItems,
-		CustomHTML:      customHTML,
+		InstanceID:                 siteBasic.ID,
+		SiteName:                   siteBasic.Name,
+		Themes:                     themes.Themes,
+		DefaultTheme:               themes.DefaultTheme,
+		User:                       &userRes,
+		Logo:                       logo.Normal,
+		LogoLight:                  logo.Light,
+		CaptchaType:                settings.CaptchaType(c),
+		TurnstileSiteID:            settings.TurnstileCaptcha(c).Key,
+		ReCaptchaKey:               reCaptcha.Key,
+		CapInstanceURL:             capCaptcha.InstanceURL,
+		CapSiteKey:                 capCaptcha.SiteKey,
+		CapAssetServer:             capCaptcha.AssetServer,
+		AppPromotion:               appSetting.Promotion,
+		CustomNavItems:             customNavItems,
+		CustomHTML:                 customHTML,
+		ShareDefaultPrivate:        shareDefaults.PrivateByDefault,
+		DefaultShareLinksInProfile: string(shareDefaults.LinksInProfile),
 	}, nil
 }
 

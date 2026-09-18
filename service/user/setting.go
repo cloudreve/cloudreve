@@ -230,6 +230,9 @@ type (
 		TwoFACode               *string   `json:"two_fa_code" binding:"omitempty"`
 		DisableViewSync         *bool     `json:"disable_view_sync" binding:"omitempty"`
 		ShareLinksInProfile     *string   `json:"share_links_in_profile" binding:"omitempty"`
+		// ShareDefaultPrivate accepts "true", "false" or "" (clear the
+		// override and inherit the site default).
+		ShareDefaultPrivate *string `json:"share_default_private" binding:"omitempty"`
 	}
 	PatchUserSettingParamsCtx struct{}
 )
@@ -277,7 +280,25 @@ func (s *PatchUserSetting) Patch(c *gin.Context) error {
 	}
 
 	if s.ShareLinksInProfile != nil {
-		u.Settings.ShareLinksInProfile = types.ShareLinksInProfileLevel(*s.ShareLinksInProfile)
+		level := types.ShareLinksInProfileLevel(*s.ShareLinksInProfile)
+		switch level {
+		case types.ProfilePublicShareOnly, types.ProfileAllShare, types.ProfileHideShare, types.ProfileSharePublic:
+		default:
+			return serializer.NewError(serializer.CodeParamErr, "Invalid share links visibility", nil)
+		}
+		u.Settings.ShareLinksInProfile = level
+		saveSetting = true
+	}
+
+	if s.ShareDefaultPrivate != nil {
+		if *s.ShareDefaultPrivate != "" && *s.ShareDefaultPrivate != "true" && *s.ShareDefaultPrivate != "false" {
+			return serializer.NewError(serializer.CodeParamErr, "Invalid share privacy default", nil)
+		}
+		u.Settings.ShareDefaultPrivate = nil
+		if *s.ShareDefaultPrivate != "" {
+			v := *s.ShareDefaultPrivate == "true"
+			u.Settings.ShareDefaultPrivate = &v
+		}
 		saveSetting = true
 	}
 

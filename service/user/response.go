@@ -32,6 +32,7 @@ type UserSettings struct {
 	Passkeys                []Passkey    `json:"passkeys,omitempty"`
 	DisableViewSync         bool         `json:"disable_view_sync"`
 	ShareLinksInProfile     string       `json:"share_links_in_profile"`
+	ShareDefaultPrivate     *bool        `json:"share_default_private,omitempty"`
 	OAuthGrants             []OauthGrant `json:"oauth_grants,omitempty"`
 }
 
@@ -47,6 +48,7 @@ func BuildUserSettings(u *ent.User, passkeys []*ent.Passkey, parser *uaparser.Pa
 		}),
 		DisableViewSync:     u.Settings.DisableViewSync,
 		ShareLinksInProfile: string(u.Settings.ShareLinksInProfile),
+		ShareDefaultPrivate: u.Settings.ShareDefaultPrivate,
 		OAuthGrants: lo.Map(grants, func(item *ent.OAuthGrant, index int) OauthGrant {
 			return BuildOauthGrant(item)
 		}),
@@ -118,6 +120,10 @@ type User struct {
 	Language            string                         `json:"language,omitempty"`
 	DisableViewSync     bool                           `json:"disable_view_sync,omitempty"`
 	ShareLinksInProfile types.ShareLinksInProfileLevel `json:"share_links_in_profile,omitempty"`
+	// ShareDefaultPrivate is the user's own private-share override; nil means
+	// the site default applies. Never resolved here — the dialog computes the
+	// effective default from user ?? site.
+	ShareDefaultPrivate *bool `json:"share_default_private,omitempty"`
 }
 
 type Group struct {
@@ -175,6 +181,7 @@ func BuildUser(user *ent.User, idEncoder hashid.Encoder) User {
 		Language:            user.Settings.Language,
 		DisableViewSync:     user.Settings.DisableViewSync,
 		ShareLinksInProfile: user.Settings.ShareLinksInProfile,
+		ShareDefaultPrivate: user.Settings.ShareDefaultPrivate,
 	}
 }
 
@@ -230,11 +237,16 @@ func BuildUserRedacted(ctx context.Context, u *ent.User, level int, idEncoder ha
 	userRaw := BuildUser(u, idEncoder)
 
 	user := User{
-		ID:                  userRaw.ID,
-		Nickname:            userRaw.Nickname,
-		Avatar:              userRaw.Avatar,
-		CreatedAt:           userRaw.CreatedAt,
+		ID:        userRaw.ID,
+		Nickname:  userRaw.Nickname,
+		Avatar:    userRaw.Avatar,
+		CreatedAt: userRaw.CreatedAt,
+		// Profile visitors see the effective visibility: an unset user
+		// preference resolves to the site-wide default (#3390).
 		ShareLinksInProfile: userRaw.ShareLinksInProfile,
+	}
+	if user.ShareLinksInProfile == types.ProfilePublicShareOnly {
+		user.ShareLinksInProfile = dependency.FromContext(ctx).SettingProvider().ShareDefaults(ctx).LinksInProfile
 	}
 
 	if userRaw.Group != nil {

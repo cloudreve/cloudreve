@@ -14,12 +14,16 @@ import (
 )
 
 // stubSettingProvider satisfies the SettingProvider dependency; only
-// ExposeUserEmail is exercised by BuildUserRedacted.
+// ExposeUserEmail and ShareDefaults are exercised by BuildUserRedacted.
 type stubSettingProvider struct {
 	setting.Provider
 }
 
 func (stubSettingProvider) ExposeUserEmail(context.Context) bool { return false }
+
+func (stubSettingProvider) ShareDefaults(context.Context) *setting.ShareDefaults {
+	return &setting.ShareDefaults{}
+}
 
 // TestBuildShareNoteVisibility ensures the owner-defined share note is only
 // exposed to the share owner, never to visitors (upstream #3570).

@@ -246,6 +246,9 @@ type (
 		SSO(ctx context.Context) *SSO
 		// EmailFilter returns the sign-up email restriction settings.
 		EmailFilter(ctx context.Context) *EmailFilter
+		// ShareDefaults returns the site-wide share defaults applied when a
+		// user has not overridden them in their personal settings.
+		ShareDefaults(ctx context.Context) *ShareDefaults
 	}
 	UseFirstSiteUrlCtxKey = struct{}
 )
@@ -934,6 +937,28 @@ func (s *settingProvider) EmailFilter(ctx context.Context) *EmailFilter {
 
 func (s *settingProvider) ExposeUserEmail(ctx context.Context) bool {
 	return s.getBoolean(ctx, "expose_user_email", true)
+}
+
+// ShareDefaults holds the site-wide share defaults (#3390).
+type ShareDefaults struct {
+	// LinksInProfile is the default profile share visibility applied when a
+	// user's own share_links_in_profile is unset.
+	LinksInProfile types.ShareLinksInProfileLevel
+	// PrivateByDefault makes new shares default to private (random password).
+	PrivateByDefault bool
+}
+
+func (s *settingProvider) ShareDefaults(ctx context.Context) *ShareDefaults {
+	level := types.ShareLinksInProfileLevel(s.getString(ctx, "default_share_links_in_profile", ""))
+	switch level {
+	case types.ProfilePublicShareOnly, types.ProfileAllShare, types.ProfileHideShare:
+	default:
+		level = types.ProfilePublicShareOnly
+	}
+	return &ShareDefaults{
+		LinksInProfile:   level,
+		PrivateByDefault: s.getBoolean(ctx, "share_default_private", false),
+	}
 }
 
 func (s *settingProvider) SiteBasic(ctx context.Context) *SiteBasic {
