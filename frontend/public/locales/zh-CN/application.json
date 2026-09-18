@@ -634,6 +634,8 @@
     "uploadOnlyDes": "访客可以上传文件，但无法查看或下载此共享文件夹中的现有内容。",
     "previewOnly": "仅预览",
     "previewOnlyDes": "访客可以在线预览文件，但不能下载。",
+    "shareNote": "备注",
+    "shareNoteDes": "用于识别此分享的私有备注，仅在“我的分享”中对你可见。",
     "showReadme": "显示 README 文件",
     "showReadmeDes": "勾选后，会自动为访问者展示目录下的 <0>README.md</0> (区分大小写) 文件。",
     "viewSetting": "视图设置",

@@ -241,6 +241,9 @@ type (
 		PreviewOnly bool `json:"preview_only,omitempty"`
 		// Whether share visitors can upload but cannot list or download (drop box)
 		UploadOnly bool `json:"upload_only,omitempty"`
+		// Owner-defined note/alias for identifying the share in My Shares;
+		// never exposed to share visitors (#3570).
+		Note string `json:"note,omitempty"`
 	}
 
 	OAuthClientProps struct {

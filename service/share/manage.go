@@ -31,6 +31,8 @@ type (
 		AllowEdit       bool   `json:"allow_edit"`
 		PreviewOnly     bool   `json:"preview_only"`
 		UploadOnly      bool   `json:"upload_only"`
+		// Optional owner-defined note shown on My Shares (#3570).
+		Note string `json:"note" binding:"omitempty,max=255"`
 	}
 	ShareCreateParamCtx struct{}
 
@@ -98,6 +100,7 @@ func (service *ShareCreateService) Upsert(c *gin.Context, existed int) (string, 
 		AllowEdit:       service.AllowEdit,
 		PreviewOnly:     service.PreviewOnly,
 		UploadOnly:      service.UploadOnly,
+		Note:            service.Note,
 	})
 	if err != nil {
 		return "", err

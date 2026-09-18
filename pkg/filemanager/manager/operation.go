@@ -355,6 +355,7 @@ func (l *manager) CreateOrUpdateShare(ctx context.Context, path *fs.URI, args *C
 		AllowEdit:   args.AllowEdit,
 		PreviewOnly: args.PreviewOnly,
 		UploadOnly:  args.UploadOnly,
+		Note:        args.Note,
 	}
 
 	share, err := shareClient.Upsert(ctx, &inventory.CreateShareParams{

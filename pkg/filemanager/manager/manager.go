@@ -127,6 +127,7 @@ type (
 		AllowEdit       bool
 		PreviewOnly     bool
 		UploadOnly      bool
+		Note            string
 	}
 
 	FullTextSearchResults struct {

@@ -38,6 +38,7 @@ const shareToSetting = (share: ShareModel, t: TFunction): ShareSetting => {
     allow_edit: share.allow_edit,
     preview_only: share.preview_only,
     upload_only: share.upload_only,
+    note: share.note,
     downloads: share.remain_downloads != undefined && share.remain_downloads > 0,
 
     expires_val: expireOptions[2],

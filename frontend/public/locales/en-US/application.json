@@ -634,6 +634,8 @@
     "uploadOnlyDes": "Visitors can upload files but cannot see or download existing content in this shared folder.",
     "previewOnly": "Preview only",
     "previewOnlyDes": "Visitors can preview files inline but cannot download them.",
+    "shareNote": "Note",
+    "shareNoteDes": "A private note to identify this share. Only visible to you in My Shares.",
     "showReadme": "Show README file",
     "showReadmeDes": "If selected, the <0>README.md</0> file (case-sensitive) in the directory will be automatically displayed for visitors.",
     "viewSetting": "View setting",

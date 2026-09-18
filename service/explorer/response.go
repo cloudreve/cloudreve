@@ -342,6 +342,7 @@ type Share struct {
 	AllowEdit   bool   `json:"allow_edit,omitempty"`
 	PreviewOnly bool   `json:"preview_only,omitempty"`
 	UploadOnly  bool   `json:"upload_only,omitempty"`
+	Note        string `json:"note,omitempty"`
 
 	// Only viewable if explicitly unlocked by owner
 	SourceUri string `json:"source_uri,omitempty"`
@@ -393,6 +394,8 @@ func BuildShare(ctx context.Context, s *ent.Share, base *url.URL, hasher hashid.
 			res.AllowEdit = s.Props.AllowEdit
 			res.PreviewOnly = s.Props.PreviewOnly
 			res.UploadOnly = s.Props.UploadOnly
+			// Owner-private note; never sent to share visitors (#3570).
+			res.Note = s.Props.Note
 		}
 	}
 

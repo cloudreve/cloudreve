@@ -234,6 +234,13 @@ const ShareCard = ({ share, onShareDeleted, onLoad, loading, selecting, selected
                   <Chip size="small" label={t("application:share.expired")} sx={{ ml: 1, height: 18 }} />
                 )}
               </Box>
+              {share?.note && (
+                <Tooltip title={share.note}>
+                  <NoWrapTypography variant={"body2"} color={"text.secondary"}>
+                    {share.note}
+                  </NoWrapTypography>
+                </Tooltip>
+              )}
               <Box>
                 <Tooltip title={share?.name ?? ""}>
                   <NoWrapTypography variant={"body2"} color={"text.secondary"}>

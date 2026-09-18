@@ -94,6 +94,7 @@ export interface Share {
   allow_edit?: boolean;
   preview_only?: boolean;
   upload_only?: boolean;
+  note?: string;
 }
 
 export enum PolicyType {
@@ -319,6 +320,7 @@ export interface ShareCreateService {
   allow_edit?: boolean;
   preview_only?: boolean;
   upload_only?: boolean;
+  note?: string;
 }
 
 export interface CreateFileService {
