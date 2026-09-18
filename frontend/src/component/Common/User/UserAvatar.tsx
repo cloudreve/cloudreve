@@ -119,6 +119,7 @@ const UserAvatar = memo(
                 img: {
                   loading: "lazy",
                   alt: "",
+                  draggable: false,
                 },
               }}
               {...rest}
