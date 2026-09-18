@@ -327,6 +327,7 @@ type (
 		SysSkipSoftDelete  bool
 		Metadata           map[string]string
 		ArchiveCompression bool
+		ArchiveWorkers     int
 		ProgressFunc
 		MaxArchiveSize  int64
 		DryRun          CreateArchiveDryRunFunc
@@ -583,6 +584,15 @@ func WithMetadata(m map[string]string) Option {
 func WithArchiveCompression(b bool) Option {
 	return OptionFunc(func(o *FsOption) {
 		o.ArchiveCompression = b
+	})
+}
+
+// WithArchiveWorkers sets the number of parallel compression workers for
+// archive creation. <=0 selects an adaptive default, 1 keeps the
+// sequential single-writer path.
+func WithArchiveWorkers(n int) Option {
+	return OptionFunc(func(o *FsOption) {
+		o.ArchiveWorkers = n
 	})
 }
 
