@@ -65,6 +65,7 @@ type SMTP struct {
 	ForceEncryption bool
 	Port            int
 	Keepalive       int
+	AuthType        string
 }
 
 type TokenAuth struct {

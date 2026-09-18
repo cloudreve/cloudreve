@@ -561,6 +561,7 @@ var DefaultSettings = map[string]string{
 	"email_filter_mode":                          "0",
 	"email_filter_list":                          "",
 	"email_disable_subaddress":                   "0",
+	"smtp_auth":                                  "autodiscover",
 	"captcha_type":                               "normal",
 	"captcha_height":                             "60",
 	"captcha_width":                              "240",
