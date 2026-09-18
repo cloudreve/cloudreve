@@ -1,0 +1,57 @@
+name: Upstream Sync
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream https://github.com/cloudreve/cloudreve.git
+          git fetch upstream master
+
+      - name: Check divergence
+        id: check
+        run: |
+          BEHIND=$(git rev-list --count HEAD..upstream/master)
+          echo "behind=$BEHIND" >> "$GITHUB_OUTPUT"
+          if [ "$BEHIND" -eq 0 ]; then
+            echo "Already up to date with upstream."
+          fi
+
+      - name: Create sync PR
+        if: steps.check.outputs.behind != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="sync/upstream-$(date +%Y%m%d)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git merge upstream/master --no-edit -m "chore: sync upstream master ($(date +%Y-%m-%d))" || {
+            echo "Merge conflicts detected — opening PR for manual resolution."
+            git merge --abort
+            git checkout upstream/master -b "$BRANCH"
+          }
+          git push origin "$BRANCH"
+          gh pr create \
+            --title "chore: sync upstream master ($(date +%Y-%m-%d))" \
+            --body "$(cat <<'EOF'
+          Weekly upstream synchronization. ${{ steps.check.outputs.behind }} commits behind upstream/master.
+
+          Review the diff before merging — upstream changes may conflict with local modifications.
+          EOF
+          )" \
+            --label "upstream-sync" || echo "PR may already exist for this branch."

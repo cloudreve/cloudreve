@@ -113,7 +113,7 @@ func (m *metadataDeadProps) DeadProps() (map[xml.Name]Property, error) {
 		}
 
 		spaceLocal := strings.SplitN(strings.TrimPrefix(k, DeadPropsMetadataPrefix), SpaceNameSeparator, 2)
-		name := xml.Name{spaceLocal[0], spaceLocal[1]}
+		name := xml.Name{Space: spaceLocal[0], Local: spaceLocal[1]}
 		propsStore := &DeadPropsStore{}
 		if err := json.Unmarshal([]byte(v), propsStore); err != nil {
 			return nil, err

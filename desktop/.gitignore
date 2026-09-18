@@ -1,0 +1,24 @@
+# Rust
+/target/
+cloudreve-api/target/
+**/*.rs.bk
+*.pdb
+Cargo.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Local configuration
+.cloudreve/
+*.local
+
+# Build artifacts
+/release/
+/debug/
+dist/
+package/*.exe

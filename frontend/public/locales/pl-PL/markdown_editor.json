@@ -1,0 +1,114 @@
+{
+  "frontmatterEditor": {
+    "title": "Edytuj frontmatter dokumentu",
+    "key": "Klucz",
+    "value": "Wartość",
+    "addEntry": "Dodaj wpis"
+  },
+  "dialogControls": {
+    "save": "Zapisz",
+    "cancel": "Anuluj"
+  },
+  "uploadImage": {
+    "dialogTitle": "Prześlij obraz",
+    "uploadInstructions": "Prześlij obraz ze swojego urządzenia:",
+    "addViaUrlInstructions": "Lub dodaj obraz z adresu URL / ścieżki względnej (względem bieżącego pliku):",
+    "autoCompletePlaceholder": "Wybierz lub wklej adres URL obrazu",
+    "addViaUrlInstructionsNoUpload": "Adres URL obrazu:",
+    "alt": "Alt:",
+    "title": "Tytuł:"
+  },
+  "imageEditor": {
+    "deleteImage": "Usuń obraz",
+    "editImage": "Edytuj obraz"
+  },
+  "createLink": {
+    "url": "URL",
+    "urlPlaceholder": "Wybierz lub wklej adres URL",
+    "title": "Tytuł",
+    "saveTooltip": "Ustaw adres URL",
+    "cancelTooltip": "Anuluj zmianę"
+  },
+  "linkPreview": {
+    "open": "Otwórz {{url}} w nowym oknie",
+    "edit": "Edytuj link",
+    "copyToClipboard": "Kopiuj do schowka",
+    "copied": "Skopiowano!",
+    "remove": "Usuń link"
+  },
+  "table": {
+    "deleteTable": "Usuń tabelę",
+    "columnMenu": "Menu kolumny",
+    "textAlignment": "Wyrównanie tekstu",
+    "alignLeft": "Wyrównaj do lewej",
+    "alignCenter": "Wyśrodkuj",
+    "alignRight": "Wyrównaj do prawej",
+    "insertColumnLeft": "Wstaw kolumnę z lewej",
+    "insertColumnRight": "Wstaw kolumnę z prawej",
+    "deleteColumn": "Usuń tę kolumnę",
+    "rowMenu": "Menu wiersza",
+    "insertRowAbove": "Wstaw wiersz powyżej",
+    "insertRowBelow": "Wstaw wiersz poniżej",
+    "deleteRow": "Usuń ten wiersz"
+  },
+  "toolbar": {
+    "blockTypes": {
+      "paragraph": "Akapit",
+      "quote": "Cytat",
+      "heading": "Nagłówek {{level}}"
+    },
+    "blockTypeSelect": {
+      "selectBlockTypeTooltip": "Wybierz typ bloku",
+      "placeholder": "Typ bloku"
+    },
+    "toggleGroup": "przełącz grupę",
+    "removeBold": "Usuń pogrubienie",
+    "bold": "Pogrubienie",
+    "removeItalic": "Usuń kursywę",
+    "italic": "Kursywa",
+    "underline": "Usuń podkreślenie",
+    "removeUnderline": "Podkreślenie",
+    "removeInlineCode": "Usuń formatowanie kodu",
+    "inlineCode": "Kod wierszowy",
+    "link": "Utwórz link",
+    "richText": "Tekst sformatowany",
+    "diffMode": "Tryb różnicowy",
+    "source": "Tryb źródłowy",
+    "admonition": "Wstaw blok wyróżnienia",
+    "codeBlock": "Wstaw blok kodu",
+    "editFrontmatter": "Edytuj frontmatter",
+    "insertFrontmatter": "Wstaw frontmatter",
+    "image": "Wstaw obraz",
+    "insertSandpack": "Wstaw Sandpack",
+    "table": "Wstaw tabelę",
+    "thematicBreak": "Wstaw podział tematyczny",
+    "bulletedList": "Lista punktowana",
+    "numberedList": "Lista numerowana",
+    "checkList": "Lista zadań",
+    "deleteSandpack": "Usuń ten blok kodu",
+    "undo": "Cofnij {{shortcut}}",
+    "redo": "Ponów {{shortcut}}",
+    "superscript": "Indeks górny",
+    "subscript": "Indeks dolny",
+    "strikethrough": "Przekreślenie",
+    "removeSubscript": "Usuń indeks dolny",
+    "removeSuperscript": "Usuń indeks górny",
+    "removeStrikethrough": "Usuń przekreślenie"
+  },
+  "admonitions": {
+    "note": "Notatka",
+    "tip": "Wskazówka",
+    "danger": "Niebezpieczeństwo",
+    "info": "Informacja",
+    "caution": "Ostrzeżenie",
+    "changeType": "Wybierz typ wyróżnienia",
+    "placeholder": "Typ wyróżnienia"
+  },
+  "codeBlock": {
+    "language": "Język bloku kodu",
+    "selectLanguage": "Wybierz język bloku kodu"
+  },
+  "contentArea": {
+    "editableMarkdown": "Edytowalny markdown"
+  }
+}

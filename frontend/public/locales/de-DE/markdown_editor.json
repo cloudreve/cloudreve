@@ -1,0 +1,114 @@
+{
+  "frontmatterEditor": {
+    "title": "Dokument-Frontmatter bearbeiten",
+    "key": "Schlüssel",
+    "value": "Wert",
+    "addEntry": "Eintrag hinzufügen"
+  },
+  "dialogControls": {
+    "save": "Speichern",
+    "cancel": "Abbrechen"
+  },
+  "uploadImage": {
+    "dialogTitle": "Bild hochladen",
+    "uploadInstructions": "Laden Sie ein Bild von Ihrem Gerät hoch:",
+    "addViaUrlInstructions": "Oder fügen Sie ein Bild über eine URL / relativen Pfad hinzu (relativ zur aktuellen Datei):",
+    "autoCompletePlaceholder": "Wählen Sie eine Bild-URL aus oder fügen Sie sie ein",
+    "addViaUrlInstructionsNoUpload": "Bild-URL:",
+    "alt": "Alt-Text:",
+    "title": "Titel:"
+  },
+  "imageEditor": {
+    "deleteImage": "Bild löschen",
+    "editImage": "Bild bearbeiten"
+  },
+  "createLink": {
+    "url": "URL",
+    "urlPlaceholder": "Wählen Sie eine URL aus oder fügen Sie sie ein",
+    "title": "Titel",
+    "saveTooltip": "URL setzen",
+    "cancelTooltip": "Änderung abbrechen"
+  },
+  "linkPreview": {
+    "open": "{{url}} in neuem Fenster öffnen",
+    "edit": "Link-URL bearbeiten",
+    "copyToClipboard": "In Zwischenablage kopieren",
+    "copied": "Kopiert!",
+    "remove": "Link entfernen"
+  },
+  "table": {
+    "deleteTable": "Tabelle löschen",
+    "columnMenu": "Spaltenmenü",
+    "textAlignment": "Textausrichtung",
+    "alignLeft": "Linksbündig",
+    "alignCenter": "Zentriert",
+    "alignRight": "Rechtsbündig",
+    "insertColumnLeft": "Spalte links von dieser einfügen",
+    "insertColumnRight": "Spalte rechts von dieser einfügen",
+    "deleteColumn": "Diese Spalte löschen",
+    "rowMenu": "Zeilenmenü",
+    "insertRowAbove": "Zeile oberhalb dieser einfügen",
+    "insertRowBelow": "Zeile unterhalb dieser einfügen",
+    "deleteRow": "Diese Zeile löschen"
+  },
+  "toolbar": {
+    "blockTypes": {
+      "paragraph": "Absatz",
+      "quote": "Zitat",
+      "heading": "Überschrift {{level}}"
+    },
+    "blockTypeSelect": {
+      "selectBlockTypeTooltip": "Blocktyp auswählen",
+      "placeholder": "Blocktyp"
+    },
+    "toggleGroup": "Gruppe umschalten",
+    "removeBold": "Fett entfernen",
+    "bold": "Fett",
+    "removeItalic": "Kursiv entfernen",
+    "italic": "Kursiv",
+    "underline": "Unterstreichen entfernen",
+    "removeUnderline": "Unterstreichen",
+    "removeInlineCode": "Code-Format entfernen",
+    "inlineCode": "Inline-Code-Format",
+    "link": "Link erstellen",
+    "richText": "Rich Text",
+    "diffMode": "Diff-Modus",
+    "source": "Quellcode-Modus",
+    "admonition": "Hinweis einfügen",
+    "codeBlock": "Codeblock einfügen",
+    "editFrontmatter": "Frontmatter bearbeiten",
+    "insertFrontmatter": "Frontmatter einfügen",
+    "image": "Bild einfügen",
+    "insertSandpack": "Sandpack einfügen",
+    "table": "Tabelle einfügen",
+    "thematicBreak": "Thematische Trennung einfügen",
+    "bulletedList": "Aufzählung",
+    "numberedList": "Nummerierte Liste",
+    "checkList": "Checkliste",
+    "deleteSandpack": "Diesen Codeblock löschen",
+    "undo": "Rückgängig {{shortcut}}",
+    "redo": "Wiederholen {{shortcut}}",
+    "superscript": "Hochgestellt",
+    "subscript": "Tiefgestellt",
+    "strikethrough": "Durchgestrichen",
+    "removeSubscript": "Tiefstellung entfernen",
+    "removeSuperscript": "Hochstellung entfernen",
+    "removeStrikethrough": "Durchstreichung entfernen"
+  },
+  "admonitions": {
+    "note": "Hinweis",
+    "tip": "Tipp",
+    "danger": "Gefahr",
+    "info": "Info",
+    "caution": "Vorsicht",
+    "changeType": "Hinweistyp auswählen",
+    "placeholder": "Hinweistyp"
+  },
+  "codeBlock": {
+    "language": "Codeblock-Sprache",
+    "selectLanguage": "Codeblock-Sprache auswählen"
+  },
+  "contentArea": {
+    "editableMarkdown": "bearbeitbares Markdown"
+  }
+}

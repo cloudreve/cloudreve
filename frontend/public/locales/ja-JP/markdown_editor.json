@@ -1,0 +1,114 @@
+{
+  "frontmatterEditor": {
+    "title": "メタデータ編集",
+    "key": "キー",
+    "value": "値",
+    "addEntry": "項目を追加"
+  },
+  "dialogControls": {
+    "save": "保存",
+    "cancel": "キャンセル"
+  },
+  "uploadImage": {
+    "dialogTitle": "画像アップロード",
+    "uploadInstructions": "デバイスから画像をアップロード：",
+    "addViaUrlInstructions": "または画像URL / 相対パス（現在のファイルに対して）：",
+    "autoCompletePlaceholder": "画像URLを選択または貼り付け",
+    "addViaUrlInstructionsNoUpload": "画像URL：",
+    "alt": "代替テキスト：",
+    "title": "タイトル："
+  },
+  "imageEditor": {
+    "deleteImage": "画像削除",
+    "editImage": "画像編集"
+  },
+  "createLink": {
+    "url": "URL",
+    "urlPlaceholder": "URLを選択または貼り付け",
+    "title": "タイトル",
+    "saveTooltip": "URLを設定",
+    "cancelTooltip": "変更をキャンセル"
+  },
+  "linkPreview": {
+    "open": "{{url}}を新しいウィンドウで開く",
+    "edit": "リンク編集",
+    "copyToClipboard": "クリップボードにコピー",
+    "copied": "コピーしました！",
+    "remove": "リンク削除"
+  },
+  "table": {
+    "deleteTable": "表削除",
+    "columnMenu": "列メニュー",
+    "textAlignment": "文字揃え",
+    "alignLeft": "左揃え",
+    "alignCenter": "中央揃え",
+    "alignRight": "右揃え",
+    "insertColumnLeft": "現在の列の左側に列挿入",
+    "insertColumnRight": "現在の列の右側に列挿入",
+    "deleteColumn": "この列を削除",
+    "rowMenu": "行メニュー",
+    "insertRowAbove": "現在の行の上に行挿入",
+    "insertRowBelow": "現在の行の下に行挿入",
+    "deleteRow": "この行を削除"
+  },
+  "toolbar": {
+    "blockTypes": {
+      "paragraph": "段落",
+      "quote": "引用",
+      "heading": "見出し {{level}}"
+    },
+    "blockTypeSelect": {
+      "selectBlockTypeTooltip": "ブロックの種類を選択",
+      "placeholder": "ブロックの種類"
+    },
+    "toggleGroup": "グループの切り替え",
+    "removeBold": "太字の解除",
+    "bold": "太字",
+    "removeItalic": "斜体の解除",
+    "italic": "斜体",
+    "underline": "下線の解除",
+    "removeUnderline": "下線",
+    "removeInlineCode": "インラインコードスタイルの解除",
+    "inlineCode": "インラインコードスタイル",
+    "link": "リンクの作成",
+    "richText": "リッチテキスト",
+    "diffMode": "差分モード",
+    "source": "ソースコードモード",
+    "admonition": "コメントブロックの挿入",
+    "codeBlock": "コードブロックの挿入",
+    "editFrontmatter": "事前メタデータの編集",
+    "insertFrontmatter": "事前メタデータの挿入",
+    "image": "画像の挿入",
+    "insertSandpack": "Sandpackの挿入",
+    "table": "テーブルの挿入",
+    "thematicBreak": "テーマ改行挿入",
+    "bulletedList": "箇条書きリスト",
+    "numberedList": "番号付きリスト",
+    "checkList": "タスクリスト",
+    "deleteSandpack": "Sandpack削除",
+    "undo": "元に戻す {{shortcut}}",
+    "redo": "やり直し {{shortcut}}",
+    "superscript": "上付き",
+    "subscript": "下付き",
+    "strikethrough": "取り消し線",
+    "removeSubscript": "下付きの解除",
+    "removeSuperscript": "上付きの解除",
+    "removeStrikethrough": "取り消し線の解除"
+  },
+  "admonitions": {
+    "note": "注意",
+    "tip": "ヒント",
+    "danger": "危険",
+    "info": "情報",
+    "caution": "警告",
+    "changeType": "注釈ブロックの種類を選択",
+    "placeholder": "注釈ブロックの種類"
+  },
+  "codeBlock": {
+    "language": "コードブロック言語",
+    "selectLanguage": "コードブロック言語を選択"
+  },
+  "contentArea": {
+    "editableMarkdown": "編集可能なMarkdown"
+  }
+}

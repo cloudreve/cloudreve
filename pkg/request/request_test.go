@@ -18,7 +18,7 @@ type ClientMock struct {
 	testMock.Mock
 }
 
-func (m ClientMock) Request(method, target string, body io.Reader, opts ...Option) *Response {
+func (m *ClientMock) Request(method, target string, body io.Reader, opts ...Option) *Response {
 	args := m.Called(method, target, body, opts)
 	return args.Get(0).(*Response)
 }

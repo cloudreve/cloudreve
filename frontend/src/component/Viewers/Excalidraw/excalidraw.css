@@ -1,0 +1,4 @@
+.excalidraw {
+  min-height: calc(100vh - 200px);
+  --zIndex-modal: 1400;
+}
