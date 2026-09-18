@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/application/constants"
@@ -91,6 +92,37 @@ type remoteClient struct {
 	httpClient   request.Client
 	settings     setting.Provider
 	l            logging.Logger
+	// clockOffset compensates master/slave clock skew, learned from a
+	// signature-expired response's Date header (upstream #3242).
+	clockOffset atomic.Int64
+}
+
+// request sends a signed slave API request, applying the learned clock offset
+// to the signature base time so skewed master/slave clocks do not produce
+// expired signatures.
+func (c *remoteClient) request(method, target string, body io.Reader, opts ...request.Option) *request.Response {
+	if off := c.clockOffset.Load(); off != 0 {
+		opts = append(opts, request.WithSignBaseTime(time.Now().Add(time.Duration(off)*time.Second)))
+	}
+	return c.httpClient.Request(method, target, body, opts...)
+}
+
+// learnClockOffset stores the master-minus-local clock offset computed from
+// the response Date header.
+func (c *remoteClient) learnClockOffset(resp *http.Response) {
+	if resp == nil {
+		return
+	}
+	masterTime, err := http.ParseTime(resp.Header.Get("Date"))
+	if err != nil {
+		return
+	}
+	// Date has second precision; round up so truncation never under-compensates.
+	offset := int64(masterTime.Sub(time.Now()).Seconds()) + 1
+	if offset != 0 {
+		c.l.Info("Compensating master clock offset of %ds after signature expiry", offset)
+		c.clockOffset.Store(offset)
+	}
 }
 
 func (c *remoteClient) Upload(ctx context.Context, file *fs.UploadRequest) error {
@@ -133,7 +165,7 @@ func (c *remoteClient) Upload(ctx context.Context, file *fs.UploadRequest) error
 }
 
 func (c *remoteClient) DeleteUploadSession(ctx context.Context, sessionID string) error {
-	resp, err := c.httpClient.Request(
+	resp, err := c.request(
 		"DELETE",
 		"upload/"+sessionID,
 		nil,
@@ -161,7 +193,7 @@ func (c *remoteClient) DeleteFiles(ctx context.Context, files ...string) ([]stri
 		return files, fmt.Errorf("failed to marshal delete request: %w", err)
 	}
 
-	resp, err := c.httpClient.Request(
+	resp, err := c.request(
 		"DELETE",
 		"file",
 		bytes.NewReader(reqStr),
@@ -185,7 +217,7 @@ func (c *remoteClient) DeleteFiles(ctx context.Context, files ...string) ([]stri
 }
 
 func (c *remoteClient) MediaMeta(ctx context.Context, src, ext, language string) ([]driver.MediaMeta, error) {
-	resp, err := c.httpClient.Request(
+	resp, err := c.request(
 		http.MethodGet,
 		routes.SlaveMediaMetaRoute(src, ext, language),
 		nil,
@@ -214,14 +246,33 @@ func (c *remoteClient) CreateUploadSession(ctx context.Context, session *fs.Uplo
 		return err
 	}
 
-	bodyReader := strings.NewReader(string(reqBodyEncoded))
-	resp, err := c.httpClient.Request(
-		"PUT",
-		"upload",
-		bodyReader,
-		request.WithContext(ctx),
-		request.WithLogger(c.l),
-	).CheckHTTPResponse(200).DecodeResponse()
+	send := func() (*serializer.Response, error) {
+		raw := c.request(
+			"PUT",
+			"upload",
+			strings.NewReader(string(reqBodyEncoded)),
+			request.WithContext(ctx),
+			request.WithLogger(c.l),
+		)
+		httpResp := raw.Response
+		resp, err := raw.CheckHTTPResponse(200).DecodeResponse()
+		if err == nil && resp.Code == serializer.CodeSignExpired {
+			// Master clock is ahead of ours beyond the sign TTL; learn the
+			// offset from the response Date header and retry once (#3242).
+			c.learnClockOffset(httpResp)
+			raw = c.request(
+				"PUT",
+				"upload",
+				strings.NewReader(string(reqBodyEncoded)),
+				request.WithContext(ctx),
+				request.WithLogger(c.l),
+			)
+			resp, err = raw.CheckHTTPResponse(200).DecodeResponse()
+		}
+		return resp, err
+	}
+
+	resp, err := send()
 	if err != nil {
 		return err
 	}
@@ -234,7 +285,7 @@ func (c *remoteClient) CreateUploadSession(ctx context.Context, session *fs.Uplo
 }
 
 func (c *remoteClient) List(ctx context.Context, path string, recursive bool) ([]fs.PhysicalObject, error) {
-	resp, err := c.httpClient.Request(
+	resp, err := c.request(
 		http.MethodGet,
 		routes.SlaveFileListRoute(path, recursive),
 		nil,
@@ -271,7 +322,7 @@ func (c *remoteClient) GetUploadURL(ctx context.Context, expires time.Time, sess
 }
 
 func (c *remoteClient) uploadChunk(ctx context.Context, sessionID string, index int, chunk io.Reader, overwrite bool, size int64) error {
-	resp, err := c.httpClient.Request(
+	resp, err := c.request(
 		"POST",
 		fmt.Sprintf("upload/%s?chunk=%d", sessionID, index),
 		chunk,

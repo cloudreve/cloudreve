@@ -176,7 +176,11 @@ func (c *HTTPClient) Request(method, target string, body io.Reader, opts ...Opti
 		if options.ctx == nil {
 			ctx = context.Background()
 		}
-		expire := time.Now().Add(time.Second * time.Duration(options.signTTL))
+		expireBase := options.signBaseTime
+		if expireBase.IsZero() {
+			expireBase = time.Now()
+		}
+		expire := expireBase.Add(time.Second * time.Duration(options.signTTL))
 		switch method {
 		case "PUT", "POST", "PATCH":
 			auth.SignRequest(ctx, options.sign, req, &expire)
