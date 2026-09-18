@@ -848,29 +848,53 @@ func (f *DBFS) deleteFiles(ctx context.Context, targets map[Navigator][]*File, f
 
 		defer reset()
 
-		// List all files to be deleted
-		toBeDeletedFiles := make([]*File, 0, len(files))
+		// Walk the tree and delete in bounded batches: accumulating the
+		// whole tree before deleting materializes every file model +
+		// entity edges at once and OOMs on large trees (upstream #3574).
+		// Folders are deferred to a single delete after the walk — child
+		// listing resolves via HasParentWith, so parent rows must stay
+		// alive until their level has been fetched.
+		folderModels := make([]*ent.File, 0, 64)
 		if err := n.Walk(ctx, files, intsets.MaxInt, intsets.MaxInt, func(targets []*File, level int) error {
-			toBeDeletedFiles = append(toBeDeletedFiles, targets...)
 			indexToDelete = append(indexToDelete, lo.Map(targets, func(item *File, index int) int {
 				return item.ID()
+			})...)
+
+			fileModels := make([]*ent.File, 0, len(targets))
+			for _, item := range targets {
+				if item.Model.Type == int(types.FileTypeFolder) && !item.IsSymbolic() {
+					folderModels = append(folderModels, item.Model)
+					continue
+				}
+				fileModels = append(fileModels, item.Model)
+			}
+
+			if len(fileModels) == 0 {
+				return nil
+			}
+			staleEntities, diff, err := fc.Delete(ctx, fileModels, opt)
+			if err != nil {
+				return fmt.Errorf("failed to delete files: %w", err)
+			}
+			storageDiff.Merge(diff)
+			allStaleEntities = append(allStaleEntities, lo.Map(staleEntities, func(item *ent.Entity, index int) fs.Entity {
+				return fs.NewEntity(item)
 			})...)
 			return nil
 		}); err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to walk files: %w", err)
 		}
 
-		// Delete files
-		staleEntities, diff, err := fc.Delete(ctx, lo.Map(toBeDeletedFiles, func(item *File, index int) *ent.File {
-			return item.Model
-		}), opt)
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to delete files: %w", err)
+		if len(folderModels) > 0 {
+			staleEntities, diff, err := fc.Delete(ctx, folderModels, opt)
+			if err != nil {
+				return nil, nil, nil, fmt.Errorf("failed to delete folders: %w", err)
+			}
+			storageDiff.Merge(diff)
+			allStaleEntities = append(allStaleEntities, lo.Map(staleEntities, func(item *ent.Entity, index int) fs.Entity {
+				return fs.NewEntity(item)
+			})...)
 		}
-		storageDiff.Merge(diff)
-		allStaleEntities = append(allStaleEntities, lo.Map(staleEntities, func(item *ent.Entity, index int) fs.Entity {
-			return fs.NewEntity(item)
-		})...)
 	}
 
 	return allStaleEntities, storageDiff, indexToDelete, nil
@@ -894,21 +918,11 @@ func (f *DBFS) copyFiles(ctx context.Context, targets map[Navigator][]*File, des
 	newTargetsMap := make(map[int]*ent.File)
 	storageDiff := make(inventory.StorageDiff)
 	indexToCopy := make([]fs.IndexDiffCopyDetails, 0)
-	var diff inventory.StorageDiff
 	for n, files := range targets {
 		initialDstMap := make(map[int][]*ent.File)
 		for _, file := range files {
 			initialDstMap[file.Model.FileChildren] = dstAncestors
 		}
-
-		firstLayer := true
-		// Let navigator use tx
-		reset, err := n.FollowTx(ctx)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-
-		defer reset()
 
 		if err := n.Walk(ctx, files, limit, intsets.MaxInt, func(targets []*File, level int) error {
 			// check capacity for each file
@@ -922,7 +936,7 @@ func (f *DBFS) copyFiles(ctx context.Context, targets map[Navigator][]*File, des
 			}
 
 			limit -= len(targets)
-			initialDstMap, diff, err = fc.Copy(ctx, &inventory.CopyParameter{
+			newDstMap, diff, err := fc.Copy(ctx, &inventory.CopyParameter{
 				Files: lo.Map(targets, func(item *File, index int) *ent.File {
 					return item.Model
 				}),
@@ -937,16 +951,29 @@ func (f *DBFS) copyFiles(ctx context.Context, targets map[Navigator][]*File, des
 				return serializer.NewError(serializer.CodeDBError, "Failed to copy files", err)
 			}
 
-			storageDiff.Merge(diff)
-			if firstLayer {
-				for k, v := range initialDstMap {
+			// Walk emits each level in bounded pages, so dst mappings must
+			// accumulate across callbacks — children of a folder copied in
+			// an earlier page may arrive in any later page.
+			for k, v := range newDstMap {
+				initialDstMap[k] = v
+			}
+			if level == 0 {
+				for k, v := range newDstMap {
 					newTargetsMap[k] = v[0]
 				}
 			}
 
+			storageDiff.Merge(diff)
+
 			for _, file := range targets {
 				if _, ok := file.Metadata()[FullTextIndexKey]; ok {
-					copiedFile := newTargetsMap[file.ID()]
+					// initialDstMap holds src->dst entries for every file
+					// copied so far, across all levels and pages.
+					copiedChain, ok := initialDstMap[file.ID()]
+					if !ok || len(copiedChain) == 0 {
+						continue
+					}
+					copiedFile := copiedChain[0]
 					indexToCopy = append(indexToCopy, fs.IndexDiffCopyDetails{
 						OriginalFileID: file.ID(),
 						FileID:         copiedFile.ID,
@@ -958,7 +985,6 @@ func (f *DBFS) copyFiles(ctx context.Context, targets map[Navigator][]*File, des
 			}
 
 			capacity.Used += sizeTotal
-			firstLayer = false
 
 			return nil
 		}); err != nil {
