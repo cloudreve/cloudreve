@@ -108,6 +108,7 @@ const CodeViewer = () => {
   const [optionAnchorEl, setOptionAnchorEl] = useState<null | HTMLElement>(null);
   const [language, setLng] = useState<string | null>(null);
   const [wordWrap, setWordWrap] = useState<"off" | "on" | "wordWrapColumn" | "bounded">("off");
+  const [eol, setEol] = useState<"LF" | "CRLF">("LF");
   const saveFunction = useRef<() => void>(() => {});
 
   const closeViewer = useCallback(() => {
@@ -141,7 +142,11 @@ const CodeViewer = () => {
       setOptionAnchorEl(null);
       dispatch(getEntityContent(viewerState.file, viewerState.version))
         .then((res) => {
-          setValue(new TextDecoder(charset).decode(res));
+          const content = new TextDecoder(charset).decode(res);
+          setValue(content);
+          // Preserve the file's existing line endings as the default
+          // (#3009): CRLF files keep CRLF, everything else uses LF.
+          setEol(content.includes("\r\n") ? "CRLF" : "LF");
           setLoaded(true);
         })
         .catch(() => {
@@ -188,7 +193,8 @@ const CodeViewer = () => {
       }
 
       setLoading(true);
-      dispatch(saveCode(value, viewerState.file, viewerState.version, saveAs))
+      const eolChar = eol == "LF" ? "\n" : "\r\n";
+      dispatch(saveCode(value.replace(/\r\n|\r|\n/g, eolChar), viewerState.file, viewerState.version, saveAs))
         .then(() => {
           setSaved(true);
         })
@@ -196,7 +202,7 @@ const CodeViewer = () => {
           setLoading(false);
         });
     },
-    [value, viewerState],
+    [value, viewerState, eol],
   );
 
   const onChange = useCallback((v: string) => {
@@ -298,6 +304,18 @@ const CodeViewer = () => {
           ))}
         </CascadingSubmenu>
         <DenseDivider />
+        <CascadingSubmenu popupId={"eol"} title={t("fileManager.lineEnding")}>
+          {(["LF", "CRLF"] as const).map((e) => (
+            <SquareMenuItem key={e} onClick={() => setEol(e)} dense>
+              <ListItemText>{e}</ListItemText>
+              {e == eol && (
+                <ListItemIcon>
+                  <Checkmark />
+                </ListItemIcon>
+              )}
+            </SquareMenuItem>
+          ))}
+        </CascadingSubmenu>
         <SquareMenuItem onClick={toggleWordWrap} dense>
           <ListItemText>{t("fileManager.wordWrap")}</ListItemText>
           {wordWrap === "on" && (
@@ -327,6 +345,7 @@ const CodeViewer = () => {
               }}
               value={value}
               language={language ?? ""}
+              eol={eol}
               onChange={(v) => onChange(v as string)}
             />
           </Box>

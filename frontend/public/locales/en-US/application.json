@@ -468,7 +468,8 @@
     "noEncryption": "Not encrypted",
     "ftsStatus": "Full-text index",
     "ftsIndexed": "Indexed",
-    "ftsNotIndexed": "Not indexed"
+    "ftsNotIndexed": "Not indexed",
+    "lineEnding": "Line ending"
   },
   "modals": {
     "includePasswordInShareLink": "Include password in share link",

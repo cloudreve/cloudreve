@@ -468,7 +468,8 @@
     "noEncryption": "未加密",
     "ftsStatus": "全文索引",
     "ftsIndexed": "已索引",
-    "ftsNotIndexed": "未索引"
+    "ftsNotIndexed": "未索引",
+    "lineEnding": "换行符"
   },
   "modals": {
     "includePasswordInShareLink": "在链接中包含密码",
