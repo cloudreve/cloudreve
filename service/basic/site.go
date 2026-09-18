@@ -49,6 +49,10 @@ type SiteConfig struct {
 	SSODisplayName   string              `json:"sso_display_name,omitempty"`
 	SSOAutoRedirect  bool                `json:"sso_auto_redirect,omitempty"`
 
+	// DownloadCDNRoutes exposes configured CDN mirror endpoints so clients
+	// can offer a download-route picker (#2987).
+	DownloadCDNRoutes []setting.CDNRoute `json:"download_cdn_routes,omitempty"`
+
 	// Explorer section
 	Icons                string                     `json:"icons,omitempty"`
 	EmojiPreset          string                     `json:"emoji_preset,omitempty"`
@@ -222,6 +226,7 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 		CustomHTML:                 customHTML,
 		ShareDefaultPrivate:        shareDefaults.PrivateByDefault,
 		DefaultShareLinksInProfile: string(shareDefaults.LinksInProfile),
+		DownloadCDNRoutes:          settings.DownloadCDNRoutes(c),
 	}, nil
 }
 

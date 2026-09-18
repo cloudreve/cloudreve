@@ -128,7 +128,45 @@ export function backendBatchDownload(files: FileResponse[]): AppThunk {
       "application:fileManager.preparingBathDownload",
     );
 
-    window.location.assign(downloadUrl.urls[0].url);
+    window.location.assign(await dispatch(pickDownloadRoute(downloadUrl.urls[0].url)));
+  };
+}
+
+// pickDownloadRoute lets the user choose one of the admin-configured CDN
+// mirror endpoints (#2987); the signed URL keeps its path+query so the
+// signature stays valid through the CDN. Cancel falls back to direct.
+export function pickDownloadRoute(url: string): AppThunk<Promise<string>> {
+  return async (dispatch, getState) => {
+    const routes = getState().siteConfig.basic.config.download_cdn_routes;
+    if (!routes || routes.length === 0) {
+      return url;
+    }
+
+    const options: DialogSelectOption[] = [
+      {
+        value: -1,
+        name: i18next.t("fileManager.downloadRouteDirect"),
+        description: i18next.t("fileManager.downloadRouteDirectDescription"),
+      },
+      ...routes.map((r, i): DialogSelectOption => ({ value: i, name: r.name, description: r.url })),
+    ];
+
+    let picked: number;
+    try {
+      picked = (await dispatch(selectOption(options, "fileManager.selectDownloadRoute"))) as number;
+    } catch {
+      return url;
+    }
+    if (picked < 0 || picked >= routes.length) {
+      return url;
+    }
+
+    try {
+      const u = new URL(url);
+      return routes[picked].url.replace(/\/+$/, "") + u.pathname + u.search + u.hash;
+    } catch {
+      return url;
+    }
   };
 }
 
@@ -553,11 +591,12 @@ export function downloadSingleFile(file: FileResponse, preferredEntity?: string)
       "application:fileManager.preparingDownload",
     );
 
+    const downloadUrl = await dispatch(pickDownloadRoute(urlRes.urls[0].url));
     const streamSaverName = urlRes.urls[0].stream_saver_display_name;
     if (streamSaverName) {
       // remove streamSaverParam from query
       const fileStream = streamSaver.createWriteStream(streamSaverName);
-      const res = await fetch(urlRes.urls[0].url);
+      const res = await fetch(downloadUrl);
       const readableStream = res.body;
       if (!readableStream) {
         return;
@@ -575,7 +614,7 @@ export function downloadSingleFile(file: FileResponse, preferredEntity?: string)
         return readableStream.pipeTo(fileStream).finally(() => closeSnackbar(downloadingSnackbar));
       }
     } else {
-      window.location.assign(urlRes.urls[0].url);
+      window.location.assign(downloadUrl);
     }
   };
 }

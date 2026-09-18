@@ -840,6 +840,8 @@
     "ssoIssuerDes": "OIDC Issuer 的基础 URL，例如 <0>https://keycloak.example.com/realms/master</0>。将从该地址下的 <1>.well-known/openid-configuration</1> 获取提供方元数据。",
     "ssoRegisterEnabled": "允许自动注册",
     "ssoRegisterEnabledDes": "用户首次通过 SSO 登录时自动创建本地账号。下方的注册邮箱过滤规则同样适用。",
+    "downloadCdnRoutes": "下载 CDN 线路",
+    "downloadCdnRoutesDes": "供用户选择的备用下载端点，每行一条，格式为 名称=URL（例如 线路1=https://cdn1.example.com）。线路需将完整的请求路径与查询串代理回本站以保证签名有效；浏览器内下载需要线路配置 CORS 头。",
     "ssoAutoRedirect": "自动跳转至 SSO",
     "ssoAutoRedirectDes": "跳过登录表单，直接跳转至身份提供商。在登录地址后附加 <0>?nosso=1</0> 可进入密码登录表单（例如管理员账户恢复）。",
     "ssoCallbackUrl": "回调地址",

@@ -249,6 +249,9 @@ type (
 		// ShareDefaults returns the site-wide share defaults applied when a
 		// user has not overridden them in their personal settings.
 		ShareDefaults(ctx context.Context) *ShareDefaults
+		// DownloadCDNRoutes returns the configured alternative download
+		// endpoints users can pick from (e.g. CDN mirrors of the site).
+		DownloadCDNRoutes(ctx context.Context) []CDNRoute
 	}
 	UseFirstSiteUrlCtxKey = struct{}
 )
@@ -948,6 +951,36 @@ type ShareDefaults struct {
 	LinksInProfile types.ShareLinksInProfileLevel
 	// PrivateByDefault makes new shares default to private (random password).
 	PrivateByDefault bool
+}
+
+// CDNRoute is an alternative download endpoint offered to users when
+// downloading files, e.g. a CDN mirror fronting the site.
+type CDNRoute struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}
+
+func (s *settingProvider) DownloadCDNRoutes(ctx context.Context) []CDNRoute {
+	raw := s.getString(ctx, "download_cdn_routes", "")
+	routes := make([]CDNRoute, 0)
+	for _, line := range strings.Split(raw, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		name, u, found := strings.Cut(line, "=")
+		if !found {
+			continue
+		}
+		u = strings.TrimRight(strings.TrimSpace(u), "/")
+		parsed, err := url.Parse(u)
+		if err != nil || parsed.Scheme == "" || parsed.Host == "" ||
+			(parsed.Scheme != "http" && parsed.Scheme != "https") {
+			continue
+		}
+		routes = append(routes, CDNRoute{Name: strings.TrimSpace(name), URL: u})
+	}
+	return routes
 }
 
 func (s *settingProvider) ShareDefaults(ctx context.Context) *ShareDefaults {

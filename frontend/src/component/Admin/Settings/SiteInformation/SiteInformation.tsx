@@ -52,6 +52,19 @@ const SiteInformation = () => {
                 <SiteURLInput urls={values.siteURL} onChange={(v) => setSettings({ siteURL: v })} />
               </FormControl>
             </SettingForm>
+            <SettingForm title={t("settings.downloadCdnRoutes")} lgWidth={5}>
+              <FormControl fullWidth>
+                <DenseFilledTextField
+                  fullWidth
+                  onChange={(e) => setSettings({ download_cdn_routes: e.target.value })}
+                  value={values.download_cdn_routes}
+                  multiline
+                  rows={3}
+                  placeholder={"Line 1=https://cdn1.example.com\nLine 2=https://cdn2.example.com"}
+                />
+                <NoMarginHelperText>{t("settings.downloadCdnRoutesDes")}</NoMarginHelperText>
+              </FormControl>
+            </SettingForm>
             <SettingForm title={t("settings.customFooterHTML")} lgWidth={5}>
               <FormControl fullWidth>
                 <DenseFilledTextField
