@@ -1,0 +1,9 @@
+.SfxModal-Wrapper {
+  z-index: 20001 !important;
+}
+.SfxPopper-wrapper {
+  z-index: 20002 !important;
+}
+.FIE_root {
+  border-radius: 0 !important;
+}

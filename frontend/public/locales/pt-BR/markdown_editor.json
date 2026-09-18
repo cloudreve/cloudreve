@@ -1,0 +1,114 @@
+{
+  "frontmatterEditor": {
+    "title": "Editar frontmatter do documento",
+    "key": "Chave",
+    "value": "Valor",
+    "addEntry": "Adicionar entrada"
+  },
+  "dialogControls": {
+    "save": "Salvar",
+    "cancel": "Cancelar"
+  },
+  "uploadImage": {
+    "dialogTitle": "Enviar imagem",
+    "uploadInstructions": "Envie uma imagem do seu dispositivo:",
+    "addViaUrlInstructions": "Ou adicione uma imagem de uma URL / caminho relativo (relativo ao arquivo atual):",
+    "autoCompletePlaceholder": "Selecione ou cole um src de imagem",
+    "addViaUrlInstructionsNoUpload": "URL da imagem:",
+    "alt": "Texto alternativo:",
+    "title": "Título:"
+  },
+  "imageEditor": {
+    "deleteImage": "Excluir imagem",
+    "editImage": "Editar imagem"
+  },
+  "createLink": {
+    "url": "URL",
+    "urlPlaceholder": "Selecione ou cole uma URL",
+    "title": "Título",
+    "saveTooltip": "Definir URL",
+    "cancelTooltip": "Cancelar alteração"
+  },
+  "linkPreview": {
+    "open": "Abrir {{url}} em nova janela",
+    "edit": "Editar URL do link",
+    "copyToClipboard": "Copiar para área de transferência",
+    "copied": "Copiado!",
+    "remove": "Remover link"
+  },
+  "table": {
+    "deleteTable": "Excluir tabela",
+    "columnMenu": "Menu da coluna",
+    "textAlignment": "Alinhamento do texto",
+    "alignLeft": "Alinhar à esquerda",
+    "alignCenter": "Alinhar ao centro",
+    "alignRight": "Alinhar à direita",
+    "insertColumnLeft": "Inserir uma coluna à esquerda desta",
+    "insertColumnRight": "Inserir uma coluna à direita desta",
+    "deleteColumn": "Excluir esta coluna",
+    "rowMenu": "Menu da linha",
+    "insertRowAbove": "Inserir uma linha acima desta",
+    "insertRowBelow": "Inserir uma linha abaixo desta",
+    "deleteRow": "Excluir esta linha"
+  },
+  "toolbar": {
+    "blockTypes": {
+      "paragraph": "Parágrafo",
+      "quote": "Citação",
+      "heading": "Cabeçalho {{level}}"
+    },
+    "blockTypeSelect": {
+      "selectBlockTypeTooltip": "Selecionar tipo de bloco",
+      "placeholder": "Tipo de bloco"
+    },
+    "toggleGroup": "alternar grupo",
+    "removeBold": "Remover negrito",
+    "bold": "Negrito",
+    "removeItalic": "Remover itálico",
+    "italic": "Itálico",
+    "underline": "Remover sublinhado",
+    "removeUnderline": "Sublinhado",
+    "removeInlineCode": "Remover formato de código",
+    "inlineCode": "Formato de código inline",
+    "link": "Criar link",
+    "richText": "Texto rico",
+    "diffMode": "Modo diff",
+    "source": "Modo código-fonte",
+    "admonition": "Inserir admoestação",
+    "codeBlock": "Inserir bloco de código",
+    "editFrontmatter": "Editar frontmatter",
+    "insertFrontmatter": "Inserir frontmatter",
+    "image": "Inserir imagem",
+    "insertSandpack": "Inserir Sandpack",
+    "table": "Inserir tabela",
+    "thematicBreak": "Inserir quebra temática",
+    "bulletedList": "Lista com marcadores",
+    "numberedList": "Lista numerada",
+    "checkList": "Lista de verificação",
+    "deleteSandpack": "Excluir este bloco de código",
+    "undo": "Desfazer {{shortcut}}",
+    "redo": "Refazer {{shortcut}}",
+    "superscript": "Sobrescrito",
+    "subscript": "Subscrito",
+    "strikethrough": "Tachado",
+    "removeSubscript": "Remover subscrito",
+    "removeSuperscript": "Remover sobrescrito",
+    "removeStrikethrough": "Remover tachado"
+  },
+  "admonitions": {
+    "note": "Nota",
+    "tip": "Dica",
+    "danger": "Perigo",
+    "info": "Informação",
+    "caution": "Cuidado",
+    "changeType": "Selecionar tipo de admoestação",
+    "placeholder": "Tipo de admoestação"
+  },
+  "codeBlock": {
+    "language": "Linguagem do bloco de código",
+    "selectLanguage": "Selecionar linguagem do bloco de código"
+  },
+  "contentArea": {
+    "editableMarkdown": "markdown editável"
+  }
+}

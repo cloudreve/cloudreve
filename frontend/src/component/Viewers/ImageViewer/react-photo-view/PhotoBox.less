@@ -1,0 +1,22 @@
+.PhotoView {
+  &__PhotoWrap,
+  &__PhotoBox {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    touch-action: none;
+    direction: ltr;
+  }
+
+  &__PhotoWrap {
+    z-index: 10;
+    overflow: hidden;
+  }
+
+  &__PhotoBox {
+    transform-origin: left top;
+  }
+}

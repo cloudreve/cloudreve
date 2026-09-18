@@ -1,0 +1,90 @@
+[package]
+name = "cloudreve-sync"
+version = "0.2.0"
+edition = "2024"
+
+[dependencies]
+tokio = { version = "1.35", features = ["full"] }
+axum = { version = "0.7", features=["macros"]}
+axum-macros = "0.5"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio-stream = { version = "0.1", features = ["sync"] }
+dirs = "5.0"
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
+tracing-appender = "0.2"
+tower-http = { version = "0.5", features = ["trace", "cors"] }
+futures = "0.3"
+reqwest = { version = "0.12", features = ["json", "stream", "multipart"] }
+sha2 = "0.10"
+image = "0.24"
+url = "2.5"
+cloudreve-api = { path = "../cloudreve-api" }
+windows-core = "0.58.0"
+nt-time = "0.8.0"
+widestring = "1.0.2"
+flagset = "0.4.5"
+memoffset = "0.9.1"
+chrono = "0.4.42"
+diesel = { version = "2.1", features = ["sqlite", "r2d2"] }
+diesel_migrations = { version = "2.1", features = ["sqlite"] }
+libsqlite3-sys = { version = "0.28", features = ["bundled"] }
+open = "5.3.2"
+rust-i18n = "3"
+dark-light = "2.0.0"
+bytes = "1"
+notify-debouncer-full = "0.6.0"
+dashmap = "5"
+thiserror = "1.0"
+base64 = "0.21"
+aes = "0.8"
+ctr = "0.9"
+tokio-util = { version = "0.7", features = ["io"] }
+globset = "0.4"
+win32_notif = { path = "../win32_notif" }
+
+[dependencies.windows]
+version = "0.58.0"
+features = [
+    "implement",
+    "Win32_Foundation",
+    "Win32_Storage_CloudFilters",
+    "Win32_System_CorrelationVector",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Com",
+    "Win32_System_Threading",
+    "Win32_UI_Shell",
+    "Win32_UI_Shell_Common",
+    "Win32_Security",
+    "Win32_UI_Shell_PropertiesSystem",
+    "Storage_Provider",
+    "Win32_System_IO",
+    "Win32_System_Memory",
+    "Storage",
+    "Storage_Search",
+    "Foundation",
+    "Foundation_Collections",
+    "Win32_Security_Authorization",
+    "Win32_System_Search",
+    "Storage_Streams",
+    "Win32_System_Ioctl",
+    "ApplicationModel_Core",
+    "Win32_Graphics_Gdi",
+    "Graphics_Imaging",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_Variant",
+    "Win32_Storage_EnhancedStorage",
+    "Win32_UI_Notifications",
+]
+
+[build-dependencies]
+windows = { version = "0.58.0", features = ["Win32_Foundation"] }
+
+[dependencies.uuid]
+version = "1.6"
+features = ["v4", "serde"]
+
+[dev-dependencies]
+tempfile = "3.8"

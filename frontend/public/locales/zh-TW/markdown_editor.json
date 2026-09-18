@@ -1,0 +1,114 @@
+{
+  "frontmatterEditor": {
+    "title": "編輯中繼資料",
+    "key": "鍵",
+    "value": "值",
+    "addEntry": "新增項目"
+  },
+  "dialogControls": {
+    "save": "儲存",
+    "cancel": "取消"
+  },
+  "uploadImage": {
+    "dialogTitle": "上傳圖片",
+    "uploadInstructions": "從您的裝置上傳圖片：",
+    "addViaUrlInstructions": "或填寫圖片 URL / 相對路徑（相對於當前文件）：",
+    "autoCompletePlaceholder": "選擇或貼上圖片 URL",
+    "addViaUrlInstructionsNoUpload": "圖片 URL：",
+    "alt": "替代文字：",
+    "title": "標題："
+  },
+  "imageEditor": {
+    "deleteImage": "刪除圖片",
+    "editImage": "編輯圖片"
+  },
+  "createLink": {
+    "url": "網址",
+    "urlPlaceholder": "選擇或貼上網址",
+    "title": "標題",
+    "saveTooltip": "設定網址",
+    "cancelTooltip": "取消修改"
+  },
+  "linkPreview": {
+    "open": "在新視窗中開啟 {{url}}",
+    "edit": "編輯連結網址",
+    "copyToClipboard": "複製到剪貼簿",
+    "copied": "已複製！",
+    "remove": "移除連結"
+  },
+  "table": {
+    "deleteTable": "刪除表格",
+    "columnMenu": "欄選單",
+    "textAlignment": "文字對齊",
+    "alignLeft": "靠左對齊",
+    "alignCenter": "置中對齊",
+    "alignRight": "靠右對齊",
+    "insertColumnLeft": "在此左側插入一欄",
+    "insertColumnRight": "在此右側插入一欄",
+    "deleteColumn": "刪除此欄",
+    "rowMenu": "列選單",
+    "insertRowAbove": "在上方插入一列",
+    "insertRowBelow": "在下方插入一列",
+    "deleteRow": "刪除此列"
+  },
+  "toolbar": {
+    "blockTypes": {
+      "paragraph": "段落",
+      "quote": "引用",
+      "heading": "標題 {{level}}"
+    },
+    "blockTypeSelect": {
+      "selectBlockTypeTooltip": "選擇塊類型",
+      "placeholder": "塊類型"
+    },
+    "toggleGroup": "切換群組",
+    "removeBold": "移除粗體",
+    "bold": "粗體",
+    "removeItalic": "移除斜體",
+    "italic": "斜體",
+    "underline": "移除底線",
+    "removeUnderline": "底線",
+    "removeInlineCode": "移除程式碼格式",
+    "inlineCode": "內聯程式碼格式",
+    "link": "建立連結",
+    "richText": "富文字",
+    "diffMode": "差異模式",
+    "source": "原始碼模式",
+    "admonition": "插入註解區塊",
+    "codeBlock": "插入程式碼區塊",
+    "editFrontmatter": "編輯中繼資料",
+    "insertFrontmatter": "插入中繼資料",
+    "image": "插入圖片",
+    "insertSandpack": "插入 Sandpack",
+    "table": "插入表格",
+    "thematicBreak": "插入主題斷行",
+    "bulletedList": "項目清單",
+    "numberedList": "編號清單",
+    "checkList": "核取清單",
+    "deleteSandpack": "刪除 Sandpack",
+    "undo": "復原 {{shortcut}}",
+    "redo": "重做 {{shortcut}}",
+    "superscript": "上標",
+    "subscript": "下標",
+    "strikethrough": "刪除線",
+    "removeSubscript": "移除下標",
+    "removeSuperscript": "移除上標",
+    "removeStrikethrough": "移除刪除線"
+  },
+  "admonitions": {
+    "note": "注意",
+    "tip": "提示",
+    "danger": "危險",
+    "info": "資訊",
+    "caution": "警告",
+    "changeType": "選擇註解區塊類型",
+    "placeholder": "註解區塊類型"
+  },
+  "codeBlock": {
+    "language": "程式碼區塊語言",
+    "selectLanguage": "選擇程式碼區塊語言"
+  },
+  "contentArea": {
+    "editableMarkdown": "可編輯的 Markdown"
+  }
+}

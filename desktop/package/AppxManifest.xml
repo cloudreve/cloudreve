@@ -1,0 +1,125 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  xmlns:desktop3="http://schemas.microsoft.com/appx/manifest/desktop/windows10/3"
+  xmlns:desktop4="http://schemas.microsoft.com/appx/manifest/desktop/windows10/4"
+  xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
+  xmlns:cloudfiles2="http://schemas.microsoft.com/appx/manifest/cloudfiles/windows10/2"
+  xmlns:uap7="http://schemas.microsoft.com/appx/manifest/uap/windows10/7"
+  xmlns:uap8="http://schemas.microsoft.com/appx/manifest/uap/windows10/8"
+  IgnorableNamespaces="uap mp rescap desktop desktop3 desktop4 cloudfiles2 uap7 uap8">
+
+
+  <Identity
+    Name="2106abslant.Cloudreve"
+    Publisher="CN=F536B6E6-7669-4531-8549-562FBE156594"
+    ProcessorArchitecture="__ARCH__"
+    Version="__VERSION__" />
+
+  <Properties>
+    <DisplayName>Cloudreve</DisplayName>
+    <PublisherDisplayName>abslant</PublisherDisplayName>
+    <Logo>Images\StoreLogo.png</Logo>
+  </Properties>
+
+  <Resources>
+    <Resource Language="en-us" />
+    <Resource Language="zh-cn" />
+    <Resource Language="zh-tw" />
+    <Resource Language="ja" />
+    <Resource Language="de" />
+    <Resource Language="fr" />
+    <Resource Language="es" />
+    <Resource Language="ko" />
+    <Resource Language="ru" />
+    <Resource Language="pl" />
+    <Resource Language="it" />
+  </Resources>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.18362.0"
+      MaxVersionTested="10.0.22598.0" />
+  </Dependencies>
+
+
+  <Applications>
+    <Application Id="Cloudreve.Sync"
+      Executable="cloudreve-desktop.exe"
+      EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="Cloudreve"
+        Description="Cloudreve"
+        BackgroundColor="transparent"
+        Square150x150Logo="Images\Square150x150Logo.png"
+        Square44x44Logo="Images\Square44x44Logo.png">
+        <uap:DefaultTile Wide310x150Logo="Images\Wide310x150Logo.png"
+          Square310x310Logo="Images\LargeTile.png" Square71x71Logo="Images\SmallTile.png" />
+      </uap:VisualElements>
+      <uap7:Properties>
+        <uap8:ActiveCodePage>UTF-8</uap8:ActiveCodePage>
+      </uap7:Properties>
+      <Extensions>
+        <desktop:Extension Category="windows.startupTask" Executable="cloudreve-desktop.exe" EntryPoint="Windows.FullTrustApplication">
+          <desktop:StartupTask TaskId="cloudreve" Enabled="true" DisplayName="Cloudreve"/>
+        </desktop:Extension>
+        <uap:Extension Category="windows.protocol">
+          <uap:Protocol Name="cloudreve" />
+        </uap:Extension>
+        <desktop:Extension Category="windows.toastNotificationActivation">
+          <desktop:ToastNotificationActivation
+            ToastActivatorCLSID="effe04d9-151d-49da-9eb5-34e01442edfe" />
+        </desktop:Extension>
+        <desktop3:Extension Category="windows.cloudFiles">
+          <desktop3:CloudFiles>
+            <desktop3:CustomStateHandler Clsid="f0c9de6c-6c76-44d7-a58e-579cdf7af263" />
+            <desktop3:ThumbnailProviderHandler Clsid="3d781652-78c5-4038-87a4-ec5940ab560a" />
+            <desktop3:ExtendedPropertyHandler Clsid="20000000-0000-0000-0000-000000000001" />
+            <desktop3:BannersHandler Clsid="20000000-0000-0000-0000-000000000001" />
+            <cloudfiles2:StorageProviderStatusUISourceFactory
+              Clsid="b1d8ef74-822d-401a-a14a-25f45b1f70b7" />
+            <desktop3:CloudFilesContextMenus>
+              <desktop3:Verb Id="Command1" Clsid="165cd069-d9c8-42b4-8e37-b6971afa4494" />
+            </desktop3:CloudFilesContextMenus>
+            <desktop4:ContentUriSource Clsid="97961bcb-601c-4950-927c-43b9319c7217" />
+          </desktop3:CloudFiles>
+        </desktop3:Extension>
+        <com:Extension Category="windows.comServer">
+          <com:ComServer>
+            <com:ExeServer Executable="cloudreve-desktop.exe"
+              DisplayName="Cloudreve Toast activator">
+              <com:Class Id="effe04d9-151d-49da-9eb5-34e01442edfe"
+                DisplayName="Cloudreve Toast activator" />
+            </com:ExeServer>
+            <com:ExeServer DisplayName="Cloudreve Command Handler"
+              Executable="cloudreve-desktop.exe">
+              <com:Class Id="165cd069-d9c8-42b4-8e37-b6971afa4494" />
+            </com:ExeServer>
+            <com:ExeServer DisplayName="Cloudreve Custom State Handler"
+              Executable="cloudreve-desktop.exe">
+              <com:Class Id="f0c9de6c-6c76-44d7-a58e-579cdf7af263" />
+            </com:ExeServer>
+            <com:ExeServer DisplayName="Cloudreve Status UI Source Factory"
+              Executable="cloudreve-desktop.exe">
+              <com:Class Id="b1d8ef74-822d-401a-a14a-25f45b1f70b7" />
+            </com:ExeServer>
+            <com:ExeServer DisplayName="Cloudreve Thumbnail Handler"
+              Executable="cloudreve-desktop.exe">
+              <com:Class Id="3d781652-78c5-4038-87a4-ec5940ab560a" />
+            </com:ExeServer>
+          </com:ComServer>
+        </com:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <Capability Name="internetClient" />
+    <rescap:Capability Name="runFullTrust" />
+    <rescap:Capability Name="broadFileSystemAccess" />
+  </Capabilities>
+</Package>

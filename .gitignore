@@ -40,3 +40,5 @@ cloudreve
 .DS_Store
 # Playwright MCP snapshots
 .playwright-mcp/
+# Monorepo staging dir for asset packaging (transient)
+/assets/

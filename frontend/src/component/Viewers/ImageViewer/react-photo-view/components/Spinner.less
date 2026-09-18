@@ -1,0 +1,30 @@
+@keyframes PhotoView__rotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes PhotoView__delayIn {
+  0%,
+  50% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+.PhotoView {
+  &__Spinner {
+    animation: PhotoView__delayIn 0.4s linear both;
+
+    svg {
+      animation: PhotoView__rotate 0.6s linear infinite;
+    }
+  }
+}

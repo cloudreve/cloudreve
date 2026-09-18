@@ -1,0 +1,114 @@
+{
+  "frontmatterEditor": {
+    "title": "تعديل frontmatter للمستند",
+    "key": "المفتاح",
+    "value": "القيمة",
+    "addEntry": "إضافة عنصر"
+  },
+  "dialogControls": {
+    "save": "حفظ",
+    "cancel": "إلغاء"
+  },
+  "uploadImage": {
+    "dialogTitle": "تحميل صورة",
+    "uploadInstructions": "تحميل صورة من جهازك:",
+    "addViaUrlInstructions": "أو أضف صورة من رابط أو مسار نسبي (نسبي إلى الملف الحالي):",
+    "autoCompletePlaceholder": "حدد أو الصق رابط الصورة",
+    "addViaUrlInstructionsNoUpload": "رابط الصورة:",
+    "alt": "النص البديل:",
+    "title": "العنوان:"
+  },
+  "imageEditor": {
+    "deleteImage": "حذف الصورة",
+    "editImage": "تعديل الصورة"
+  },
+  "createLink": {
+    "url": "الرابط",
+    "urlPlaceholder": "حدد أو الصق الرابط",
+    "title": "العنوان",
+    "saveTooltip": "تعيين الرابط",
+    "cancelTooltip": "إلغاء التعديل"
+  },
+  "linkPreview": {
+    "open": "فتح {{url}} في نافذة جديدة",
+    "edit": "تعديل الرابط",
+    "copyToClipboard": "نسخ إلى الحافظة",
+    "copied": "تم النسخ!",
+    "remove": "إزالة الرابط"
+  },
+  "table": {
+    "deleteTable": "حذف الجدول",
+    "columnMenu": "قائمة الأعمدة",
+    "textAlignment": "محاذاة النص",
+    "alignLeft": "محاذاة إلى اليسار",
+    "alignCenter": "محاذاة إلى الوسط",
+    "alignRight": "محاذاة إلى اليمين",
+    "insertColumnLeft": "إدراج عمود على يسار هذا العمود",
+    "insertColumnRight": "إدراج عمود على يمين هذا العمود",
+    "deleteColumn": "حذف هذا العمود",
+    "rowMenu": "قائمة الصفوف",
+    "insertRowAbove": "إدراج صف فوق هذا الصف",
+    "insertRowBelow": "إدراج صف أسفل هذا الصف",
+    "deleteRow": "حذف هذا الصف"
+  },
+  "toolbar": {
+    "blockTypes": {
+      "paragraph": "فقرة",
+      "quote": "اقتباس",
+      "heading": "عنوان {{level}}"
+    },
+    "blockTypeSelect": {
+      "selectBlockTypeTooltip": "اختر نوع الكتلة",
+      "placeholder": "نوع الكتلة"
+    },
+    "toggleGroup": "تفعيل المجموعة",
+    "removeBold": "إزالة الخط العريض",
+    "bold": "خط عريض",
+    "removeItalic": "إزالة الخط المائل",
+    "italic": "خط مائل",
+    "underline": "إزالة التسطير",
+    "removeUnderline": "تسطير",
+    "removeInlineCode": "إزالة الكود المضمن",
+    "inlineCode": "كود مضمن",
+    "link": "إنشاء رابط",
+    "richText": "نص منسق",
+    "diffMode": "وضع المقارنة",
+    "source": "وضع النص الخام",
+    "admonition": "إدراج تنبيه",
+    "codeBlock": "إدراج كتلة نص برمجي",
+    "editFrontmatter": "تحرير frontmatter",
+    "insertFrontmatter": "إدراج frontmatter",
+    "image": "إدراج صورة",
+    "insertSandpack": "إدراج Sandpack",
+    "table": "إدراج جدول",
+    "thematicBreak": "إدراج فاصل أفقي",
+    "bulletedList": "قائمة نقطية",
+    "numberedList": "قائمة مرقمة",
+    "checkList": "قائمة مهام",
+    "deleteSandpack": "إزالة كتلة النص البرمجي هذه",
+    "undo": "تراجع {{shortcut}}",
+    "redo": "إعادة {{shortcut}}",
+    "superscript": "نص علوي",
+    "subscript": "نص سفلي",
+    "strikethrough": "نص يتوسطه خط",
+    "removeSubscript": "إزالة النص السفلي",
+    "removeSuperscript": "إزالة النص العلوي",
+    "removeStrikethrough": "إزالة الخط المتوسط"
+  },
+  "admonitions": {
+    "note": "ملاحظة",
+    "tip": "تلميح",
+    "danger": "تحذير",
+    "info": "معلومة",
+    "caution": "تنبيه",
+    "changeType": "اختر نوع التنبيه",
+    "placeholder": "نوع التنبيه"
+  },
+  "codeBlock": {
+    "language": "لغة كتلة النص البرمجي",
+    "selectLanguage": "اختر لغة كتلة النص البرمجي"
+  },
+  "contentArea": {
+    "editableMarkdown": "markdown قابل للتحرير"
+  }
+}

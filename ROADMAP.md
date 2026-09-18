@@ -42,16 +42,26 @@ The community repo contains **zero Pro code** — Pro ships as a separate licens
 
 Backend gaps are concrete: `ShareProps` = `{share_view, show_read_me}` only; `group.storage_policy_id` is single; no order/product/credit entities at all. `NavigatorCapability_CommunityPlaceholder1–9` in `pkg/filemanager/fs/dbfs/navigator.go` are the reserved capability slots Pro fills.
 
-### 1.4 Org repo decisions
+### 1.4 Org repo decisions — **monorepo**
+
+Everything ships from `Dvorinka/cloudreve`. No submodules, no sibling repos.
+
+```
+cloudreve/           Go backend (existing code, repo root)
+├── frontend/        web SPA — vendored from cloudreve/frontend (was `assets` submodule)
+├── desktop/         Tauri app — vendored from cloudreve/desktop
+├── android/         native Android app — Kotlin + Compose (Phase E)
+└── .github/workflows/  GitHub Actions CI/CD (replaces azure-pipelines)
+```
 
 | Repo | Verdict | Reason |
 |---|---|---|
-| `cloudreve` (this fork) | **Keep — base** | The core |
-| `frontend` | **Fork — required** | UI is source-available and already holds Pro skeleton; we need our own fork to strip gates |
-| `desktop` | **Fork — port** | Tauri+React; portable core (`cloudreve-api`, `inventory`, `tasks`, `uploader`, `drive/sync`) vs Windows-only glue (`cfapi`, `shellext`, `win32_notif`) |
-| `docs` | **Fork later** | Needed when we ship; low priority |
-| `docker-compose` | **Fork — small** | One file we extend (add pro-less compose + dev compose) |
-| `taskqueue` | **Skip** | Dead since 2024; OneDrive offload queue superseded by in-app queue |
+| `cloudreve` (this fork) | **Keep — base + monorepo root** | The core |
+| `frontend` | **Vendored → `frontend/`** | Submodule replaced; source lives in-repo, CI builds it |
+| `desktop` | **Vendored → `desktop/`** | Tauri+React; portable core (`cloudreve-api`, `inventory`, `tasks`, `uploader`, `drive/sync`) vs Windows-only glue (`cfapi`, `shellext`, `win32_notif`) |
+| `docs` | **Skip for now** | Fork when we ship public docs |
+| `docker-compose` | **Vendored file** | Root `docker-compose.yml` already exists; extend for dev stack |
+| `taskqueue` | **Skip** | Dead since 2024; superseded by in-app queue |
 | `remote-server` | **Skip** | Dead PHP-era remote; v4 has native remote nodes |
 | `ios-feedback` | **Skip** | Tracker for closed-source iOS app; we do Android instead |
 | `theme-editor`, `frontend_v2`, `v2` | **Skip** | Archived/ancient |
@@ -93,18 +103,19 @@ Backend gaps are concrete: `ShareProps` = `{share_view, show_read_me}` only; `gr
 ## 2. Immediate actions (this change set)
 
 - [x] Analysis + this roadmap
-- [ ] Enable Issues on fork; label taxonomy (`upstream-####`, `group:*`, `pro-free`, `desktop`, `android`, `security`)
-- [ ] Migrate upstream issues → fork (translate Chinese titles, tag `upstream-NNNN` + group labels, link originals)
-- [ ] Cherry-pick merge: #3524, #3549, #2964, #2851, #3490 (and #3472 after compile review)
-- [ ] `go build ./...` + `go test ./...` green
+- [x] Enable Issues on fork; label taxonomy (`group:*`, `pro-free`, `security`, `revisit`, `epic`)
+- [x] Migrate all 137 upstream issues → fork #1–137 (translated, grouped, linked)
+- [x] Merge upstream PRs: #3524, #3472, #3490, #3549, #2964, #2851, #2481
+- [x] `go build ./...` + `go test ./...` green (incl. upstream's own stale-test fixes)
+- [x] Monorepo restructure: `frontend/` + `desktop/` vendored, `assets` submodule removed, `android/` scaffolded
+- [x] CI/CD rewrite: GitHub Actions `ci.yml` (backend/frontend/desktop matrix) + `release.yml` (goreleaser→ghcr.io); azure-pipelines removed
 
 ## 3. Phase A — foundation hardening (first weeks)
 
-- Sync-fork automation: weekly `upstream → fork` merge workflow (GitHub Action) so security fixes keep landing
-- Dependabot/renovate on the fork
-- CI: build + test + vet + frontend build on PR (upstream azure-pipelines is theirs; ours = GitHub Actions)
+- Sync-upstream automation: weekly `upstream → fork` merge workflow so security fixes keep landing
+- Dependabot/renovate on the fork (Go, npm, cargo)
 - `docker-compose` dev stack (postgres + app + frontend hot reload)
-- Remove `ProDialog`/`ProChip` gates in frontend fork; point `assets` submodule at our frontend fork
+- Remove `ProDialog`/`ProChip` gates in `frontend/` — UI skeleton already exists, backend fills it
 
 ## 4. Phase B — Pro features, free (the big one)
 
@@ -124,7 +135,7 @@ Order = user-visible value first; each ships with backend + UI + tests.
 
 ## 6. Phase D — desktop, all platforms
 
-Goal: Windows + macOS + Linux from one Tauri codebase (`cloudreve/desktop` fork).
+Goal: Windows + macOS + Linux from the `desktop/` tree in this repo.
 
 | Layer | Windows (exists) | macOS | Linux |
 |---|---|---|---|
@@ -138,7 +149,7 @@ Goal: Windows + macOS + Linux from one Tauri codebase (`cloudreve/desktop` fork)
 
 ## 7. Phase E — Android app (native, no iOS)
 
-New repo `Dvorinka/cloudreve-android`. Kotlin + Jetpack Compose, Material 3.
+Lives in `android/` in this repo. Kotlin + Jetpack Compose, Material 3.
 
 - **API**: `api/v4` REST + OAuth token (entities exist: `oauthclient`, `oauthgrant`) — same surface the desktop `cloudreve-api` crate documents; port its models as the spec
 - **Core features**: browse/download/upload files, share links, camera-upload (auto photo backup), offline-favorite files, local sync folder via SAF/WorkManager

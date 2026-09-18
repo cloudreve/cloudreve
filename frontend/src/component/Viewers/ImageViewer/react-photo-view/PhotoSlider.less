@@ -1,0 +1,131 @@
+@keyframes PhotoView__fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.PhotoView {
+  &-Slider__clean {
+    .PhotoView-Slider__BannerWrap,
+    .PhotoView-Slider__ArrowLeft,
+    .PhotoView-Slider__ArrowRight,
+    .PhotoView-Slider__Overlay {
+      opacity: 0;
+    }
+  }
+
+  &-Slider__willClose {
+    .PhotoView-Slider__BannerWrap:hover {
+      opacity: 0;
+    }
+  }
+
+  &-Slider__Backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 1);
+    transition-property: background-color;
+    z-index: -1;
+  }
+
+  &-Slider__fadeIn {
+    opacity: 0;
+    animation: PhotoView__fade linear both;
+  }
+
+  &-Slider__fadeOut {
+    opacity: 0;
+    animation: PhotoView__fade linear both reverse;
+  }
+
+  &-Slider__BannerWrap {
+    position: absolute;
+    left: 0;
+    top: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    height: 52px;
+    background-image: linear-gradient(0deg, transparent, rgba(0, 0, 0, 0.38));
+    color: white;
+    transition: opacity 0.2s ease-out;
+    z-index: 20;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  &-Slider__Counter {
+    padding: 0 10px;
+    font-size: 14px;
+    opacity: 0.75;
+  }
+
+  &-Slider__BannerRight {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    margin: 4px 8px;
+    gap: 6px;
+  }
+
+  &-Slider__toolbarIcon {
+    box-sizing: border-box;
+    padding: 10px;
+    fill: white;
+    opacity: 0.75;
+    cursor: pointer;
+    transition: opacity 0.2s linear;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  &-Slider__ArrowLeft,
+  &-Slider__ArrowRight {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 70px;
+    height: 100px;
+    margin: auto;
+    opacity: 0.75;
+    z-index: 20;
+    cursor: pointer;
+    user-select: none;
+    transition: opacity 0.2s linear;
+
+    &:hover {
+      opacity: 1;
+    }
+
+    svg {
+      box-sizing: content-box;
+      padding: 10px;
+      width: 24px;
+      height: 24px;
+      fill: white;
+      background: rgba(0, 0, 0, 0.3);
+    }
+  }
+
+  &-Slider__ArrowLeft {
+    left: 0;
+  }
+
+  &-Slider__ArrowRight {
+    right: 0;
+  }
+}

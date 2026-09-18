@@ -89,7 +89,7 @@ dockers:
       - .build/aria2.supervisor.conf
       - .build/entrypoint.sh
     image_templates:
-      - "cloudreve/cloudreve:{{ .Tag }}-amd64"
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-amd64"
   - dockerfile: Dockerfile
     use: buildx
     build_flag_templates:
@@ -101,18 +101,18 @@ dockers:
       - .build/aria2.supervisor.conf
       - .build/entrypoint.sh
     image_templates:
-      - "cloudreve/cloudreve:{{ .Tag }}-arm64"
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-arm64"
 
 docker_manifests:
-  - name_template: "cloudreve/cloudreve:latest"
+  - name_template: "ghcr.io/dvorinka/cloudreve:latest"
     image_templates:
-      - "cloudreve/cloudreve:{{ .Tag }}-amd64"
-      - "cloudreve/cloudreve:{{ .Tag }}-arm64"
-  - name_template: "cloudreve/cloudreve:v4"
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-amd64"
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-arm64"
+  - name_template: "ghcr.io/dvorinka/cloudreve:v4"
     image_templates:
-      - "cloudreve/cloudreve:{{ .Tag }}-amd64"
-      - "cloudreve/cloudreve:{{ .Tag }}-arm64"
-  - name_template: "cloudreve/cloudreve:{{ .Tag }}"
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-amd64"
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-arm64"
+  - name_template: "ghcr.io/dvorinka/cloudreve:{{ .Tag }}"
     image_templates:
-      - "cloudreve/cloudreve:{{ .Tag }}-amd64"
-      - "cloudreve/cloudreve:{{ .Tag }}-arm64"
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-amd64"
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-arm64"

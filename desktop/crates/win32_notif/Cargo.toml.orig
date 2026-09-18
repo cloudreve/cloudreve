@@ -1,0 +1,49 @@
+[package]
+name = "win32_notif"
+version = "0.10.2"
+edition = "2021"
+description = "Wrapper around Windows UWP XAML (WinRT) Notification api"
+license = "MIT"
+repository = "https://github.com/AHQ-Softwares/win32_notif"
+authors = [
+  "AHQ Softwares (@AHQ-Softwares)",
+  "A. Chakraborty (@ahqsoftwares) <ahqsecret@gmail.com>",
+]
+
+[package.metadata.docs.rs]
+all-features = true
+targets = [
+  "x86_64-pc-windows-msvc",
+  "i686-pc-windows-msvc",
+  "aarch64-pc-windows-msvc",
+]
+
+[dependencies]
+windows = { version = "~0.62", features = [
+  "UI_Notifications",
+  "Win32_UI_Notifications",
+  "Win32_UI_Shell",
+  "Win32_UI_WindowsAndMessaging",
+  "Win32_System_Com",
+  "Data_Xml_Dom",
+  "Globalization",
+  "Foundation_Collections",
+] }
+windows-core = "~0.62"
+windows-registry = { version = "~0.6", optional = true }
+
+quick-xml = "~0.38"
+
+[features]
+default = ["registration"]
+
+# Register your AUMID in win32 registry
+registration = ["dep:windows-registry"]
+
+# Compatibility purposes
+# Stability not guaranteed
+unsafe = ["experimental"]
+
+# Allows you to access the underlying experimental apis
+# Stability not guaranteed
+experimental = []

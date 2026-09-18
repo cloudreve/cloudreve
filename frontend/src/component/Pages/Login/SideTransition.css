@@ -1,0 +1,23 @@
+.side-enter {
+  opacity: 0;
+  transform: translateX(-100%);
+}
+.side-enter-active {
+  opacity: 1;
+  transform: translateX(0%);
+}
+.side-exit {
+  opacity: 1;
+  transform: translateX(0%);
+}
+.side-exit-active {
+  opacity: 0;
+  transform: translateX(100%);
+}
+.side-enter-active,
+.side-exit-active {
+  transition:
+    opacity 300ms,
+    transform 300ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}

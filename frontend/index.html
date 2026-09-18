@@ -1,0 +1,118 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="shortcut icon" href="{pwa_small_icon}" sizes="64x64" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,shrink-to-fit=no"
+    />
+    <meta name="theme-color" content="" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="description" content="{siteDes}" />
+    <title>{siteName}</title>
+    <script>
+      window.subTitle = "{siteName}";
+    </script>
+    <style>
+      #app-loader {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: #f5f5f5;
+        z-index: 9999;
+      }
+      #app-loader .logo {
+        width: 120px;
+        height: 120px;
+        margin-bottom: 32px;
+        background-image: url("{pwa_medium_icon}");
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: contain;
+        opacity: 0;
+        transform: scale(0.8);
+        animation: fadeIn 0.6s ease-out 0.3s forwards;
+      }
+      #app-loader .spinner {
+        width: 28px;
+        height: 28px;
+        position: relative;
+        opacity: 0;
+        transform: scale(0.8);
+        animation: fadeIn 0.6s ease-out 0.3s forwards;
+      }
+      #app-loader .spinner {
+        display: inline-block;
+        width: 40px;
+        height: 40px;
+      }
+      #app-loader .spinner svg {
+        display: block;
+      }
+      #app-loader .spinner .stroke {
+        stroke: var(--defaultThemeColor);
+        stroke-linecap: round;
+        animation: spinDash 1.4s ease-in-out infinite;
+      }
+      #app-loader .spinner .background {
+        stroke: rgba(0, 0, 0, 0.1)
+      }
+
+      @keyframes spinDash {
+        0% {
+          stroke-dasharray: 1px, 200px;
+          stroke-dashoffset: 0;
+        }
+        50% {
+          stroke-dasharray: 100px, 200px;
+          stroke-dashoffset: -15px;
+        }
+        100% {
+          stroke-dasharray: 1px, 200px;
+          stroke-dashoffset: -126px;
+        }
+      }
+      @keyframes fadeIn {
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="app-loader">
+      <div class="logo"></div>
+      <div class="spinner">
+        <svg viewBox="22 22 44 44">
+          <circle class="background" cx="44" cy="44" r="20" fill="none" stroke-width="4"></circle>
+          <circle class="stroke" cx="44" cy="44" r="20" fill="none" stroke-width="4"></circle>
+        </svg>
+      </div>
+    </div>
+    <script async type="module" src="/src/main.tsx"></script>
+    <div id="root"></div>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // Hide loader when the app has loaded
+        const appRoot = document.getElementById("root");
+        const observer = new MutationObserver(function (mutations) {
+          if (appRoot.children.length > 0) {
+            document.getElementById("app-loader").style.display = "none";
+            observer.disconnect();
+          }
+        });
+        observer.observe(appRoot, { childList: true });
+      });
+    </script>
+  </body>
+  {siteScript}
+</html>

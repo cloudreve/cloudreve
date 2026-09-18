@@ -1,0 +1,114 @@
+{
+  "frontmatterEditor": {
+    "title": "전면 메타데이터 편집",
+    "key": "키",
+    "value": "값",
+    "addEntry": "항목 추가"
+  },
+  "dialogControls": {
+    "save": "저장",
+    "cancel": "취소"
+  },
+  "uploadImage": {
+    "dialogTitle": "이미지 업로드",
+    "uploadInstructions": "기기에서 이미지를 업로드하세요:",
+    "addViaUrlInstructions": "또는 이미지 URL / 상대 경로를 입력하세요 (현재 파일 기준):",
+    "autoCompletePlaceholder": "이미지 URL을 선택하거나 붙여넣기",
+    "addViaUrlInstructionsNoUpload": "이미지 URL:",
+    "alt": "대체 텍스트:",
+    "title": "제목:"
+  },
+  "imageEditor": {
+    "deleteImage": "이미지 삭제",
+    "editImage": "이미지 편집"
+  },
+  "createLink": {
+    "url": "URL",
+    "urlPlaceholder": "URL을 선택하거나 붙여넣기",
+    "title": "제목",
+    "saveTooltip": "URL 설정",
+    "cancelTooltip": "변경 취소"
+  },
+  "linkPreview": {
+    "open": "새 창에서 {{url}} 열기",
+    "edit": "링크 URL 편집",
+    "copyToClipboard": "클립보드에 복사",
+    "copied": "복사됨!",
+    "remove": "링크 제거"
+  },
+  "table": {
+    "deleteTable": "표 삭제",
+    "columnMenu": "열 메뉴",
+    "textAlignment": "텍스트 정렬",
+    "alignLeft": "왼쪽 정렬",
+    "alignCenter": "가운데 정렬",
+    "alignRight": "오른쪽 정렬",
+    "insertColumnLeft": "현재 열 왼쪽에 열 삽입",
+    "insertColumnRight": "현재 열 오른쪽에 열 삽입",
+    "deleteColumn": "이 열 삭제",
+    "rowMenu": "행 메뉴",
+    "insertRowAbove": "현재 행 위에 행 삽입",
+    "insertRowBelow": "현재 행 아래에 행 삽입",
+    "deleteRow": "이 행 삭제"
+  },
+  "toolbar": {
+    "blockTypes": {
+      "paragraph": "단락",
+      "quote": "인용",
+      "heading": "제목 {{level}}"
+    },
+    "blockTypeSelect": {
+      "selectBlockTypeTooltip": "블록 유형 선택",
+      "placeholder": "블록 유형"
+    },
+    "toggleGroup": "그룹 전환",
+    "removeBold": "굵게 제거",
+    "bold": "굵게",
+    "removeItalic": "기울임 제거",
+    "italic": "기울임",
+    "underline": "밑줄 제거",
+    "removeUnderline": "밑줄",
+    "removeInlineCode": "인라인 코드 스타일 제거",
+    "inlineCode": "인라인 코드 스타일",
+    "link": "링크 생성",
+    "richText": "리치 텍스트",
+    "diffMode": "차이점 모드",
+    "source": "소스 모드",
+    "admonition": "주석 블록 삽입",
+    "codeBlock": "코드 블록 삽입",
+    "editFrontmatter": "전면 메타데이터 편집",
+    "insertFrontmatter": "전면 메타데이터 삽입",
+    "image": "이미지 삽입",
+    "insertSandpack": "Sandpack 삽입",
+    "table": "표 삽입",
+    "thematicBreak": "주제 구분선 삽입",
+    "bulletedList": "순서 없는 목록",
+    "numberedList": "순서 있는 목록",
+    "checkList": "체크리스트",
+    "deleteSandpack": "Sandpack 삭제",
+    "undo": "실행 취소 {{shortcut}}",
+    "redo": "다시 실행 {{shortcut}}",
+    "superscript": "위첨자",
+    "subscript": "아래첨자",
+    "strikethrough": "취소선",
+    "removeSubscript": "아래첨자 제거",
+    "removeSuperscript": "위첨자 제거",
+    "removeStrikethrough": "취소선 제거"
+  },
+  "admonitions": {
+    "note": "주의",
+    "tip": "팁",
+    "danger": "위험",
+    "info": "정보",
+    "caution": "경고",
+    "changeType": "주석 블록 유형 선택",
+    "placeholder": "주석 블록 유형"
+  },
+  "codeBlock": {
+    "language": "코드 블록 언어",
+    "selectLanguage": "코드 블록 언어 선택"
+  },
+  "contentArea": {
+    "editableMarkdown": "편집 가능한 Markdown"
+  }
+}
