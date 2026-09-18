@@ -66,3 +66,16 @@ func CancelDownloadTask(c *gin.Context) {
 
 	c.JSON(200, serializer.Response{})
 }
+
+// RetryTask re-queues a failed task with its original args.
+func RetryTask(c *gin.Context) {
+	taskId := hashid.FromContext(c)
+	err := explorer.RetryTask(c, taskId)
+	if err != nil {
+		c.JSON(200, serializer.Err(c, err))
+		c.Abort()
+		return
+	}
+
+	c.JSON(200, serializer.Response{})
+}

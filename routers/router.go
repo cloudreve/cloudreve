@@ -590,6 +590,12 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				middleware.HashID(hashid.TaskID),
 				controllers.GetTaskPhaseProgress,
 			)
+			// Retry a failed task with its original args
+			wf.POST(":id/retry",
+				middleware.RequiredScopes(types.ScopeWorkflowWrite),
+				middleware.HashID(hashid.TaskID),
+				controllers.RetryTask,
+			)
 			// Create task to create an archive file
 			wf.POST("archive",
 				middleware.RequiredScopes(types.ScopeWorkflowWrite),

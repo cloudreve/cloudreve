@@ -1,7 +1,9 @@
 package explorer
 
 import (
+	"context"
 	"encoding/gob"
+	"fmt"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 	"time"
 
@@ -408,6 +410,61 @@ func CancelDownloadTask(c *gin.Context, taskID int) error {
 		if err := downloadTask.CancelDownload(c); err != nil {
 			return serializer.NewError(serializer.CodeInternalSetting, "Failed to cancel download task", err)
 		}
+	}
+
+	return nil
+}
+
+// queueForTaskType maps a persisted task type to the dependency queue that
+// owns it. Slave-side task types are not retryable from the master UI.
+func queueForTaskType(c *gin.Context, dep dependency.Dep, taskType string) (queue.Queue, error) {
+	switch taskType {
+	case queue.CreateArchiveTaskType, queue.ExtractArchiveTaskType, queue.RelocateTaskType, queue.ImportTaskType:
+		return dep.IoIntenseQueue(c), nil
+	case queue.RemoteDownloadTaskType:
+		return dep.RemoteDownloadQueue(c), nil
+	case queue.MediaMetaTaskType, queue.FullTextIndexTaskType, queue.FullTextDeleteTaskType,
+		queue.FullTextRebuildTaskType, queue.FullTextCopyTaskType, queue.FullTextChangeOwnerTaskType:
+		return dep.MediaMetaQueue(c), nil
+	case queue.EntityRecycleRoutineTaskType, queue.ExplicitEntityRecycleTaskType, queue.UploadSentinelCheckTaskType:
+		return dep.EntityRecycleQueue(c), nil
+	}
+	return nil, fmt.Errorf("task type %q is not retryable", taskType)
+}
+
+// RetryTask re-queues a failed task with its original args (#2823).
+func RetryTask(c *gin.Context, taskID int) error {
+	dep := dependency.FromContext(c)
+	u := inventory.UserFromContext(c)
+	taskClient := dep.TaskClient()
+
+	ctx := context.WithValue(c, inventory.LoadTaskUser{}, true)
+	ctx = context.WithValue(ctx, inventory.LoadUserGroup{}, true)
+	model, err := taskClient.GetTaskByID(ctx, taskID)
+	if err != nil {
+		return serializer.NewError(serializer.CodeNotFound, "Task not found", err)
+	}
+
+	if model.UserTasks != u.ID && !u.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+		return serializer.NewError(serializer.CodeNotFound, "Task not found", nil)
+	}
+
+	if model.Status != task.StatusError {
+		return serializer.NewError(serializer.CodeParamErr, "Only failed tasks can be retried", nil)
+	}
+
+	resumed, err := queue.NewTaskFromModel(model)
+	if err != nil {
+		return serializer.NewError(serializer.CodeInternalSetting, "Failed to rebuild task", err)
+	}
+
+	q, err := queueForTaskType(c, dep, model.Type)
+	if err != nil {
+		return serializer.NewError(serializer.CodeParamErr, "Task type is not retryable", err)
+	}
+
+	if err := q.QueueTask(c, resumed); err != nil {
+		return serializer.NewError(serializer.CodeCreateTaskError, "Failed to queue task", err)
 	}
 
 	return nil

@@ -469,6 +469,11 @@ func init() {
 				return persistTask(ctx, task, newStatus, q)
 			},
 		},
+		task.StatusError: {
+			// Manual retry re-queues a failed task with its original args
+			// (#2823). RetryCount history is preserved in PublicState.
+			task.StatusQueued: persistTask,
+		},
 	}
 
 }

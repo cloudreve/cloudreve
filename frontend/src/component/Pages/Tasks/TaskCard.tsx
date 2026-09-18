@@ -96,6 +96,7 @@ export interface TaskCardProps {
   showProgress?: boolean;
   task?: TaskResponse;
   onLoad?: () => void;
+  onRetried?: () => void;
 }
 
 const taskIconsMap: {
@@ -107,7 +108,7 @@ const taskIconsMap: {
   [TaskType.import]: ArrowImport,
 };
 
-const TaskCard = ({ loading, showProgress, onLoad, task }: TaskCardProps) => {
+const TaskCard = ({ loading, showProgress, onLoad, onRetried, task }: TaskCardProps) => {
   const { t } = useTranslation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -214,7 +215,7 @@ const TaskCard = ({ loading, showProgress, onLoad, task }: TaskCardProps) => {
           </Box>
         </SummaryButton>
       </AccordionSummary>
-      <AccordionDetails>{task && <TaskDetail task={task} downloading={showProgress} />}</AccordionDetails>
+      <AccordionDetails>{task && <TaskDetail task={task} downloading={showProgress} onRetried={onRetried} />}</AccordionDetails>
     </Accordion>
   );
 };

@@ -919,6 +919,22 @@ export function getTasks(req: ListTaskService): ThunkResponse<TaskListResponse> 
   };
 }
 
+export function sendRetryTask(id: string): ThunkResponse<undefined> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/workflow/${id}/retry`,
+        {
+          method: "POST",
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
 export function getTasksPhaseProgress(id: string): ThunkResponse<TaskProgresses> {
   return async (dispatch, _getState) => {
     return await dispatch(

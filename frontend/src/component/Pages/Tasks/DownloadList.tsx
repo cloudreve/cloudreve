@@ -140,12 +140,13 @@ const DownloadList = () => {
         )}
         {downloadingTasks == undefined && <TaskCard onLoad={loadDownloading} loading={true} />}
 
-        {downloadingTasks && downloadingTasks.map((task) => <TaskCard showProgress key={task.id} task={task} />)}
+        {downloadingTasks &&
+          downloadingTasks.map((task) => <TaskCard showProgress key={task.id} task={task} onRetried={refresh} />)}
         <Typography variant={"h5"} sx={{ mb: 2, mt: 3 }} color={"text.secondary"} fontWeight={500}>
           {t("download.finished")}
         </Typography>
         {tasks.map((task) => (
-          <TaskCard key={task.id} task={task} />
+          <TaskCard key={task.id} task={task} onRetried={refresh} />
         ))}
         {nextPageToken != undefined && (
           <TaskCard onLoad={loadNextPage(tasks, nextPageToken)} loading={true} key={nextPageToken} />
