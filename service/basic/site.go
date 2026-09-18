@@ -41,6 +41,8 @@ type SiteConfig struct {
 	RegisterEnabled  bool                `json:"register_enabled,omitempty"`
 	TosUrl           string              `json:"tos_url,omitempty"`
 	PrivacyPolicyUrl string              `json:"privacy_policy_url,omitempty"`
+	SSOEnabled       bool                `json:"sso_enabled,omitempty"`
+	SSODisplayName   string              `json:"sso_display_name,omitempty"`
 
 	// Explorer section
 	Icons                string                     `json:"icons,omitempty"`
@@ -89,6 +91,7 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 	switch s.Section {
 	case "login":
 		legalDocs := settings.LegalDocuments(c)
+		sso := settings.SSO(c)
 		return &SiteConfig{
 			LoginCaptcha:     settings.LoginCaptchaEnabled(c),
 			RegCaptcha:       settings.RegCaptchaEnabled(c),
@@ -97,6 +100,8 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 			RegisterEnabled:  settings.RegisterEnabled(c),
 			PrivacyPolicyUrl: legalDocs.PrivacyPolicy,
 			TosUrl:           legalDocs.TermsOfService,
+			SSOEnabled:       sso.Enabled && sso.Issuer != "" && sso.ClientID != "",
+			SSODisplayName:   sso.DisplayName,
 		}, nil
 	case "explorer":
 		explorerSettings := settings.ExplorerFrontendSettings(c)

@@ -820,7 +820,13 @@
     "ftsTikaExts": "支持的扩展名",
     "ftsTikaExtsDes": "逗号分隔的文件扩展名列表，Tika 将处理这些类型的文件。",
     "ftsTikaMaxFileSize": "最大文件大小",
-    "ftsTikaMaxFileSizeDes": "发送至 Tika 进行内容提取的文件最大大小。"
+    "ftsTikaMaxFileSizeDes": "发送至 Tika 进行内容提取的文件最大大小。",
+    "ssoIssuer": "Issuer 地址",
+    "ssoIssuerDes": "OIDC Issuer 的基础 URL，例如 <0>https://keycloak.example.com/realms/master</0>。将从该地址下的 <1>.well-known/openid-configuration</1> 获取提供方元数据。",
+    "ssoRegisterEnabled": "允许自动注册",
+    "ssoRegisterEnabledDes": "用户首次通过 SSO 登录时自动创建本地账号。下方的注册邮箱过滤规则同样适用。",
+    "ssoCallbackUrl": "回调地址",
+    "ssoCallbackUrlDes": "请在身份提供方中将此 URL 注册为 Redirect/Callback URL：<0>{{url}}</0>"
   },
   "giftCodes": {
     "giftCodesSettings": "礼品码",
@@ -1596,7 +1602,7 @@
     "filterEmailProviderDisabled": "不启用",
     "filterEmailProviderWhitelist": "白名单",
     "filterEmailProviderBlacklist": "黑名单",
-    "filterEmailProviderDes": "只允许使用特定的邮箱注册站点，第三方 SSO 登录不受此限制。",
+    "filterEmailProviderDes": "限制新注册账号可使用的邮箱提供商，包括通过 SSO 自动创建的账号。",
     "filterEmailProviderRule": "邮箱域过滤规则",
     "filterEmailProviderRuleDes": "多个域请使用半角逗号 , 隔开。",
     "qqConnect": "QQ 互联",

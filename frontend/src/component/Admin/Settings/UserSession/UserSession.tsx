@@ -141,10 +141,17 @@ const UserSession = () => {
             </SettingForm>
             <SettingForm title={t("vas.filterEmailProvider")} lgWidth={5}>
               <FormControl>
-                <DenseSelect value={0}>
+                <DenseSelect
+                  value={values.email_filter_mode ?? "0"}
+                  onChange={(e) =>
+                    setSettings({
+                      email_filter_mode: e.target.value as string,
+                    })
+                  }
+                >
                   {["filterEmailProviderDisabled", "filterEmailProviderWhitelist", "filterEmailProviderBlacklist"].map(
                     (v, i) => (
-                      <SquareMenuItem value={i.toString()}>
+                      <SquareMenuItem key={v} value={i.toString()}>
                         <ListItemText
                           slotProps={{
                             primary: { variant: "body2" },
@@ -159,10 +166,37 @@ const UserSession = () => {
                 <NoMarginHelperText>{t("vas.filterEmailProviderDes")}</NoMarginHelperText>
               </FormControl>
             </SettingForm>
+            {(values.email_filter_mode ?? "0") !== "0" && (
+              <SettingForm title={t("vas.filterEmailProviderRule")} lgWidth={5}>
+                <FormControl fullWidth>
+                  <DenseFilledTextField
+                    value={values.email_filter_list}
+                    onChange={(e) =>
+                      setSettings({
+                        email_filter_list: e.target.value,
+                      })
+                    }
+                    multiline
+                    minRows={3}
+                    placeholder={"example.com\nmail.example.org"}
+                  />
+                  <NoMarginHelperText>{t("vas.filterEmailProviderRuleDes")}</NoMarginHelperText>
+                </FormControl>
+              </SettingForm>
+            )}
             <SettingForm lgWidth={5}>
               <FormControl fullWidth>
                 <FormControlLabel
-                  control={<Switch checked={false} />}
+                  control={
+                    <Switch
+                      checked={isTrueVal(values.email_disable_subaddress)}
+                      onChange={(e) =>
+                        setSettings({
+                          email_disable_subaddress: e.target.checked ? "1" : "0",
+                        })
+                      }
+                    />
+                  }
                   label={
                     <>
                       {t("vas.disableSubAddressEmail")}

@@ -355,6 +355,32 @@ func UserPrepareLogin(c *gin.Context) {
 	c.JSON(200, serializer.Response{Data: res})
 }
 
+// UserSSOLogin redirects the browser to the configured OIDC provider.
+func UserSSOLogin(c *gin.Context) {
+	service := ParametersFromContext[*user.SSOLoginService](c, user.SSOLoginParameterCtx{})
+	service.SSOLogin(c)
+}
+
+// UserSSOCallback completes the OIDC flow and redirects to the SPA with a
+// one-time ticket.
+func UserSSOCallback(c *gin.Context) {
+	service := ParametersFromContext[*user.SSOCallbackService](c, user.SSOCallbackParameterCtx{})
+	service.SSOCallback(c)
+}
+
+// UserSSOExchange trades the one-time ticket for a session token pair.
+func UserSSOExchange(c *gin.Context) {
+	service := ParametersFromContext[*user.SSOExchangeService](c, user.SSOExchangeParameterCtx{})
+	res, err := service.SSOExchange(c)
+	if err != nil {
+		c.JSON(200, serializer.Err(c, err))
+		c.Abort()
+		return
+	}
+
+	c.JSON(200, serializer.Response{Data: res})
+}
+
 // UserSearch Search user by keyword
 func UserSearch(c *gin.Context) {
 	service := ParametersFromContext[*user.SearchUserService](c, user.SearchUserParamCtx{})

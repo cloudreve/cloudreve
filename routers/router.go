@@ -319,6 +319,23 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				controllers.UserPrepareLogin,
 			)
 
+			// Inbound OIDC single sign-on
+			ssoRouter := session.Group("sso")
+			{
+				ssoRouter.GET("",
+					controllers.FromQuery[usersvc.SSOLoginService](usersvc.SSOLoginParameterCtx{}),
+					controllers.UserSSOLogin,
+				)
+				ssoRouter.GET("callback",
+					controllers.FromQuery[usersvc.SSOCallbackService](usersvc.SSOCallbackParameterCtx{}),
+					controllers.UserSSOCallback,
+				)
+				ssoRouter.POST("exchange",
+					controllers.FromJSON[usersvc.SSOExchangeService](usersvc.SSOExchangeParameterCtx{}),
+					controllers.UserSSOExchange,
+				)
+			}
+
 			oauthRouter := session.Group("oauth")
 			{
 				oauthRouter.GET("app/:app_id",

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -241,6 +242,10 @@ type (
 		// ExposeUserEmail returns true if user email should be exposed to other
 		// signed-in users in redacted responses.
 		ExposeUserEmail(ctx context.Context) bool
+		// SSO returns the inbound single sign-on (OIDC) settings.
+		SSO(ctx context.Context) *SSO
+		// EmailFilter returns the sign-up email restriction settings.
+		EmailFilter(ctx context.Context) *EmailFilter
 	}
 	UseFirstSiteUrlCtxKey = struct{}
 )
@@ -867,6 +872,63 @@ func (s *settingProvider) AuthnEnabled(ctx context.Context) bool {
 
 func (s *settingProvider) RegisterEnabled(ctx context.Context) bool {
 	return s.getBoolean(ctx, "register_enabled", false)
+}
+
+func (s *settingProvider) SSO(ctx context.Context) *SSO {
+	// Base scopes are always requested; sso_scopes holds extras only, so the
+	// admin cannot break the flow by removing "openid".
+	scopes := map[string]bool{"openid": true, "profile": true, "email": true}
+	for _, extra := range strings.FieldsFunc(s.getString(ctx, "sso_scopes", ""), func(r rune) bool {
+		return r == ',' || r == ';' || r == ' '
+	}) {
+		if extra = strings.TrimSpace(extra); extra != "" {
+			scopes[extra] = true
+		}
+	}
+	scopeList := make([]string, 0, len(scopes))
+	for sc := range scopes {
+		scopeList = append(scopeList, sc)
+	}
+	sort.Strings(scopeList)
+
+	issuer := strings.TrimSpace(s.getString(ctx, "sso_issuer", ""))
+	// Tolerate admins pasting the full well-known document URL.
+	issuer = strings.TrimSuffix(issuer, "/.well-known/openid-configuration")
+	issuer = strings.TrimRight(issuer, "/")
+
+	return &SSO{
+		Enabled:         s.getBoolean(ctx, "sso_enabled", false),
+		DisplayName:     s.getString(ctx, "sso_display_name", "SSO"),
+		Issuer:          issuer,
+		ClientID:        s.getString(ctx, "sso_client_id", ""),
+		ClientSecret:    s.getString(ctx, "sso_client_secret", ""),
+		Scopes:          strings.Join(scopeList, " "),
+		RegisterEnabled: s.getBoolean(ctx, "sso_register_enabled", true),
+	}
+}
+
+func (s *settingProvider) EmailFilter(ctx context.Context) *EmailFilter {
+	mode := EmailFilterMode(s.getInt(ctx, "email_filter_mode", 0))
+	if mode < EmailFilterDisabled || mode > EmailFilterBlacklist {
+		mode = EmailFilterDisabled
+	}
+
+	raw := s.getString(ctx, "email_filter_list", "")
+	var list []string
+	for _, entry := range strings.FieldsFunc(raw, func(r rune) bool {
+		return r == ',' || r == '\n' || r == ';' || r == ' '
+	}) {
+		entry = strings.ToLower(strings.TrimSpace(entry))
+		if entry != "" {
+			list = append(list, entry)
+		}
+	}
+
+	return &EmailFilter{
+		Mode:              mode,
+		List:              list,
+		DisableSubAddress: s.getBoolean(ctx, "email_disable_subaddress", false),
+	}
 }
 
 func (s *settingProvider) ExposeUserEmail(ctx context.Context) bool {

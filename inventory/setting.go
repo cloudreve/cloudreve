@@ -551,6 +551,16 @@ var DefaultSettings = map[string]string{
 	"cron_trash_bin_collect":                     "@every 33m",
 	"cron_oauth_cred_refresh":                    "@every 230h",
 	"authn_enabled":                              "1",
+	"sso_enabled":                                "0",
+	"sso_display_name":                           "SSO",
+	"sso_issuer":                                 "",
+	"sso_client_id":                              "",
+	"sso_client_secret":                          "",
+	"sso_scopes":                                 "",
+	"sso_register_enabled":                       "1",
+	"email_filter_mode":                          "0",
+	"email_filter_list":                          "",
+	"email_disable_subaddress":                   "0",
 	"captcha_type":                               "normal",
 	"captcha_height":                             "60",
 	"captcha_width":                              "240",
@@ -710,6 +720,7 @@ var RedactedSettings = map[string]struct{}{
 	"encrypt_master_key":       {},
 	"secret_key":               {},
 	"oidc_signing_private_key": {},
+	"sso_client_secret":        {},
 }
 
 func init() {

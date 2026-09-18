@@ -35,8 +35,13 @@ func (service *UserRegisterService) Register(c *gin.Context) serializer.Response
 	settings := dep.SettingProvider()
 
 	isEmailRequired := settings.EmailActivationEnabled(c)
+	email := strings.ToLower(service.UserName)
+	if err := CheckEmailAllowed(settings.EmailFilter(c), email); err != nil {
+		return serializer.Err(c, err)
+	}
+
 	args := &inventory.NewUserArgs{
-		Email:         strings.ToLower(service.UserName),
+		Email:         email,
 		PlainPassword: service.Password,
 		Status:        user.StatusActive,
 		GroupID:       settings.DefaultGroup(c),

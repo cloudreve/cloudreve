@@ -72,6 +72,32 @@ type TokenAuth struct {
 	RefreshTokenTTL time.Duration
 }
 
+// SSO holds inbound single sign-on (OIDC consumer) settings.
+type SSO struct {
+	Enabled         bool
+	DisplayName     string
+	Issuer          string
+	ClientID        string
+	ClientSecret    string
+	Scopes          string
+	RegisterEnabled bool
+}
+
+type EmailFilterMode int
+
+const (
+	EmailFilterDisabled EmailFilterMode = iota
+	EmailFilterWhitelist
+	EmailFilterBlacklist
+)
+
+// EmailFilter holds sign-up email restriction settings.
+type EmailFilter struct {
+	Mode              EmailFilterMode
+	List              []string
+	DisableSubAddress bool
+}
+
 type DBFS struct {
 	UseCursorPagination        bool
 	MaxPageSize                int
