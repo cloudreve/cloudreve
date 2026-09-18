@@ -189,7 +189,7 @@ func (c *qbittorrentClient) Info(ctx context.Context, handle *downloader.TaskHan
 	// Combining and converting all info
 	state := downloader.StatusDownloading
 	switch torrents[0].State {
-	case "downloading", "pausedDL", "allocating", "metaDL", "queuedDL", "stalledDL", "checkingDL", "forcedDL", "checkingResumeData", "moving", "forcedMetaDL":
+	case "downloading", "pausedDL", "stoppedDL", "allocating", "metaDL", "queuedDL", "stalledDL", "checkingDL", "forcedDL", "checkingResumeData", "moving", "forcedMetaDL":
 		state = downloader.StatusDownloading
 	case "uploading", "queuedUP", "stalledUP", "checkingUP", "forcedUP":
 		state = downloader.StatusSeeding
