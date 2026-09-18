@@ -10,6 +10,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/conf"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 	"github.com/samber/lo"
+	"strings"
 )
 
 type (
@@ -25,6 +26,11 @@ type (
 		GetByIDAndUserID(ctx context.Context, id, userID int) (*ent.DavAccount, error)
 		// Delete deletes the dav account.
 		Delete(ctx context.Context, id int) error
+		// UpdateURIPrefix rewrites the mount URIs of a user's dav accounts after
+		// a file rename or move: an account mounting exactly oldURI, or any path
+		// under it, is repointed to newURI. This keeps mounts working when the
+		// bound folder changes location.
+		UpdateURIPrefix(ctx context.Context, userID int, oldURI, newURI string) error
 	}
 
 	ListDavAccountArgs struct {
@@ -94,6 +100,35 @@ func (c *davAccountClient) Update(ctx context.Context, id int, params *CreateDav
 
 func (c *davAccountClient) Delete(ctx context.Context, id int) error {
 	return c.client.DavAccount.DeleteOneID(id).Exec(ctx)
+}
+
+func (c *davAccountClient) UpdateURIPrefix(ctx context.Context, userID int, oldURI, newURI string) error {
+	oldURI = strings.TrimSuffix(oldURI, "/")
+	newURI = strings.TrimSuffix(newURI, "/")
+	if oldURI == newURI || userID == 0 {
+		return nil
+	}
+
+	accounts, err := c.client.DavAccount.Query().
+		Where(
+			davaccount.OwnerIDEQ(userID),
+			davaccount.Or(
+				davaccount.URIEQ(oldURI),
+				davaccount.URIHasPrefix(oldURI+"/"),
+			),
+		).
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query dav accounts for URI rewrite: %w", err)
+	}
+
+	for _, account := range accounts {
+		updated := strings.TrimSuffix(newURI+strings.TrimPrefix(account.URI, oldURI), "/")
+		if err := c.client.DavAccount.UpdateOneID(account.ID).SetURI(updated).Exec(ctx); err != nil {
+			return fmt.Errorf("failed to rewrite dav account URI: %w", err)
+		}
+	}
+	return nil
 }
 
 func (c *davAccountClient) List(ctx context.Context, args *ListDavAccountArgs) (*ListDavAccountResult, error) {

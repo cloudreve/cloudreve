@@ -140,7 +140,15 @@ func (m *manager) Create(ctx context.Context, path *fs.URI, fileType types.FileT
 func (m *manager) Rename(ctx context.Context, path *fs.URI, newName string) (fs.File, error) {
 	file, indexDiff, err := m.fs.Rename(ctx, path, newName)
 	m.processIndexDiff(ctx, indexDiff)
-	return file, err
+	if err != nil {
+		return file, err
+	}
+
+	// Keep WebDAV mounts bound under the renamed path pointing at its new URI.
+	// Scope to the file's owner — the URI authority carries the owner's hash,
+	// which may differ from the requester for admin-on-behalf operations.
+	m.rewriteDavMounts(ctx, file.OwnerID(), path, file.Uri(false))
+	return file, nil
 }
 
 func (m *manager) MoveOrCopy(ctx context.Context, src []*fs.URI, dst *fs.URI, isCopy bool) error {
@@ -150,7 +158,26 @@ func (m *manager) MoveOrCopy(ctx context.Context, src []*fs.URI, dst *fs.URI, is
 	}
 
 	m.processIndexDiff(ctx, indexDiff)
+
+	// Keep WebDAV mounts bound under moved paths pointing at their new URIs.
+	if !isCopy && m.user != nil {
+		for _, srcURI := range src {
+			m.rewriteDavMounts(ctx, m.user.ID, srcURI, dst.JoinRaw(srcURI.Name()))
+		}
+	}
 	return nil
+}
+
+// rewriteDavMounts repoints the given user's dav account mount URIs that
+// reference oldURI (or any path under it) to newURI. Failures are logged but
+// never fail the file operation itself.
+func (m *manager) rewriteDavMounts(ctx context.Context, ownerID int, oldURI, newURI *fs.URI) {
+	if ownerID == 0 || oldURI == nil || newURI == nil {
+		return
+	}
+	if err := m.dep.DavAccountClient().UpdateURIPrefix(ctx, ownerID, oldURI.String(), newURI.String()); err != nil {
+		m.l.Warning("failed to update dav account URIs after file operation: %s", err)
+	}
 }
 
 func (m *manager) SoftDelete(ctx context.Context, path ...*fs.URI) error {
