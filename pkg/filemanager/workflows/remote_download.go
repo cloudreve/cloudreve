@@ -60,6 +60,10 @@ type (
 		GetTaskStatusTried int                     `json:"get_task_status_tried,omitempty"`
 		Transferred        map[int]interface{}     `json:"transferred,omitempty"`
 		Failed             int                     `json:"failed,omitempty"`
+		// ResumeMonitorAfterTransfer marks an early transfer batch taken while
+		// the download is still running: after it completes, return to Monitor
+		// instead of awaiting seeding.
+		ResumeMonitorAfterTransfer bool `json:"resume_monitor_after_transfer,omitempty"`
 	}
 )
 
@@ -389,6 +393,13 @@ func (m *RemoteDownloadTask) monitor(ctx context.Context, dep dependency.Dep) (t
 		m.l.Info("Download task seeding completed")
 		return task.StatusCompleted, nil
 	case downloader.StatusDownloading:
+		if m.hasEarlyTransferCandidates(status) {
+			m.l.Info("Some files already completed, starting early transfer.")
+			m.state.Phase = RemoteDownloadTaskPhaseTransfer
+			m.state.ResumeMonitorAfterTransfer = true
+			m.ResumeAfter(0)
+			return task.StatusSuspending, nil
+		}
 		m.ResumeAfter(resumeAfter)
 		return task.StatusSuspending, nil
 	case downloader.StatusUnknown, downloader.StatusError:
@@ -397,6 +408,19 @@ func (m *RemoteDownloadTask) monitor(ctx context.Context, dep dependency.Dep) (t
 
 	m.ResumeAfter(resumeAfter)
 	return task.StatusSuspending, nil
+}
+
+// hasEarlyTransferCandidates reports whether any selected file finished
+// downloading but has not been transferred to the user's storage yet.
+func (m *RemoteDownloadTask) hasEarlyTransferCandidates(status *downloader.TaskStatus) bool {
+	for _, f := range status.Files {
+		if f.Selected && f.Progress >= 1 {
+			if _, ok := m.state.Transferred[f.Index]; !ok {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (m *RemoteDownloadTask) slaveTransfer(ctx context.Context, dep dependency.Dep) (task.Status, error) {
@@ -426,6 +450,11 @@ func (m *RemoteDownloadTask) slaveTransfer(ctx context.Context, dep dependency.D
 
 			// Skip already transferred
 			if _, ok := m.state.Transferred[f.Index]; ok {
+				continue
+			}
+
+			// During early transfer batches only completed files are picked.
+			if m.state.ResumeMonitorAfterTransfer && f.Progress < 1 {
 				continue
 			}
 
@@ -480,12 +509,30 @@ func (m *RemoteDownloadTask) slaveTransfer(ctx context.Context, dep dependency.D
 			}
 
 			m.l.Warning("Slave task %d failed to transfer %d files, retrying...", slaveTaskId, len(m.state.SlaveUploadState.Files)-len(m.state.SlaveUploadState.Transferred))
+			if m.state.ResumeMonitorAfterTransfer {
+				// Early transfer batch failed while the download continues -
+				// return to monitoring; the final transfer pass retries them.
+				m.state.ResumeMonitorAfterTransfer = false
+				m.state.Phase = RemoteDownloadTaskPhaseMonitor
+				m.ResumeAfter(0)
+				return task.StatusSuspending, nil
+			}
 			return task.StatusError, fmt.Errorf(
 				"slave task failed to transfer %d files, first 5 errors: %s",
 				len(m.state.SlaveUploadState.Files)-len(m.state.SlaveUploadState.Transferred),
 				m.state.SlaveUploadState.First5TransferErrors,
 			)
 		} else {
+			if m.state.ResumeMonitorAfterTransfer {
+				for i := range m.state.SlaveUploadState.Transferred {
+					m.state.Transferred[m.state.SlaveUploadState.Files[i].Index] = struct{}{}
+				}
+				m.state.SlaveUploadTaskID = 0
+				m.state.ResumeMonitorAfterTransfer = false
+				m.state.Phase = RemoteDownloadTaskPhaseMonitor
+				m.ResumeAfter(0)
+				return task.StatusSuspending, nil
+			}
 			m.state.Phase = RemoteDownloadTaskPhaseAwaitSeeding
 			m.ResumeAfter(0)
 			return task.StatusSuspending, nil
@@ -519,6 +566,11 @@ func (m *RemoteDownloadTask) masterTransfer(ctx context.Context, dep dependency.
 	allFiles := make([]downloader.TaskFile, 0, len(m.state.Status.Files))
 	for _, f := range m.state.Status.Files {
 		if f.Selected {
+			// Early transfer batches only pick completed files; files still
+			// downloading are left for the final transfer pass.
+			if m.state.ResumeMonitorAfterTransfer && f.Progress < 1 {
+				continue
+			}
 			allFiles = append(allFiles, f)
 			totalSize += f.Size
 			totalCount++
@@ -622,12 +674,27 @@ func (m *RemoteDownloadTask) masterTransfer(ctx context.Context, dep dependency.
 
 	wg.Wait()
 	if failed > 0 {
+		if m.state.ResumeMonitorAfterTransfer {
+			// Early batch failed while the download continues - return to
+			// monitoring; the final transfer pass retries the failed files.
+			m.l.Warning("Early transfer batch failed for %d file(s), will retry after download completes.", failed)
+			m.state.ResumeMonitorAfterTransfer = false
+			m.state.Phase = RemoteDownloadTaskPhaseMonitor
+			m.ResumeAfter(0)
+			return task.StatusSuspending, nil
+		}
 		m.state.Failed = int(failed)
 		m.l.Error("Failed to transfer %d file(s).", failed)
 		return task.StatusError, fmt.Errorf("failed to transfer %d file(s), first 5 errors: %s", failed, ae.FormatFirstN(5))
 	}
 
 	m.l.Info("All files transferred.")
+	if m.state.ResumeMonitorAfterTransfer {
+		m.state.ResumeMonitorAfterTransfer = false
+		m.state.Phase = RemoteDownloadTaskPhaseMonitor
+		m.ResumeAfter(0)
+		return task.StatusSuspending, nil
+	}
 	m.state.Phase = RemoteDownloadTaskPhaseAwaitSeeding
 	return task.StatusSuspending, nil
 }

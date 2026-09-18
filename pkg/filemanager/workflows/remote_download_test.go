@@ -7,6 +7,7 @@ import (
 
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cluster"
+	"github.com/cloudreve/Cloudreve/v4/pkg/downloader"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -127,6 +128,24 @@ func TestBuildDownloadOptionsHeaders(t *testing.T) {
 	a.Equal("sid=abc", opts["cookie"])
 	_, hasHeader := opts["header"]
 	a.False(hasHeader)
+}
+
+func TestHasEarlyTransferCandidates(t *testing.T) {
+	a := assert.New(t)
+	m := &RemoteDownloadTask{state: &RemoteDownloadTaskState{}}
+
+	status := &downloader.TaskStatus{Files: []downloader.TaskFile{
+		{Index: 0, Selected: true, Progress: 1},
+		{Index: 1, Selected: true, Progress: 0.5},
+		{Index: 2, Selected: false, Progress: 1},
+	}}
+	a.True(m.hasEarlyTransferCandidates(status))
+
+	m.state.Transferred = map[int]interface{}{0: struct{}{}}
+	a.False(m.hasEarlyTransferCandidates(status))
+
+	status.Files[1].Progress = 1
+	a.True(m.hasEarlyTransferCandidates(status))
 }
 
 func TestNewRemoteDownloadTaskSanitizesFileName(t *testing.T) {
