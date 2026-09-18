@@ -65,6 +65,7 @@ export interface CustomNavItem {
   name: string;
   url: string;
   icon: string;
+  scope?: "public" | "user";
 }
 
 export interface CustomHTML {

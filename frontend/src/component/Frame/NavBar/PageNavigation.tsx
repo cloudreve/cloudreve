@@ -256,16 +256,18 @@ const PageNavigation = () => {
       )}
       {customNavItems && customNavItems.length > 0 && (
         <Box>
-          {customNavItems.map((item) => (
-            <SideNavItemComponent
-              key={item.name}
-              item={{
-                label: item.name,
-                iconifyName: item.icon,
-                path: item.url,
-              }}
-            />
-          ))}
+          {customNavItems
+            .filter((item) => isLogin || item.scope !== "user")
+            .map((item) => (
+              <SideNavItemComponent
+                key={item.name}
+                item={{
+                  label: item.name,
+                  iconifyName: item.icon,
+                  path: item.url,
+                }}
+              />
+            ))}
         </Box>
       )}
       {isLogin && isAdmin && (

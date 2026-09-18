@@ -244,6 +244,9 @@ type CustomNavItem struct {
 	Icon string `json:"icon"`
 	Name string `json:"name"`
 	URL  string `json:"url"`
+	// Scope limits display: "" or "public" shows to everyone, "user" only
+	// to logged-in accounts (#3578).
+	Scope string `json:"scope,omitempty"`
 }
 
 type CustomHTML struct {

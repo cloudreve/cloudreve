@@ -2,6 +2,7 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import {
   Box,
   IconButton,
+  MenuItem,
   Table,
   TableBody,
   TableCell,
@@ -18,6 +19,7 @@ import { useTranslation } from "react-i18next";
 import { CustomNavItem } from "../../../../api/site";
 import {
   DenseFilledTextField,
+  DenseSelect,
   NoWrapCell,
   NoWrapTableCell,
   SecondaryButton,
@@ -49,6 +51,7 @@ interface DraggableNavItemRowProps {
   inputCache: { [key: number]: { [field: string]: string | undefined } };
   onInputChange: (index: number, field: string, value: string) => void;
   onInputBlur: (index: number, field: keyof CustomNavItem) => void;
+  onFieldChange: (index: number, field: keyof CustomNavItem, value: string) => void;
   IconPreview: React.ComponentType<{ iconName: string }>;
   t: any;
   style?: React.CSSProperties;
@@ -69,6 +72,7 @@ const DraggableNavItemRow = React.memo(
         inputCache,
         onInputChange,
         onInputBlur,
+        onFieldChange,
         IconPreview,
         t,
         style,
@@ -143,6 +147,17 @@ const DraggableNavItemRow = React.memo(
               onBlur={() => onInputBlur(index, "url")}
               placeholder="https://example.com"
             />
+          </TableCell>
+          <TableCell>
+            <DenseSelect
+              fullWidth
+              size="small"
+              value={item.scope === "user" ? "user" : "public"}
+              onChange={(e) => onFieldChange(index, "scope", e.target.value as string)}
+            >
+              <MenuItem value="public">{t("settings.navScopePublic")}</MenuItem>
+              <MenuItem value="user">{t("settings.navScopeUser")}</MenuItem>
+            </DenseSelect>
           </TableCell>
           <TableCell align="right">
             <IconButton size="small" onClick={() => onDelete(index)}>
@@ -327,6 +342,7 @@ const CustomNavItems = ({ value, onChange }: CustomNavItemsProps) => {
                 <NoWrapTableCell width={200}>{t("settings.iconifyName")}</NoWrapTableCell>
                 <NoWrapTableCell width={200}>{t("settings.displayName")}</NoWrapTableCell>
                 <NoWrapTableCell width={250}>{t("settings.navItemUrl")}</NoWrapTableCell>
+                <NoWrapTableCell width={130}>{t("settings.navItemVisibility")}</NoWrapTableCell>
                 <NoWrapTableCell width={80} align="right"></NoWrapTableCell>
                 <NoWrapTableCell width={80}></NoWrapTableCell>
               </TableRow>
@@ -349,6 +365,7 @@ const CustomNavItems = ({ value, onChange }: CustomNavItemsProps) => {
                     inputCache={inputCache}
                     onInputChange={handleInputChange}
                     onInputBlur={handleInputBlur}
+                    onFieldChange={handleFieldChange}
                     IconPreview={IconPreview}
                     t={t}
                   />
@@ -356,7 +373,7 @@ const CustomNavItems = ({ value, onChange }: CustomNavItemsProps) => {
               })}
               {items.length === 0 && (
                 <TableRow>
-                  <NoWrapCell colSpan={6} align="center">
+                  <NoWrapCell colSpan={7} align="center">
                     <Typography variant="caption" color="text.secondary">
                       {t("application:setting.listEmpty")}
                     </Typography>
