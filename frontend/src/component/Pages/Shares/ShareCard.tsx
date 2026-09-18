@@ -31,6 +31,7 @@ import TimeBadge from "../../Common/TimeBadge.tsx";
 import { DenseDivider, SquareMenuItem } from "../../FileManager/ContextMenu/ContextMenu.tsx";
 import FileTypeIcon from "../../FileManager/Explorer/FileTypeIcon.tsx";
 import Clipboard from "../../Icons/Clipboard.tsx";
+import CloudDownloadOutlined from "../../Icons/CloudDownloadOutlined.tsx";
 import DeleteOutlined from "../../Icons/DeleteOutlined.tsx";
 import Eye from "../../Icons/Eye.tsx";
 import LinkEdit from "../../Icons/LinkEdit.tsx";
@@ -263,6 +264,12 @@ const ShareCard = ({ share, onShareDeleted, onLoad, loading, selecting, selected
                         >
                           <Eye sx={{ ml: 1, mr: 0.5 }} fontSize={"small"} />
                           {share?.visited ?? 0}
+                          <Tooltip title={t("application:share.downloads")}>
+                            <Box sx={{ display: "flex", alignItems: "center" }}>
+                              <CloudDownloadOutlined sx={{ ml: 1, mr: 0.5 }} fontSize={"small"} />
+                              {share?.downloaded ?? 0}
+                            </Box>
+                          </Tooltip>
                         </Box>
                       </Box>
                     )}
