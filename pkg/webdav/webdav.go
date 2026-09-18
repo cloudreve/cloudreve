@@ -875,7 +875,7 @@ func handleCopyMove(c *gin.Context, user *ent.User, fm manager.FileManager) (sta
 			}
 		}
 
-		return performCopyMove(ctx, fm, srcUri, dstUri, dstFolderUri, true, overwrite, dstExists)
+		return performCopyMove(ctx, fm, srcUri, dstUri, dstFolderUri, true, overwrite, dstExists, hashid.EncodeUserID(hasher, user.ID))
 	}
 
 	release, ls, status, err := confirmLock(c, fm, user, srcTarget, dstTarget, srcUri, dstUri)
@@ -893,13 +893,14 @@ func handleCopyMove(c *gin.Context, user *ent.User, fm manager.FileManager) (sta
 			return http.StatusBadRequest, errInvalidDepth
 		}
 	}
-	return performCopyMove(ctx, fm, srcUri, dstUri, dstFolderUri, false, overwrite, dstExists)
+	return performCopyMove(ctx, fm, srcUri, dstUri, dstFolderUri, false, overwrite, dstExists, hashid.EncodeUserID(hasher, user.ID))
 }
 
 type copyMoveOperations interface {
 	Delete(ctx context.Context, path []*fs.URI, opts ...fs.Option) error
 	MoveOrCopy(ctx context.Context, src []*fs.URI, dst *fs.URI, isCopy bool) error
 	Rename(ctx context.Context, path *fs.URI, newName string) (fs.File, error)
+	SharedAddressTranslation(ctx context.Context, path *fs.URI, opts ...fs.Option) (fs.File, *fs.URI, error)
 }
 
 func parseOverwrite(value string) (bool, error) {
@@ -918,7 +919,20 @@ func performCopyMove(
 	fm copyMoveOperations,
 	srcUri, dstUri, dstFolderUri *fs.URI,
 	isCopy, overwrite, dstExists bool,
+	uid string,
 ) (int, error) {
+	if srcUri.Name() != dstUri.Name() {
+		// A renamed move/copy lands at dstFolder/srcName before the rename;
+		// a different resource already occupying that path would hit the
+		// UNIQUE(parent, name) constraint mid-operation.
+		_, intermediateUri, err := fm.SharedAddressTranslation(ctx, dstFolderUri.Join(srcUri.Name()))
+		if err == nil && !intermediateUri.IsSame(srcUri, uid) {
+			return http.StatusPreconditionFailed, errDestinationExists
+		} else if err != nil && !ent.IsNotFound(err) {
+			return purposeStatusCodeFromError(err), err
+		}
+	}
+
 	if dstExists {
 		if !overwrite {
 			return http.StatusPreconditionFailed, errDestinationExists

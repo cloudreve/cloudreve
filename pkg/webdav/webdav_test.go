@@ -13,11 +13,14 @@ import (
 )
 
 type copyMoveOperationsStub struct {
-	calls      []string
-	deleteErr  error
-	moveErr    error
-	renameErr  error
-	moveIsCopy bool
+	calls         []string
+	deleteErr     error
+	moveErr       error
+	renameErr     error
+	moveIsCopy    bool
+	translateURI  *fs.URI
+	translateErr  error
+	translateHits int
 }
 
 func (s *copyMoveOperationsStub) Delete(context.Context, []*fs.URI, ...fs.Option) error {
@@ -34,6 +37,11 @@ func (s *copyMoveOperationsStub) MoveOrCopy(_ context.Context, _ []*fs.URI, _ *f
 func (s *copyMoveOperationsStub) Rename(context.Context, *fs.URI, string) (fs.File, error) {
 	s.calls = append(s.calls, "rename")
 	return nil, s.renameErr
+}
+
+func (s *copyMoveOperationsStub) SharedAddressTranslation(context.Context, *fs.URI, ...fs.Option) (fs.File, *fs.URI, error) {
+	s.translateHits++
+	return nil, s.translateURI, s.translateErr
 }
 
 func TestParseOverwrite(t *testing.T) {
@@ -67,8 +75,8 @@ func TestPerformCopyMove(t *testing.T) {
 	dstFolder := dst.DirUri()
 
 	t.Run("overwrite disabled", func(t *testing.T) {
-		operations := &copyMoveOperationsStub{}
-		status, err := performCopyMove(context.Background(), operations, src, dst, dstFolder, false, false, true)
+		operations := &copyMoveOperationsStub{translateErr: &ent.NotFoundError{}}
+		status, err := performCopyMove(context.Background(), operations, src, dst, dstFolder, false, false, true, "u1")
 		if status != http.StatusPreconditionFailed || !errors.Is(err, errDestinationExists) {
 			t.Fatalf("unexpected result: status=%d err=%v", status, err)
 		}
@@ -78,8 +86,8 @@ func TestPerformCopyMove(t *testing.T) {
 	})
 
 	t.Run("overwrite existing move", func(t *testing.T) {
-		operations := &copyMoveOperationsStub{}
-		status, err := performCopyMove(context.Background(), operations, src, dst, dstFolder, false, true, true)
+		operations := &copyMoveOperationsStub{translateErr: &ent.NotFoundError{}}
+		status, err := performCopyMove(context.Background(), operations, src, dst, dstFolder, false, true, true, "u1")
 		if err != nil || status != http.StatusNoContent {
 			t.Fatalf("unexpected result: status=%d err=%v", status, err)
 		}
@@ -92,8 +100,8 @@ func TestPerformCopyMove(t *testing.T) {
 	})
 
 	t.Run("new copy", func(t *testing.T) {
-		operations := &copyMoveOperationsStub{}
-		status, err := performCopyMove(context.Background(), operations, src, dst, dstFolder, true, true, false)
+		operations := &copyMoveOperationsStub{translateErr: &ent.NotFoundError{}}
+		status, err := performCopyMove(context.Background(), operations, src, dst, dstFolder, true, true, false, "u1")
 		if err != nil || status != http.StatusCreated {
 			t.Fatalf("unexpected result: status=%d err=%v", status, err)
 		}
@@ -102,6 +110,41 @@ func TestPerformCopyMove(t *testing.T) {
 		}
 		if !operations.moveIsCopy {
 			t.Fatal("copy was executed as move")
+		}
+	})
+
+	t.Run("intermediate src name occupied", func(t *testing.T) {
+		// dstFolder already holds a different file named src.Name(): the
+		// intermediate dstFolder/srcName state would collide mid-operation.
+		operations := &copyMoveOperationsStub{translateURI: mustWebDAVTestURI(t, "cloudreve://my/elsewhere")}
+		status, err := performCopyMove(context.Background(), operations, src, dst, dstFolder, false, true, true, "u1")
+		if status != http.StatusPreconditionFailed || !errors.Is(err, errDestinationExists) {
+			t.Fatalf("unexpected result: status=%d err=%v", status, err)
+		}
+		if len(operations.calls) != 0 {
+			t.Fatalf("unexpected operations: %v", operations.calls)
+		}
+	})
+
+	t.Run("intermediate is src itself", func(t *testing.T) {
+		// Same-folder rename: dstFolder/srcName resolves back to the source.
+		operations := &copyMoveOperationsStub{translateURI: src}
+		status, err := performCopyMove(context.Background(), operations, src, dst, dstFolder, false, true, true, "u1")
+		if err != nil || status != http.StatusNoContent {
+			t.Fatalf("unexpected result: status=%d err=%v", status, err)
+		}
+	})
+
+	t.Run("same-name move skips intermediate check", func(t *testing.T) {
+		sameNameDst := mustWebDAVTestURI(t, "cloudreve://my/other/source.temp")
+		sameNameFolder := sameNameDst.DirUri()
+		operations := &copyMoveOperationsStub{translateURI: mustWebDAVTestURI(t, "cloudreve://my/other/source.temp")}
+		status, err := performCopyMove(context.Background(), operations, src, sameNameDst, sameNameFolder, false, true, true, "u1")
+		if err != nil || status != http.StatusNoContent {
+			t.Fatalf("unexpected result: status=%d err=%v", status, err)
+		}
+		if operations.translateHits != 0 {
+			t.Fatalf("intermediate check ran for same-name move")
 		}
 	})
 }
