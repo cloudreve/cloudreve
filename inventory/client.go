@@ -149,9 +149,18 @@ func (d sqlite3Driver) Open(name string) (conn driver.Conn, err error) {
 	if err != nil {
 		return
 	}
-	_, err = conn.(sqlite3DriverConn).Exec("PRAGMA foreign_keys = ON;", nil)
-	if err != nil {
-		_ = conn.Close()
+	// WAL lets readers coexist with the writer; busy_timeout makes a brief
+	// lock wait instead of failing instantly with SQLITE_BUSY (#2917).
+	for _, pragma := range []string{
+		"PRAGMA journal_mode = WAL;",
+		"PRAGMA synchronous = NORMAL;",
+		"PRAGMA busy_timeout = 5000;",
+		"PRAGMA foreign_keys = ON;",
+	} {
+		if _, err = conn.(sqlite3DriverConn).Exec(pragma, nil); err != nil {
+			_ = conn.Close()
+			return
+		}
 	}
 	return
 }
