@@ -2,8 +2,8 @@ import dayjs from "dayjs";
 import i18next from "i18next";
 import { closeSnackbar, enqueueSnackbar } from "notistack";
 import streamSaver from "streamsaver";
-import { getFileEntityUrl } from "../../api/api.ts";
-import { FileResponse, FileType, Metadata } from "../../api/explorer.ts";
+import { getFileEntityUrl, getFileList } from "../../api/api.ts";
+import { FileResponse, FileType, ListResponse, Metadata } from "../../api/explorer.ts";
 import { GroupPermission } from "../../api/user.ts";
 import {
   DefaultCloseAction,
@@ -48,6 +48,32 @@ export function downloadFiles(index: number, files: FileResponse[]): AppThunk {
     } else {
       await dispatch(downloadMultipleFiles(files));
     }
+  };
+}
+
+// downloadAll fetches every page of the current directory listing and
+// downloads the whole set — the visible list may be only the first page.
+export function downloadAll(index: number): AppThunk {
+  return async (dispatch, getState) => {
+    const path = getState().fileManager[index]?.path;
+    if (!path) {
+      return;
+    }
+
+    const files: FileResponse[] = [];
+    let token: string | undefined = undefined;
+    do {
+      const res: ListResponse = await dispatch(
+        getFileList({ uri: path, next_page_token: token, page_size: 1000 }),
+      );
+      files.push(...(res.files ?? []));
+      token = res.pagination?.next_token;
+    } while (token);
+
+    if (files.length == 0) {
+      return;
+    }
+    await dispatch(downloadFiles(index, files));
   };
 }
 

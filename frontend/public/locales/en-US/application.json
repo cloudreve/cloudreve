@@ -470,7 +470,8 @@
     "ftsStatus": "Full-text index",
     "ftsIndexed": "Indexed",
     "ftsNotIndexed": "Not indexed",
-    "lineEnding": "Line ending"
+    "lineEnding": "Line ending",
+    "downloadAll": "Download all"
   },
   "modals": {
     "includePasswordInShareLink": "Include password in share link",
