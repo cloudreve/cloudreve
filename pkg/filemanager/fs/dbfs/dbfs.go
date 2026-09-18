@@ -40,7 +40,22 @@ const (
 type (
 	ContextHintCtxKey      struct{}
 	ByPassOwnerCheckCtxKey struct{}
+	// IsDownloadCtxKey marks the request as an explicit file download (as
+	// opposed to an inline preview fetch). Navigator hooks consult it.
+	IsDownloadCtxKey struct{}
 )
+
+// writePermitted reports whether the user may mutate file under the given
+// capability. File owners are always permitted; non-owners (e.g. share
+// visitors) require the capability in the file's resolved capability set,
+// which for share file systems is derived from the share's props.
+func (f *DBFS) writePermitted(file *File, capability NavigatorCapability) bool {
+	if file.Owner().ID == f.user.ID {
+		return true
+	}
+	caps := file.Capabilities()
+	return caps != nil && caps.Enabled(int(capability))
+}
 
 func NewDatabaseFS(u *ent.User, fileClient inventory.FileClient, shareClient inventory.ShareClient,
 	l logging.Logger, ls lock.LockSystem, settingClient setting.Provider,
@@ -451,7 +466,7 @@ func (f *DBFS) Get(ctx context.Context, path *fs.URI, opts ...fs.Option) (fs.Fil
 
 	// Calculate folder summary if requested
 	if o.loadFolderSummary && target != nil && target.Type() == types.FileTypeFolder {
-		if _, ok := ctx.Value(ByPassOwnerCheckCtxKey{}).(bool); !ok && target.OwnerID() != f.user.ID {
+		if _, ok := ctx.Value(ByPassOwnerCheckCtxKey{}).(bool); !ok && !f.writePermitted(target, NavigatorCapabilityRenameFile) {
 			return nil, fs.ErrOwnerOnly
 		}
 
@@ -804,6 +819,11 @@ func generateSavePath(policy *ent.StoragePolicy, req *fs.UploadRequest, user *en
 
 func canMoveOrCopyTo(src, dst *fs.URI, isCopy bool) bool {
 	if isCopy {
+		if src.FileSystem() == constants.FileSystemShare {
+			// Copy within the same share is allowed; write permission on the
+			// destination is enforced separately.
+			return dst.FileSystem() == constants.FileSystemShare && src.ID("") != "" && src.ID("") == dst.ID("")
+		}
 		return src.FileSystem() == dst.FileSystem() && src.FileSystem() == constants.FileSystemMy
 	} else {
 		switch src.FileSystem() {
@@ -811,7 +831,9 @@ func canMoveOrCopyTo(src, dst *fs.URI, isCopy bool) bool {
 			return dst.FileSystem() == constants.FileSystemMy || dst.FileSystem() == constants.FileSystemTrash
 		case constants.FileSystemTrash:
 			return dst.FileSystem() == constants.FileSystemMy
-
+		case constants.FileSystemShare:
+			// Move within the same share is allowed; cross-share moves are not.
+			return dst.FileSystem() == constants.FileSystemShare && src.ID("") != "" && src.ID("") == dst.ID("")
 		}
 	}
 

@@ -18,14 +18,22 @@ import (
 )
 
 var (
-	ErrShareNotFound = serializer.NewError(serializer.CodeNotFound, "Shared file does not exist", nil)
-	ErrNotPurchased  = serializer.NewError(serializer.CodePurchaseRequired, "You need to purchased this share", nil)
+	ErrShareNotFound          = serializer.NewError(serializer.CodeNotFound, "Shared file does not exist", nil)
+	ErrNotPurchased           = serializer.NewError(serializer.CodePurchaseRequired, "You need to purchased this share", nil)
+	ErrShareDownloadDisabled  = serializer.NewError(serializer.CodeNoPermissionErr, "Download is disabled for this share", nil)
+	ErrShareOperationDisabled = serializer.NewError(serializer.CodeNoPermissionErr, "This operation is not allowed for this share", nil)
 )
 
 const (
 	PurchaseTicketHeader = constants.CrHeaderPrefix + "Purchase-Ticket"
 )
 
+// shareNavigatorCapability is the static capability superset of the share
+// file system, populated in init() alongside the other navigator sets. The
+// navigator-level gate in getNavigator runs before the share is resolved, so
+// it must admit every action a share may grant. The effective per-share
+// permission is enforced after share resolution via the capability set
+// stamped onto resolved files (see Capabilities) and writePermitted.
 var shareNavigatorCapability = &boolset.BooleanSet{}
 
 // NewShareNavigator creates a navigator for user's "shared" file system.
@@ -131,6 +139,9 @@ func (n *shareNavigator) Root(ctx context.Context, path *fs.URI) (*File, error) 
 		return nil, ErrShareIncorrectPassword
 	}
 
+	// Share must be assigned before capabilities are derived from its props.
+	n.share = share
+
 	// Share permission setting should overwrite root folder's permission
 	n.shareRoot = newFile(nil, share.Edges.File)
 
@@ -174,7 +185,6 @@ func (n *shareNavigator) Root(ctx context.Context, path *fs.URI) (*File, error) 
 
 	n.ownerRoot = ownerRoot
 	n.ownerRoot.Path[pathIndexRoot] = newMyIDUri(hashid.EncodeUserID(n.hasher, n.owner.ID))
-	n.share = share
 	return n.shareRoot, nil
 }
 
@@ -240,6 +250,14 @@ func (n *shareNavigator) Children(ctx context.Context, parent *File, args *ListA
 		}, nil
 	}
 
+	// Drop-box shares accept uploads but never list existing content.
+	if n.share != nil && n.share.Props != nil && n.share.Props.UploadOnly {
+		return &ListResult{
+			Files:      []*File{},
+			Pagination: &inventory.PaginationResults{},
+		}, nil
+	}
+
 	return n.baseNavigator.children(ctx, parent, args)
 }
 
@@ -267,12 +285,69 @@ func (n *shareNavigator) Capabilities(isSearching bool) *fs.NavigatorProps {
 		MaxPageSize:           n.config.MaxPageSize,
 	}
 
+	// Once the share is resolved, narrow capabilities to what its props grant.
+	// This set is stamped onto resolved files and consulted by writePermitted.
+	if n.share != nil {
+		res.Capability = n.shareCapabilities()
+	}
+
 	if isSearching {
 		res.OrderByOptions = nil
 		res.OrderDirectionOptions = nil
 	}
 
 	return res
+}
+
+// shareCapabilities derives the effective capability set from share props.
+func (n *shareNavigator) shareCapabilities() *boolset.BooleanSet {
+	bs := &boolset.BooleanSet{}
+	boolset.Sets(map[NavigatorCapability]bool{
+		NavigatorCapabilityListChildren:  true,
+		NavigatorCapabilityDownloadFile:  true,
+		NavigatorCapabilityEnterFolder:   true,
+		NavigatorCapabilityInfo:          true,
+		NavigatorCapabilityGenerateThumb: true,
+	}, bs)
+
+	props := n.share.Props
+	if props == nil {
+		return bs
+	}
+
+	// Drop-box shares accept uploads but deny any read or edit of existing
+	// content; UploadOnly implies upload access and wins over edit grants.
+	// It is folder-only: on a single-file share it would strip download from
+	// the shared file itself.
+	if props.UploadOnly && !n.singleFileShare {
+		boolset.Sets(map[NavigatorCapability]bool{
+			NavigatorCapabilityListChildren: false,
+			NavigatorCapabilityDownloadFile: false,
+			NavigatorCapabilityUploadFile:   true,
+			NavigatorCapabilityCreateFile:   true,
+			NavigatorCapabilityLockFile:     true,
+			NavigatorCapabilityRenameFile:   false,
+			NavigatorCapabilityDeleteFile:   false,
+			NavigatorCapabilitySoftDelete:   false,
+		}, bs)
+		return bs
+	}
+
+	// PreviewOnly keeps DownloadFile so viewers can fetch entities; the
+	// download action itself is denied in ExecuteHook when the request is an
+	// explicit download.
+	if props.AllowUpload || props.AllowEdit {
+		boolset.Set(int(NavigatorCapabilityUploadFile), true, bs)
+		boolset.Set(int(NavigatorCapabilityCreateFile), true, bs)
+		boolset.Set(int(NavigatorCapabilityLockFile), true, bs)
+	}
+	if props.AllowEdit {
+		boolset.Set(int(NavigatorCapabilityRenameFile), true, bs)
+		boolset.Set(int(NavigatorCapabilityDeleteFile), true, bs)
+		boolset.Set(int(NavigatorCapabilitySoftDelete), true, bs)
+	}
+
+	return bs
 }
 
 func (n *shareNavigator) FollowTx(ctx context.Context) (func(), error) {
@@ -302,7 +377,16 @@ func (n *shareNavigator) FollowTx(ctx context.Context) (func(), error) {
 func (n *shareNavigator) ExecuteHook(ctx context.Context, hookType fs.HookType, file *File) error {
 	switch hookType {
 	case fs.HookTypeBeforeDownload:
-		return n.shareClient.Downloaded(ctx, n.share)
+		// Preview-only shares deny explicit downloads but still allow
+		// entity fetches for inline viewers.
+		if n.share != nil && n.share.Props != nil && n.share.Props.PreviewOnly {
+			if isDownload, _ := ctx.Value(IsDownloadCtxKey{}).(bool); isDownload {
+				return ErrShareDownloadDisabled
+			}
+		}
+		if err := n.shareClient.Downloaded(ctx, n.share); err != nil {
+			n.l.Warning("Failed to increase share download count: %s", err)
+		}
 	}
 	return nil
 }

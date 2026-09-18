@@ -91,9 +91,12 @@ func (m *manager) GetDirectLink(ctx context.Context, urls ...*fs.URI) ([]DirectL
 			continue
 		}
 
-		// Hooks for entity download
+		// Hooks for entity download; failures deny the link. Direct links are
+		// always explicit downloads.
+		ctx = context.WithValue(ctx, dbfs.IsDownloadCtxKey{}, true)
 		if err := m.fs.ExecuteNavigatorHooks(ctx, fs.HookTypeBeforeDownload, file); err != nil {
-			m.l.Warning("Failed to execute navigator hooks: %s", err)
+			ae.Add(url.String(), err)
+			continue
 		}
 
 		if useRedirect {
@@ -222,6 +225,14 @@ func (m *manager) GetEntityUrls(ctx context.Context, args []GetEntityUrlArgs, op
 			continue
 		}
 
+		// The navigator-level capability check runs before a share is resolved;
+		// the resolved file's capability set is authoritative (e.g. drop-box
+		// shares strip DownloadFile from it).
+		if caps := file.Capabilities(); caps == nil || !caps.Enabled(int(dbfs.NavigatorCapabilityDownloadFile)) {
+			ae.Add(arg.URI.String(), fs.ErrNotSupportedAction.WithError(fmt.Errorf("download is not allowed")))
+			continue
+		}
+
 		if file.Type() != types.FileTypeFile {
 			ae.Add(arg.URI.String(), fs.ErrEntityNotExist)
 			continue
@@ -246,9 +257,14 @@ func (m *manager) GetEntityUrls(ctx context.Context, args []GetEntityUrlArgs, op
 			}
 		}
 
-		// Hooks for entity download
+		// Hooks for entity download; failures deny the URL. Preview-only
+		// shares deny explicit downloads here via the IsDownload flag.
+		if o.IsDownload {
+			ctx = context.WithValue(ctx, dbfs.IsDownloadCtxKey{}, true)
+		}
 		if err := m.fs.ExecuteNavigatorHooks(ctx, fs.HookTypeBeforeDownload, file); err != nil {
-			m.l.Warning("Failed to execute navigator hooks: %s", err)
+			ae.Add(arg.URI.String(), err)
+			continue
 		}
 
 		policy, d, err := m.getEntityPolicyDriver(ctx, target, nil)

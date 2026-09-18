@@ -26,11 +26,12 @@ export const canShowInfo = (cap: Boolset) => {
 };
 
 export const canUpdate = (opt: DisplayOption) => {
+  // Overwriting an existing file requires the rename capability server-side.
   return !!(
     opt.allUpdatable &&
     opt.hasFile &&
     opt.orCapability?.enabled(NavigatorCapability.upload_file) &&
-    opt.allUpdatable
+    opt.orCapability?.enabled(NavigatorCapability.rename_file)
   );
 };
 
@@ -117,7 +118,9 @@ export const getActionOpt = (
     }
 
     const parentCap = new Boolset(parent.capability);
-    display.showCreateFolder = parentCap.enabled(NavigatorCapability.create_file) && parent.owned;
+    const parentInShare = new CrUri(parent.path).fs() == Filesystem.share;
+    display.showCreateFolder =
+      parentCap.enabled(NavigatorCapability.create_file) && (parent.owned || parentInShare);
     display.showCreateFile = display.showCreateFolder && fmIndex == FileManagerIndex.main;
     display.showUpload = display.showCreateFile;
     if (display.showCreateFile) {
@@ -138,9 +141,12 @@ export const getActionOpt = (
   }
 
   const parentUrl = new CrUri(targets?.[0]?.path ?? defaultPath);
+  const inShare = parentUrl.fs() == Filesystem.share;
   targets.forEach((target) => {
-    let readable = true;
-    let updatable = target.owned && parentUrl.fs() != Filesystem.share;
+    const readable = true;
+    // Share visitors are never owners; their writable actions are gated by
+    // the per-file capability boolset stamped from the share's props.
+    const updatable = target.owned || inShare;
 
     if (display.allReadable && !readable) {
       display.allReadable = false;
@@ -210,7 +216,11 @@ export const getActionOpt = (
     display.allUpdatable &&
     display.orCapability &&
     display.orCapability.enabled(NavigatorCapability.rename_file);
-  display.showCopy = display.hasUpdatable && !!display.orCapability;
+  display.showCopy =
+    display.hasUpdatable &&
+    display.orCapability &&
+    display.orCapability.enabled(NavigatorCapability.download_file) &&
+    (!inShare || display.orCapability.enabled(NavigatorCapability.create_file));
   display.showShare =
     targets.length == 1 &&
     !!currentUser &&
@@ -221,7 +231,11 @@ export const getActionOpt = (
     display.orCapability.enabled(NavigatorCapability.share) &&
     (!targets[0].metadata ||
       (!targets[0].metadata[Metadata.share_redirect] && !targets[0].metadata[Metadata.restore_uri]));
-  display.showMove = display.hasUpdatable && !!display.orCapability;
+  display.showMove =
+    display.hasUpdatable &&
+    display.orCapability &&
+    display.orCapability.enabled(NavigatorCapability.delete_file) &&
+    (!inShare || display.orCapability.enabled(NavigatorCapability.create_file));
   display.showTags =
     display.hasUpdatable && display.orCapability && display.orCapability.enabled(NavigatorCapability.update_metadata);
   display.showChangeFolderColor =

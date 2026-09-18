@@ -225,6 +225,14 @@ type (
 		ShareView bool `json:"share_view,omitempty"`
 		// Whether to automatically show readme file in share view
 		ShowReadMe bool `json:"show_read_me,omitempty"`
+		// Whether share visitors can upload new files into the shared folder
+		AllowUpload bool `json:"allow_upload,omitempty"`
+		// Whether share visitors can rename, move and delete files (implies upload)
+		AllowEdit bool `json:"allow_edit,omitempty"`
+		// Whether share visitors can browse and preview but not download
+		PreviewOnly bool `json:"preview_only,omitempty"`
+		// Whether share visitors can upload but cannot list or download (drop box)
+		UploadOnly bool `json:"upload_only,omitempty"`
 	}
 
 	OAuthClientProps struct {

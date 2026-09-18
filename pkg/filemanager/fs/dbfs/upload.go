@@ -34,8 +34,8 @@ func (f *DBFS) PreValidateUpload(ctx context.Context, dst *fs.URI, files ...fs.P
 	}
 
 	// check ownership
-	if f.user.ID != dstFile.OwnerID() {
-		return fmt.Errorf("failed to evaluate permission: %w", err)
+	if !f.writePermitted(dstFile, NavigatorCapabilityUploadFile) {
+		return fmt.Errorf("failed to evaluate permission: %w", fs.ErrOwnerOnly)
 	}
 
 	total := int64(0)
@@ -107,7 +107,11 @@ func (f *DBFS) PrepareUpload(ctx context.Context, req *fs.UploadRequest, opts ..
 		return nil, fs.ErrPathNotExist
 	}
 
-	if _, ok := ctx.Value(ByPassOwnerCheckCtxKey{}).(bool); !ok && ancestor.OwnerID() != f.user.ID {
+	requiredWriteCap := NavigatorCapabilityUploadFile
+	if fileExisted {
+		requiredWriteCap = NavigatorCapabilityRenameFile
+	}
+	if _, ok := ctx.Value(ByPassOwnerCheckCtxKey{}).(bool); !ok && !f.writePermitted(ancestor, requiredWriteCap) {
 		return nil, fs.ErrOwnerOnly
 	}
 
@@ -409,7 +413,7 @@ func (f *DBFS) CancelUploadSession(ctx context.Context, path *fs.URI, sessionID 
 		}
 	}
 
-	if _, ok := ctx.Value(ByPassOwnerCheckCtxKey{}).(bool); !ok && filePrivate.OwnerID() != f.user.ID {
+	if _, ok := ctx.Value(ByPassOwnerCheckCtxKey{}).(bool); !ok && !f.writePermitted(filePrivate, NavigatorCapabilityUploadFile) {
 		return nil, nil, fs.ErrOwnerOnly
 	}
 

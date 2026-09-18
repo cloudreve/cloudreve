@@ -125,11 +125,18 @@ func init() {
 		NavigatorCapabilityEnterFolder:    true,
 		NavigatorCapabilityModifyProps:    true,
 	}, myNavigatorCapability)
+	// Static superset admitting every action a share's props may grant;
+	// per-share props narrow it after share resolution.
 	boolset.Sets(map[NavigatorCapability]bool{
+		NavigatorCapabilityCreateFile:     true,
+		NavigatorCapabilityRenameFile:     true,
+		NavigatorCapabilityUploadFile:     true,
 		NavigatorCapabilityDownloadFile:   true,
 		NavigatorCapabilityListChildren:   true,
 		NavigatorCapabilityGenerateThumb:  true,
+		NavigatorCapabilityDeleteFile:     true,
 		NavigatorCapabilityLockFile:       true,
+		NavigatorCapabilitySoftDelete:     true,
 		NavigatorCapabilityInfo:           true,
 		NavigatorCapabilityVersionControl: true,
 		NavigatorCapabilityEnterFolder:    true,

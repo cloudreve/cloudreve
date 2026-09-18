@@ -123,6 +123,10 @@ type (
 		Expire          *time.Time
 		ShareView       bool
 		ShowReadMe      bool
+		AllowUpload     bool
+		AllowEdit       bool
+		PreviewOnly     bool
+		UploadOnly      bool
 	}
 
 	FullTextSearchResults struct {
