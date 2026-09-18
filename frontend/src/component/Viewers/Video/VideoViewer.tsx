@@ -469,6 +469,26 @@ const VideoViewer = () => {
                 fontSize: `${subtitleStyle.fontSize ?? 20}px`,
               },
             },
+            settings: [
+              {
+                name: "loop",
+                html: t("application:fileManager.loop"),
+                switch: false,
+                mounted(item: any) {
+                  const enabled = this.storage.get("loop") === true;
+                  if (enabled) {
+                    item.switch = true;
+                    this.loop = true;
+                  }
+                },
+                onSwitch(item: any) {
+                  const next = !item.switch;
+                  this.loop = next;
+                  this.storage.set("loop", next);
+                  return next;
+                },
+              },
+            ],
             plugins: [],
             lang: t("artPlayerLocaleCode", { ns: "common" }), // TODO: review
           }}

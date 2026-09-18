@@ -230,6 +230,7 @@
     "color": "颜色",
     "fontSize": "字体大小",
     "disableSubtitle": "禁用字幕",
+    "loop": "循环播放",
     "noSubtitle": "没有在当前目录下找到 ASS/SRT/VTT 字幕文件。",
     "subtitleStyles": "字幕样式",
     "subtitles": "字幕",

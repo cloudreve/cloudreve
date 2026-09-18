@@ -230,6 +230,7 @@
     "color": "Color",
     "fontSize": "Font size",
     "disableSubtitle": "Disable subtitle",
+    "loop": "Loop",
     "noSubtitle": "No ASS/SRT/VTT subtitle files found under current folder.",
     "subtitleStyles": "Subtitle styles",
     "subtitles": "Subtitles",
