@@ -269,6 +269,10 @@ const (
 	GroupPermissionSetExplicitUser_placeholder
 	GroupPermissionIgnoreFileOwnership // not used
 	GroupPermissionUniqueRedirectDirectLink
+	// GroupPermissionWebDAVReadOnly restricts the group's WebDAV access to
+	// read operations — write methods (PUT, MKCOL, DELETE, COPY, MOVE, LOCK,
+	// PROPPATCH) are rejected even if the group's WebDAV access is enabled.
+	GroupPermissionWebDAVReadOnly
 )
 
 const (

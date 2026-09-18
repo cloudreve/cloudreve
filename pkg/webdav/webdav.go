@@ -190,7 +190,29 @@ func confirmLock(c *gin.Context, fm manager.FileManager, user *ent.User, srcAnc,
 	return nil, nil, http.StatusPreconditionFailed, ErrLocked
 }
 
+// davWriteForbidden reports whether the user is confined to read-only WebDAV
+// access, either by a group-level restriction or a read-only dav account.
+// Read-only access allows GET/HEAD/OPTIONS/PROPFIND and rejects every
+// state-changing method.
+func davWriteForbidden(user *ent.User) bool {
+	if user == nil {
+		return false
+	}
+	if len(user.Edges.DavAccounts) > 0 &&
+		user.Edges.DavAccounts[0].Options.Enabled(int(types.DavAccountReadOnly)) {
+		return true
+	}
+	if user.Edges.Group != nil &&
+		user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionWebDAVReadOnly)) {
+		return true
+	}
+	return false
+}
+
 func handleMkcol(c *gin.Context, user *ent.User, fm manager.FileManager) (status int, err error) {
+	if davWriteForbidden(user) {
+		return http.StatusForbidden, nil
+	}
 	_, reqPath, status, err := stripPrefix(c.Request.URL.Path, user)
 	if err != nil {
 		return status, err
@@ -227,6 +249,9 @@ func handleMkcol(c *gin.Context, user *ent.User, fm manager.FileManager) (status
 }
 
 func handlePut(c *gin.Context, user *ent.User, fm manager.FileManager) (status int, err error) {
+	if davWriteForbidden(user) {
+		return http.StatusForbidden, nil
+	}
 	_, reqPath, status, err := stripPrefix(c.Request.URL.Path, user)
 	if err != nil {
 		return status, err
@@ -439,6 +464,12 @@ func handleRangedPut(ctx context.Context, c *gin.Context, user *ent.User, m mana
 		return http.StatusInternalServerError, err
 	}
 	if !allReceived {
+		// If the session record vanished mid-upload, coverage can never
+		// complete — fail so the client retries rather than leaving a stuck
+		// placeholder.
+		if _, ok := kv.Get(manager.UploadSessionCachePrefix + sessionKey); !ok {
+			return http.StatusConflict, errors.New("upload session expired")
+		}
 		return http.StatusCreated, nil
 	}
 
@@ -466,7 +497,7 @@ func handleOptions(c *gin.Context, user *ent.User, fm manager.FileManager) (stat
 		if target, _, err := fm.SharedAddressTranslation(c, reqPath); err == nil {
 			allow = allow[:1]
 			read, update, del, create := true, true, true, true
-			if target.OwnerID() != user.ID {
+			if target.OwnerID() != user.ID || davWriteForbidden(user) {
 				update = false
 				del = false
 				create = false
@@ -475,7 +506,10 @@ func handleOptions(c *gin.Context, user *ent.User, fm manager.FileManager) (stat
 				allow = append(allow, "DELETE", "MOVE")
 			}
 			if read {
-				allow = append(allow, "COPY", "PROPFIND")
+				if !davWriteForbidden(user) {
+					allow = append(allow, "COPY")
+				}
+				allow = append(allow, "PROPFIND")
 				if target.Type() == types.FileTypeFile {
 					allow = append(allow, "GET", "HEAD", "POST")
 				}
@@ -559,6 +593,9 @@ func handleUnlock(c *gin.Context, user *ent.User, fm manager.FileManager) (retSt
 }
 
 func handleLock(c *gin.Context, user *ent.User, fm manager.FileManager) (retStatus int, retErr error) {
+	if davWriteForbidden(user) {
+		return http.StatusForbidden, nil
+	}
 	duration, err := parseTimeout(c.Request.Header.Get("Timeout"))
 	if err != nil {
 		return http.StatusBadRequest, err
@@ -732,6 +769,9 @@ func handlePropfind(c *gin.Context, user *ent.User, fm manager.FileManager) (sta
 }
 
 func handleDelete(c *gin.Context, user *ent.User, fm manager.FileManager) (status int, err error) {
+	if davWriteForbidden(user) {
+		return http.StatusForbidden, nil
+	}
 	_, reqPath, status, err := stripPrefix(c.Request.URL.Path, user)
 	if err != nil {
 		return status, err
@@ -759,6 +799,9 @@ func handleDelete(c *gin.Context, user *ent.User, fm manager.FileManager) (statu
 }
 
 func handleCopyMove(c *gin.Context, user *ent.User, fm manager.FileManager) (status int, err error) {
+	if davWriteForbidden(user) {
+		return http.StatusForbidden, nil
+	}
 	hdr := c.Request.Header.Get("Destination")
 	if hdr == "" {
 		return http.StatusBadRequest, errInvalidDestination
@@ -902,6 +945,9 @@ func performCopyMove(
 }
 
 func handleProppatch(c *gin.Context, user *ent.User, fm manager.FileManager) (status int, err error) {
+	if davWriteForbidden(user) {
+		return http.StatusForbidden, nil
+	}
 	_, reqPath, status, err := stripPrefix(c.Request.URL.Path, user)
 	if err != nil {
 		return status, err

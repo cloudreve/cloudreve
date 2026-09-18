@@ -6,6 +6,9 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/cloudreve/Cloudreve/v4/ent"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/boolset"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 )
 
@@ -154,5 +157,36 @@ func TestParseContentRange(t *testing.T) {
 		if got == nil || *got != *tt.want {
 			t.Fatalf("header %q: got %+v, want %+v", tt.header, got, tt.want)
 		}
+	}
+}
+
+func TestDavWriteForbidden(t *testing.T) {
+	readOnlyAccount := &boolset.BooleanSet{}
+	boolset.Set(types.DavAccountReadOnly, true, readOnlyAccount)
+	readOnlyGroup := &boolset.BooleanSet{}
+	boolset.Set(types.GroupPermissionWebDAVReadOnly, true, readOnlyGroup)
+
+	mkUser := func(group *boolset.BooleanSet, account *boolset.BooleanSet) *ent.User {
+		u := &ent.User{}
+		if group != nil {
+			u.SetGroup(&ent.Group{Permissions: group})
+		}
+		if account != nil {
+			u.Edges.DavAccounts = []*ent.DavAccount{{Options: account}}
+		}
+		return u
+	}
+
+	if !davWriteForbidden(mkUser(nil, readOnlyAccount)) {
+		t.Fatal("read-only dav account not blocked")
+	}
+	if !davWriteForbidden(mkUser(readOnlyGroup, &boolset.BooleanSet{})) {
+		t.Fatal("read-only group not blocked")
+	}
+	if davWriteForbidden(mkUser(&boolset.BooleanSet{}, &boolset.BooleanSet{})) {
+		t.Fatal("normal user blocked")
+	}
+	if davWriteForbidden(nil) {
+		t.Fatal("nil user blocked")
 	}
 }

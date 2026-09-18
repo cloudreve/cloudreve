@@ -1264,6 +1264,8 @@
     "allowWabDAVDes": "If disabled, users cannot connect to the storage via the WebDAV protocol",
     "allowWabDAVProxy": "WebDAV Proxy",
     "allowWabDAVProxyDes": "If enabled, users can configure the WebDAV to be proxied by Cloudreve when downloading files.",
+    "wabDAVReadOnly": "WebDAV read-only",
+    "wabDAVReadOnlyDes": "If enabled, WebDAV mounts for users in this group become read-only — uploads, deletes, moves and other write methods are rejected.",
     "compressTask": "Compression/Decompression tasks",
     "compressTaskDes": "If enabled, users can do compression/decompression for files online.",
     "compressSize": "Maximum file size to be compressed",

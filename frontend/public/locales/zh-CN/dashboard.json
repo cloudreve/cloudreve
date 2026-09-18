@@ -1264,6 +1264,8 @@
     "allowWabDAVDes": "关闭后，用户无法通过 WebDAV 协议连接至网盘。",
     "allowWabDAVProxy": "WebDAV 代理",
     "allowWabDAVProxyDes": "启用后，用户可以配置 WebDAV 下载经由 Cloudreve 中转。",
+    "wabDAVReadOnly": "WebDAV 只读",
+    "wabDAVReadOnlyDes": "启用后，该用户组的 WebDAV 挂载变为只读——上传、删除、移动及其他写操作将被拒绝。",
     "compressTask": "压缩/解压缩任务",
     "compressTaskDes": "开启后，用户可以在线压缩/解压缩文件。",
     "compressSize": "待压缩文件最大大小",

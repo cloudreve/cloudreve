@@ -93,6 +93,7 @@ export const GroupPermission = {
   redirected_source: 11,
   advance_delete: 12,
   unique_direct_link: 17,
+  webdav_read_only: 18,
 };
 
 export interface UserSettings {

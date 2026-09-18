@@ -63,6 +63,16 @@ const FileManagementSection = () => {
     [setGroup],
   );
 
+  const onWabDAVReadOnlyChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setGroup((p: GroupEnt) => ({
+        ...p,
+        permissions: new Boolset(p.permissions).set(GroupPermission.webdav_read_only, e.target.checked).toString(),
+      }));
+    },
+    [setGroup],
+  );
+
   const onAllowCompressTaskChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setGroup((p: GroupEnt) => ({
@@ -184,6 +194,20 @@ const FileManagementSection = () => {
                     label={t("group.allowWabDAVProxy")}
                   />
                   <NoMarginHelperText>{t("group.allowWabDAVProxyDes")}</NoMarginHelperText>
+                </FormControl>
+              </SettingForm>
+              <SettingForm lgWidth={5}>
+                <FormControl fullWidth>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={permission.enabled(GroupPermission.webdav_read_only)}
+                        onChange={onWabDAVReadOnlyChange}
+                      />
+                    }
+                    label={t("group.wabDAVReadOnly")}
+                  />
+                  <NoMarginHelperText>{t("group.wabDAVReadOnlyDes")}</NoMarginHelperText>
                 </FormControl>
               </SettingForm>
             </Collapse>

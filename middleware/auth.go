@@ -161,9 +161,10 @@ func WebDAVAuth() gin.HandlerFunc {
 		}
 
 		// 检查是否只读
-		if expectedUser.Edges.DavAccounts[0].Options.Enabled(int(types.DavAccountReadOnly)) {
+		if expectedUser.Edges.DavAccounts[0].Options.Enabled(int(types.DavAccountReadOnly)) ||
+			group.Permissions.Enabled(int(types.GroupPermissionWebDAVReadOnly)) {
 			switch c.Request.Method {
-			case http.MethodDelete, http.MethodPut, "MKCOL", "COPY", "MOVE", "LOCK", "UNLOCK":
+			case http.MethodDelete, http.MethodPut, "MKCOL", "COPY", "MOVE", "LOCK", "UNLOCK", "PROPPATCH":
 				c.Status(http.StatusForbidden)
 				c.Abort()
 				return
