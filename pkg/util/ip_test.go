@@ -322,9 +322,9 @@ func TestIPMatcher_MatchIP_WithNetIP(t *testing.T) {
 
 func TestWildcardToCIDR(t *testing.T) {
 	tests := []struct {
-		pattern  string
-		cidr     string
-		wantErr  bool
+		pattern string
+		cidr    string
+		wantErr bool
 	}{
 		{"192.168.1.*", "192.168.1.0/24", false},
 		{"192.168.*.*", "192.168.0.0/16", false},

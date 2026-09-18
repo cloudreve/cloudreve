@@ -28,7 +28,7 @@ func Init() error {
 	if confDBType == "sqlite3" {
 		confDBType = "sqlite"
 	}
-	
+
 	// 兼容 "mariadb" 数据库
 	if confDBType == "mariadb" {
 		confDBType = "mysql"

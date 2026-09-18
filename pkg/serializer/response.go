@@ -28,8 +28,8 @@ func NewResponseWithGobData(c context.Context, data interface{}) Response {
 	return Response{Data: w.Bytes()}
 }
 
-// GobDecode 将 Response 正文解码至目标指针
-func (r *Response) GobDecode(target interface{}) {
+// DecodeGob 将 Response 正文解码至目标指针
+func (r *Response) DecodeGob(target interface{}) {
 	src := r.Data.(string)
 	raw := make([]byte, len(src)*len(src)/base64.StdEncoding.DecodedLen(len(src)))
 	base64.StdEncoding.Decode(raw, []byte(src))

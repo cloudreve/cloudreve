@@ -141,7 +141,7 @@ func (service *TestNodeDownloaderService) Test(c *gin.Context) (string, error) {
 			request.WithCorrelationID(),
 			request.WithSlaveMeta(service.Node.ID),
 			request.WithMasterMeta(settings.SiteBasic(c).ID, settings.SiteURL(setting.UseFirstSiteUrl(c)).String()),
-			request.WithCredential(auth.HMACAuth{[]byte(service.Node.SlaveKey)}, int64(settings.SlaveRequestSignTTL(c))),
+			request.WithCredential(auth.HMACAuth{SecretKey: []byte(service.Node.SlaveKey)}, int64(settings.SlaveRequestSignTTL(c))),
 			request.WithEndpoint(service.Node.Server),
 		), service.Node.Settings)
 	}

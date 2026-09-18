@@ -47,7 +47,7 @@ func New(ctx context.Context, policy *ent.StoragePolicy, settings setting.Provid
 	return &Driver{
 		Policy:       policy,
 		Client:       request.NewClient(config),
-		AuthInstance: auth.HMACAuth{[]byte(policy.Edges.Node.SlaveKey)},
+		AuthInstance: auth.HMACAuth{SecretKey: []byte(policy.Edges.Node.SlaveKey)},
 		uploadClient: client,
 		settings:     settings,
 		config:       config,
