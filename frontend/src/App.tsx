@@ -242,6 +242,7 @@ interface themeOptions {
 interface singleThemeOption {
   light: ThemeOptions;
   dark?: ThemeOptions;
+  hidden?: boolean;
 }
 
 const getPreferredTheme = (
@@ -250,16 +251,21 @@ const getPreferredTheme = (
   preferredTheme?: string,
   defaultTheme?: string,
 ): ThemeOptions => {
+  // Hidden themes are not user-selectable; fall back to the default when the
+  // preferred (or the last remaining) theme is hidden.
+  const visible = Object.values(opts).filter((o) => !o.hidden);
+  const pool = visible.length > 0 ? visible : Object.values(opts);
+
   let themeConfig = {} as singleThemeOption;
-  if (defaultTheme && opts[defaultTheme]) {
+  if (defaultTheme && opts[defaultTheme] && !opts[defaultTheme].hidden) {
     themeConfig = opts[defaultTheme];
   }
-  if (preferredTheme && opts[preferredTheme]) {
+  if (preferredTheme && opts[preferredTheme] && !opts[preferredTheme].hidden) {
     themeConfig = opts[preferredTheme];
   }
 
   if (!themeConfig?.light) {
-    themeConfig = Object.values(opts)[0];
+    themeConfig = pool[0];
   }
 
   if (mode === "dark" && themeConfig.dark) {

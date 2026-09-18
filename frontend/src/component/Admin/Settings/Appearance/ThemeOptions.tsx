@@ -36,6 +36,7 @@ export interface ThemeOptionsProps {
 interface ThemeOption {
   id: string;
   config: {
+    hidden?: boolean;
     light: {
       palette: {
         primary: {
@@ -234,6 +235,15 @@ const ThemeOptions = ({ value, onChange, defaultTheme, onDefaultThemeChange }: T
     [onDefaultThemeChange],
   );
 
+  const handleVisibilityChange = useCallback(
+    (id: string, visible: boolean) => {
+      const newOptions = { ...options };
+      newOptions[id] = { ...newOptions[id], hidden: !visible };
+      handleSave(newOptions);
+    },
+    [options, handleSave],
+  );
+
   const optionsArray = useMemo(() => {
     return Object.entries(options).map(([id, config]) => ({
       id,
@@ -256,6 +266,7 @@ const ThemeOptions = ({ value, onChange, defaultTheme, onDefaultThemeChange }: T
             <TableHead>
               <TableRow>
                 <NoWrapTableCell width={50}>{t("settings.defaultTheme")}</NoWrapTableCell>
+                <NoWrapTableCell width={50}>{t("settings.themeVisible")}</NoWrapTableCell>
                 <NoWrapTableCell width={150}>{t("settings.primaryColor")}</NoWrapTableCell>
                 <NoWrapTableCell width={150}>{t("settings.secondaryColor")}</NoWrapTableCell>
                 <NoWrapTableCell width={150}>{t("settings.primaryColorDark")}</NoWrapTableCell>
@@ -271,6 +282,13 @@ const ThemeOptions = ({ value, onChange, defaultTheme, onDefaultThemeChange }: T
                       size="small"
                       checked={option.id === defaultTheme}
                       onChange={() => handleDefaultThemeChange(option.id)}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <StyledCheckbox
+                      size="small"
+                      checked={!option.config.hidden}
+                      onChange={(e) => handleVisibilityChange(option.id, e.target.checked)}
                     />
                   </TableCell>
                   <TableCell>

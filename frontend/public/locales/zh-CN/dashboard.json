@@ -841,7 +841,8 @@
     "ssoRegisterEnabled": "允许自动注册",
     "ssoRegisterEnabledDes": "用户首次通过 SSO 登录时自动创建本地账号。下方的注册邮箱过滤规则同样适用。",
     "ssoCallbackUrl": "回调地址",
-    "ssoCallbackUrlDes": "请在身份提供方中将此 URL 注册为 Redirect/Callback URL：<0>{{url}}</0>"
+    "ssoCallbackUrlDes": "请在身份提供方中将此 URL 注册为 Redirect/Callback URL：<0>{{url}}</0>",
+    "themeVisible": "可见"
   },
   "giftCodes": {
     "giftCodesSettings": "礼品码",

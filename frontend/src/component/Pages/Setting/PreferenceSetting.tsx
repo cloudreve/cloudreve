@@ -233,14 +233,16 @@ const PreferenceSetting = ({ setting, setSetting }: PreferenceSettingProps) => {
       </SettingForm>
       <SettingForm title={t("setting.themeColor")} lgWidth={12}>
         <SelectorBox sx={{ gap: 1 }}>
-          {Object.keys(themeOptions).map((color, index) => (
-            <ColorCircle
-              size={30}
-              color={color}
-              onClick={() => applyTheme(color)}
-              selected={(preferredTheme && preferredTheme == color) || (!preferredTheme && defaultTheme == color)}
-            />
-          ))}
+          {Object.keys(themeOptions)
+            .filter((color) => !themeOptions[color]?.hidden)
+            .map((color, index) => (
+              <ColorCircle
+                size={30}
+                color={color}
+                onClick={() => applyTheme(color)}
+                selected={(preferredTheme && preferredTheme == color) || (!preferredTheme && defaultTheme == color)}
+              />
+            ))}
         </SelectorBox>
       </SettingForm>
       <SettingForm title={t("setting.versionRetention")}>

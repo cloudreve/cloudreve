@@ -841,7 +841,8 @@
     "ssoRegisterEnabled": "Allow automatic registration",
     "ssoRegisterEnabledDes": "Automatically create a local account when a user signs in via SSO for the first time. The sign-up email filter below also applies.",
     "ssoCallbackUrl": "Callback URL",
-    "ssoCallbackUrlDes": "Register this URL as the redirect/callback URL in your identity provider: <0>{{url}}</0>"
+    "ssoCallbackUrlDes": "Register this URL as the redirect/callback URL in your identity provider: <0>{{url}}</0>",
+    "themeVisible": "Visible"
   },
   "giftCodes": {
     "giftCodesSettings": "Gift Codes",
