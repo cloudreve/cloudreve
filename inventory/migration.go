@@ -41,6 +41,7 @@ func needMigration(client *ent.Client, ctx context.Context, requiredDbVersion st
 func migrate(l logging.Logger, client *ent.Client, ctx context.Context, kv cache.Driver, requiredDbVersion string) error {
 	l.Info("Start initializing database schema...")
 	l.Info("Creating basic table schema...")
+	repairLegacyUserGroupColumn(l, client, ctx)
 	if err := client.Schema.Create(ctx); err != nil {
 		return fmt.Errorf("Failed creating schema resources: %w", err)
 	}
@@ -65,6 +66,32 @@ func migrate(l logging.Logger, client *ent.Client, ctx context.Context, kv cache
 
 	client.Setting.Create().SetName(DBVersionPrefix + requiredDbVersion).SetValue("installed").Save(ctx)
 	return nil
+}
+
+// repairLegacyUserGroupColumn backfills users.group_users before ent's
+// auto-migration. v3 bound user groups via a nullable group_id column (or no
+// column at all for groupless users); the v4 schema requires NOT NULL
+// group_users, so the schema copy fails mid-upgrade on old databases
+// (upstream #2934). All statements are error-tolerant: on a fresh install
+// the users/groups tables simply do not exist yet and every statement no-ops.
+func repairLegacyUserGroupColumn(l logging.Logger, client *ent.Client, ctx context.Context) {
+	if _, err := client.ExecContext(ctx, `ALTER TABLE users ADD COLUMN group_users INTEGER`); err != nil {
+		l.Debug("Skip adding group_users column: %s", err)
+	}
+
+	// Prefer the legacy group_id binding when present; otherwise fall back to
+	// the first non-admin group (id 1 is the seeded admin group), then any group.
+	queries := []string{
+		`UPDATE users SET group_users = COALESCE(group_id, (SELECT MIN(id) FROM groups WHERE id <> 1), (SELECT MIN(id) FROM groups)) WHERE group_users IS NULL`,
+		`UPDATE users SET group_users = COALESCE((SELECT MIN(id) FROM groups WHERE id <> 1), (SELECT MIN(id) FROM groups)) WHERE group_users IS NULL`,
+	}
+	for _, q := range queries {
+		_, err := client.ExecContext(ctx, q)
+		if err == nil {
+			return
+		}
+		l.Debug("Skip legacy group_users backfill: %s", err)
+	}
 }
 
 func migrateDefaultSettings(l logging.Logger, client *ent.Client, ctx context.Context, kv cache.Driver) {
