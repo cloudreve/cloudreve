@@ -7,11 +7,13 @@ package webdav // import "golang.org/x/net/webdav"
 
 import (
 	"context"
+	"crypto/sha1"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -256,6 +258,34 @@ func handlePut(c *gin.Context, user *ent.User, fm manager.FileManager) (status i
 		return http.StatusBadRequest, err
 	}
 
+	// A PUT with no length information at all (e.g. chunked transfer encoding)
+	// cannot be sized — previously this silently created an empty file.
+	if fileSize == 0 && c.Request.ContentLength < 0 &&
+		c.Request.Header.Get("X-Expected-Entity-Length") == "" {
+		return http.StatusLengthRequired, nil
+	}
+
+	// Ranged PUTs ("Content-Range: bytes start-end/total") are used by some
+	// clients (e.g. Mountain Duck) to upload large files in pieces. A partial
+	// range goes through the chunked-assembly path; a full-range PUT falls
+	// through to the regular overwrite path.
+	contentRange, err := parseContentRange(c.Request.Header.Get("Content-Range"))
+	if err != nil {
+		return http.StatusBadRequest, err
+	}
+
+	m := manager.NewFileManager(dependency.FromContext(ctx), user)
+	defer m.Recycle()
+
+	if contentRange != nil {
+		if contentRange.start != 0 || contentRange.end+1 != contentRange.total {
+			return handleRangedPut(ctx, c, user, m, fm, uri, rc, fileSize, contentRange)
+		}
+		if contentRange.total != fileSize {
+			return http.StatusBadRequest, errInvalidContentRange
+		}
+	}
+
 	fileData := &fs.UploadRequest{
 		Props: &fs.UploadProps{
 			Uri: uri,
@@ -265,9 +295,6 @@ func handlePut(c *gin.Context, user *ent.User, fm manager.FileManager) (status i
 		File: rc,
 		Mode: fs.ModeOverwrite,
 	}
-
-	m := manager.NewFileManager(dependency.FromContext(ctx), user)
-	defer m.Recycle()
 
 	// Update file
 	res, err := m.Update(ctx, fileData)
@@ -280,6 +307,150 @@ func handlePut(c *gin.Context, user *ent.User, fm manager.FileManager) (status i
 		return http.StatusInternalServerError, err
 	}
 
+	c.Writer.Header().Set("ETag", etag)
+	return http.StatusCreated, nil
+}
+
+var errInvalidContentRange = errors.New("invalid Content-Range")
+
+// contentRange describes a "bytes start-end/total" request range, with end
+// inclusive per RFC 7233.
+type contentRange struct {
+	start, end, total int64
+}
+
+// parseContentRange parses a Content-Range header of the form
+// "bytes start-end/total". It returns (nil, nil) when the header is absent.
+func parseContentRange(h string) (*contentRange, error) {
+	if h == "" {
+		return nil, nil
+	}
+
+	h = strings.TrimSpace(h)
+	if !strings.HasPrefix(h, "bytes ") {
+		return nil, errInvalidContentRange
+	}
+
+	rangePart, totalPart, ok := strings.Cut(h[len("bytes "):], "/")
+	if !ok || totalPart == "*" || totalPart == "" {
+		// An unknown total cannot be turned into a sized upload session.
+		return nil, errInvalidContentRange
+	}
+
+	startPart, endPart, ok := strings.Cut(rangePart, "-")
+	if !ok {
+		return nil, errInvalidContentRange
+	}
+
+	start, err := strconv.ParseInt(strings.TrimSpace(startPart), 10, 64)
+	if err != nil {
+		return nil, errInvalidContentRange
+	}
+	end, err := strconv.ParseInt(strings.TrimSpace(endPart), 10, 64)
+	if err != nil {
+		return nil, errInvalidContentRange
+	}
+	total, err := strconv.ParseInt(strings.TrimSpace(totalPart), 10, 64)
+	if err != nil {
+		return nil, errInvalidContentRange
+	}
+
+	if start < 0 || end < start || total <= 0 || end >= total {
+		return nil, errInvalidContentRange
+	}
+	return &contentRange{start: start, end: end, total: total}, nil
+}
+
+// handleRangedPut assembles a multi-request ranged PUT into a single upload
+// session. Byte-range coverage is tracked on the session in KV; the upload is
+// completed once [0,total) has been received. Only local storage policies are
+// supported, as remote drivers cannot honor arbitrary write offsets.
+func handleRangedPut(ctx context.Context, c *gin.Context, user *ent.User, m manager.FileManager, fm manager.FileManager, uri *fs.URI, rc request.LimitReaderCloser, fileSize int64, cr *contentRange) (status int, err error) {
+	if fileSize != cr.end-cr.start+1 {
+		return http.StatusBadRequest, errInvalidContentRange
+	}
+
+	dep := dependency.FromContext(c)
+	kv := dep.KV()
+
+	// One in-flight ranged upload per user+path, keyed deterministically so
+	// that subsequent chunk requests resume the same upload session.
+	sessionKey := fmt.Sprintf("dav-put-%d-%x", user.ID, sha1.Sum([]byte(uri.String())))
+
+	var session *fs.UploadSession
+	if raw, ok := kv.Get(manager.UploadSessionCachePrefix + sessionKey); ok {
+		s, ok := raw.(fs.UploadSession)
+		if !ok || s.Props == nil {
+			kv.Delete(manager.UploadSessionCachePrefix, sessionKey)
+		} else if s.Props.Size == cr.total {
+			session = &s
+		} else {
+			// A different upload to the same path — fail the stale session.
+			m.OnUploadFailed(ctx, &s)
+			session = nil
+		}
+	}
+
+	if session == nil {
+		ttl := dep.SettingProvider().UploadSessionTTL(ctx)
+		if _, err := m.CreateUploadSession(ctx, &fs.UploadRequest{
+			Props: &fs.UploadProps{
+				Uri:             uri,
+				Size:            cr.total,
+				UploadSessionID: sessionKey,
+				ExpireAt:        time.Now().Add(ttl),
+			},
+			Mode: fs.ModeOverwrite,
+		}); err != nil {
+			return purposeStatusCodeFromError(err), err
+		}
+
+		raw, ok := kv.Get(manager.UploadSessionCachePrefix + sessionKey)
+		if !ok {
+			return http.StatusInternalServerError, errors.New("upload session not persisted")
+		}
+		s := raw.(fs.UploadSession)
+		session = &s
+
+		// Only the local driver honors arbitrary write offsets; for other
+		// policies a ranged PUT cannot be assembled safely.
+		if session.Policy == nil || session.Policy.Type != types.PolicyTypeLocal {
+			m.OnUploadFailed(ctx, session)
+			return http.StatusNotImplemented, errors.New("ranged PUT not supported by this storage policy")
+		}
+	}
+
+	chunkReq := &fs.UploadRequest{
+		File:   rc,
+		Offset: cr.start,
+		Props:  session.Props.Copy(),
+		Mode:   fs.ModeOverwrite,
+	}
+	if err := m.Upload(ctx, chunkReq, session.Policy, session); err != nil {
+		return purposeStatusCodeFromError(err), err
+	}
+
+	if lrc, ok := chunkReq.File.(request.LimitReaderCloser); ok && lrc.Count() != fileSize {
+		return http.StatusInternalServerError, fmt.Errorf("uploaded data(%d) does not match purposed size(%d)", lrc.Count(), fileSize)
+	}
+
+	allReceived, err := m.MarkRangeUploaded(ctx, session, cr.start, fileSize)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+	if !allReceived {
+		return http.StatusCreated, nil
+	}
+
+	res, err := m.CompleteUpload(ctx, session)
+	if err != nil {
+		return purposeStatusCodeFromError(err), err
+	}
+
+	etag, err := findETag(ctx, fm, res)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
 	c.Writer.Header().Set("ETag", etag)
 	return http.StatusCreated, nil
 }
