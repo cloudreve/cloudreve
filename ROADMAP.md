@@ -124,6 +124,8 @@ cloudreve/           Go backend (existing code, repo root)
 Order = user-visible value first; each ships with backend + UI + tests.
 
 1. **Share collaboration** — write/upload/delete via share link, anonymous upload, share ACL (users/groups), preview-only mode (fixes #3555, #3390, #3340, #3517, #3578; uses `NavigatorCapability` placeholder slots + `ShareProps` extension + `share` entity fields)
+   - [x] PR #140 — `allow_upload`/`allow_edit`/`preview_only`/`upload_only` props, props-derived capability sets enforced server-side (`writePermitted`), same-share move/copy, anonymous upload, drop-box listing suppression, download denial via `IsDownloadCtxKey` hooks (fixes #3555 preview-only, #3340 drop-box)
+   - [ ] Share ACL — per-user/group grants on shares (#3517); paid share links deferred to VAS phase; default shares for new users (#3390) open
 2. **Storage policy advanced** — multiple policies per group (group→policies join table), per-directory binding, load-balancer policy, file migration between policies (fixes #3518, #2961, #2262)
 3. **SSO** — generic OIDC provider (PR #3472 base), Logto connector, multi-account switching, sign-up email filtering (fixes #3464, #3056, #3505)
 4. **VAS/monetization-free** — credits + redemption codes as *free* features (gift codes for admin use), storage/membership plan definitions; skip payment processor integration initially — YAGNI until a real user asks (fixes #3231)
