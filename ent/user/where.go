@@ -90,6 +90,11 @@ func BanExpires(v time.Time) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldBanExpires, v))
 }
 
+// BanReason applies equality check predicate on the "ban_reason" field. It's identical to BanReasonEQ.
+func BanReason(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldBanReason, v))
+}
+
 // Storage applies equality check predicate on the "storage" field. It's identical to StorageEQ.
 func Storage(v int64) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldStorage, v))
@@ -513,6 +518,81 @@ func BanExpiresIsNil() predicate.User {
 // BanExpiresNotNil applies the NotNil predicate on the "ban_expires" field.
 func BanExpiresNotNil() predicate.User {
 	return predicate.User(sql.FieldNotNull(FieldBanExpires))
+}
+
+// BanReasonEQ applies the EQ predicate on the "ban_reason" field.
+func BanReasonEQ(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldBanReason, v))
+}
+
+// BanReasonNEQ applies the NEQ predicate on the "ban_reason" field.
+func BanReasonNEQ(v string) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldBanReason, v))
+}
+
+// BanReasonIn applies the In predicate on the "ban_reason" field.
+func BanReasonIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldIn(FieldBanReason, vs...))
+}
+
+// BanReasonNotIn applies the NotIn predicate on the "ban_reason" field.
+func BanReasonNotIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldBanReason, vs...))
+}
+
+// BanReasonGT applies the GT predicate on the "ban_reason" field.
+func BanReasonGT(v string) predicate.User {
+	return predicate.User(sql.FieldGT(FieldBanReason, v))
+}
+
+// BanReasonGTE applies the GTE predicate on the "ban_reason" field.
+func BanReasonGTE(v string) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldBanReason, v))
+}
+
+// BanReasonLT applies the LT predicate on the "ban_reason" field.
+func BanReasonLT(v string) predicate.User {
+	return predicate.User(sql.FieldLT(FieldBanReason, v))
+}
+
+// BanReasonLTE applies the LTE predicate on the "ban_reason" field.
+func BanReasonLTE(v string) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldBanReason, v))
+}
+
+// BanReasonContains applies the Contains predicate on the "ban_reason" field.
+func BanReasonContains(v string) predicate.User {
+	return predicate.User(sql.FieldContains(FieldBanReason, v))
+}
+
+// BanReasonHasPrefix applies the HasPrefix predicate on the "ban_reason" field.
+func BanReasonHasPrefix(v string) predicate.User {
+	return predicate.User(sql.FieldHasPrefix(FieldBanReason, v))
+}
+
+// BanReasonHasSuffix applies the HasSuffix predicate on the "ban_reason" field.
+func BanReasonHasSuffix(v string) predicate.User {
+	return predicate.User(sql.FieldHasSuffix(FieldBanReason, v))
+}
+
+// BanReasonIsNil applies the IsNil predicate on the "ban_reason" field.
+func BanReasonIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldBanReason))
+}
+
+// BanReasonNotNil applies the NotNil predicate on the "ban_reason" field.
+func BanReasonNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldBanReason))
+}
+
+// BanReasonEqualFold applies the EqualFold predicate on the "ban_reason" field.
+func BanReasonEqualFold(v string) predicate.User {
+	return predicate.User(sql.FieldEqualFold(FieldBanReason, v))
+}
+
+// BanReasonContainsFold applies the ContainsFold predicate on the "ban_reason" field.
+func BanReasonContainsFold(v string) predicate.User {
+	return predicate.User(sql.FieldContainsFold(FieldBanReason, v))
 }
 
 // StorageEQ applies the EQ predicate on the "storage" field.

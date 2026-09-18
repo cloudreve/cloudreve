@@ -1388,7 +1388,9 @@
     "calibrateStorage": "Calibrate storage",
     "calibrateStorageSuccess": "Storage calibrated successfully.",
     "banExpires": "Ban expires",
-    "banExpiresDes": "Optional. The ban lifts automatically after this time; empty means permanent."
+    "banExpiresDes": "Optional. The ban lifts automatically after this time; empty means permanent.",
+    "banReason": "Ban reason",
+    "banReasonDes": "Optional. Shown to the user when a banned login is rejected."
   },
   "file": {
     "deleteXFiles": "Delete {{num}} files",
@@ -1763,7 +1765,9 @@
     "customPaymentEndpointDes": "URL to be requested when creating a payment order.",
     "appFeedback": "Feedback URL",
     "appForum": "User forum URL",
-    "appLinkDes": "Will be displayed in mobile client, leave empty to hide menu item. This setting will take effect only if VOL license is valid."
+    "appLinkDes": "Will be displayed in mobile client, leave empty to hide menu item. This setting will take effect only if VOL license is valid.",
+    "subAddressChars": "Sub-address characters",
+    "subAddressCharsDes": "Characters treated as sub-address separators in the local part of the email (e.g. <code>+-.</code> for Gmail/iCloud-style aliases). Empty defaults to <code>+</code>."
   },
   "pro": {
     "title": "Pro edition exclusive features",

@@ -128,6 +128,20 @@ func (uc *UserCreate) SetNillableBanExpires(t *time.Time) *UserCreate {
 	return uc
 }
 
+// SetBanReason sets the "ban_reason" field.
+func (uc *UserCreate) SetBanReason(s string) *UserCreate {
+	uc.mutation.SetBanReason(s)
+	return uc
+}
+
+// SetNillableBanReason sets the "ban_reason" field if the given value is not nil.
+func (uc *UserCreate) SetNillableBanReason(s *string) *UserCreate {
+	if s != nil {
+		uc.SetBanReason(*s)
+	}
+	return uc
+}
+
 // SetStorage sets the "storage" field.
 func (uc *UserCreate) SetStorage(i int64) *UserCreate {
 	uc.mutation.SetStorage(i)
@@ -486,6 +500,10 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		_spec.SetField(user.FieldBanExpires, field.TypeTime, value)
 		_node.BanExpires = &value
 	}
+	if value, ok := uc.mutation.BanReason(); ok {
+		_spec.SetField(user.FieldBanReason, field.TypeString, value)
+		_node.BanReason = value
+	}
 	if value, ok := uc.mutation.Storage(); ok {
 		_spec.SetField(user.FieldStorage, field.TypeInt64, value)
 		_node.Storage = value
@@ -801,6 +819,24 @@ func (u *UserUpsert) ClearBanExpires() *UserUpsert {
 	return u
 }
 
+// SetBanReason sets the "ban_reason" field.
+func (u *UserUpsert) SetBanReason(v string) *UserUpsert {
+	u.Set(user.FieldBanReason, v)
+	return u
+}
+
+// UpdateBanReason sets the "ban_reason" field to the value that was provided on create.
+func (u *UserUpsert) UpdateBanReason() *UserUpsert {
+	u.SetExcluded(user.FieldBanReason)
+	return u
+}
+
+// ClearBanReason clears the value of the "ban_reason" field.
+func (u *UserUpsert) ClearBanReason() *UserUpsert {
+	u.SetNull(user.FieldBanReason)
+	return u
+}
+
 // SetStorage sets the "storage" field.
 func (u *UserUpsert) SetStorage(v int64) *UserUpsert {
 	u.Set(user.FieldStorage, v)
@@ -1046,6 +1082,27 @@ func (u *UserUpsertOne) UpdateBanExpires() *UserUpsertOne {
 func (u *UserUpsertOne) ClearBanExpires() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
 		s.ClearBanExpires()
+	})
+}
+
+// SetBanReason sets the "ban_reason" field.
+func (u *UserUpsertOne) SetBanReason(v string) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetBanReason(v)
+	})
+}
+
+// UpdateBanReason sets the "ban_reason" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateBanReason() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateBanReason()
+	})
+}
+
+// ClearBanReason clears the value of the "ban_reason" field.
+func (u *UserUpsertOne) ClearBanReason() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearBanReason()
 	})
 }
 
@@ -1479,6 +1536,27 @@ func (u *UserUpsertBulk) UpdateBanExpires() *UserUpsertBulk {
 func (u *UserUpsertBulk) ClearBanExpires() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
 		s.ClearBanExpires()
+	})
+}
+
+// SetBanReason sets the "ban_reason" field.
+func (u *UserUpsertBulk) SetBanReason(v string) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetBanReason(v)
+	})
+}
+
+// UpdateBanReason sets the "ban_reason" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateBanReason() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateBanReason()
+	})
+}
+
+// ClearBanReason clears the value of the "ban_reason" field.
+func (u *UserUpsertBulk) ClearBanReason() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearBanReason()
 	})
 }
 

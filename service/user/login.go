@@ -93,7 +93,7 @@ func (service *UserResetEmailService) Reset(c *gin.Context) error {
 	}
 
 	if u.Status == user.StatusManualBanned || u.Status == user.StatusSysBanned {
-		return serializer.NewError(serializer.CodeUserBaned, "This user is banned", nil)
+		return banError(u, "This user is banned")
 	}
 
 	if u.Status == user.StatusInactive {
@@ -141,7 +141,7 @@ func (service *UserLoginService) Login(c *gin.Context) (*ent.User, string, error
 	} else if checkErr := inventory.CheckPassword(expectedUser, service.Password); checkErr != nil {
 		err = serializer.NewError(serializer.CodeInvalidPassword, "Incorrect password or email address", err)
 	} else if expectedUser.Status == user.StatusManualBanned || expectedUser.Status == user.StatusSysBanned {
-		err = serializer.NewError(serializer.CodeUserBaned, "This account has been blocked", nil)
+		err = banError(expectedUser, "This account has been blocked")
 	} else if expectedUser.Status == user.StatusInactive {
 		err = serializer.NewError(serializer.CodeUserNotActivated, "This account is not activated", nil)
 	}

@@ -251,6 +251,21 @@ const UserSession = () => {
                 </NoMarginHelperText>
               </FormControl>
             </SettingForm>
+            {isTrueVal(values.email_disable_subaddress) && (
+              <SettingForm title={t("vas.subAddressChars")} lgWidth={5}>
+                <FormControl fullWidth>
+                  <DenseFilledTextField
+                    fullWidth
+                    placeholder="+"
+                    value={values.email_subaddress_chars ?? ""}
+                    onChange={(e) => setSettings({ email_subaddress_chars: e.target.value })}
+                  />
+                  <NoMarginHelperText>
+                    <Trans i18nKey="vas.subAddressCharsDes" ns={"dashboard"} components={[<Code />]} />
+                  </NoMarginHelperText>
+                </FormControl>
+              </SettingForm>
+            )}
           </SettingSectionContent>
         </SettingSection>
         <SettingSection>

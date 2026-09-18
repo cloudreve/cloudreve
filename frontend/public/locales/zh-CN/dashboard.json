@@ -1388,7 +1388,9 @@
     "calibrateStorage": "校准存储空间",
     "calibrateStorageSuccess": "存储空间校准成功",
     "banExpires": "封禁截止时间",
-    "banExpiresDes": "可选。到期后自动解除封禁；留空表示永久封禁。"
+    "banExpiresDes": "可选。到期后自动解除封禁；留空表示永久封禁。",
+    "banReason": "封禁原因",
+    "banReasonDes": "可选。封禁用户登录被拒绝时向其展示。"
   },
   "file": {
     "deleteXFiles": "删除 {{num}} 个文件",
@@ -1762,7 +1764,9 @@
     "customPaymentEndpointDes": "创建支付订单时请求的接口 URL。",
     "appFeedback": "反馈页面 URL",
     "appForum": "用户论坛 URL",
-    "appLinkDes": "用于在 App 设置页面展示，留空即不展示链接按钮，仅当 VOL 授权有效时此项设置才会生效。"
+    "appLinkDes": "用于在 App 设置页面展示，留空即不展示链接按钮，仅当 VOL 授权有效时此项设置才会生效。",
+    "subAddressChars": "子地址字符",
+    "subAddressCharsDes": "邮箱用户名部分中视为子地址分隔符的字符（如 <code>+-.</code>，覆盖 Gmail/iCloud 风格别名）。留空默认为 <code>+</code>。"
   },
   "pro": {
     "title": "Pro 版本专属功能",

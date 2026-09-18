@@ -76,18 +76,23 @@ func TestUpsertBanExpires(t *testing.T) {
 	u := client.User.Create().SetEmail("upsert-ban@example.com").SetNick("u").
 		SetStatus(entuser.StatusActive).SetGroup(group).SaveX(ctx)
 
-	// Ban with expiry
+	// Ban with expiry and reason
 	u.Status = entuser.StatusManualBanned
 	u.BanExpires = &future
+	u.BanReason = "spam"
 	_, err := uc.Upsert(ctx, u, "", "")
 	require.NoError(t, err)
 	got := client.User.GetX(ctx, u.ID)
 	require.Equal(t, future, got.BanExpires.UTC())
+	require.Equal(t, "spam", got.BanReason)
 
-	// Unban clears the expiry
+	// Unban clears the expiry and reason
 	u.Status = entuser.StatusActive
 	u.BanExpires = nil
+	u.BanReason = ""
 	_, err = uc.Upsert(ctx, u, "", "")
 	require.NoError(t, err)
-	require.Nil(t, client.User.GetX(ctx, u.ID).BanExpires)
+	got = client.User.GetX(ctx, u.ID)
+	require.Nil(t, got.BanExpires)
+	require.Equal(t, "", got.BanReason)
 }

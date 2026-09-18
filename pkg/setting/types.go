@@ -97,6 +97,9 @@ type EmailFilter struct {
 	Mode              EmailFilterMode
 	List              []string
 	DisableSubAddress bool
+	// SubAddressChars are the characters treated as sub-address separators in
+	// the local part when DisableSubAddress is on. Empty falls back to "+".
+	SubAddressChars string
 }
 
 type DBFS struct {

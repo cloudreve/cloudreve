@@ -602,8 +602,10 @@ func (c *userClient) Upsert(ctx context.Context, u *ent.User, password, twoFa st
 
 	if u.Status == user.StatusManualBanned || u.Status == user.StatusSysBanned {
 		q.SetNillableBanExpires(u.BanExpires)
+		q.SetBanReason(u.BanReason)
 	} else {
 		q.ClearBanExpires()
+		q.ClearBanReason()
 	}
 
 	if password != "" {

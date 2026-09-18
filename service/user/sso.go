@@ -312,10 +312,21 @@ func ssoResolveUser(c *gin.Context, dep dependency.Dep, sso *setting.SSO, email,
 	return newUser, nil
 }
 
+// banError renders the ban error. When a ban reason is configured it is
+// sent as the message so the frontend can render it next to the
+// localized "blocked" text (#2478).
+func banError(u *ent.User, fallback string) error {
+	msg := fallback
+	if u.BanReason != "" {
+		msg = u.BanReason
+	}
+	return serializer.NewError(serializer.CodeUserBaned, msg, nil)
+}
+
 func checkUserStatus(u *ent.User) error {
 	switch u.Status {
 	case user.StatusSysBanned, user.StatusManualBanned:
-		return serializer.NewError(serializer.CodeUserBaned, "User is banned", nil)
+		return banError(u, "User is banned")
 	case user.StatusInactive:
 		return serializer.NewError(serializer.CodeUserNotActivated, "User is not activated", nil)
 	}
@@ -330,8 +341,14 @@ func CheckEmailAllowed(filter *setting.EmailFilter, email string) error {
 		return serializer.NewError(serializer.CodeParamErr, "Invalid email", nil)
 	}
 
-	if filter.DisableSubAddress && strings.Contains(local, "+") {
-		return serializer.NewError(serializer.CodeParamErr, "Sub-address emails are not allowed", nil)
+	if filter.DisableSubAddress {
+		chars := filter.SubAddressChars
+		if chars == "" {
+			chars = "+"
+		}
+		if strings.ContainsAny(local, chars) {
+			return serializer.NewError(serializer.CodeParamErr, "Sub-address emails are not allowed", nil)
+		}
 	}
 
 	domain = strings.ToLower(domain)

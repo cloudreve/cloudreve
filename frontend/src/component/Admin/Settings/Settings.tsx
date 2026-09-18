@@ -201,6 +201,7 @@ const Settings = () => {
                     "email_filter_mode",
                     "email_filter_list",
                     "email_disable_subaddress",
+                    "email_subaddress_chars",
                     "siteURL",
                   ]}
                 >

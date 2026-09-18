@@ -484,6 +484,7 @@ var (
 		{Name: "password", Type: field.TypeString, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"active", "inactive", "manual_banned", "sys_banned"}, Default: "active"},
 		{Name: "ban_expires", Type: field.TypeTime, Nullable: true},
+		{Name: "ban_reason", Type: field.TypeString, Nullable: true, Size: 2147483647},
 		{Name: "storage", Type: field.TypeInt64, Default: 0},
 		{Name: "two_factor_secret", Type: field.TypeString, Nullable: true},
 		{Name: "avatar", Type: field.TypeString, Nullable: true},
@@ -498,7 +499,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "users_groups_users",
-				Columns:    []*schema.Column{UsersColumns[13]},
+				Columns:    []*schema.Column{UsersColumns[14]},
 				RefColumns: []*schema.Column{GroupsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},

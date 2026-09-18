@@ -264,6 +264,7 @@ export interface User extends CommonMixin {
   credit?: number;
   group_expires?: string;
   ban_expires?: string;
+  ban_reason?: string;
   notify_date?: string;
   group_users?: number;
   previous_group?: number;

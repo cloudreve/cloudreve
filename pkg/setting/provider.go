@@ -932,6 +932,7 @@ func (s *settingProvider) EmailFilter(ctx context.Context) *EmailFilter {
 		Mode:              mode,
 		List:              list,
 		DisableSubAddress: s.getBoolean(ctx, "email_disable_subaddress", false),
+		SubAddressChars:   s.getString(ctx, "email_subaddress_chars", "+"),
 	}
 }
 

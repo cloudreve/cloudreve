@@ -15173,6 +15173,7 @@ type UserMutation struct {
 	password            *string
 	status              *user.Status
 	ban_expires         *time.Time
+	ban_reason          *string
 	storage             *int64
 	addstorage          *int64
 	two_factor_secret   *string
@@ -15633,6 +15634,55 @@ func (m *UserMutation) BanExpiresCleared() bool {
 func (m *UserMutation) ResetBanExpires() {
 	m.ban_expires = nil
 	delete(m.clearedFields, user.FieldBanExpires)
+}
+
+// SetBanReason sets the "ban_reason" field.
+func (m *UserMutation) SetBanReason(s string) {
+	m.ban_reason = &s
+}
+
+// BanReason returns the value of the "ban_reason" field in the mutation.
+func (m *UserMutation) BanReason() (r string, exists bool) {
+	v := m.ban_reason
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBanReason returns the old "ban_reason" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldBanReason(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBanReason is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBanReason requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBanReason: %w", err)
+	}
+	return oldValue.BanReason, nil
+}
+
+// ClearBanReason clears the value of the "ban_reason" field.
+func (m *UserMutation) ClearBanReason() {
+	m.ban_reason = nil
+	m.clearedFields[user.FieldBanReason] = struct{}{}
+}
+
+// BanReasonCleared returns if the "ban_reason" field was cleared in this mutation.
+func (m *UserMutation) BanReasonCleared() bool {
+	_, ok := m.clearedFields[user.FieldBanReason]
+	return ok
+}
+
+// ResetBanReason resets all changes to the "ban_reason" field.
+func (m *UserMutation) ResetBanReason() {
+	m.ban_reason = nil
+	delete(m.clearedFields, user.FieldBanReason)
 }
 
 // SetStorage sets the "storage" field.
@@ -16380,7 +16430,7 @@ func (m *UserMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 13)
+	fields := make([]string, 0, 14)
 	if m.created_at != nil {
 		fields = append(fields, user.FieldCreatedAt)
 	}
@@ -16404,6 +16454,9 @@ func (m *UserMutation) Fields() []string {
 	}
 	if m.ban_expires != nil {
 		fields = append(fields, user.FieldBanExpires)
+	}
+	if m.ban_reason != nil {
+		fields = append(fields, user.FieldBanReason)
 	}
 	if m.storage != nil {
 		fields = append(fields, user.FieldStorage)
@@ -16444,6 +16497,8 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 		return m.Status()
 	case user.FieldBanExpires:
 		return m.BanExpires()
+	case user.FieldBanReason:
+		return m.BanReason()
 	case user.FieldStorage:
 		return m.Storage()
 	case user.FieldTwoFactorSecret:
@@ -16479,6 +16534,8 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldStatus(ctx)
 	case user.FieldBanExpires:
 		return m.OldBanExpires(ctx)
+	case user.FieldBanReason:
+		return m.OldBanReason(ctx)
 	case user.FieldStorage:
 		return m.OldStorage(ctx)
 	case user.FieldTwoFactorSecret:
@@ -16553,6 +16610,13 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetBanExpires(v)
+		return nil
+	case user.FieldBanReason:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBanReason(v)
 		return nil
 	case user.FieldStorage:
 		v, ok := value.(int64)
@@ -16643,6 +16707,9 @@ func (m *UserMutation) ClearedFields() []string {
 	if m.FieldCleared(user.FieldBanExpires) {
 		fields = append(fields, user.FieldBanExpires)
 	}
+	if m.FieldCleared(user.FieldBanReason) {
+		fields = append(fields, user.FieldBanReason)
+	}
 	if m.FieldCleared(user.FieldTwoFactorSecret) {
 		fields = append(fields, user.FieldTwoFactorSecret)
 	}
@@ -16674,6 +16741,9 @@ func (m *UserMutation) ClearField(name string) error {
 		return nil
 	case user.FieldBanExpires:
 		m.ClearBanExpires()
+		return nil
+	case user.FieldBanReason:
+		m.ClearBanReason()
 		return nil
 	case user.FieldTwoFactorSecret:
 		m.ClearTwoFactorSecret()
@@ -16715,6 +16785,9 @@ func (m *UserMutation) ResetField(name string) error {
 		return nil
 	case user.FieldBanExpires:
 		m.ResetBanExpires()
+		return nil
+	case user.FieldBanReason:
+		m.ResetBanReason()
 		return nil
 	case user.FieldStorage:
 		m.ResetStorage()

@@ -104,6 +104,35 @@ func TestCheckEmailAllowed(t *testing.T) {
 			email: "a+tag@example.com",
 		},
 		{
+			name: "custom sub-address chars rejected",
+			filter: &setting.EmailFilter{
+				Mode:              setting.EmailFilterDisabled,
+				DisableSubAddress: true,
+				SubAddressChars:   "+-.",
+			},
+			email:   "a-tag@example.com",
+			wantErr: true,
+			code:    serializer.CodeParamErr,
+		},
+		{
+			name: "custom sub-address chars allow plain local part",
+			filter: &setting.EmailFilter{
+				Mode:              setting.EmailFilterDisabled,
+				DisableSubAddress: true,
+				SubAddressChars:   "+-.",
+			},
+			email: "user@example.com",
+		},
+		{
+			name: "dot in domain not treated as sub-address",
+			filter: &setting.EmailFilter{
+				Mode:              setting.EmailFilterDisabled,
+				DisableSubAddress: true,
+				SubAddressChars:   "+-.",
+			},
+			email: "user@mail.example.com",
+		},
+		{
 			name:    "invalid email rejected",
 			filter:  &setting.EmailFilter{Mode: setting.EmailFilterDisabled},
 			email:   "not-an-email",
