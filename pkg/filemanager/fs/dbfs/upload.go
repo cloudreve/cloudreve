@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/ent"
+	"github.com/cloudreve/Cloudreve/v4/ent/storagepolicy"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
@@ -136,6 +137,10 @@ func (f *DBFS) PrepareUpload(ctx context.Context, req *fs.UploadRequest, opts ..
 	}
 	if err != nil {
 		return nil, err
+	}
+
+	if policy.Status == storagepolicy.StatusSuspended {
+		return nil, serializer.NewError(serializer.CodePolicyNotAllowed, "Storage policy is suspended", nil)
 	}
 
 	// Encryption setting

@@ -16,6 +16,10 @@ func (StoragePolicy) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("name"),
 		field.String("type"),
+		// Suspended policies keep serving reads but reject new uploads.
+		field.Enum("status").
+			Values("active", "suspended").
+			Default("active"),
 		field.String("server").
 			Optional(),
 		field.String("bucket_name").

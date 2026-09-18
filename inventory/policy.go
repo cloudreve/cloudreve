@@ -125,6 +125,11 @@ func (c *storagePolicyClient) Upsert(ctx context.Context, policy *ent.StoragePol
 		SetSettings(policy.Settings).
 		SetNillableNodeID(nodeId)
 
+	// Status is optional in the update payload; empty keeps the stored value.
+	if policy.Status != "" {
+		updateQuery.SetStatus(policy.Status)
+	}
+
 	if policy.Type != types.PolicyTypeOd {
 		updateQuery.SetAccessKey(policy.AccessKey)
 	}
@@ -146,7 +151,9 @@ func (c *storagePolicyClient) GetByGroup(ctx context.Context, group *ent.Group) 
 	val, skipCache := ctx.Value(SkipStoragePolicyCache{}).(bool)
 	skipCache = skipCache && val
 
-	res, err := withStoragePolicyEagerLoading(ctx, c.client.Group.QueryStoragePolicies(group)).WithNode().First(ctx)
+	res, err := withStoragePolicyEagerLoading(ctx, c.client.Group.QueryStoragePolicies(group)).
+		Where(storagepolicy.StatusEQ(storagepolicy.StatusActive)).
+		WithNode().First(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get storage policies: %w", err)
 	}

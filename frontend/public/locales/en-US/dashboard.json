@@ -1176,7 +1176,9 @@
     "fileEncryption": "File encryption",
     "enableFileEncryption": "Enable file encryption",
     "enableFileEncryptionDes": "When enabled, file blobs will be stored encrypted. Changing this setting only affects newly added files.",
-    "encryptedFile": "Encrypted files"
+    "encryptedFile": "Encrypted files",
+    "status": "Status",
+    "statusDes": "Suspended policies keep serving existing files but reject new uploads."
   },
   "node": {
     "slave": "slave",

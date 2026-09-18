@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { deleteStoragePolicy, getStoragePolicyDetail } from "../../../api/api";
-import { StoragePolicy } from "../../../api/dashboard";
+import { PolicyStatus, StoragePolicy } from "../../../api/dashboard";
 import { useAppDispatch } from "../../../redux/hooks";
 import { confirmOperation } from "../../../redux/thunks/dialog";
 import { sizeToString } from "../../../util";
@@ -125,6 +125,9 @@ const StoragePolicyCard = ({ policy, onRefresh, loading }: StoragePolicyCardProp
         >
           <Typography variant="subtitle1" fontWeight={600}>
             {policy?.name}
+            {policy?.status == PolicyStatus.suspended && (
+              <SquareChip sx={{ ml: 1 }} size="small" color="warning" label={t("node.suspended")} />
+            )}
           </Typography>
           {policy && (
             <Typography variant="body2" color="text.secondary">

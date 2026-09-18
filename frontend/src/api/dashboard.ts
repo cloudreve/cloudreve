@@ -123,9 +123,15 @@ export interface CommonMixin {
   deleted_at?: string;
 }
 
+export enum PolicyStatus {
+  active = "active",
+  suspended = "suspended",
+}
+
 export interface StoragePolicy extends CommonMixin {
   name: string;
   type: PolicyType;
+  status?: PolicyStatus;
   server?: string;
   bucket_name?: string;
   is_private?: boolean;

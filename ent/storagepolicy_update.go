@@ -87,6 +87,20 @@ func (spu *StoragePolicyUpdate) SetNillableType(s *string) *StoragePolicyUpdate 
 	return spu
 }
 
+// SetStatus sets the "status" field.
+func (spu *StoragePolicyUpdate) SetStatus(s storagepolicy.Status) *StoragePolicyUpdate {
+	spu.mutation.SetStatus(s)
+	return spu
+}
+
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (spu *StoragePolicyUpdate) SetNillableStatus(s *storagepolicy.Status) *StoragePolicyUpdate {
+	if s != nil {
+		spu.SetStatus(*s)
+	}
+	return spu
+}
+
 // SetServer sets the "server" field.
 func (spu *StoragePolicyUpdate) SetServer(s string) *StoragePolicyUpdate {
 	spu.mutation.SetServer(s)
@@ -452,7 +466,20 @@ func (spu *StoragePolicyUpdate) defaults() error {
 	return nil
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (spu *StoragePolicyUpdate) check() error {
+	if v, ok := spu.mutation.Status(); ok {
+		if err := storagepolicy.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "StoragePolicy.status": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (spu *StoragePolicyUpdate) sqlSave(ctx context.Context) (n int, err error) {
+	if err := spu.check(); err != nil {
+		return n, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(storagepolicy.Table, storagepolicy.Columns, sqlgraph.NewFieldSpec(storagepolicy.FieldID, field.TypeInt))
 	if ps := spu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -475,6 +502,9 @@ func (spu *StoragePolicyUpdate) sqlSave(ctx context.Context) (n int, err error) 
 	}
 	if value, ok := spu.mutation.GetType(); ok {
 		_spec.SetField(storagepolicy.FieldType, field.TypeString, value)
+	}
+	if value, ok := spu.mutation.Status(); ok {
+		_spec.SetField(storagepolicy.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := spu.mutation.Server(); ok {
 		_spec.SetField(storagepolicy.FieldServer, field.TypeString, value)
@@ -767,6 +797,20 @@ func (spuo *StoragePolicyUpdateOne) SetType(s string) *StoragePolicyUpdateOne {
 func (spuo *StoragePolicyUpdateOne) SetNillableType(s *string) *StoragePolicyUpdateOne {
 	if s != nil {
 		spuo.SetType(*s)
+	}
+	return spuo
+}
+
+// SetStatus sets the "status" field.
+func (spuo *StoragePolicyUpdateOne) SetStatus(s storagepolicy.Status) *StoragePolicyUpdateOne {
+	spuo.mutation.SetStatus(s)
+	return spuo
+}
+
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (spuo *StoragePolicyUpdateOne) SetNillableStatus(s *storagepolicy.Status) *StoragePolicyUpdateOne {
+	if s != nil {
+		spuo.SetStatus(*s)
 	}
 	return spuo
 }
@@ -1149,7 +1193,20 @@ func (spuo *StoragePolicyUpdateOne) defaults() error {
 	return nil
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (spuo *StoragePolicyUpdateOne) check() error {
+	if v, ok := spuo.mutation.Status(); ok {
+		if err := storagepolicy.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "StoragePolicy.status": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (spuo *StoragePolicyUpdateOne) sqlSave(ctx context.Context) (_node *StoragePolicy, err error) {
+	if err := spuo.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(storagepolicy.Table, storagepolicy.Columns, sqlgraph.NewFieldSpec(storagepolicy.FieldID, field.TypeInt))
 	id, ok := spuo.mutation.ID()
 	if !ok {
@@ -1189,6 +1246,9 @@ func (spuo *StoragePolicyUpdateOne) sqlSave(ctx context.Context) (_node *Storage
 	}
 	if value, ok := spuo.mutation.GetType(); ok {
 		_spec.SetField(storagepolicy.FieldType, field.TypeString, value)
+	}
+	if value, ok := spuo.mutation.Status(); ok {
+		_spec.SetField(storagepolicy.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := spuo.mutation.Server(); ok {
 		_spec.SetField(storagepolicy.FieldServer, field.TypeString, value)

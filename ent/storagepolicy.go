@@ -30,6 +30,8 @@ type StoragePolicy struct {
 	Name string `json:"name,omitempty"`
 	// Type holds the value of the "type" field.
 	Type string `json:"type,omitempty"`
+	// Status holds the value of the "status" field.
+	Status storagepolicy.Status `json:"status,omitempty"`
 	// Server holds the value of the "server" field.
 	Server string `json:"server,omitempty"`
 	// BucketName holds the value of the "bucket_name" field.
@@ -122,7 +124,7 @@ func (*StoragePolicy) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case storagepolicy.FieldID, storagepolicy.FieldMaxSize, storagepolicy.FieldNodeID:
 			values[i] = new(sql.NullInt64)
-		case storagepolicy.FieldName, storagepolicy.FieldType, storagepolicy.FieldServer, storagepolicy.FieldBucketName, storagepolicy.FieldAccessKey, storagepolicy.FieldSecretKey, storagepolicy.FieldDirNameRule, storagepolicy.FieldFileNameRule:
+		case storagepolicy.FieldName, storagepolicy.FieldType, storagepolicy.FieldStatus, storagepolicy.FieldServer, storagepolicy.FieldBucketName, storagepolicy.FieldAccessKey, storagepolicy.FieldSecretKey, storagepolicy.FieldDirNameRule, storagepolicy.FieldFileNameRule:
 			values[i] = new(sql.NullString)
 		case storagepolicy.FieldCreatedAt, storagepolicy.FieldUpdatedAt, storagepolicy.FieldDeletedAt:
 			values[i] = new(sql.NullTime)
@@ -177,6 +179,12 @@ func (sp *StoragePolicy) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field type", values[i])
 			} else if value.Valid {
 				sp.Type = value.String
+			}
+		case storagepolicy.FieldStatus:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field status", values[i])
+			} else if value.Valid {
+				sp.Status = storagepolicy.Status(value.String)
 			}
 		case storagepolicy.FieldServer:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -312,6 +320,9 @@ func (sp *StoragePolicy) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("type=")
 	builder.WriteString(sp.Type)
+	builder.WriteString(", ")
+	builder.WriteString("status=")
+	builder.WriteString(fmt.Sprintf("%v", sp.Status))
 	builder.WriteString(", ")
 	builder.WriteString("server=")
 	builder.WriteString(sp.Server)

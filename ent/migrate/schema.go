@@ -419,6 +419,7 @@ var (
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"mysql": "datetime"}},
 		{Name: "name", Type: field.TypeString},
 		{Name: "type", Type: field.TypeString},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"active", "suspended"}, Default: "active"},
 		{Name: "server", Type: field.TypeString, Nullable: true},
 		{Name: "bucket_name", Type: field.TypeString, Nullable: true},
 		{Name: "is_private", Type: field.TypeBool, Nullable: true},
@@ -438,7 +439,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "storage_policies_nodes_storage_policy",
-				Columns:    []*schema.Column{StoragePoliciesColumns[15]},
+				Columns:    []*schema.Column{StoragePoliciesColumns[16]},
 				RefColumns: []*schema.Column{NodesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},

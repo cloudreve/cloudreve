@@ -12519,6 +12519,7 @@ type StoragePolicyMutation struct {
 	deleted_at      *time.Time
 	name            *string
 	_type           *string
+	status          *storagepolicy.Status
 	server          *string
 	bucket_name     *string
 	is_private      *bool
@@ -12835,6 +12836,42 @@ func (m *StoragePolicyMutation) OldType(ctx context.Context) (v string, err erro
 // ResetType resets all changes to the "type" field.
 func (m *StoragePolicyMutation) ResetType() {
 	m._type = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *StoragePolicyMutation) SetStatus(s storagepolicy.Status) {
+	m.status = &s
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *StoragePolicyMutation) Status() (r storagepolicy.Status, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the StoragePolicy entity.
+// If the StoragePolicy object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *StoragePolicyMutation) OldStatus(ctx context.Context) (v storagepolicy.Status, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *StoragePolicyMutation) ResetStatus() {
+	m.status = nil
 }
 
 // SetServer sets the "server" field.
@@ -13571,7 +13608,7 @@ func (m *StoragePolicyMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *StoragePolicyMutation) Fields() []string {
-	fields := make([]string, 0, 15)
+	fields := make([]string, 0, 16)
 	if m.created_at != nil {
 		fields = append(fields, storagepolicy.FieldCreatedAt)
 	}
@@ -13586,6 +13623,9 @@ func (m *StoragePolicyMutation) Fields() []string {
 	}
 	if m._type != nil {
 		fields = append(fields, storagepolicy.FieldType)
+	}
+	if m.status != nil {
+		fields = append(fields, storagepolicy.FieldStatus)
 	}
 	if m.server != nil {
 		fields = append(fields, storagepolicy.FieldServer)
@@ -13635,6 +13675,8 @@ func (m *StoragePolicyMutation) Field(name string) (ent.Value, bool) {
 		return m.Name()
 	case storagepolicy.FieldType:
 		return m.GetType()
+	case storagepolicy.FieldStatus:
+		return m.Status()
 	case storagepolicy.FieldServer:
 		return m.Server()
 	case storagepolicy.FieldBucketName:
@@ -13674,6 +13716,8 @@ func (m *StoragePolicyMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldName(ctx)
 	case storagepolicy.FieldType:
 		return m.OldType(ctx)
+	case storagepolicy.FieldStatus:
+		return m.OldStatus(ctx)
 	case storagepolicy.FieldServer:
 		return m.OldServer(ctx)
 	case storagepolicy.FieldBucketName:
@@ -13737,6 +13781,13 @@ func (m *StoragePolicyMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetType(v)
+		return nil
+	case storagepolicy.FieldStatus:
+		v, ok := value.(storagepolicy.Status)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
 		return nil
 	case storagepolicy.FieldServer:
 		v, ok := value.(string)
@@ -13955,6 +14006,9 @@ func (m *StoragePolicyMutation) ResetField(name string) error {
 		return nil
 	case storagepolicy.FieldType:
 		m.ResetType()
+		return nil
+	case storagepolicy.FieldStatus:
+		m.ResetStatus()
 		return nil
 	case storagepolicy.FieldServer:
 		m.ResetServer()

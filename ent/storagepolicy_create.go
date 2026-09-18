@@ -81,6 +81,20 @@ func (spc *StoragePolicyCreate) SetType(s string) *StoragePolicyCreate {
 	return spc
 }
 
+// SetStatus sets the "status" field.
+func (spc *StoragePolicyCreate) SetStatus(s storagepolicy.Status) *StoragePolicyCreate {
+	spc.mutation.SetStatus(s)
+	return spc
+}
+
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (spc *StoragePolicyCreate) SetNillableStatus(s *storagepolicy.Status) *StoragePolicyCreate {
+	if s != nil {
+		spc.SetStatus(*s)
+	}
+	return spc
+}
+
 // SetServer sets the "server" field.
 func (spc *StoragePolicyCreate) SetServer(s string) *StoragePolicyCreate {
 	spc.mutation.SetServer(s)
@@ -314,6 +328,10 @@ func (spc *StoragePolicyCreate) defaults() error {
 		v := storagepolicy.DefaultUpdatedAt()
 		spc.mutation.SetUpdatedAt(v)
 	}
+	if _, ok := spc.mutation.Status(); !ok {
+		v := storagepolicy.DefaultStatus
+		spc.mutation.SetStatus(v)
+	}
 	if _, ok := spc.mutation.Settings(); !ok {
 		v := storagepolicy.DefaultSettings
 		spc.mutation.SetSettings(v)
@@ -334,6 +352,14 @@ func (spc *StoragePolicyCreate) check() error {
 	}
 	if _, ok := spc.mutation.GetType(); !ok {
 		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "StoragePolicy.type"`)}
+	}
+	if _, ok := spc.mutation.Status(); !ok {
+		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "StoragePolicy.status"`)}
+	}
+	if v, ok := spc.mutation.Status(); ok {
+		if err := storagepolicy.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "StoragePolicy.status": %w`, err)}
+		}
 	}
 	return nil
 }
@@ -388,6 +414,10 @@ func (spc *StoragePolicyCreate) createSpec() (*StoragePolicy, *sqlgraph.CreateSp
 	if value, ok := spc.mutation.GetType(); ok {
 		_spec.SetField(storagepolicy.FieldType, field.TypeString, value)
 		_node.Type = value
+	}
+	if value, ok := spc.mutation.Status(); ok {
+		_spec.SetField(storagepolicy.FieldStatus, field.TypeEnum, value)
+		_node.Status = value
 	}
 	if value, ok := spc.mutation.Server(); ok {
 		_spec.SetField(storagepolicy.FieldServer, field.TypeString, value)
@@ -593,6 +623,18 @@ func (u *StoragePolicyUpsert) SetType(v string) *StoragePolicyUpsert {
 // UpdateType sets the "type" field to the value that was provided on create.
 func (u *StoragePolicyUpsert) UpdateType() *StoragePolicyUpsert {
 	u.SetExcluded(storagepolicy.FieldType)
+	return u
+}
+
+// SetStatus sets the "status" field.
+func (u *StoragePolicyUpsert) SetStatus(v storagepolicy.Status) *StoragePolicyUpsert {
+	u.Set(storagepolicy.FieldStatus, v)
+	return u
+}
+
+// UpdateStatus sets the "status" field to the value that was provided on create.
+func (u *StoragePolicyUpsert) UpdateStatus() *StoragePolicyUpsert {
+	u.SetExcluded(storagepolicy.FieldStatus)
 	return u
 }
 
@@ -887,6 +929,20 @@ func (u *StoragePolicyUpsertOne) SetType(v string) *StoragePolicyUpsertOne {
 func (u *StoragePolicyUpsertOne) UpdateType() *StoragePolicyUpsertOne {
 	return u.Update(func(s *StoragePolicyUpsert) {
 		s.UpdateType()
+	})
+}
+
+// SetStatus sets the "status" field.
+func (u *StoragePolicyUpsertOne) SetStatus(v storagepolicy.Status) *StoragePolicyUpsertOne {
+	return u.Update(func(s *StoragePolicyUpsert) {
+		s.SetStatus(v)
+	})
+}
+
+// UpdateStatus sets the "status" field to the value that was provided on create.
+func (u *StoragePolicyUpsertOne) UpdateStatus() *StoragePolicyUpsertOne {
+	return u.Update(func(s *StoragePolicyUpsert) {
+		s.UpdateStatus()
 	})
 }
 
@@ -1383,6 +1439,20 @@ func (u *StoragePolicyUpsertBulk) SetType(v string) *StoragePolicyUpsertBulk {
 func (u *StoragePolicyUpsertBulk) UpdateType() *StoragePolicyUpsertBulk {
 	return u.Update(func(s *StoragePolicyUpsert) {
 		s.UpdateType()
+	})
+}
+
+// SetStatus sets the "status" field.
+func (u *StoragePolicyUpsertBulk) SetStatus(v storagepolicy.Status) *StoragePolicyUpsertBulk {
+	return u.Update(func(s *StoragePolicyUpsert) {
+		s.SetStatus(v)
+	})
+}
+
+// UpdateStatus sets the "status" field to the value that was provided on create.
+func (u *StoragePolicyUpsertBulk) UpdateStatus() *StoragePolicyUpsertBulk {
+	return u.Update(func(s *StoragePolicyUpsert) {
+		s.UpdateStatus()
 	})
 }
 

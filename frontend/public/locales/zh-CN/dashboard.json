@@ -1176,7 +1176,9 @@
     "fileEncryption": "文件加密",
     "enableFileEncryption": "启用文件加密",
     "enableFileEncryptionDes": "开启后，文件 Blob 会被加密存储。更改此设置只对新增的文件有效。",
-    "encryptedFile": "加密的文件"
+    "encryptedFile": "加密的文件",
+    "status": "状态",
+    "statusDes": "已暂停的存储策略仍可读取已有文件，但会拒绝新的上传。"
   },
   "node": {
     "slave": "从机",

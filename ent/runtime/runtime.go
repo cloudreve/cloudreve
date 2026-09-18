@@ -361,7 +361,7 @@ func init() {
 	// storagepolicy.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	storagepolicy.UpdateDefaultUpdatedAt = storagepolicyDescUpdatedAt.UpdateDefault.(func() time.Time)
 	// storagepolicyDescSettings is the schema descriptor for settings field.
-	storagepolicyDescSettings := storagepolicyFields[10].Descriptor()
+	storagepolicyDescSettings := storagepolicyFields[11].Descriptor()
 	// storagepolicy.DefaultSettings holds the default value on creation for the settings field.
 	storagepolicy.DefaultSettings = storagepolicyDescSettings.Default.(*types.PolicySetting)
 	taskMixin := schema.Task{}.Mixin()
