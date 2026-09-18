@@ -565,6 +565,8 @@
     "remoteDownloadFileNameDescription": "Custom output file name",
     "remoteDownloadHttpUser": "HTTP username (optional)",
     "remoteDownloadHttpPassword": "HTTP password (optional)",
+    "remoteDownloadHeaders": "Request headers (optional)",
+    "remoteDownloadHeadersDescription": "One header per line, e.g. Cookie: sid=...",
     "processNode": "Target node",
     "remoteDownloadNodeAuto": "Auto dispatch",
     "createTask": "Create task",

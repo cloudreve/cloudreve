@@ -107,6 +107,28 @@ func TestBuildDownloadOptionsNoExtras(t *testing.T) {
 	a.Equal("https://example.com/file.zip", taskUrl)
 }
 
+func TestBuildDownloadOptionsHeaders(t *testing.T) {
+	a := assert.New(t)
+
+	// aria2: arbitrary headers pass through as a list.
+	m := newRemoteDownloadTaskForOptions(&RemoteDownloadTaskState{
+		SrcUri:      "https://example.com/f.zip",
+		HTTPHeaders: []string{"Cookie: sid=abc", "Referer: https://example.com/"},
+	}, types.DownloaderProviderAria2)
+	opts, _ := m.buildDownloadOptions(context.Background(), nil, "https://example.com/f.zip")
+	a.Equal([]string{"Cookie: sid=abc", "Referer: https://example.com/"}, opts["header"])
+
+	// qBittorrent: only the Cookie line maps onto the cookie field.
+	m = newRemoteDownloadTaskForOptions(&RemoteDownloadTaskState{
+		SrcUri:      "https://example.com/f.torrent",
+		HTTPHeaders: []string{"Referer: https://x/", "Cookie: sid=abc"},
+	}, types.DownloaderProviderQBittorrent)
+	opts, _ = m.buildDownloadOptions(context.Background(), nil, "https://example.com/f.torrent")
+	a.Equal("sid=abc", opts["cookie"])
+	_, hasHeader := opts["header"]
+	a.False(hasHeader)
+}
+
 func TestNewRemoteDownloadTaskSanitizesFileName(t *testing.T) {
 	a := assert.New(t)
 	tsk, err := NewRemoteDownloadTask(context.Background(), "https://example.com/f", "", "cloudreve://my/dst", &RemoteDownloadTaskOption{

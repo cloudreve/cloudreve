@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
+	"strings"
 	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
@@ -79,6 +80,7 @@ type (
 		FileName string   `json:"file_name" binding:"omitempty,max=255"`
 		Username string   `json:"username" binding:"omitempty,max=255"`
 		Password string   `json:"password" binding:"omitempty,max=255"`
+		Headers  []string `json:"headers" binding:"omitempty,max=32,dive,max=2048"`
 	}
 	CreateDownloadParamCtx struct{}
 )
@@ -134,11 +136,20 @@ func (service *DownloadWorkflowService) CreateDownloadTask(c *gin.Context) ([]*T
 		}
 	}
 
+	// Validate custom request headers: "Name: value" lines, no CRLF injection.
+	for _, h := range service.Headers {
+		name, _, ok := strings.Cut(h, ":")
+		if !ok || strings.TrimSpace(name) == "" || strings.ContainsAny(h, "\r\n") {
+			return nil, serializer.NewError(serializer.CodeParamErr, "Invalid header", nil)
+		}
+	}
+
 	// Custom file name only applies to single-source tasks; HTTP credentials
-	// only apply to plain HTTP(S) source URLs.
+	// and headers only apply to plain HTTP(S) source URLs.
 	taskOpts := &workflows.RemoteDownloadTaskOption{
 		HTTPUsername: service.Username,
 		HTTPPassword: service.Password,
+		HTTPHeaders:  service.Headers,
 	}
 	if len(service.Src) <= 1 {
 		taskOpts.FileName = service.FileName
@@ -146,6 +157,7 @@ func (service *DownloadWorkflowService) CreateDownloadTask(c *gin.Context) ([]*T
 	if service.SrcFile != "" {
 		taskOpts.HTTPUsername = ""
 		taskOpts.HTTPPassword = ""
+		taskOpts.HTTPHeaders = nil
 	}
 
 	// batch creating tasks

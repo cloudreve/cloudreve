@@ -50,6 +50,7 @@ type (
 		FileName           string                 `json:"file_name,omitempty"`
 		HTTPUsername       string                 `json:"http_username,omitempty"`
 		HTTPPassword       string                 `json:"http_password,omitempty"`
+		HTTPHeaders        []string               `json:"http_headers,omitempty"`
 		Handle             *downloader.TaskHandle `json:"handle,omitempty"`
 		Status             *downloader.TaskStatus `json:"status,omitempty"`
 		NodeState          `json:",inline"`
@@ -93,6 +94,7 @@ type RemoteDownloadTaskOption struct {
 	FileName     string
 	HTTPUsername string
 	HTTPPassword string
+	HTTPHeaders  []string
 }
 
 // NewRemoteDownloadTask creates a new RemoteDownloadTask
@@ -107,6 +109,7 @@ func NewRemoteDownloadTask(ctx context.Context, src string, srcFile, dst string,
 		state.FileName = sanitizeFileName(opts.FileName)
 		state.HTTPUsername = opts.HTTPUsername
 		state.HTTPPassword = opts.HTTPPassword
+		state.HTTPHeaders = opts.HTTPHeaders
 	}
 	stateBytes, err := json.Marshal(state)
 	if err != nil {
@@ -251,7 +254,7 @@ func (m *RemoteDownloadTask) createDownloadTask(ctx context.Context, dep depende
 // credentials only apply to plain HTTP(S) source URLs on aria2; qBittorrent
 // accepts a torrent rename and carries HTTP auth in the URL userinfo.
 func (m *RemoteDownloadTask) buildDownloadOptions(ctx context.Context, base map[string]interface{}, srcUrl string) (map[string]interface{}, string) {
-	if m.state.FileName == "" && m.state.HTTPUsername == "" {
+	if m.state.FileName == "" && m.state.HTTPUsername == "" && len(m.state.HTTPHeaders) == 0 {
 		return base, srcUrl
 	}
 
@@ -266,19 +269,33 @@ func (m *RemoteDownloadTask) buildDownloadOptions(ctx context.Context, base map[
 		if m.state.FileName != "" {
 			options["rename"] = m.state.FileName
 		}
-		if m.state.HTTPUsername != "" && isHttpSrc {
-			if u, err := url.Parse(srcUrl); err == nil {
-				u.User = url.UserPassword(m.state.HTTPUsername, m.state.HTTPPassword)
-				srcUrl = u.String()
+		if isHttpSrc {
+			if m.state.HTTPUsername != "" {
+				if u, err := url.Parse(srcUrl); err == nil {
+					u.User = url.UserPassword(m.state.HTTPUsername, m.state.HTTPPassword)
+					srcUrl = u.String()
+				}
+			}
+			// qBittorrent's add API only accepts a cookie field, not arbitrary
+			// headers — pass through any Cookie: line the user supplied.
+			for _, h := range m.state.HTTPHeaders {
+				if k, v, ok := strings.Cut(h, ":"); ok && strings.EqualFold(strings.TrimSpace(k), "cookie") {
+					options["cookie"] = strings.TrimSpace(v)
+				}
 			}
 		}
 	default:
-		if m.state.FileName != "" && isHttpSrc {
-			options["out"] = m.state.FileName
-		}
-		if m.state.HTTPUsername != "" && isHttpSrc {
-			options["http-user"] = m.state.HTTPUsername
-			options["http-passwd"] = m.state.HTTPPassword
+		if isHttpSrc {
+			if m.state.FileName != "" {
+				options["out"] = m.state.FileName
+			}
+			if m.state.HTTPUsername != "" {
+				options["http-user"] = m.state.HTTPUsername
+				options["http-passwd"] = m.state.HTTPPassword
+			}
+			if len(m.state.HTTPHeaders) > 0 {
+				options["header"] = m.state.HTTPHeaders
+			}
 		}
 	}
 	return options, srcUrl

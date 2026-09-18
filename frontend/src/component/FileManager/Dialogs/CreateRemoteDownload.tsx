@@ -32,6 +32,7 @@ const CreateRemoteDownload = () => {
   const [fileName, setFileName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [headers, setHeaders] = useState("");
 
   const open = useAppSelector((state) => state.globalState.remoteDownloadDialogOpen);
   const target = useAppSelector((state) => state.globalState.remoteDownloadDialogFile);
@@ -46,6 +47,7 @@ const CreateRemoteDownload = () => {
       setFileName("");
       setUsername("");
       setPassword("");
+      setHeaders("");
     }
   }, [open]);
 
@@ -67,6 +69,7 @@ const CreateRemoteDownload = () => {
         file_name: fileName || undefined,
         username: username || undefined,
         password: password || undefined,
+        headers: headers ? headers.split("\n").filter((h) => h.trim()) : undefined,
       }),
     )
       .then(() => {
@@ -80,7 +83,7 @@ const CreateRemoteDownload = () => {
       .finally(() => {
         setLoading(false);
       });
-  }, [target, url, path, fileName, username, password]);
+  }, [target, url, path, fileName, username, password, headers]);
 
   return (
     <DraggableDialog
@@ -151,6 +154,21 @@ const CreateRemoteDownload = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 label={t("application:modals.remoteDownloadHttpPassword")}
+                fullWidth
+              />
+            </Stack>
+          )}
+          {!target && (
+            <Stack spacing={3} direction={isMobile ? "column" : "row"}>
+              <OutlineIconTextField
+                icon={<Link />}
+                variant="outlined"
+                value={headers}
+                multiline
+                minRows={2}
+                onChange={(e) => setHeaders(e.target.value)}
+                placeholder={t("modals.remoteDownloadHeadersDescription")}
+                label={t("application:modals.remoteDownloadHeaders")}
                 fullWidth
               />
             </Stack>
