@@ -24,9 +24,13 @@ import { Code } from "../../../Common/Code.tsx";
 import { FilledTextField, SmallFormControlLabel } from "../../../Common/StyledComponents.tsx";
 import BookInformation from "../../../Icons/BookInformation.tsx";
 import ClockArrowDownload from "../../../Icons/ClockArrowDownload.tsx";
+import Edit from "../../../Icons/Edit.tsx";
 import Eye from "../../../Icons/Eye.tsx";
+import EyeOff from "../../../Icons/EyeOff.tsx";
+import FolderAdd from "../../../Icons/FolderAdd.tsx";
 import TableSettingsOutlined from "../../../Icons/TableSettings.tsx";
 import Timer from "../../../Icons/Timer.tsx";
+import Upload from "../../../Icons/Upload.tsx";
 
 const Accordion = styled(MuiAccordion)(() => ({
   border: "0px solid rgba(0, 0, 0, .125)",
@@ -79,6 +83,10 @@ export interface ShareSetting {
   password?: string;
   share_view?: boolean;
   show_readme?: boolean;
+  allow_upload?: boolean;
+  allow_edit?: boolean;
+  preview_only?: boolean;
+  upload_only?: boolean;
   downloads?: boolean;
   expires?: boolean;
 
@@ -132,7 +140,9 @@ const ShareSettingContent = ({ setting, file, editing, onSettingChange }: ShareS
     setExpanded(isExpanded ? panel : undefined);
   };
 
-  const handleCheck = (prop: "is_private" | "share_view" | "show_readme" | "expires" | "downloads") => () => {
+  const handleCheck = (
+    prop: "is_private" | "share_view" | "show_readme" | "preview_only" | "expires" | "downloads",
+  ) => () => {
     if (!setting[prop]) {
       handleExpand(prop)(null, true);
     }
@@ -200,8 +210,98 @@ const ShareSettingContent = ({ setting, file, editing, onSettingChange }: ShareS
           )}
         </AccordionDetails>
       </Accordion>
+      <Accordion expanded={expanded === "preview_only"} onChange={handleExpand("preview_only")}>
+        <AccordionSummary aria-controls="panel1a-content" id="panel1a-header">
+          <StyledListItemButton>
+            <ListItemIcon>
+              <EyeOff />
+            </ListItemIcon>
+            <ListItemText primary={t("application:modals.previewOnly")} />
+            <ListItemSecondaryAction>
+              <Checkbox checked={!!setting.preview_only} onChange={handleCheck("preview_only")} />
+            </ListItemSecondaryAction>
+          </StyledListItemButton>
+        </AccordionSummary>
+        <AccordionDetails>{t("application:modals.previewOnlyDes")}</AccordionDetails>
+      </Accordion>
       {file?.type == FileType.folder && (
         <>
+          <Accordion expanded={expanded === "allow_upload"} onChange={handleExpand("allow_upload")}>
+            <AccordionSummary aria-controls="panel1a-content" id="panel1a-header">
+              <StyledListItemButton>
+                <ListItemIcon>
+                  <Upload />
+                </ListItemIcon>
+                <ListItemText primary={t("application:modals.allowUpload")} />
+                <ListItemSecondaryAction>
+                  <Checkbox
+                    checked={!!setting.allow_upload || !!setting.allow_edit || !!setting.upload_only}
+                    disabled={!!setting.allow_edit || !!setting.upload_only}
+                    onChange={() => {
+                      if (!setting.allow_upload) {
+                        handleExpand("allow_upload")(null, true);
+                      }
+                      onSettingChange({ ...setting, allow_upload: !setting.allow_upload });
+                    }}
+                  />
+                </ListItemSecondaryAction>
+              </StyledListItemButton>
+            </AccordionSummary>
+            <AccordionDetails>{t("application:modals.allowUploadDes")}</AccordionDetails>
+          </Accordion>
+          <Accordion expanded={expanded === "allow_edit"} onChange={handleExpand("allow_edit")}>
+            <AccordionSummary aria-controls="panel1a-content" id="panel1a-header">
+              <StyledListItemButton>
+                <ListItemIcon>
+                  <Edit />
+                </ListItemIcon>
+                <ListItemText primary={t("application:modals.allowEdit")} />
+                <ListItemSecondaryAction>
+                  <Checkbox
+                    checked={!!setting.allow_edit}
+                    disabled={!!setting.upload_only}
+                    onChange={() => {
+                      if (!setting.allow_edit) {
+                        handleExpand("allow_edit")(null, true);
+                      }
+                      onSettingChange({
+                        ...setting,
+                        allow_edit: !setting.allow_edit,
+                        allow_upload: true,
+                      });
+                    }}
+                  />
+                </ListItemSecondaryAction>
+              </StyledListItemButton>
+            </AccordionSummary>
+            <AccordionDetails>{t("application:modals.allowEditDes")}</AccordionDetails>
+          </Accordion>
+          <Accordion expanded={expanded === "upload_only"} onChange={handleExpand("upload_only")}>
+            <AccordionSummary aria-controls="panel1a-content" id="panel1a-header">
+              <StyledListItemButton>
+                <ListItemIcon>
+                  <FolderAdd />
+                </ListItemIcon>
+                <ListItemText primary={t("application:modals.uploadOnly")} />
+                <ListItemSecondaryAction>
+                  <Checkbox
+                    checked={!!setting.upload_only}
+                    onChange={() => {
+                      if (!setting.upload_only) {
+                        handleExpand("upload_only")(null, true);
+                      }
+                      onSettingChange({
+                        ...setting,
+                        upload_only: !setting.upload_only,
+                        allow_edit: false,
+                      });
+                    }}
+                  />
+                </ListItemSecondaryAction>
+              </StyledListItemButton>
+            </AccordionSummary>
+            <AccordionDetails>{t("application:modals.uploadOnlyDes")}</AccordionDetails>
+          </Accordion>
           <Accordion expanded={expanded === "share_view"} onChange={handleExpand("share_view")}>
             <AccordionSummary aria-controls="panel1a-content" id="panel1a-header">
               <StyledListItemButton>

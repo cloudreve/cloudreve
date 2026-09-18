@@ -1,7 +1,7 @@
 import { memo, useCallback, useContext, useEffect } from "react";
 import { useDrag, useDrop } from "react-dnd";
 import { getEmptyImage } from "react-dnd-html5-backend";
-import { FileResponse, FileType } from "../../../api/explorer.ts";
+import { FileResponse, FileType, NavigatorCapability } from "../../../api/explorer.ts";
 import { setDragging } from "../../../redux/globalStateSlice.ts";
 import { useAppDispatch, useAppSelector } from "../../../redux/hooks.ts";
 import { processDnd } from "../../../redux/thunks/file.ts";
@@ -9,6 +9,7 @@ import { getFileLinkedUri, mergeRefs } from "../../../util";
 
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
+import Boolset from "../../../util/boolset.ts";
 import CrUri, { Filesystem } from "../../../util/uri.ts";
 import { FileBlockProps } from "../Explorer/Explorer.tsx";
 import { FileManagerIndex } from "../FileManager.tsx";
@@ -66,7 +67,11 @@ export const useFileDrag = ({ file, includeSelected, dropUri }: UseFileDragProps
       }
 
       const crUri = new CrUri(file.path);
-      return file.owned && crUri.fs() != Filesystem.share;
+      if (crUri.fs() == Filesystem.share) {
+        // Moving a file out of a share folder requires delete permission on it.
+        return !!file.capability && new Boolset(file.capability).enabled(NavigatorCapability.delete_file);
+      }
+      return !!file.owned;
     },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),

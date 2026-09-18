@@ -27,6 +27,10 @@ type (
 		Expire          int    `json:"expire"`
 		ShareView       bool   `json:"share_view"`
 		ShowReadMe      bool   `json:"show_readme"`
+		AllowUpload     bool   `json:"allow_upload"`
+		AllowEdit       bool   `json:"allow_edit"`
+		PreviewOnly     bool   `json:"preview_only"`
+		UploadOnly      bool   `json:"upload_only"`
 	}
 	ShareCreateParamCtx struct{}
 
@@ -90,6 +94,10 @@ func (service *ShareCreateService) Upsert(c *gin.Context, existed int) (string, 
 		ExistedShareID:  existed,
 		ShareView:       service.ShareView,
 		ShowReadMe:      service.ShowReadMe,
+		AllowUpload:     service.AllowUpload,
+		AllowEdit:       service.AllowEdit,
+		PreviewOnly:     service.PreviewOnly,
+		UploadOnly:      service.UploadOnly,
 	})
 	if err != nil {
 		return "", err

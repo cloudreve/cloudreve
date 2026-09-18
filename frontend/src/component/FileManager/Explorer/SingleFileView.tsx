@@ -262,9 +262,11 @@ const SingleFileView = forwardRef((_props, ref: React.Ref<any>) => {
                   </SecondaryButton>
                 )}
                 <ButtonGroup disableElevation variant="contained">
-                  <Button onClick={download} disabled={loading} startIcon={<Download />}>
-                    {t("application:fileManager.download")}
-                  </Button>
+                  {!shareInfo.preview_only && (
+                    <Button onClick={download} disabled={loading} startIcon={<Download />}>
+                      {t("application:fileManager.download")}
+                    </Button>
+                  )}
                   <Button size="small" onClick={openMore}>
                     <CaretDown sx={{ fontSize: "12px!important" }} />
                   </Button>

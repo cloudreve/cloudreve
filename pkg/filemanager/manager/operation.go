@@ -322,8 +322,12 @@ func (l *manager) CreateOrUpdateShare(ctx context.Context, path *fs.URI, args *C
 	}
 
 	props := &types.ShareProps{
-		ShareView:  args.ShareView,
-		ShowReadMe: args.ShowReadMe,
+		ShareView:   args.ShareView,
+		ShowReadMe:  args.ShowReadMe,
+		AllowUpload: args.AllowUpload || args.AllowEdit,
+		AllowEdit:   args.AllowEdit,
+		PreviewOnly: args.PreviewOnly,
+		UploadOnly:  args.UploadOnly,
 	}
 
 	share, err := shareClient.Upsert(ctx, &inventory.CreateShareParams{
