@@ -131,18 +131,18 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 			}
 		}
 		return &SiteConfig{
-			MaxBatchSize:         maxBatchSize,
-			FileViewers:          fileViewers,
-			DefaultViewerMapping: settings.DefaultViewerMapping(c),
-			Icons:                explorerSettings.Icons,
-			MapProvider:          mapSettings.Provider,
-			GoogleMapTileType:    mapSettings.GoogleTileType,
-			MapboxAK:             mapSettings.MapboxAK,
-			ThumbnailWidth:       w,
-			ThumbnailHeight:      h,
-			CustomProps:          customProps,
-			ShowEncryptionStatus: showEncryptionStatus,
-			FullTextSearch:       settings.FTSEnabled(c),
+			MaxBatchSize:            maxBatchSize,
+			FileViewers:             fileViewers,
+			DefaultViewerMapping:    settings.DefaultViewerMapping(c),
+			Icons:                   explorerSettings.Icons,
+			MapProvider:             mapSettings.Provider,
+			GoogleMapTileType:       mapSettings.GoogleTileType,
+			MapboxAK:                mapSettings.MapboxAK,
+			ThumbnailWidth:          w,
+			ThumbnailHeight:         h,
+			CustomProps:             customProps,
+			ShowEncryptionStatus:    showEncryptionStatus,
+			FullTextSearch:          settings.FTSEnabled(c),
 			RemoteDownloadProviders: remoteDownloadProviders(c, dep),
 		}, nil
 	case "emojis":

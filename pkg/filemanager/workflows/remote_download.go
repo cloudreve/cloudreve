@@ -44,10 +44,10 @@ type (
 	}
 	RemoteDownloadTaskPhase string
 	RemoteDownloadTaskState struct {
-		SrcFileUri         string                 `json:"src_file_uri,omitempty"`
-		SrcUri             string                 `json:"src_uri,omitempty"`
-		Dst                string                 `json:"dst,omitempty"`
-		FileName           string                 `json:"file_name,omitempty"`
+		SrcFileUri string `json:"src_file_uri,omitempty"`
+		SrcUri     string `json:"src_uri,omitempty"`
+		Dst        string `json:"dst,omitempty"`
+		FileName   string `json:"file_name,omitempty"`
 		// Provider pins the task to a node offering this downloader provider
 		// (e.g. "aria2"/"qbittorrent"). Empty = pool picks any capable node.
 		Provider           string                 `json:"provider,omitempty"`

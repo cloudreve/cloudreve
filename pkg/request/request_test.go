@@ -239,7 +239,7 @@ func TestBlackHole(t *testing.T) {
 
 func TestHTTPClient_TPSLimit(t *testing.T) {
 	a := assert.New(t)
-	client := NewClient(nil, )
+	client := NewClient(nil)
 
 	finished := make(chan struct{})
 	go func() {

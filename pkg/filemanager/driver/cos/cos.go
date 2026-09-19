@@ -234,7 +234,7 @@ func (handler Driver) CORS() error {
 	return err
 }
 
-// Get 获取文件
+// Open opens a file for reading
 func (handler *Driver) Open(ctx context.Context, path string) (*os.File, error) {
 	return nil, errors.New("not implemented")
 }
