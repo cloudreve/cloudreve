@@ -184,6 +184,7 @@ const Settings = () => {
                 <SettingsWrapper
                   settings={[
                     "register_enabled",
+                    "invitation_code_required",
                     "email_active",
                     "default_group",
                     "authn_enabled",

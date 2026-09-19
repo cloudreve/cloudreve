@@ -21,6 +21,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/file"
 	"github.com/cloudreve/Cloudreve/v4/ent/fsevent"
 	"github.com/cloudreve/Cloudreve/v4/ent/group"
+	"github.com/cloudreve/Cloudreve/v4/ent/invitationcode"
 	"github.com/cloudreve/Cloudreve/v4/ent/metadata"
 	"github.com/cloudreve/Cloudreve/v4/ent/node"
 	"github.com/cloudreve/Cloudreve/v4/ent/oauthclient"
@@ -52,6 +53,8 @@ type Client struct {
 	FsEvent *FsEventClient
 	// Group is the client for interacting with the Group builders.
 	Group *GroupClient
+	// InvitationCode is the client for interacting with the InvitationCode builders.
+	InvitationCode *InvitationCodeClient
 	// Metadata is the client for interacting with the Metadata builders.
 	Metadata *MetadataClient
 	// Node is the client for interacting with the Node builders.
@@ -89,6 +92,7 @@ func (c *Client) init() {
 	c.File = NewFileClient(c.config)
 	c.FsEvent = NewFsEventClient(c.config)
 	c.Group = NewGroupClient(c.config)
+	c.InvitationCode = NewInvitationCodeClient(c.config)
 	c.Metadata = NewMetadataClient(c.config)
 	c.Node = NewNodeClient(c.config)
 	c.OAuthClient = NewOAuthClientClient(c.config)
@@ -189,24 +193,25 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:           ctx,
-		config:        cfg,
-		DavAccount:    NewDavAccountClient(cfg),
-		DirectLink:    NewDirectLinkClient(cfg),
-		Entity:        NewEntityClient(cfg),
-		File:          NewFileClient(cfg),
-		FsEvent:       NewFsEventClient(cfg),
-		Group:         NewGroupClient(cfg),
-		Metadata:      NewMetadataClient(cfg),
-		Node:          NewNodeClient(cfg),
-		OAuthClient:   NewOAuthClientClient(cfg),
-		OAuthGrant:    NewOAuthGrantClient(cfg),
-		Passkey:       NewPasskeyClient(cfg),
-		Setting:       NewSettingClient(cfg),
-		Share:         NewShareClient(cfg),
-		StoragePolicy: NewStoragePolicyClient(cfg),
-		Task:          NewTaskClient(cfg),
-		User:          NewUserClient(cfg),
+		ctx:            ctx,
+		config:         cfg,
+		DavAccount:     NewDavAccountClient(cfg),
+		DirectLink:     NewDirectLinkClient(cfg),
+		Entity:         NewEntityClient(cfg),
+		File:           NewFileClient(cfg),
+		FsEvent:        NewFsEventClient(cfg),
+		Group:          NewGroupClient(cfg),
+		InvitationCode: NewInvitationCodeClient(cfg),
+		Metadata:       NewMetadataClient(cfg),
+		Node:           NewNodeClient(cfg),
+		OAuthClient:    NewOAuthClientClient(cfg),
+		OAuthGrant:     NewOAuthGrantClient(cfg),
+		Passkey:        NewPasskeyClient(cfg),
+		Setting:        NewSettingClient(cfg),
+		Share:          NewShareClient(cfg),
+		StoragePolicy:  NewStoragePolicyClient(cfg),
+		Task:           NewTaskClient(cfg),
+		User:           NewUserClient(cfg),
 	}, nil
 }
 
@@ -224,24 +229,25 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:           ctx,
-		config:        cfg,
-		DavAccount:    NewDavAccountClient(cfg),
-		DirectLink:    NewDirectLinkClient(cfg),
-		Entity:        NewEntityClient(cfg),
-		File:          NewFileClient(cfg),
-		FsEvent:       NewFsEventClient(cfg),
-		Group:         NewGroupClient(cfg),
-		Metadata:      NewMetadataClient(cfg),
-		Node:          NewNodeClient(cfg),
-		OAuthClient:   NewOAuthClientClient(cfg),
-		OAuthGrant:    NewOAuthGrantClient(cfg),
-		Passkey:       NewPasskeyClient(cfg),
-		Setting:       NewSettingClient(cfg),
-		Share:         NewShareClient(cfg),
-		StoragePolicy: NewStoragePolicyClient(cfg),
-		Task:          NewTaskClient(cfg),
-		User:          NewUserClient(cfg),
+		ctx:            ctx,
+		config:         cfg,
+		DavAccount:     NewDavAccountClient(cfg),
+		DirectLink:     NewDirectLinkClient(cfg),
+		Entity:         NewEntityClient(cfg),
+		File:           NewFileClient(cfg),
+		FsEvent:        NewFsEventClient(cfg),
+		Group:          NewGroupClient(cfg),
+		InvitationCode: NewInvitationCodeClient(cfg),
+		Metadata:       NewMetadataClient(cfg),
+		Node:           NewNodeClient(cfg),
+		OAuthClient:    NewOAuthClientClient(cfg),
+		OAuthGrant:     NewOAuthGrantClient(cfg),
+		Passkey:        NewPasskeyClient(cfg),
+		Setting:        NewSettingClient(cfg),
+		Share:          NewShareClient(cfg),
+		StoragePolicy:  NewStoragePolicyClient(cfg),
+		Task:           NewTaskClient(cfg),
+		User:           NewUserClient(cfg),
 	}, nil
 }
 
@@ -271,9 +277,9 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.DavAccount, c.DirectLink, c.Entity, c.File, c.FsEvent, c.Group, c.Metadata,
-		c.Node, c.OAuthClient, c.OAuthGrant, c.Passkey, c.Setting, c.Share,
-		c.StoragePolicy, c.Task, c.User,
+		c.DavAccount, c.DirectLink, c.Entity, c.File, c.FsEvent, c.Group,
+		c.InvitationCode, c.Metadata, c.Node, c.OAuthClient, c.OAuthGrant, c.Passkey,
+		c.Setting, c.Share, c.StoragePolicy, c.Task, c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -283,9 +289,9 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.DavAccount, c.DirectLink, c.Entity, c.File, c.FsEvent, c.Group, c.Metadata,
-		c.Node, c.OAuthClient, c.OAuthGrant, c.Passkey, c.Setting, c.Share,
-		c.StoragePolicy, c.Task, c.User,
+		c.DavAccount, c.DirectLink, c.Entity, c.File, c.FsEvent, c.Group,
+		c.InvitationCode, c.Metadata, c.Node, c.OAuthClient, c.OAuthGrant, c.Passkey,
+		c.Setting, c.Share, c.StoragePolicy, c.Task, c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -306,6 +312,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.FsEvent.mutate(ctx, m)
 	case *GroupMutation:
 		return c.Group.mutate(ctx, m)
+	case *InvitationCodeMutation:
+		return c.InvitationCode.mutate(ctx, m)
 	case *MetadataMutation:
 		return c.Metadata.mutate(ctx, m)
 	case *NodeMutation:
@@ -1393,6 +1401,141 @@ func (c *GroupClient) mutate(ctx context.Context, m *GroupMutation) (Value, erro
 		return (&GroupDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Group mutation op: %q", m.Op())
+	}
+}
+
+// InvitationCodeClient is a client for the InvitationCode schema.
+type InvitationCodeClient struct {
+	config
+}
+
+// NewInvitationCodeClient returns a client for the InvitationCode from the given config.
+func NewInvitationCodeClient(c config) *InvitationCodeClient {
+	return &InvitationCodeClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `invitationcode.Hooks(f(g(h())))`.
+func (c *InvitationCodeClient) Use(hooks ...Hook) {
+	c.hooks.InvitationCode = append(c.hooks.InvitationCode, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `invitationcode.Intercept(f(g(h())))`.
+func (c *InvitationCodeClient) Intercept(interceptors ...Interceptor) {
+	c.inters.InvitationCode = append(c.inters.InvitationCode, interceptors...)
+}
+
+// Create returns a builder for creating a InvitationCode entity.
+func (c *InvitationCodeClient) Create() *InvitationCodeCreate {
+	mutation := newInvitationCodeMutation(c.config, OpCreate)
+	return &InvitationCodeCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of InvitationCode entities.
+func (c *InvitationCodeClient) CreateBulk(builders ...*InvitationCodeCreate) *InvitationCodeCreateBulk {
+	return &InvitationCodeCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *InvitationCodeClient) MapCreateBulk(slice any, setFunc func(*InvitationCodeCreate, int)) *InvitationCodeCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &InvitationCodeCreateBulk{err: fmt.Errorf("calling to InvitationCodeClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*InvitationCodeCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &InvitationCodeCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for InvitationCode.
+func (c *InvitationCodeClient) Update() *InvitationCodeUpdate {
+	mutation := newInvitationCodeMutation(c.config, OpUpdate)
+	return &InvitationCodeUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *InvitationCodeClient) UpdateOne(ic *InvitationCode) *InvitationCodeUpdateOne {
+	mutation := newInvitationCodeMutation(c.config, OpUpdateOne, withInvitationCode(ic))
+	return &InvitationCodeUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *InvitationCodeClient) UpdateOneID(id int) *InvitationCodeUpdateOne {
+	mutation := newInvitationCodeMutation(c.config, OpUpdateOne, withInvitationCodeID(id))
+	return &InvitationCodeUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for InvitationCode.
+func (c *InvitationCodeClient) Delete() *InvitationCodeDelete {
+	mutation := newInvitationCodeMutation(c.config, OpDelete)
+	return &InvitationCodeDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *InvitationCodeClient) DeleteOne(ic *InvitationCode) *InvitationCodeDeleteOne {
+	return c.DeleteOneID(ic.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *InvitationCodeClient) DeleteOneID(id int) *InvitationCodeDeleteOne {
+	builder := c.Delete().Where(invitationcode.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &InvitationCodeDeleteOne{builder}
+}
+
+// Query returns a query builder for InvitationCode.
+func (c *InvitationCodeClient) Query() *InvitationCodeQuery {
+	return &InvitationCodeQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeInvitationCode},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a InvitationCode entity by its id.
+func (c *InvitationCodeClient) Get(ctx context.Context, id int) (*InvitationCode, error) {
+	return c.Query().Where(invitationcode.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *InvitationCodeClient) GetX(ctx context.Context, id int) *InvitationCode {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *InvitationCodeClient) Hooks() []Hook {
+	hooks := c.hooks.InvitationCode
+	return append(hooks[:len(hooks):len(hooks)], invitationcode.Hooks[:]...)
+}
+
+// Interceptors returns the client interceptors.
+func (c *InvitationCodeClient) Interceptors() []Interceptor {
+	inters := c.inters.InvitationCode
+	return append(inters[:len(inters):len(inters)], invitationcode.Interceptors[:]...)
+}
+
+func (c *InvitationCodeClient) mutate(ctx context.Context, m *InvitationCodeMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&InvitationCodeCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&InvitationCodeUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&InvitationCodeUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&InvitationCodeDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown InvitationCode mutation op: %q", m.Op())
 	}
 }
 
@@ -3101,13 +3244,13 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		DavAccount, DirectLink, Entity, File, FsEvent, Group, Metadata, Node,
-		OAuthClient, OAuthGrant, Passkey, Setting, Share, StoragePolicy, Task,
+		DavAccount, DirectLink, Entity, File, FsEvent, Group, InvitationCode, Metadata,
+		Node, OAuthClient, OAuthGrant, Passkey, Setting, Share, StoragePolicy, Task,
 		User []ent.Hook
 	}
 	inters struct {
-		DavAccount, DirectLink, Entity, File, FsEvent, Group, Metadata, Node,
-		OAuthClient, OAuthGrant, Passkey, Setting, Share, StoragePolicy, Task,
+		DavAccount, DirectLink, Entity, File, FsEvent, Group, InvitationCode, Metadata,
+		Node, OAuthClient, OAuthGrant, Passkey, Setting, Share, StoragePolicy, Task,
 		User []ent.Interceptor
 	}
 )

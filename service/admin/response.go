@@ -114,6 +114,11 @@ type ListGroupResponse struct {
 	Pagination *inventory.PaginationResults `json:"pagination"`
 }
 
+type ListInvitationCodeResult struct {
+	Pagination *inventory.PaginationResults `json:"pagination"`
+	Codes      []*InvitationCodeResponse    `json:"codes"`
+}
+
 type ListOAuthClientResponse struct {
 	Clients    []GetOAuthClientResponse     `json:"clients"`
 	Pagination *inventory.PaginationResults `json:"pagination"`

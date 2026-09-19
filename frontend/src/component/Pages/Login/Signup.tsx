@@ -17,6 +17,7 @@ import { DefaultCloseAction } from "../../Common/Snackbar/snackbar.tsx";
 import EmailClock from "../../Icons/EmailClock.tsx";
 import MailOutlined from "../../Icons/MailOutlined.tsx";
 import Password from "../../Icons/Password.tsx";
+import TicketDiagonal from "../../Icons/TicketDiagonal.tsx";
 import { LegalLinks } from "./Phases/PhaseCollectEmail.tsx";
 
 export enum SignUpPhase {
@@ -39,7 +40,7 @@ const signUpPhaseSettings: Record<SignUpPhase, signUpPhaseProps> = {
 
 const SignUp = () => {
   const { t } = useTranslation();
-  const { reg_captcha } = useAppSelector((state) => state.siteConfig.login.config);
+  const { reg_captcha, invitation_code } = useAppSelector((state) => state.siteConfig.login.config);
   const tos = useAppSelector((state) => state.siteConfig.login.config.tos_url);
   const privacyPolicy = useAppSelector((state) => state.siteConfig.login.config.privacy_policy_url);
   const navigate = useNavigate();
@@ -52,6 +53,7 @@ const SignUp = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordRepeat, setPasswordRepeat] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const [captchaGen, setCaptchaGen] = useState(0);
   const captchaState = useRef<CaptchaParams>();
   const [loading, setLoading] = useState(false);
@@ -89,6 +91,7 @@ const SignUp = () => {
         email,
         password,
         language: i18next.language,
+        invite_code: inviteCode || undefined,
         ...captchaState.current,
       }),
     )
@@ -206,6 +209,23 @@ const SignUp = () => {
                         autoComplete={"false"}
                       />
                     </FormControl>
+                    {invitation_code && (
+                      <FormControl variant="standard" margin="normal" required fullWidth>
+                        <OutlineIconTextField
+                          variant={"outlined"}
+                          label={t("login.invitationCode")}
+                          inputProps={{
+                            name: "invite_code",
+                            type: "text",
+                            id: "invite_code",
+                            required: "true",
+                          }}
+                          onChange={(e) => setInviteCode(e.target.value)}
+                          icon={<TicketDiagonal />}
+                          value={inviteCode}
+                        />
+                      </FormControl>
+                    )}
                     {reg_captcha && (
                       <FormControl variant="standard" margin="normal" required fullWidth>
                         <Captcha

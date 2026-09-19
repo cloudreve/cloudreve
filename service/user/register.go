@@ -24,9 +24,10 @@ type RegisterParameterCtx struct{}
 
 // UserRegisterService 管理用户注册的服务
 type UserRegisterService struct {
-	UserName string `form:"email" json:"email" binding:"required,email"`
-	Password string `form:"password" json:"password" binding:"required,min=6,max=128"`
-	Language string `form:"language" json:"language"`
+	UserName   string `form:"email" json:"email" binding:"required,email"`
+	Password   string `form:"password" json:"password" binding:"required,min=6,max=128"`
+	InviteCode string `form:"invite_code" json:"invite_code"`
+	Language   string `form:"language" json:"language"`
 }
 
 // Register 新用户注册
@@ -38,6 +39,11 @@ func (service *UserRegisterService) Register(c *gin.Context) serializer.Response
 	email := strings.ToLower(service.UserName)
 	if err := CheckEmailAllowed(settings.EmailFilter(c), email); err != nil {
 		return serializer.Err(c, err)
+	}
+
+	inviteCode := strings.TrimSpace(service.InviteCode)
+	if inviteCode == "" && settings.InvitationCodeRequired(c) {
+		return serializer.ErrWithDetails(c, serializer.CodeInvitationCodeRequired, "Invitation code is required", nil)
 	}
 
 	args := &inventory.NewUserArgs{
@@ -52,9 +58,23 @@ func (service *UserRegisterService) Register(c *gin.Context) serializer.Response
 	}
 
 	userClient := dep.UserClient()
-	uc, tx, _, err := inventory.WithTx(c, userClient)
+	uc, tx, txCtx, err := inventory.WithTx(c, userClient)
 	if err != nil {
 		return serializer.DBErr(c, "Failed to start transaction", err)
+	}
+
+	if inviteCode != "" {
+		// Consume inside the registration transaction: if user creation fails
+		// the use count rolls back with it.
+		invClient, _ := inventory.InheritTx(txCtx, dep.InvitationCodeClient())
+		invite, err := invClient.Consume(txCtx, inviteCode)
+		if err != nil {
+			_ = inventory.Rollback(tx)
+			return serializer.ErrWithDetails(c, serializer.CodeInvitationCodeInvalid, "Invalid invitation code", err)
+		}
+		if invite.GroupID > 0 {
+			args.GroupID = invite.GroupID
+		}
 	}
 
 	expectedUser, err := uc.Create(c, args)

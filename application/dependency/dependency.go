@@ -88,6 +88,8 @@ type Dep interface {
 	NodeClient() inventory.NodeClient
 	// DavAccountClient Get a singleton inventory.DavAccountClient instance for access DB dav account store.
 	DavAccountClient() inventory.DavAccountClient
+	// InvitationCodeClient Get a singleton inventory.InvitationCodeClient instance for access DB invitation code store.
+	InvitationCodeClient() inventory.InvitationCodeClient
 	// DirectLinkClient Get a singleton inventory.DirectLinkClient instance for access DB direct link store.
 	DirectLinkClient() inventory.DirectLinkClient
 	// OAuthClientClient Get a singleton inventory.OAuthClientClient instance for access DB OAuth client store.
@@ -167,6 +169,7 @@ type dependency struct {
 	taskClient            inventory.TaskClient
 	nodeClient            inventory.NodeClient
 	davAccountClient      inventory.DavAccountClient
+	invitationCodeClient  inventory.InvitationCodeClient
 	directLinkClient      inventory.DirectLinkClient
 	fsEventClient         inventory.FsEventClient
 	oAuthClient           inventory.OAuthClientClient
@@ -835,6 +838,15 @@ func (d *dependency) DavAccountClient() inventory.DavAccountClient {
 
 	d.davAccountClient = inventory.NewDavAccountClient(d.DBClient(), d.ConfigProvider().Database().Type, d.HashIDEncoder())
 	return d.davAccountClient
+}
+
+func (d *dependency) InvitationCodeClient() inventory.InvitationCodeClient {
+	if d.invitationCodeClient != nil {
+		return d.invitationCodeClient
+	}
+
+	d.invitationCodeClient = inventory.NewInvitationCodeClient(d.DBClient(), d.ConfigProvider().Database().Type, d.HashIDEncoder())
+	return d.invitationCodeClient
 }
 
 func (d *dependency) DirectLinkClient() inventory.DirectLinkClient {
