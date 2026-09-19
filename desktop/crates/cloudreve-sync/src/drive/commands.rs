@@ -585,6 +585,11 @@ impl Mount {
                 )?
                 .to_string(),
                 copy: None,
+                // The OS already resolved local naming before emitting the
+                // rename (Explorer prompts replace/skip; skip produces no
+                // event), so a remote name collision at the destination is a
+                // stale remote entity and must be overwritten.
+                on_conflict: Some("overwrite".to_string()),
             })
             .await
         {

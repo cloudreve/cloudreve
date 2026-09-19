@@ -287,6 +287,12 @@ pub struct MoveFileService {
     pub dst: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub copy: Option<bool>,
+    /// Behaviour when a destination child with the same name exists:
+    /// "skip" drops the colliding source, "overwrite" deletes the
+    /// destination object first. Absent keeps the server default
+    /// (fail with a conflict error).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub on_conflict: Option<String>,
 }
 
 /// Metadata patch
