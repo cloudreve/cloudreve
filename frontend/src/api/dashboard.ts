@@ -58,6 +58,8 @@ export interface GroupSetting {
   remote_download_options?: Record<string, any>;
   source_batch?: number;
   aria2_batch?: number;
+  aria2_task_limit?: number;
+  aria2_max_file_size?: number;
   max_walked_files?: number;
   trash_retention?: number;
   redirected_source?: boolean;

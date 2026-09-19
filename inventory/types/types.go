@@ -44,6 +44,10 @@ type (
 		RemoteDownloadOptions map[string]interface{} `json:"remote_download_options,omitempty"` // 离线下载用户组配置
 		SourceBatchSize       int                    `json:"source_batch,omitempty"`
 		Aria2BatchSize        int                    `json:"aria2_batch,omitempty"`
+		// Aria2TaskLimit caps concurrent active remote-download tasks per user.
+		Aria2TaskLimit int `json:"aria2_task_limit,omitempty"`
+		// Aria2MaxFileSize caps the total byte size of a single download task.
+		Aria2MaxFileSize int64 `json:"aria2_max_file_size,omitempty"`
 		MaxWalkedFiles        int                    `json:"max_walked_files,omitempty"`
 		TrashRetention        int                    `json:"trash_retention,omitempty"`
 		RedirectedSource      bool                   `json:"redirected_source,omitempty"`

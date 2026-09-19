@@ -366,6 +366,15 @@ func (m *RemoteDownloadTask) monitor(ctx context.Context, dep dependency.Dep) (t
 
 	if m.state.Status == nil || m.state.Status.Total != status.Total {
 		m.l.Info("download size changed, re-validate files.")
+		// Group per-task volume cap: abort once the resolved size exceeds it.
+		var maxSize int64
+		if u := inventory.UserFromContext(ctx); u != nil && u.Edges.Group != nil {
+			maxSize = u.Edges.Group.Settings.Aria2MaxFileSize
+		}
+		if maxSize > 0 && status.Total > maxSize {
+			m.state.Status = status
+			return task.StatusError, fmt.Errorf("download size %d exceeds group limit %d (%w)", status.Total, maxSize, queue.CriticalErr)
+		}
 		// First time to get status / total size changed, check user capacity
 		if err := m.validateFiles(ctx, dep, status); err != nil {
 			m.state.Status = status
