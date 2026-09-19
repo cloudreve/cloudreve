@@ -826,7 +826,7 @@ func applyPatches(l logging.Logger, client *ent.Client, ctx context.Context, req
 		return fmt.Errorf("failed to parse required version %s: %w", requiredDbVersion, err)
 	}
 
-	if latestAppliedVersion == nil || requiredVersion.Compare(requiredVersion) > 0 {
+	if latestAppliedVersion == nil || requiredVersion.Compare(latestAppliedVersion) > 0 {
 		latestAppliedVersion = requiredVersion
 	}
 

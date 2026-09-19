@@ -417,7 +417,7 @@ func (f *fileClient) CreateDirectLink(ctx context.Context, file int, name string
 func (f *fileClient) GetByHashID(ctx context.Context, hashID string) (*ent.File, error) {
 	id, err := f.hasher.Decode(hashID, hashid.FileID)
 	if err != nil {
-		return nil, fmt.Errorf("ailed to decode hash id %q: %w", hashID, err)
+		return nil, fmt.Errorf("failed to decode hash id %q: %w", hashID, err)
 	}
 
 	return withFileEagerLoading(ctx, f.client.File.Query().Where(file.ID(id))).First(ctx)
