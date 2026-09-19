@@ -10,7 +10,7 @@ import {
   Typography,
 } from "@mui/material";
 import { bindTrigger, usePopupState } from "material-ui-popup-state/hooks";
-import { useContext, useMemo } from "react";
+import { useContext } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { DenseFilledTextField } from "../../../Common/StyledComponents.tsx";
 import SettingForm from "../../../Pages/Setting/SettingForm.tsx";
@@ -18,26 +18,16 @@ import { NoMarginHelperText, SettingSection, SettingSectionContent } from "../Se
 import { SettingContext } from "../SettingWrapper.tsx";
 import GiftCodes from "./GiftCodes.tsx";
 import GroupProducts from "./GroupProducts.tsx";
+import ManualCreditAdjust from "./ManualCreditAdjust.tsx";
 import PaymentProviders from "./PaymentProviders.tsx";
 import StorageProducts from "./StorageProducts.tsx";
-interface CurrencyOption {
-  code: string;
-  symbol: string;
-  unit: number;
-  label: string;
-}
-
 const VAS = () => {
   const { t } = useTranslation("dashboard");
-  const { formRef, setSettings, values } = useContext(SettingContext);
+  const { formRef } = useContext(SettingContext);
   const currencyPopupState = usePopupState({
     variant: "popover",
     popupId: "currencySelector",
   });
-  const paymentConfig = useMemo(() => JSON.parse(values.payment || "{}"), [values.payment]);
-  const storageProducts = useMemo(() => values.storage_products || "[]", [values.storage_products]);
-  const groupSellData = useMemo(() => values.group_sell_data || "[]", [values.group_sell_data]);
-
   return (
     <Box component={"form"} ref={formRef}>
       <Stack spacing={5}>
@@ -206,7 +196,16 @@ const VAS = () => {
             {t("giftCodes.giftCodesSettings")}
           </Typography>
           <SettingSectionContent>
-            <GiftCodes storageProductsConfig={storageProducts} groupProductsConfig={groupSellData} />
+            <GiftCodes />
+          </SettingSectionContent>
+        </SettingSection>
+
+        <SettingSection>
+          <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center" }}>
+            {t("vas.manualAdjust")}
+          </Typography>
+          <SettingSectionContent>
+            <ManualCreditAdjust />
           </SettingSectionContent>
         </SettingSection>
       </Stack>

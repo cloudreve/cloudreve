@@ -11,16 +11,19 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/cloudreve/Cloudreve/v4/ent/credittxn"
 	"github.com/cloudreve/Cloudreve/v4/ent/davaccount"
 	"github.com/cloudreve/Cloudreve/v4/ent/entity"
 	"github.com/cloudreve/Cloudreve/v4/ent/file"
 	"github.com/cloudreve/Cloudreve/v4/ent/fsevent"
+	"github.com/cloudreve/Cloudreve/v4/ent/giftcode"
 	"github.com/cloudreve/Cloudreve/v4/ent/group"
 	"github.com/cloudreve/Cloudreve/v4/ent/oauthgrant"
 	"github.com/cloudreve/Cloudreve/v4/ent/passkey"
 	"github.com/cloudreve/Cloudreve/v4/ent/share"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
+	"github.com/cloudreve/Cloudreve/v4/ent/usergrant"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 )
 
@@ -166,6 +169,20 @@ func (uc *UserCreate) SetStorage(i int64) *UserCreate {
 func (uc *UserCreate) SetNillableStorage(i *int64) *UserCreate {
 	if i != nil {
 		uc.SetStorage(*i)
+	}
+	return uc
+}
+
+// SetCredits sets the "credits" field.
+func (uc *UserCreate) SetCredits(i int64) *UserCreate {
+	uc.mutation.SetCredits(i)
+	return uc
+}
+
+// SetNillableCredits sets the "credits" field if the given value is not nil.
+func (uc *UserCreate) SetNillableCredits(i *int64) *UserCreate {
+	if i != nil {
+		uc.SetCredits(*i)
 	}
 	return uc
 }
@@ -341,6 +358,51 @@ func (uc *UserCreate) AddOauthGrants(o ...*OAuthGrant) *UserCreate {
 	return uc.AddOauthGrantIDs(ids...)
 }
 
+// AddCreditTxnIDs adds the "credit_txns" edge to the CreditTxn entity by IDs.
+func (uc *UserCreate) AddCreditTxnIDs(ids ...int) *UserCreate {
+	uc.mutation.AddCreditTxnIDs(ids...)
+	return uc
+}
+
+// AddCreditTxns adds the "credit_txns" edges to the CreditTxn entity.
+func (uc *UserCreate) AddCreditTxns(c ...*CreditTxn) *UserCreate {
+	ids := make([]int, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return uc.AddCreditTxnIDs(ids...)
+}
+
+// AddRedeemedCodeIDs adds the "redeemed_codes" edge to the GiftCode entity by IDs.
+func (uc *UserCreate) AddRedeemedCodeIDs(ids ...int) *UserCreate {
+	uc.mutation.AddRedeemedCodeIDs(ids...)
+	return uc
+}
+
+// AddRedeemedCodes adds the "redeemed_codes" edges to the GiftCode entity.
+func (uc *UserCreate) AddRedeemedCodes(g ...*GiftCode) *UserCreate {
+	ids := make([]int, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return uc.AddRedeemedCodeIDs(ids...)
+}
+
+// AddGrantIDs adds the "grants" edge to the UserGrant entity by IDs.
+func (uc *UserCreate) AddGrantIDs(ids ...int) *UserCreate {
+	uc.mutation.AddGrantIDs(ids...)
+	return uc
+}
+
+// AddGrants adds the "grants" edges to the UserGrant entity.
+func (uc *UserCreate) AddGrants(u ...*UserGrant) *UserCreate {
+	ids := make([]int, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return uc.AddGrantIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uc *UserCreate) Mutation() *UserMutation {
 	return uc.mutation
@@ -400,6 +462,10 @@ func (uc *UserCreate) defaults() error {
 		v := user.DefaultStorage
 		uc.mutation.SetStorage(v)
 	}
+	if _, ok := uc.mutation.Credits(); !ok {
+		v := user.DefaultCredits
+		uc.mutation.SetCredits(v)
+	}
 	if _, ok := uc.mutation.Settings(); !ok {
 		v := user.DefaultSettings
 		uc.mutation.SetSettings(v)
@@ -441,6 +507,9 @@ func (uc *UserCreate) check() error {
 	}
 	if _, ok := uc.mutation.Storage(); !ok {
 		return &ValidationError{Name: "storage", err: errors.New(`ent: missing required field "User.storage"`)}
+	}
+	if _, ok := uc.mutation.Credits(); !ok {
+		return &ValidationError{Name: "credits", err: errors.New(`ent: missing required field "User.credits"`)}
 	}
 	if _, ok := uc.mutation.GroupUsers(); !ok {
 		return &ValidationError{Name: "group_users", err: errors.New(`ent: missing required field "User.group_users"`)}
@@ -525,6 +594,10 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := uc.mutation.Storage(); ok {
 		_spec.SetField(user.FieldStorage, field.TypeInt64, value)
 		_node.Storage = value
+	}
+	if value, ok := uc.mutation.Credits(); ok {
+		_spec.SetField(user.FieldCredits, field.TypeInt64, value)
+		_node.Credits = value
 	}
 	if value, ok := uc.mutation.TwoFactorSecret(); ok {
 		_spec.SetField(user.FieldTwoFactorSecret, field.TypeString, value)
@@ -676,6 +749,54 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(oauthgrant.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := uc.mutation.CreditTxnsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CreditTxnsTable,
+			Columns: []string{user.CreditTxnsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credittxn.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := uc.mutation.RedeemedCodesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.RedeemedCodesTable,
+			Columns: []string{user.RedeemedCodesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(giftcode.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := uc.mutation.GrantsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.GrantsTable,
+			Columns: []string{user.GrantsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usergrant.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -888,6 +1009,24 @@ func (u *UserUpsert) UpdateStorage() *UserUpsert {
 // AddStorage adds v to the "storage" field.
 func (u *UserUpsert) AddStorage(v int64) *UserUpsert {
 	u.Add(user.FieldStorage, v)
+	return u
+}
+
+// SetCredits sets the "credits" field.
+func (u *UserUpsert) SetCredits(v int64) *UserUpsert {
+	u.Set(user.FieldCredits, v)
+	return u
+}
+
+// UpdateCredits sets the "credits" field to the value that was provided on create.
+func (u *UserUpsert) UpdateCredits() *UserUpsert {
+	u.SetExcluded(user.FieldCredits)
+	return u
+}
+
+// AddCredits adds v to the "credits" field.
+func (u *UserUpsert) AddCredits(v int64) *UserUpsert {
+	u.Add(user.FieldCredits, v)
 	return u
 }
 
@@ -1181,6 +1320,27 @@ func (u *UserUpsertOne) AddStorage(v int64) *UserUpsertOne {
 func (u *UserUpsertOne) UpdateStorage() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateStorage()
+	})
+}
+
+// SetCredits sets the "credits" field.
+func (u *UserUpsertOne) SetCredits(v int64) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetCredits(v)
+	})
+}
+
+// AddCredits adds v to the "credits" field.
+func (u *UserUpsertOne) AddCredits(v int64) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.AddCredits(v)
+	})
+}
+
+// UpdateCredits sets the "credits" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateCredits() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateCredits()
 	})
 }
 
@@ -1656,6 +1816,27 @@ func (u *UserUpsertBulk) AddStorage(v int64) *UserUpsertBulk {
 func (u *UserUpsertBulk) UpdateStorage() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateStorage()
+	})
+}
+
+// SetCredits sets the "credits" field.
+func (u *UserUpsertBulk) SetCredits(v int64) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetCredits(v)
+	})
+}
+
+// AddCredits adds v to the "credits" field.
+func (u *UserUpsertBulk) AddCredits(v int64) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.AddCredits(v)
+	})
+}
+
+// UpdateCredits sets the "credits" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateCredits() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateCredits()
 	})
 }
 

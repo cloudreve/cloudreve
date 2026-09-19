@@ -40,6 +40,39 @@ var (
 			},
 		},
 	}
+	// CreditTxnsColumns holds the columns for the "credit_txns" table.
+	CreditTxnsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "amount", Type: field.TypeInt64},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"purchase", "gift", "share_income", "adjust"}},
+		{Name: "ref", Type: field.TypeString, Nullable: true},
+		{Name: "des", Type: field.TypeString, Nullable: true},
+		{Name: "user_id", Type: field.TypeInt},
+	}
+	// CreditTxnsTable holds the schema information for the "credit_txns" table.
+	CreditTxnsTable = &schema.Table{
+		Name:       "credit_txns",
+		Columns:    CreditTxnsColumns,
+		PrimaryKey: []*schema.Column{CreditTxnsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "credit_txns_users_credit_txns",
+				Columns:    []*schema.Column{CreditTxnsColumns[8]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "credittxn_user_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{CreditTxnsColumns[8], CreditTxnsColumns[1]},
+			},
+		},
+	}
 	// DavAccountsColumns holds the columns for the "dav_accounts" table.
 	DavAccountsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -216,6 +249,34 @@ var (
 			{
 				Symbol:     "fs_events_users_fsevents",
 				Columns:    []*schema.Column{FsEventsColumns[6]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+	}
+	// GiftCodesColumns holds the columns for the "gift_codes" table.
+	GiftCodesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "code", Type: field.TypeString, Unique: true},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"points", "storage", "group"}},
+		{Name: "amount", Type: field.TypeInt64},
+		{Name: "duration", Type: field.TypeInt64, Nullable: true},
+		{Name: "used_at", Type: field.TypeTime, Nullable: true},
+		{Name: "des", Type: field.TypeString, Nullable: true},
+		{Name: "used_by_id", Type: field.TypeInt, Nullable: true},
+	}
+	// GiftCodesTable holds the schema information for the "gift_codes" table.
+	GiftCodesTable = &schema.Table{
+		Name:       "gift_codes",
+		Columns:    GiftCodesColumns,
+		PrimaryKey: []*schema.Column{GiftCodesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "gift_codes_users_redeemed_codes",
+				Columns:    []*schema.Column{GiftCodesColumns[10]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -538,6 +599,7 @@ var (
 		{Name: "ban_reason", Type: field.TypeString, Nullable: true, Size: 2147483647},
 		{Name: "last_login", Type: field.TypeTime, Nullable: true},
 		{Name: "storage", Type: field.TypeInt64, Default: 0},
+		{Name: "credits", Type: field.TypeInt64, Default: 0},
 		{Name: "two_factor_secret", Type: field.TypeString, Nullable: true},
 		{Name: "avatar", Type: field.TypeString, Nullable: true},
 		{Name: "settings", Type: field.TypeJSON, Nullable: true},
@@ -551,9 +613,47 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "users_groups_users",
-				Columns:    []*schema.Column{UsersColumns[15]},
+				Columns:    []*schema.Column{UsersColumns[16]},
 				RefColumns: []*schema.Column{GroupsColumns[0]},
 				OnDelete:   schema.NoAction,
+			},
+		},
+	}
+	// UserGrantsColumns holds the columns for the "user_grants" table.
+	UserGrantsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"storage", "group"}},
+		{Name: "amount", Type: field.TypeInt64},
+		{Name: "prev_group_id", Type: field.TypeInt, Nullable: true},
+		{Name: "expires_at", Type: field.TypeTime, Nullable: true},
+		{Name: "user_id", Type: field.TypeInt},
+	}
+	// UserGrantsTable holds the schema information for the "user_grants" table.
+	UserGrantsTable = &schema.Table{
+		Name:       "user_grants",
+		Columns:    UserGrantsColumns,
+		PrimaryKey: []*schema.Column{UserGrantsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "user_grants_users_grants",
+				Columns:    []*schema.Column{UserGrantsColumns[8]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "usergrant_user_id_type",
+				Unique:  false,
+				Columns: []*schema.Column{UserGrantsColumns[8], UserGrantsColumns[4]},
+			},
+			{
+				Name:    "usergrant_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{UserGrantsColumns[7]},
 			},
 		},
 	}
@@ -610,11 +710,13 @@ var (
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		ACLEntriesTable,
+		CreditTxnsTable,
 		DavAccountsTable,
 		DirectLinksTable,
 		EntitiesTable,
 		FilesTable,
 		FsEventsTable,
+		GiftCodesTable,
 		GroupsTable,
 		InvitationCodesTable,
 		MetadataTable,
@@ -627,6 +729,7 @@ var (
 		StoragePoliciesTable,
 		TasksTable,
 		UsersTable,
+		UserGrantsTable,
 		FileEntitiesTable,
 		GroupAllowedPoliciesTable,
 	}
@@ -634,6 +737,7 @@ var (
 
 func init() {
 	ACLEntriesTable.ForeignKeys[0].RefTable = FilesTable
+	CreditTxnsTable.ForeignKeys[0].RefTable = UsersTable
 	DavAccountsTable.ForeignKeys[0].RefTable = UsersTable
 	DirectLinksTable.ForeignKeys[0].RefTable = FilesTable
 	EntitiesTable.ForeignKeys[0].RefTable = StoragePoliciesTable
@@ -642,6 +746,7 @@ func init() {
 	FilesTable.ForeignKeys[1].RefTable = StoragePoliciesTable
 	FilesTable.ForeignKeys[2].RefTable = UsersTable
 	FsEventsTable.ForeignKeys[0].RefTable = UsersTable
+	GiftCodesTable.ForeignKeys[0].RefTable = UsersTable
 	GroupsTable.ForeignKeys[0].RefTable = StoragePoliciesTable
 	MetadataTable.ForeignKeys[0].RefTable = FilesTable
 	OauthGrantsTable.ForeignKeys[0].RefTable = OauthClientsTable
@@ -652,6 +757,7 @@ func init() {
 	StoragePoliciesTable.ForeignKeys[0].RefTable = NodesTable
 	TasksTable.ForeignKeys[0].RefTable = UsersTable
 	UsersTable.ForeignKeys[0].RefTable = GroupsTable
+	UserGrantsTable.ForeignKeys[0].RefTable = UsersTable
 	FileEntitiesTable.ForeignKeys[0].RefTable = FilesTable
 	FileEntitiesTable.ForeignKeys[1].RefTable = EntitiesTable
 	GroupAllowedPoliciesTable.ForeignKeys[0].RefTable = GroupsTable

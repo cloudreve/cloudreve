@@ -11,10 +11,12 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/cloudreve/Cloudreve/v4/ent/credittxn"
 	"github.com/cloudreve/Cloudreve/v4/ent/davaccount"
 	"github.com/cloudreve/Cloudreve/v4/ent/entity"
 	"github.com/cloudreve/Cloudreve/v4/ent/file"
 	"github.com/cloudreve/Cloudreve/v4/ent/fsevent"
+	"github.com/cloudreve/Cloudreve/v4/ent/giftcode"
 	"github.com/cloudreve/Cloudreve/v4/ent/group"
 	"github.com/cloudreve/Cloudreve/v4/ent/oauthgrant"
 	"github.com/cloudreve/Cloudreve/v4/ent/passkey"
@@ -22,6 +24,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/share"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
+	"github.com/cloudreve/Cloudreve/v4/ent/usergrant"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 )
 
@@ -204,6 +207,27 @@ func (uu *UserUpdate) SetNillableStorage(i *int64) *UserUpdate {
 // AddStorage adds i to the "storage" field.
 func (uu *UserUpdate) AddStorage(i int64) *UserUpdate {
 	uu.mutation.AddStorage(i)
+	return uu
+}
+
+// SetCredits sets the "credits" field.
+func (uu *UserUpdate) SetCredits(i int64) *UserUpdate {
+	uu.mutation.ResetCredits()
+	uu.mutation.SetCredits(i)
+	return uu
+}
+
+// SetNillableCredits sets the "credits" field if the given value is not nil.
+func (uu *UserUpdate) SetNillableCredits(i *int64) *UserUpdate {
+	if i != nil {
+		uu.SetCredits(*i)
+	}
+	return uu
+}
+
+// AddCredits adds i to the "credits" field.
+func (uu *UserUpdate) AddCredits(i int64) *UserUpdate {
+	uu.mutation.AddCredits(i)
 	return uu
 }
 
@@ -404,6 +428,51 @@ func (uu *UserUpdate) AddOauthGrants(o ...*OAuthGrant) *UserUpdate {
 	return uu.AddOauthGrantIDs(ids...)
 }
 
+// AddCreditTxnIDs adds the "credit_txns" edge to the CreditTxn entity by IDs.
+func (uu *UserUpdate) AddCreditTxnIDs(ids ...int) *UserUpdate {
+	uu.mutation.AddCreditTxnIDs(ids...)
+	return uu
+}
+
+// AddCreditTxns adds the "credit_txns" edges to the CreditTxn entity.
+func (uu *UserUpdate) AddCreditTxns(c ...*CreditTxn) *UserUpdate {
+	ids := make([]int, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return uu.AddCreditTxnIDs(ids...)
+}
+
+// AddRedeemedCodeIDs adds the "redeemed_codes" edge to the GiftCode entity by IDs.
+func (uu *UserUpdate) AddRedeemedCodeIDs(ids ...int) *UserUpdate {
+	uu.mutation.AddRedeemedCodeIDs(ids...)
+	return uu
+}
+
+// AddRedeemedCodes adds the "redeemed_codes" edges to the GiftCode entity.
+func (uu *UserUpdate) AddRedeemedCodes(g ...*GiftCode) *UserUpdate {
+	ids := make([]int, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return uu.AddRedeemedCodeIDs(ids...)
+}
+
+// AddGrantIDs adds the "grants" edge to the UserGrant entity by IDs.
+func (uu *UserUpdate) AddGrantIDs(ids ...int) *UserUpdate {
+	uu.mutation.AddGrantIDs(ids...)
+	return uu
+}
+
+// AddGrants adds the "grants" edges to the UserGrant entity.
+func (uu *UserUpdate) AddGrants(u ...*UserGrant) *UserUpdate {
+	ids := make([]int, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return uu.AddGrantIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uu *UserUpdate) Mutation() *UserMutation {
 	return uu.mutation
@@ -583,6 +652,69 @@ func (uu *UserUpdate) RemoveOauthGrants(o ...*OAuthGrant) *UserUpdate {
 	return uu.RemoveOauthGrantIDs(ids...)
 }
 
+// ClearCreditTxns clears all "credit_txns" edges to the CreditTxn entity.
+func (uu *UserUpdate) ClearCreditTxns() *UserUpdate {
+	uu.mutation.ClearCreditTxns()
+	return uu
+}
+
+// RemoveCreditTxnIDs removes the "credit_txns" edge to CreditTxn entities by IDs.
+func (uu *UserUpdate) RemoveCreditTxnIDs(ids ...int) *UserUpdate {
+	uu.mutation.RemoveCreditTxnIDs(ids...)
+	return uu
+}
+
+// RemoveCreditTxns removes "credit_txns" edges to CreditTxn entities.
+func (uu *UserUpdate) RemoveCreditTxns(c ...*CreditTxn) *UserUpdate {
+	ids := make([]int, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return uu.RemoveCreditTxnIDs(ids...)
+}
+
+// ClearRedeemedCodes clears all "redeemed_codes" edges to the GiftCode entity.
+func (uu *UserUpdate) ClearRedeemedCodes() *UserUpdate {
+	uu.mutation.ClearRedeemedCodes()
+	return uu
+}
+
+// RemoveRedeemedCodeIDs removes the "redeemed_codes" edge to GiftCode entities by IDs.
+func (uu *UserUpdate) RemoveRedeemedCodeIDs(ids ...int) *UserUpdate {
+	uu.mutation.RemoveRedeemedCodeIDs(ids...)
+	return uu
+}
+
+// RemoveRedeemedCodes removes "redeemed_codes" edges to GiftCode entities.
+func (uu *UserUpdate) RemoveRedeemedCodes(g ...*GiftCode) *UserUpdate {
+	ids := make([]int, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return uu.RemoveRedeemedCodeIDs(ids...)
+}
+
+// ClearGrants clears all "grants" edges to the UserGrant entity.
+func (uu *UserUpdate) ClearGrants() *UserUpdate {
+	uu.mutation.ClearGrants()
+	return uu
+}
+
+// RemoveGrantIDs removes the "grants" edge to UserGrant entities by IDs.
+func (uu *UserUpdate) RemoveGrantIDs(ids ...int) *UserUpdate {
+	uu.mutation.RemoveGrantIDs(ids...)
+	return uu
+}
+
+// RemoveGrants removes "grants" edges to UserGrant entities.
+func (uu *UserUpdate) RemoveGrants(u ...*UserGrant) *UserUpdate {
+	ids := make([]int, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return uu.RemoveGrantIDs(ids...)
+}
+
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (uu *UserUpdate) Save(ctx context.Context) (int, error) {
 	if err := uu.defaults(); err != nil {
@@ -707,6 +839,12 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := uu.mutation.AddedStorage(); ok {
 		_spec.AddField(user.FieldStorage, field.TypeInt64, value)
+	}
+	if value, ok := uu.mutation.Credits(); ok {
+		_spec.SetField(user.FieldCredits, field.TypeInt64, value)
+	}
+	if value, ok := uu.mutation.AddedCredits(); ok {
+		_spec.AddField(user.FieldCredits, field.TypeInt64, value)
 	}
 	if value, ok := uu.mutation.TwoFactorSecret(); ok {
 		_spec.SetField(user.FieldTwoFactorSecret, field.TypeString, value)
@@ -1115,6 +1253,141 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if uu.mutation.CreditTxnsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CreditTxnsTable,
+			Columns: []string{user.CreditTxnsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credittxn.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.RemovedCreditTxnsIDs(); len(nodes) > 0 && !uu.mutation.CreditTxnsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CreditTxnsTable,
+			Columns: []string{user.CreditTxnsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credittxn.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.CreditTxnsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CreditTxnsTable,
+			Columns: []string{user.CreditTxnsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credittxn.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uu.mutation.RedeemedCodesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.RedeemedCodesTable,
+			Columns: []string{user.RedeemedCodesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(giftcode.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.RemovedRedeemedCodesIDs(); len(nodes) > 0 && !uu.mutation.RedeemedCodesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.RedeemedCodesTable,
+			Columns: []string{user.RedeemedCodesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(giftcode.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.RedeemedCodesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.RedeemedCodesTable,
+			Columns: []string{user.RedeemedCodesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(giftcode.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uu.mutation.GrantsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.GrantsTable,
+			Columns: []string{user.GrantsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usergrant.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.RemovedGrantsIDs(); len(nodes) > 0 && !uu.mutation.GrantsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.GrantsTable,
+			Columns: []string{user.GrantsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usergrant.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.GrantsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.GrantsTable,
+			Columns: []string{user.GrantsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usergrant.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, uu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{user.Label}
@@ -1301,6 +1574,27 @@ func (uuo *UserUpdateOne) SetNillableStorage(i *int64) *UserUpdateOne {
 // AddStorage adds i to the "storage" field.
 func (uuo *UserUpdateOne) AddStorage(i int64) *UserUpdateOne {
 	uuo.mutation.AddStorage(i)
+	return uuo
+}
+
+// SetCredits sets the "credits" field.
+func (uuo *UserUpdateOne) SetCredits(i int64) *UserUpdateOne {
+	uuo.mutation.ResetCredits()
+	uuo.mutation.SetCredits(i)
+	return uuo
+}
+
+// SetNillableCredits sets the "credits" field if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableCredits(i *int64) *UserUpdateOne {
+	if i != nil {
+		uuo.SetCredits(*i)
+	}
+	return uuo
+}
+
+// AddCredits adds i to the "credits" field.
+func (uuo *UserUpdateOne) AddCredits(i int64) *UserUpdateOne {
+	uuo.mutation.AddCredits(i)
 	return uuo
 }
 
@@ -1501,6 +1795,51 @@ func (uuo *UserUpdateOne) AddOauthGrants(o ...*OAuthGrant) *UserUpdateOne {
 	return uuo.AddOauthGrantIDs(ids...)
 }
 
+// AddCreditTxnIDs adds the "credit_txns" edge to the CreditTxn entity by IDs.
+func (uuo *UserUpdateOne) AddCreditTxnIDs(ids ...int) *UserUpdateOne {
+	uuo.mutation.AddCreditTxnIDs(ids...)
+	return uuo
+}
+
+// AddCreditTxns adds the "credit_txns" edges to the CreditTxn entity.
+func (uuo *UserUpdateOne) AddCreditTxns(c ...*CreditTxn) *UserUpdateOne {
+	ids := make([]int, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return uuo.AddCreditTxnIDs(ids...)
+}
+
+// AddRedeemedCodeIDs adds the "redeemed_codes" edge to the GiftCode entity by IDs.
+func (uuo *UserUpdateOne) AddRedeemedCodeIDs(ids ...int) *UserUpdateOne {
+	uuo.mutation.AddRedeemedCodeIDs(ids...)
+	return uuo
+}
+
+// AddRedeemedCodes adds the "redeemed_codes" edges to the GiftCode entity.
+func (uuo *UserUpdateOne) AddRedeemedCodes(g ...*GiftCode) *UserUpdateOne {
+	ids := make([]int, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return uuo.AddRedeemedCodeIDs(ids...)
+}
+
+// AddGrantIDs adds the "grants" edge to the UserGrant entity by IDs.
+func (uuo *UserUpdateOne) AddGrantIDs(ids ...int) *UserUpdateOne {
+	uuo.mutation.AddGrantIDs(ids...)
+	return uuo
+}
+
+// AddGrants adds the "grants" edges to the UserGrant entity.
+func (uuo *UserUpdateOne) AddGrants(u ...*UserGrant) *UserUpdateOne {
+	ids := make([]int, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return uuo.AddGrantIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uuo *UserUpdateOne) Mutation() *UserMutation {
 	return uuo.mutation
@@ -1680,6 +2019,69 @@ func (uuo *UserUpdateOne) RemoveOauthGrants(o ...*OAuthGrant) *UserUpdateOne {
 	return uuo.RemoveOauthGrantIDs(ids...)
 }
 
+// ClearCreditTxns clears all "credit_txns" edges to the CreditTxn entity.
+func (uuo *UserUpdateOne) ClearCreditTxns() *UserUpdateOne {
+	uuo.mutation.ClearCreditTxns()
+	return uuo
+}
+
+// RemoveCreditTxnIDs removes the "credit_txns" edge to CreditTxn entities by IDs.
+func (uuo *UserUpdateOne) RemoveCreditTxnIDs(ids ...int) *UserUpdateOne {
+	uuo.mutation.RemoveCreditTxnIDs(ids...)
+	return uuo
+}
+
+// RemoveCreditTxns removes "credit_txns" edges to CreditTxn entities.
+func (uuo *UserUpdateOne) RemoveCreditTxns(c ...*CreditTxn) *UserUpdateOne {
+	ids := make([]int, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return uuo.RemoveCreditTxnIDs(ids...)
+}
+
+// ClearRedeemedCodes clears all "redeemed_codes" edges to the GiftCode entity.
+func (uuo *UserUpdateOne) ClearRedeemedCodes() *UserUpdateOne {
+	uuo.mutation.ClearRedeemedCodes()
+	return uuo
+}
+
+// RemoveRedeemedCodeIDs removes the "redeemed_codes" edge to GiftCode entities by IDs.
+func (uuo *UserUpdateOne) RemoveRedeemedCodeIDs(ids ...int) *UserUpdateOne {
+	uuo.mutation.RemoveRedeemedCodeIDs(ids...)
+	return uuo
+}
+
+// RemoveRedeemedCodes removes "redeemed_codes" edges to GiftCode entities.
+func (uuo *UserUpdateOne) RemoveRedeemedCodes(g ...*GiftCode) *UserUpdateOne {
+	ids := make([]int, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return uuo.RemoveRedeemedCodeIDs(ids...)
+}
+
+// ClearGrants clears all "grants" edges to the UserGrant entity.
+func (uuo *UserUpdateOne) ClearGrants() *UserUpdateOne {
+	uuo.mutation.ClearGrants()
+	return uuo
+}
+
+// RemoveGrantIDs removes the "grants" edge to UserGrant entities by IDs.
+func (uuo *UserUpdateOne) RemoveGrantIDs(ids ...int) *UserUpdateOne {
+	uuo.mutation.RemoveGrantIDs(ids...)
+	return uuo
+}
+
+// RemoveGrants removes "grants" edges to UserGrant entities.
+func (uuo *UserUpdateOne) RemoveGrants(u ...*UserGrant) *UserUpdateOne {
+	ids := make([]int, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return uuo.RemoveGrantIDs(ids...)
+}
+
 // Where appends a list predicates to the UserUpdate builder.
 func (uuo *UserUpdateOne) Where(ps ...predicate.User) *UserUpdateOne {
 	uuo.mutation.Where(ps...)
@@ -1834,6 +2236,12 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 	}
 	if value, ok := uuo.mutation.AddedStorage(); ok {
 		_spec.AddField(user.FieldStorage, field.TypeInt64, value)
+	}
+	if value, ok := uuo.mutation.Credits(); ok {
+		_spec.SetField(user.FieldCredits, field.TypeInt64, value)
+	}
+	if value, ok := uuo.mutation.AddedCredits(); ok {
+		_spec.AddField(user.FieldCredits, field.TypeInt64, value)
 	}
 	if value, ok := uuo.mutation.TwoFactorSecret(); ok {
 		_spec.SetField(user.FieldTwoFactorSecret, field.TypeString, value)
@@ -2235,6 +2643,141 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(oauthgrant.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uuo.mutation.CreditTxnsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CreditTxnsTable,
+			Columns: []string{user.CreditTxnsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credittxn.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.RemovedCreditTxnsIDs(); len(nodes) > 0 && !uuo.mutation.CreditTxnsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CreditTxnsTable,
+			Columns: []string{user.CreditTxnsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credittxn.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.CreditTxnsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CreditTxnsTable,
+			Columns: []string{user.CreditTxnsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credittxn.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uuo.mutation.RedeemedCodesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.RedeemedCodesTable,
+			Columns: []string{user.RedeemedCodesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(giftcode.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.RemovedRedeemedCodesIDs(); len(nodes) > 0 && !uuo.mutation.RedeemedCodesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.RedeemedCodesTable,
+			Columns: []string{user.RedeemedCodesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(giftcode.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.RedeemedCodesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.RedeemedCodesTable,
+			Columns: []string{user.RedeemedCodesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(giftcode.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uuo.mutation.GrantsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.GrantsTable,
+			Columns: []string{user.GrantsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usergrant.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.RemovedGrantsIDs(); len(nodes) > 0 && !uuo.mutation.GrantsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.GrantsTable,
+			Columns: []string{user.GrantsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usergrant.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.GrantsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.GrantsTable,
+			Columns: []string{user.GrantsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usergrant.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

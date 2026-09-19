@@ -1070,7 +1070,29 @@
     "preferredPolicyDes": "New uploads in your own files use this storage policy unless a folder overrides it.",
     "policySaved": "Storage policy updated",
     "policyInherit": "Inherit (group default)",
-    "policyGroupDefault": "Group default"
+    "policyGroupDefault": "Group default",
+    "finance": "Finance",
+    "creditBalance": "Credit Balance",
+    "storageBonus": "Storage Bonus",
+    "activeGrants": "Active Benefits",
+    "grantStorage": "Storage",
+    "grantGroup": "Group",
+    "redeemGiftCode": "Redeem Gift Code",
+    "redeemGiftCodeDes": "Enter a gift code to claim credits or benefits",
+    "giftCodePlaceholder": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "redeem": "Redeem",
+    "giftCodeRedeemed": "Gift code redeemed",
+    "creditLedger": "Credit Ledger",
+    "txnChange": "Change",
+    "txnTime": "Time",
+    "txnReason": "Reason",
+    "noTxns": "No transactions yet",
+    "txnType": {
+      "purchase": "Shop purchase",
+      "gift": "Gift code",
+      "share_income": "Share link purchased",
+      "adjust": "Manual adjustment"
+    }
   },
   "vas": {
     "points": "Points",

@@ -105,6 +105,11 @@ func Storage(v int64) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldStorage, v))
 }
 
+// Credits applies equality check predicate on the "credits" field. It's identical to CreditsEQ.
+func Credits(v int64) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldCredits, v))
+}
+
 // TwoFactorSecret applies equality check predicate on the "two_factor_secret" field. It's identical to TwoFactorSecretEQ.
 func TwoFactorSecret(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldTwoFactorSecret, v))
@@ -690,6 +695,46 @@ func StorageLTE(v int64) predicate.User {
 	return predicate.User(sql.FieldLTE(FieldStorage, v))
 }
 
+// CreditsEQ applies the EQ predicate on the "credits" field.
+func CreditsEQ(v int64) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldCredits, v))
+}
+
+// CreditsNEQ applies the NEQ predicate on the "credits" field.
+func CreditsNEQ(v int64) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldCredits, v))
+}
+
+// CreditsIn applies the In predicate on the "credits" field.
+func CreditsIn(vs ...int64) predicate.User {
+	return predicate.User(sql.FieldIn(FieldCredits, vs...))
+}
+
+// CreditsNotIn applies the NotIn predicate on the "credits" field.
+func CreditsNotIn(vs ...int64) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldCredits, vs...))
+}
+
+// CreditsGT applies the GT predicate on the "credits" field.
+func CreditsGT(v int64) predicate.User {
+	return predicate.User(sql.FieldGT(FieldCredits, v))
+}
+
+// CreditsGTE applies the GTE predicate on the "credits" field.
+func CreditsGTE(v int64) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldCredits, v))
+}
+
+// CreditsLT applies the LT predicate on the "credits" field.
+func CreditsLT(v int64) predicate.User {
+	return predicate.User(sql.FieldLT(FieldCredits, v))
+}
+
+// CreditsLTE applies the LTE predicate on the "credits" field.
+func CreditsLTE(v int64) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldCredits, v))
+}
+
 // TwoFactorSecretEQ applies the EQ predicate on the "two_factor_secret" field.
 func TwoFactorSecretEQ(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldTwoFactorSecret, v))
@@ -1069,6 +1114,75 @@ func HasOauthGrants() predicate.User {
 func HasOauthGrantsWith(preds ...predicate.OAuthGrant) predicate.User {
 	return predicate.User(func(s *sql.Selector) {
 		step := newOauthGrantsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasCreditTxns applies the HasEdge predicate on the "credit_txns" edge.
+func HasCreditTxns() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, CreditTxnsTable, CreditTxnsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCreditTxnsWith applies the HasEdge predicate on the "credit_txns" edge with a given conditions (other predicates).
+func HasCreditTxnsWith(preds ...predicate.CreditTxn) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newCreditTxnsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasRedeemedCodes applies the HasEdge predicate on the "redeemed_codes" edge.
+func HasRedeemedCodes() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, RedeemedCodesTable, RedeemedCodesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasRedeemedCodesWith applies the HasEdge predicate on the "redeemed_codes" edge with a given conditions (other predicates).
+func HasRedeemedCodesWith(preds ...predicate.GiftCode) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newRedeemedCodesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasGrants applies the HasEdge predicate on the "grants" edge.
+func HasGrants() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, GrantsTable, GrantsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasGrantsWith applies the HasEdge predicate on the "grants" edge with a given conditions (other predicates).
+func HasGrantsWith(preds ...predicate.UserGrant) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newGrantsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

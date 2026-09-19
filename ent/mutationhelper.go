@@ -10,6 +10,12 @@ func (m *AclEntryMutation) SetRawID(t int) {
 
 // SetUpdatedAt sets the "updated_at" field.
 
+func (m *CreditTxnMutation) SetRawID(t int) {
+	m.id = &t
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+
 func (m *DavAccountMutation) SetRawID(t int) {
 	m.id = &t
 }
@@ -35,6 +41,12 @@ func (m *FileMutation) SetRawID(t int) {
 // SetUpdatedAt sets the "updated_at" field.
 
 func (m *FsEventMutation) SetRawID(t int) {
+	m.id = &t
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+
+func (m *GiftCodeMutation) SetRawID(t int) {
 	m.id = &t
 }
 
@@ -107,5 +119,11 @@ func (m *TaskMutation) SetRawID(t int) {
 // SetUpdatedAt sets the "updated_at" field.
 
 func (m *UserMutation) SetRawID(t int) {
+	m.id = &t
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+
+func (m *UserGrantMutation) SetRawID(t int) {
 	m.id = &t
 }

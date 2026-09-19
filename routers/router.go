@@ -1283,6 +1283,33 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 				}
 
+				vas := admin.Group("vas", middleware.AdminSection(types.GroupPermissionAdminPayment))
+				{
+					// 列出礼品码
+					vas.GET("giftcode",
+						controllers.FromQuery[adminsvc.GiftCodeListService](adminsvc.GiftCodeListParamCtx{}),
+						controllers.AdminListGiftCodes,
+					)
+					// 生成礼品码
+					vas.PUT("giftcode",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
+						controllers.FromJSON[adminsvc.CreateGiftCodeService](adminsvc.CreateGiftCodeParamCtx{}),
+						controllers.AdminCreateGiftCode,
+					)
+					// 删除礼品码
+					vas.DELETE("giftcode/:id",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
+						controllers.FromUri[adminsvc.SingleGiftCodeService](adminsvc.SingleGiftCodeParamCtx{}),
+						controllers.AdminDeleteGiftCode,
+					)
+					// 手动调整用户积分
+					vas.POST("credit",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
+						controllers.FromJSON[adminsvc.AdjustCreditService](adminsvc.AdjustCreditParamCtx{}),
+						controllers.AdminAdjustCredit,
+					)
+				}
+
 				file := admin.Group("file", middleware.AdminSection(types.GroupPermissionAdminFiles))
 				{
 					// 列出文件
@@ -1420,6 +1447,30 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 						middleware.RateLimitByIP("email_change", 5, time.Hour),
 						controllers.FromJSON[usersvc.RequestEmailChangeService](usersvc.RequestEmailChangeParamCtx{}),
 						controllers.UserRequestEmailChange,
+					)
+				}
+
+				// 积分与兑换
+				credit := user.Group("credit")
+				{
+					// 余额与权益
+					credit.GET("",
+						middleware.RequiredScopes(types.ScopeUserInfoRead),
+						controllers.FromQuery[usersvc.CreditService](usersvc.CreditParamCtx{}),
+						controllers.UserCredit,
+					)
+					// 积分流水
+					credit.GET("txns",
+						middleware.RequiredScopes(types.ScopeUserInfoRead),
+						controllers.FromQuery[usersvc.CreditTxnListService](usersvc.CreditTxnListParamCtx{}),
+						controllers.UserCreditTxns,
+					)
+					// 兑换礼品码
+					credit.POST("redeem",
+						middleware.RequiredScopes(types.ScopeUserInfoWrite),
+						middleware.RateLimitByIP("redeem", 20, time.Hour),
+						controllers.FromJSON[usersvc.RedeemGiftCodeService](usersvc.RedeemGiftCodeParamCtx{}),
+						controllers.UserRedeemGiftCode,
 					)
 				}
 			}

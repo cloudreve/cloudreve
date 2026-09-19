@@ -886,7 +886,10 @@
     "copyAndClose": "复制并关闭",
     "duratonTimes": "时长倍数",
     "duratonTimesDes": "每个礼品码包含了多少份对应商品。",
-    "unknownProduct": "未知产品"
+    "unknownProduct": "未知产品",
+    "giftCodeDeleteFailed": "删除礼品码失败",
+    "giftCodeCreateFailed": "生成礼品码失败",
+    "giftCodeAmountHelp": "每个兑换码的额度"
   },
   "policy": {
     "acceleratedDomainUpload": "使用传输加速域名上传",
@@ -1847,7 +1850,15 @@
     "appForum": "用户论坛 URL",
     "appLinkDes": "用于在 App 设置页面展示，留空即不展示链接按钮，仅当 VOL 授权有效时此项设置才会生效。",
     "subAddressChars": "子地址字符",
-    "subAddressCharsDes": "邮箱用户名部分中视为子地址分隔符的字符（如 <code>+-.</code>，覆盖 Gmail/iCloud 风格别名）。留空默认为 <code>+</code>。"
+    "subAddressCharsDes": "邮箱用户名部分中视为子地址分隔符的字符（如 <code>+-.</code>，覆盖 Gmail/iCloud 风格别名）。留空默认为 <code>+</code>。",
+    "manualAdjust": "手动积分调整",
+    "adjustEmail": "用户邮箱",
+    "adjustDelta": "积分变动",
+    "adjustDeltaDes": "正数为增加，负数为扣减",
+    "adjustNote": "备注",
+    "adjustSubmit": "应用",
+    "adjustSuccess": "积分已调整",
+    "adjustFailed": "积分调整失败"
   },
   "pro": {
     "title": "Pro 版本专属功能",

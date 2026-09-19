@@ -1,4 +1,4 @@
-import { PersonOutline } from "@mui/icons-material";
+import { AccountBalanceWalletOutlined, PersonOutline } from "@mui/icons-material";
 import { Box, Container } from "@mui/material";
 import { useQueryState } from "nuqs";
 import { useEffect, useMemo, useState } from "react";
@@ -14,6 +14,7 @@ import EditSetting from "../../Icons/EditSetting.tsx";
 import LockClosedOutlined from "../../Icons/LockClosedOutlined.tsx";
 import PageContainer from "../PageContainer.tsx";
 import PageHeader, { PageTabQuery } from "../PageHeader.tsx";
+import FinanceSetting from "./FinanceSetting.tsx";
 import PreferenceSetting from "./PreferenceSetting.tsx";
 import ProfileSetting from "./ProfileSetting.tsx";
 import SecuritySetting from "./Security/SecuritySetting.tsx";
@@ -22,6 +23,7 @@ export enum SettingPageTab {
   Profile = "profile",
   Preference = "preference",
   Security = "security",
+  Finance = "finance",
 }
 
 const Setting = () => {
@@ -61,6 +63,11 @@ const Setting = () => {
           label: t("application:setting.security"),
           value: SettingPageTab.Security,
           icon: <LockClosedOutlined />,
+        },
+        {
+          label: t("application:setting.finance"),
+          value: SettingPageTab.Finance,
+          icon: <AccountBalanceWalletOutlined />,
         },
       ],
     );
@@ -107,6 +114,7 @@ const Setting = () => {
                   )}
                   {tab == SettingPageTab.Preference && <PreferenceSetting setting={setting} setSetting={setSetting} />}
                   {tab == SettingPageTab.Security && <SecuritySetting setting={setting} setSetting={setSetting} />}
+                  {tab == SettingPageTab.Finance && <FinanceSetting />}
                 </Box>
               )}
             </Box>

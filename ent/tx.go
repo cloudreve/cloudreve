@@ -16,6 +16,8 @@ type Tx struct {
 	config
 	// AclEntry is the client for interacting with the AclEntry builders.
 	AclEntry *AclEntryClient
+	// CreditTxn is the client for interacting with the CreditTxn builders.
+	CreditTxn *CreditTxnClient
 	// DavAccount is the client for interacting with the DavAccount builders.
 	DavAccount *DavAccountClient
 	// DirectLink is the client for interacting with the DirectLink builders.
@@ -26,6 +28,8 @@ type Tx struct {
 	File *FileClient
 	// FsEvent is the client for interacting with the FsEvent builders.
 	FsEvent *FsEventClient
+	// GiftCode is the client for interacting with the GiftCode builders.
+	GiftCode *GiftCodeClient
 	// Group is the client for interacting with the Group builders.
 	Group *GroupClient
 	// InvitationCode is the client for interacting with the InvitationCode builders.
@@ -50,6 +54,8 @@ type Tx struct {
 	Task *TaskClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
+	// UserGrant is the client for interacting with the UserGrant builders.
+	UserGrant *UserGrantClient
 
 	// lazily loaded.
 	client     *Client
@@ -182,11 +188,13 @@ func (tx *Tx) Client() *Client {
 
 func (tx *Tx) init() {
 	tx.AclEntry = NewAclEntryClient(tx.config)
+	tx.CreditTxn = NewCreditTxnClient(tx.config)
 	tx.DavAccount = NewDavAccountClient(tx.config)
 	tx.DirectLink = NewDirectLinkClient(tx.config)
 	tx.Entity = NewEntityClient(tx.config)
 	tx.File = NewFileClient(tx.config)
 	tx.FsEvent = NewFsEventClient(tx.config)
+	tx.GiftCode = NewGiftCodeClient(tx.config)
 	tx.Group = NewGroupClient(tx.config)
 	tx.InvitationCode = NewInvitationCodeClient(tx.config)
 	tx.Metadata = NewMetadataClient(tx.config)
@@ -199,6 +207,7 @@ func (tx *Tx) init() {
 	tx.StoragePolicy = NewStoragePolicyClient(tx.config)
 	tx.Task = NewTaskClient(tx.config)
 	tx.User = NewUserClient(tx.config)
+	tx.UserGrant = NewUserGrantClient(tx.config)
 }
 
 // txDriver wraps the given dialect.Tx with a nop dialect.Driver implementation.

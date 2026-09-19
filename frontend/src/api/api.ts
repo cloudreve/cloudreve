@@ -2,10 +2,14 @@ import { AxiosProgressEvent, CancelToken } from "axios";
 import { EncryptedBlob } from "../component/Uploader/core/uploader/encrypt/blob.ts";
 import i18n from "../i18n.ts";
 import {
+  AdjustCreditService,
   AdminListGroupResponse,
   AdminListService,
   ListShareResponse as AdminListShareResponse,
   StoragePolicy as AdminStoragePolicy,
+  CreateGiftCodeService,
+  GiftCode,
+  GiftCodeListResponse,
   BatchIDService,
   CleanupTaskService,
   CreateStoragePolicyCorsService,
@@ -90,6 +94,8 @@ import {
   Capacity,
   FinishPasskeyLoginService,
   FinishPasskeyRegistrationService,
+  CreditInfo,
+  CreditTxnList,
   GrantResponse,
   GrantService,
   LoginResponse,
@@ -2563,6 +2569,104 @@ export function sendRebuildFTSIndex(req: RebuildFTSIndexWorkflowService): ThunkR
           data: req,
           method: "POST",
         },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function getCredit(): ThunkResponse<CreditInfo> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/user/credit",
+        { method: "GET" },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function getCreditTxns(page: number, pageSize: number): ThunkResponse<CreditTxnList> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/user/credit/txns?page=${page}&page_size=${pageSize}`,
+        { method: "GET" },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function redeemGiftCode(code: string): ThunkResponse<GiftCode> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/user/credit/redeem",
+        { method: "POST", data: { code } },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function adminListGiftCodes(page: number, pageSize: number): ThunkResponse<GiftCodeListResponse> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/admin/vas/giftcode?page=${page}&page_size=${pageSize}`,
+        { method: "GET" },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function adminCreateGiftCode(args: CreateGiftCodeService): ThunkResponse<GiftCode[]> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/admin/vas/giftcode",
+        { method: "PUT", data: args },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function adminDeleteGiftCode(id: number): ThunkResponse<void> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/admin/vas/giftcode/${id}`,
+        { method: "DELETE" },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function adminAdjustCredit(args: AdjustCreditService): ThunkResponse<void> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/admin/vas/credit",
+        { method: "POST", data: args },
         {
           ...defaultOpts,
         },

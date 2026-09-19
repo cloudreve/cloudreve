@@ -886,7 +886,10 @@
     "copyAndClose": "Copy and Close",
     "duratonTimes": "Quantity",
     "duratonTimesDes": "How many quantities of the product is included in each gift code.",
-    "unknownProduct": "Unknown Product"
+    "unknownProduct": "Unknown Product",
+    "giftCodeDeleteFailed": "Failed to delete gift code",
+    "giftCodeCreateFailed": "Failed to generate gift codes",
+    "giftCodeAmountHelp": "Grant amount per code"
   },
   "policy": {
     "acceleratedDomainUpload": "Use transfer acceleration domain for upload",
@@ -1848,7 +1851,15 @@
     "appForum": "User forum URL",
     "appLinkDes": "Will be displayed in mobile client, leave empty to hide menu item. This setting will take effect only if VOL license is valid.",
     "subAddressChars": "Sub-address characters",
-    "subAddressCharsDes": "Characters treated as sub-address separators in the local part of the email (e.g. <code>+-.</code> for Gmail/iCloud-style aliases). Empty defaults to <code>+</code>."
+    "subAddressCharsDes": "Characters treated as sub-address separators in the local part of the email (e.g. <code>+-.</code> for Gmail/iCloud-style aliases). Empty defaults to <code>+</code>.",
+    "manualAdjust": "Manual Credit Adjustment",
+    "adjustEmail": "User Email",
+    "adjustDelta": "Points Change",
+    "adjustDeltaDes": "Positive adds credits, negative deducts",
+    "adjustNote": "Note",
+    "adjustSubmit": "Apply",
+    "adjustSuccess": "Credits adjusted",
+    "adjustFailed": "Failed to adjust credits"
   },
   "pro": {
     "title": "Pro edition exclusive features",
