@@ -25,6 +25,8 @@ export enum UserSettings {
   BookLocationPrefix = "book_location_",
   MusicVolume = "music_volume",
   OpenWithPrefix = "open_with_",
+  CodeCharsetPrefix = "code_charset_",
+  CodeLanguagePrefix = "code_language_",
   ConcurrentLimit = "concurrent_limit",
   UseAvgSpeed = "use_avg_speed",
   TaskFilter = "task_filter",

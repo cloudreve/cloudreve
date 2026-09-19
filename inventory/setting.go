@@ -26,7 +26,7 @@ type (
 		Get(ctx context.Context, name string) (string, error)
 		// Set sets a setting value to DB.
 		Set(ctx context.Context, settings map[string]string) error
-		// Gets gets multiple setting values from DB, returns error if any setting cannot be found.
+		// Gets gets multiple setting values from DB, returns a map of found settings; names with no matching setting are omitted.
 		Gets(ctx context.Context, names []string) (map[string]string, error)
 	}
 )
@@ -295,6 +295,12 @@ var (
 					Exts:        []string{"bmp", "png", "gif", "jpg", "jpeg", "svg", "webp", "heic", "heif"},
 				},
 				{
+					ID:          "model3d",
+					Type:        types.ViewerTypeBuiltin,
+					DisplayName: "fileManager.modelViewer",
+					Exts:        []string{"fbx", "obj", "gltf", "glb"},
+				},
+				{
 					ID:          "monaco",
 					Type:        types.ViewerTypeBuiltin,
 					Icon:        "/static/img/viewers/monaco.svg",
@@ -558,6 +564,8 @@ var DefaultSettings = map[string]string{
 	"sso_client_secret":                          "",
 	"sso_scopes":                                 "",
 	"sso_register_enabled":                       "1",
+	"sso_auto_redirect":                          "0",
+	"download_cdn_routes":                        "",
 	"email_filter_mode":                          "0",
 	"email_filter_list":                          "",
 	"email_disable_subaddress":                   "0",

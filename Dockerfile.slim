@@ -1,0 +1,35 @@
+# Slim variant: no LibreOffice, fonts, aria2, or media/thumbnail tooling.
+# Build stage
+
+FROM ghcr.io/goreleaser/goreleaser:v2.10.2 AS builder
+
+WORKDIR /src
+
+# Install goreleaser
+RUN apk add --no-cache bash curl git npm nodejs tar zip
+RUN npm install -g yarn
+
+# Perform the build
+COPY . .
+
+RUN goreleaser build --single-target --snapshot
+
+# Runtime stage
+FROM alpine:latest
+
+WORKDIR /cloudreve
+
+RUN apk update \
+    && apk add --no-cache tzdata \
+    && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+    && echo "Asia/Shanghai" > /etc/timezone
+
+COPY --from=builder /src/dist/*/cloudreve ./cloudreve
+
+RUN chmod +x ./cloudreve
+
+EXPOSE 5212
+
+VOLUME ["/cloudreve/data"]
+
+ENTRYPOINT ["./cloudreve"]

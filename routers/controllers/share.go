@@ -12,8 +12,7 @@ import (
 func CreateShare(c *gin.Context) {
 	service := ParametersFromContext[*share.ShareCreateService](c, share.ShareCreateParamCtx{})
 	uri, err := service.Upsert(c, 0)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 
@@ -24,8 +23,7 @@ func CreateShare(c *gin.Context) {
 func EditShare(c *gin.Context) {
 	service := ParametersFromContext[*share.ShareCreateService](c, share.ShareCreateParamCtx{})
 	uri, err := service.Upsert(c, hashid.FromContext(c))
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 
@@ -36,8 +34,7 @@ func EditShare(c *gin.Context) {
 func GetShare(c *gin.Context) {
 	service := ParametersFromContext[*share.ShareInfoService](c, share.ShareInfoParamCtx{})
 	info, err := service.Get(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 
@@ -48,9 +45,7 @@ func GetShare(c *gin.Context) {
 func ListShare(c *gin.Context) {
 	service := ParametersFromContext[*share.ListShareService](c, share.ListShareParamCtx{})
 	resp, err := service.List(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -64,8 +59,7 @@ func ListShare(c *gin.Context) {
 // DeleteShare 删除分享
 func DeleteShare(c *gin.Context) {
 	err := share.DeleteShare(c, hashid.FromContext(c))
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 

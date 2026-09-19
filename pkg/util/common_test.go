@@ -56,19 +56,6 @@ func TestReplace(t *testing.T) {
 	}, "123origin123"))
 }
 
-func TestBuildRegexp(t *testing.T) {
-	asserts := assert.New(t)
-
-	asserts.Equal("^/dir/", BuildRegexp([]string{"/dir"}, "^", "/", "|"))
-	asserts.Equal("^/dir/|^/dir/di\\*r/", BuildRegexp([]string{"/dir", "/dir/di*r"}, "^", "/", "|"))
-}
-
-func TestBuildConcat(t *testing.T) {
-	asserts := assert.New(t)
-	asserts.Equal("CONCAT(1,2)", BuildConcat("1", "2", "mysql"))
-	asserts.Equal("1||2", BuildConcat("1", "2", "sqlite"))
-}
-
 func TestSliceDifference(t *testing.T) {
 	asserts := assert.New(t)
 

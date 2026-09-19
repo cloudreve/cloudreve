@@ -1,8 +1,11 @@
 package explorer
 
 import (
+	"context"
 	"encoding/gob"
+	"fmt"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
+	"strings"
 	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
@@ -20,7 +23,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gofrs/uuid"
 	"github.com/samber/lo"
-	"golang.org/x/tools/container/intsets"
+	"math"
 )
 
 // ItemMoveService 处理多文件/目录移动
@@ -71,9 +74,14 @@ func init() {
 
 type (
 	DownloadWorkflowService struct {
-		Src     []string `json:"src"`
-		SrcFile string   `json:"src_file"`
-		Dst     string   `json:"dst" binding:"required"`
+		Src      []string `json:"src"`
+		SrcFile  string   `json:"src_file"`
+		Dst      string   `json:"dst" binding:"required"`
+		FileName string   `json:"file_name" binding:"omitempty,max=255"`
+		Username string   `json:"username" binding:"omitempty,max=255"`
+		Password string   `json:"password" binding:"omitempty,max=255"`
+		Headers  []string `json:"headers" binding:"omitempty,max=32,dive,max=2048"`
+		Provider string   `json:"provider" binding:"omitempty,max=64"`
 	}
 	CreateDownloadParamCtx struct{}
 )
@@ -129,6 +137,37 @@ func (service *DownloadWorkflowService) CreateDownloadTask(c *gin.Context) ([]*T
 		}
 	}
 
+	// Validate custom request headers: "Name: value" lines, no CRLF injection.
+	for _, h := range service.Headers {
+		name, _, ok := strings.Cut(h, ":")
+		if !ok || strings.TrimSpace(name) == "" || strings.ContainsAny(h, "\r\n") {
+			return nil, serializer.NewError(serializer.CodeParamErr, "Invalid header", nil)
+		}
+	}
+
+	// Validate a requested downloader provider against what the node pool
+	// actually offers.
+	if service.Provider != "" && providerNodeAvailable(c, dep, service.Provider) == 0 {
+		return nil, serializer.NewError(serializer.CodeParamErr, "Invalid downloader provider", nil)
+	}
+
+	// Custom file name only applies to single-source tasks; HTTP credentials
+	// and headers only apply to plain HTTP(S) source URLs.
+	taskOpts := &workflows.RemoteDownloadTaskOption{
+		Provider:     service.Provider,
+		HTTPUsername: service.Username,
+		HTTPPassword: service.Password,
+		HTTPHeaders:  service.Headers,
+	}
+	if len(service.Src) <= 1 {
+		taskOpts.FileName = service.FileName
+	}
+	if service.SrcFile != "" {
+		taskOpts.HTTPUsername = ""
+		taskOpts.HTTPPassword = ""
+		taskOpts.HTTPHeaders = nil
+	}
+
 	// batch creating tasks
 	ae := serializer.NewAggregateError()
 	tasks := make([]queue.Task, 0, len(service.Src))
@@ -137,7 +176,7 @@ func (service *DownloadWorkflowService) CreateDownloadTask(c *gin.Context) ([]*T
 			continue
 		}
 
-		t, err := workflows.NewRemoteDownloadTask(c, src, service.SrcFile, service.Dst)
+		t, err := workflows.NewRemoteDownloadTask(c, src, service.SrcFile, service.Dst, taskOpts)
 		if err != nil {
 			ae.Add(src, err)
 			continue
@@ -151,7 +190,7 @@ func (service *DownloadWorkflowService) CreateDownloadTask(c *gin.Context) ([]*T
 	}
 
 	if service.SrcFile != "" {
-		t, err := workflows.NewRemoteDownloadTask(c, "", service.SrcFile, service.Dst)
+		t, err := workflows.NewRemoteDownloadTask(c, "", service.SrcFile, service.Dst, taskOpts)
 		if err != nil {
 			ae.Add(service.SrcFile, err)
 		}
@@ -333,14 +372,15 @@ func (service *ListTaskService) ListTasks(c *gin.Context) (*TaskListResponse, er
 			PageToken:           service.NextPageToken,
 			PageSize:            service.PageSize,
 		},
-		Types:  []string{queue.CreateArchiveTaskType, queue.ExtractArchiveTaskType, queue.RelocateTaskType, queue.ImportTaskType},
-		UserID: user.ID,
+		Types:         []string{queue.CreateArchiveTaskType, queue.ExtractArchiveTaskType, queue.RelocateTaskType, queue.ImportTaskType},
+		UserID:        user.ID,
+		ExcludeHidden: true,
 	}
 
 	if service.Category != "general" {
 		args.Types = []string{queue.RemoteDownloadTaskType}
 		if service.Category == "downloading" {
-			args.PageSize = intsets.MaxInt
+			args.PageSize = math.MaxInt
 			args.Status = []task.Status{task.StatusSuspending, task.StatusProcessing, task.StatusQueued}
 		} else if service.Category == "downloaded" {
 			args.Status = []task.Status{task.StatusCanceled, task.StatusError, task.StatusCompleted}
@@ -413,6 +453,138 @@ func CancelDownloadTask(c *gin.Context, taskID int) error {
 	return nil
 }
 
+// queueForTaskType maps a persisted task type to the dependency queue that
+// owns it. Slave-side task types are not retryable from the master UI.
+func queueForTaskType(c *gin.Context, dep dependency.Dep, taskType string) (queue.Queue, error) {
+	switch taskType {
+	case queue.CreateArchiveTaskType, queue.ExtractArchiveTaskType, queue.RelocateTaskType, queue.ImportTaskType:
+		return dep.IoIntenseQueue(c), nil
+	case queue.RemoteDownloadTaskType:
+		return dep.RemoteDownloadQueue(c), nil
+	case queue.MediaMetaTaskType, queue.FullTextIndexTaskType, queue.FullTextDeleteTaskType,
+		queue.FullTextRebuildTaskType, queue.FullTextCopyTaskType, queue.FullTextChangeOwnerTaskType:
+		return dep.MediaMetaQueue(c), nil
+	case queue.EntityRecycleRoutineTaskType, queue.ExplicitEntityRecycleTaskType, queue.UploadSentinelCheckTaskType:
+		return dep.EntityRecycleQueue(c), nil
+	}
+	return nil, fmt.Errorf("task type %q is not retryable", taskType)
+}
+
+// RetryTask re-queues a failed task with its original args (#2823).
+func RetryTask(c *gin.Context, taskID int) error {
+	dep := dependency.FromContext(c)
+	u := inventory.UserFromContext(c)
+	taskClient := dep.TaskClient()
+
+	ctx := context.WithValue(c, inventory.LoadTaskUser{}, true)
+	ctx = context.WithValue(ctx, inventory.LoadUserGroup{}, true)
+	model, err := taskClient.GetTaskByID(ctx, taskID)
+	if err != nil {
+		return serializer.NewError(serializer.CodeNotFound, "Task not found", err)
+	}
+
+	if model.UserTasks != u.ID && !u.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+		return serializer.NewError(serializer.CodeNotFound, "Task not found", nil)
+	}
+
+	if model.Status != task.StatusError {
+		return serializer.NewError(serializer.CodeParamErr, "Only failed tasks can be retried", nil)
+	}
+
+	resumed, err := queue.NewTaskFromModel(model)
+	if err != nil {
+		return serializer.NewError(serializer.CodeInternalSetting, "Failed to rebuild task", err)
+	}
+
+	q, err := queueForTaskType(c, dep, model.Type)
+	if err != nil {
+		return serializer.NewError(serializer.CodeParamErr, "Task type is not retryable", err)
+	}
+
+	if err := q.QueueTask(c, resumed); err != nil {
+		return serializer.NewError(serializer.CodeCreateTaskError, "Failed to queue task", err)
+	}
+
+	return nil
+}
+
+// CancelTask terminates a queued or suspending task; running remote
+// downloads are canceled through their downloader handle (#2270).
+func CancelTask(c *gin.Context, taskID int) error {
+	dep := dependency.FromContext(c)
+	u := inventory.UserFromContext(c)
+	taskClient := dep.TaskClient()
+
+	ctx := context.WithValue(c, inventory.LoadTaskUser{}, true)
+	model, err := taskClient.GetTaskByID(ctx, taskID)
+	if err != nil {
+		return serializer.NewError(serializer.CodeNotFound, "Task not found", err)
+	}
+
+	if model.UserTasks != u.ID && !u.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+		return serializer.NewError(serializer.CodeNotFound, "Task not found", nil)
+	}
+
+	switch model.Status {
+	case task.StatusQueued, task.StatusSuspending:
+		q, err := queueForTaskType(c, dep, model.Type)
+		if err != nil {
+			return serializer.NewError(serializer.CodeParamErr, "Task type cannot be canceled", err)
+		}
+		if q.CancelTask(ctx, taskID) {
+			return nil
+		}
+		// Not in the in-memory registry (e.g. after a restart before
+		// resume); persist the cancel so it won't be picked up later.
+		if err := taskClient.SetStatusByID(ctx, taskID, task.StatusCanceled); err != nil {
+			return serializer.NewError(serializer.CodeDBError, "Failed to cancel task", err)
+		}
+		return nil
+	case task.StatusProcessing:
+		// Only remote downloads expose a runtime cancel handle; other
+		// running tasks cannot be interrupted safely.
+		if t, found := dep.TaskRegistry().Get(taskID); found {
+			if dl, ok := t.(*workflows.RemoteDownloadTask); ok {
+				if err := dl.CancelDownload(c); err != nil {
+					return serializer.NewError(serializer.CodeInternalSetting, "Failed to cancel download task", err)
+				}
+				return nil
+			}
+		}
+		return serializer.NewError(serializer.CodeParamErr, "Running task cannot be canceled", nil)
+	default:
+		return serializer.NewError(serializer.CodeParamErr, "Only queued or running tasks can be canceled", nil)
+	}
+}
+
+// DeleteTask hides a finished task record from its owner's list. The row
+// is kept so admins retain the history (#2270 follow-up, user request).
+func DeleteTask(c *gin.Context, taskID int) error {
+	dep := dependency.FromContext(c)
+	u := inventory.UserFromContext(c)
+	taskClient := dep.TaskClient()
+
+	model, err := taskClient.GetTaskByID(c, taskID)
+	if err != nil {
+		return serializer.NewError(serializer.CodeNotFound, "Task not found", err)
+	}
+
+	if model.UserTasks != u.ID && !u.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+		return serializer.NewError(serializer.CodeNotFound, "Task not found", nil)
+	}
+
+	switch model.Status {
+	case task.StatusCompleted, task.StatusError, task.StatusCanceled:
+	default:
+		return serializer.NewError(serializer.CodeParamErr, "Only finished tasks can be deleted", nil)
+	}
+
+	if err := taskClient.HideByIDs(c, model.UserTasks, taskID); err != nil {
+		return serializer.NewError(serializer.CodeDBError, "Failed to delete task", err)
+	}
+	return nil
+}
+
 type (
 	SetDownloadFilesService struct {
 		Files []*downloader.SetFileToDownloadArgs `json:"files" binding:"required"`
@@ -480,4 +652,48 @@ func (service *RebuildFTSIndexWorkflowService) CreateRebuildFTSIndexTask(c *gin.
 	}
 
 	return BuildTaskResponse(t, nil, hasher), nil
+}
+
+type (
+	BlobAuditWorkflowService struct {
+		PolicyID int  `json:"policy_id" binding:"required,min=1"`
+		Delete   bool `json:"delete"`
+	}
+	BlobAuditParamCtx struct{}
+)
+
+// CreateBlobAuditTask queues a blob-vs-database audit for one storage policy.
+func (service *BlobAuditWorkflowService) CreateBlobAuditTask(c *gin.Context) (*TaskResponse, error) {
+	dep := dependency.FromContext(c)
+	user := inventory.UserFromContext(c)
+	hasher := dep.HashIDEncoder()
+
+	if !user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+		return nil, serializer.NewError(serializer.CodeGroupNotAllowed, "Only admin can run a blob audit", nil)
+	}
+
+	if _, err := dep.StoragePolicyClient().GetPolicyByID(c, service.PolicyID); err != nil {
+		return nil, serializer.NewError(serializer.CodeNotFound, "Storage policy not found", err)
+	}
+
+	t, err := workflows.NewBlobAuditTask(c, user, service.PolicyID, service.Delete)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeCreateTaskError, "Failed to create task", err)
+	}
+
+	if err := dep.IoIntenseQueue(c).QueueTask(c, t); err != nil {
+		return nil, serializer.NewError(serializer.CodeCreateTaskError, "Failed to queue task", err)
+	}
+
+	return BuildTaskResponse(t, nil, hasher), nil
+}
+
+// providerNodeAvailable returns the ID of an active remote-download node
+// offering the given provider, or 0 when none does.
+func providerNodeAvailable(c *gin.Context, dep dependency.Dep, provider string) int {
+	nodes, err := dep.NodeClient().ListActiveNodes(c, nil)
+	if err != nil {
+		return 0
+	}
+	return workflows.PickProviderNode(nodes, provider)
 }

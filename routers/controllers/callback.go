@@ -71,7 +71,7 @@ func OSSCallbackValidate(c *gin.Context) {
 
 		c.Next()
 	} else {
-		c.JSON(401, ErrorResponse(err))
+		c.JSON(401, ErrorResponse(c, err))
 		c.Abort()
 	}
 }
@@ -104,7 +104,7 @@ func OneDriveOAuth(c *gin.Context) {
 	//	redirect.RawQuery = queries.Encode()
 	//	c.Redirect(303, redirect.String())
 	//} else {
-	//	c.JSON(200, ErrorResponse(err))
+	//	c.JSON(200, ErrorResponse(c, err))
 	//}
 }
 
@@ -122,6 +122,6 @@ func GoogleDriveOAuth(c *gin.Context) {
 	//	redirect.RawQuery = queries.Encode()
 	//	c.Redirect(303, redirect.String())
 	//} else {
-	//	c.JSON(200, ErrorResponse(err))
+	//	c.JSON(200, ErrorResponse(c, err))
 	//}
 }

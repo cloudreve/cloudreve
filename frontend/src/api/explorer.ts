@@ -94,6 +94,7 @@ export interface Share {
   allow_edit?: boolean;
   preview_only?: boolean;
   upload_only?: boolean;
+  note?: string;
 }
 
 export enum PolicyType {
@@ -264,6 +265,7 @@ export interface UnlockFileService {
 export interface RenameFileService {
   uri: string;
   new_name: string;
+  expect_id?: string;
 }
 
 export const NavigatorCapability = {
@@ -292,6 +294,8 @@ export interface PinFileService {
 export interface MoveFileService extends MultipleUriService {
   dst: string;
   copy?: boolean;
+  expect_ids?: string[];
+  on_conflict?: "skip" | "overwrite";
 }
 
 export interface MetadataPatch {
@@ -316,6 +320,7 @@ export interface ShareCreateService {
   allow_edit?: boolean;
   preview_only?: boolean;
   upload_only?: boolean;
+  note?: string;
 }
 
 export interface CreateFileService {

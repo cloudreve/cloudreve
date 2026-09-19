@@ -1,5 +1,5 @@
 import { LoadingButton } from "@mui/lab";
-import { Collapse, Grid2, Stack, Typography, useMediaQuery, useTheme, styled } from "@mui/material";
+import { Button, Collapse, FormHelperText, Grid2, ListItemText, Stack, Typography, useMediaQuery, useTheme, styled } from "@mui/material";
 import { bindPopover, bindTrigger, usePopupState } from "material-ui-popup-state/hooks";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -7,10 +7,12 @@ import { sendUpdateUserSetting } from "../../../api/api.ts";
 import { UserSettings, ShareLinksInProfileLevel } from "../../../api/user.ts";
 import { useAppDispatch } from "../../../redux/hooks.ts";
 import SessionManager from "../../../session";
-import { DefaultButton, DenseFilledTextField } from "../../Common/StyledComponents.tsx";
+import { DefaultButton, DenseFilledTextField, DenseSelect } from "../../Common/StyledComponents.tsx";
+import { SquareMenuItem } from "../../FileManager/ContextMenu/ContextMenu.tsx";
 import TimeBadge from "../../Common/TimeBadge.tsx";
 import CaretDown from "../../Icons/CaretDown.tsx";
 import AvatarSetting from "./AvatarSetting.tsx";
+import ChangeEmailDialog from "./ChangeEmailDialog.tsx";
 import ProfileSettingPopover, { useProfileSettingSummary } from "./ProfileSettingPopover.tsx";
 import SettingForm from "./SettingForm.tsx";
 
@@ -42,6 +44,7 @@ const ProfileSetting = ({ setting, setSetting }: ProfileSettingProps) => {
   const [nick, setNick] = useState(user?.user.nickname);
   const [nickLoading, setNickLoading] = useState(false);
   const [profileSettingLoading, setProfileSettingLoading] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
 
   const profileSettingPopup = usePopupState({
     variant: "popover",
@@ -101,7 +104,12 @@ const ProfileSetting = ({ setting, setSetting }: ProfileSettingProps) => {
         <Grid2 spacing={3} sx={{ flexGrow: 1, width: "100%" }} size={{ md: 6, xs: 12 }}>
           <Stack spacing={3}>
             <SettingForm title={t("login.email")} noContainer lgWidth={12}>
-              <DenseFilledTextField disabled fullWidth value={user?.user.email} />
+              <Stack direction="row" spacing={1}>
+                <DenseFilledTextField disabled fullWidth value={user?.user.email} />
+                <Button variant="outlined" onClick={() => setEmailDialogOpen(true)} sx={{ flexShrink: 0 }}>
+                  {t("setting.changeEmail")}
+                </Button>
+              </Stack>
             </SettingForm>
             <SettingForm title={t("setting.nickname")} noContainer lgWidth={12}>
               <DenseFilledTextField
@@ -154,10 +162,44 @@ const ProfileSetting = ({ setting, setSetting }: ProfileSettingProps) => {
                   {...bindPopover(profileSettingPopup)}
                 />
               </SettingForm>
+
+              <SettingForm title={t("setting.shareDefaultPrivate")} noContainer lgWidth={6}>
+                <DenseSelect
+                  fullWidth
+                  value={
+                    setting.share_default_private === undefined || setting.share_default_private === null
+                      ? ""
+                      : setting.share_default_private
+                        ? "true"
+                        : "false"
+                  }
+                  onChange={(e) => {
+                    const v = e.target.value as string;
+                    dispatch(sendUpdateUserSetting({ share_default_private: v })).then(() => {
+                      setSetting({
+                        ...setting,
+                        share_default_private: v === "" ? undefined : v === "true",
+                      });
+                    });
+                  }}
+                >
+                  <SquareMenuItem value="">
+                    <ListItemText primary={t("setting.shareSiteDefault")} />
+                  </SquareMenuItem>
+                  <SquareMenuItem value="true">
+                    <ListItemText primary={t("setting.sharePrivateOn")} />
+                  </SquareMenuItem>
+                  <SquareMenuItem value="false">
+                    <ListItemText primary={t("setting.sharePrivateOff")} />
+                  </SquareMenuItem>
+                </DenseSelect>
+                <FormHelperText>{t("setting.shareDefaultPrivateDes")}</FormHelperText>
+              </SettingForm>
             </Grid2>
           </Stack>
         </Grid2>
       </Grid2>
+      <ChangeEmailDialog open={emailDialogOpen} onClose={() => setEmailDialogOpen(false)} currentEmail={user?.user.email} />
     </Stack>
   );
 };

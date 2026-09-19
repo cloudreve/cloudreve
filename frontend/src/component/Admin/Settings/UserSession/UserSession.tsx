@@ -139,6 +139,49 @@ const UserSession = () => {
                 </NoMarginHelperText>
               </FormControl>
             </SettingForm>
+            <SettingForm lgWidth={5}>
+              <FormControl fullWidth>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={isTrueVal(values.share_default_private)}
+                      onChange={(e) =>
+                        setSettings({
+                          share_default_private: e.target.checked ? "1" : "0",
+                        })
+                      }
+                    />
+                  }
+                  label={t("settings.shareDefaultPrivate")}
+                />
+                <NoMarginHelperText>{t("settings.shareDefaultPrivateDes")}</NoMarginHelperText>
+              </FormControl>
+            </SettingForm>
+            <SettingForm title={t("settings.defaultShareLinksInProfile")} lgWidth={5}>
+              <FormControl>
+                <DenseSelect
+                  value={values.default_share_links_in_profile ?? ""}
+                  onChange={(e) =>
+                    setSettings({
+                      default_share_links_in_profile: e.target.value as string,
+                    })
+                  }
+                >
+                  {["profileSharePublicOnly", "profileShareAll", "profileShareHide"].map((v, i) => (
+                    <SquareMenuItem key={v} value={["", "all_share", "hide_share"][i]}>
+                      <ListItemText
+                        slotProps={{
+                          primary: { variant: "body2" },
+                        }}
+                      >
+                        {t(`settings.${v}`)}
+                      </ListItemText>
+                    </SquareMenuItem>
+                  ))}
+                </DenseSelect>
+                <NoMarginHelperText>{t("settings.defaultShareLinksInProfileDes")}</NoMarginHelperText>
+              </FormControl>
+            </SettingForm>
             <SettingForm title={t("vas.filterEmailProvider")} lgWidth={5}>
               <FormControl>
                 <DenseSelect
@@ -208,6 +251,21 @@ const UserSession = () => {
                 </NoMarginHelperText>
               </FormControl>
             </SettingForm>
+            {isTrueVal(values.email_disable_subaddress) && (
+              <SettingForm title={t("vas.subAddressChars")} lgWidth={5}>
+                <FormControl fullWidth>
+                  <DenseFilledTextField
+                    fullWidth
+                    placeholder="+"
+                    value={values.email_subaddress_chars ?? ""}
+                    onChange={(e) => setSettings({ email_subaddress_chars: e.target.value })}
+                  />
+                  <NoMarginHelperText>
+                    <Trans i18nKey="vas.subAddressCharsDes" ns={"dashboard"} components={[<Code />]} />
+                  </NoMarginHelperText>
+                </FormControl>
+              </SettingForm>
+            )}
           </SettingSectionContent>
         </SettingSection>
         <SettingSection>

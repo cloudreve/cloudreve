@@ -17,6 +17,17 @@ type (
 		DisableViewSync     bool                     `json:"disable_view_sync,omitempty"`
 		FsViewMap           map[string]ExplorerView  `json:"fs_view_map,omitempty"`
 		ShareLinksInProfile ShareLinksInProfileLevel `json:"share_links_in_profile,omitempty"`
+		// ShareDefaultPrivate overrides the site-wide private-share default
+		// for this user. nil means inherit the site default.
+		ShareDefaultPrivate *bool `json:"share_default_private,omitempty"`
+		// PreferredViewers maps file extensions (without dot, lowercase) to
+		// viewer IDs chosen via "always open with". Synced server-side so the
+		// preference follows the user across devices.
+		PreferredViewers map[string]string `json:"preferred_viewers,omitempty"`
+		// TrashRetention overrides the group's trash retention in seconds.
+		// 0 means inherit the group setting. Applied when a file is moved to
+		// trash — already-trashed files keep their original expiry.
+		TrashRetention int `json:"trash_retention,omitempty"`
 	}
 
 	ShareLinksInProfileLevel string
@@ -36,6 +47,9 @@ type (
 		MaxWalkedFiles        int                    `json:"max_walked_files,omitempty"`
 		TrashRetention        int                    `json:"trash_retention,omitempty"`
 		RedirectedSource      bool                   `json:"redirected_source,omitempty"`
+		// LoginIPWhitelist restricts sign-in to the given IPs/CIDR ranges.
+		// Empty means no restriction.
+		LoginIPWhitelist []string `json:"login_ip_whitelist,omitempty"`
 	}
 
 	// PolicySetting 非公有的存储策略属性
@@ -50,6 +64,10 @@ type (
 		NameRegexp string `json:"file_regexp,omitempty"`
 		// IsNameRegexp Whether above regexp is a deny list.
 		IsNameRegexpDenyList bool `json:"is_name_regexp_deny_list,omitempty"`
+		// AllowNativeName permits characters only illegal on Windows
+		// filesystems (:*?"<>|) in file names. Path separators and dot-names
+		// stay illegal (#3065).
+		AllowNativeName bool `json:"allow_native_name,omitempty"`
 		// OauthRedirect Oauth 重定向地址
 		OauthRedirect string `json:"od_redirect,omitempty"`
 		// CustomProxy whether to use custom-proxy to get file content
@@ -179,6 +197,10 @@ type (
 	EntityProps struct {
 		UnlinkOnly      bool             `json:"unlink_only,omitempty"`
 		EncryptMetadata *EncryptMetadata `json:"encrypt_metadata,omitempty"`
+		// RecycleFailCount tracks consecutive driver-delete failures during
+		// entity recycling. Entities reaching the threshold are force-removed
+		// from the DB so one un-deletable blob cannot stall the sweep forever.
+		RecycleFailCount int `json:"recycle_fail_count,omitempty"`
 	}
 
 	Cipher string
@@ -233,6 +255,9 @@ type (
 		PreviewOnly bool `json:"preview_only,omitempty"`
 		// Whether share visitors can upload but cannot list or download (drop box)
 		UploadOnly bool `json:"upload_only,omitempty"`
+		// Owner-defined note/alias for identifying the share in My Shares;
+		// never exposed to share visitors (#3570).
+		Note string `json:"note,omitempty"`
 	}
 
 	OAuthClientProps struct {
@@ -269,7 +294,47 @@ const (
 	GroupPermissionSetExplicitUser_placeholder
 	GroupPermissionIgnoreFileOwnership // not used
 	GroupPermissionUniqueRedirectDirectLink
+	// GroupPermissionWebDAVReadOnly restricts the group's WebDAV access to
+	// read operations — write methods (PUT, MKCOL, DELETE, COPY, MOVE, LOCK,
+	// PROPPATCH) are rejected even if the group's WebDAV access is enabled.
+	GroupPermissionWebDAVReadOnly
+	// Delegated admin section permissions. A group with any of these bits —
+	// but without GroupPermissionIsAdmin — is a delegated administrator that
+	// can only access the corresponding admin sections. GroupPermissionIsAdmin
+	// implies all sections.
+	GroupPermissionAdminUsers
+	GroupPermissionAdminGroups
+	GroupPermissionAdminFiles
+	GroupPermissionAdminShares
+	GroupPermissionAdminStorage
+	GroupPermissionAdminQueue
+	GroupPermissionAdminSettings
+	GroupPermissionAdminPayment
+	GroupPermissionAdminEvents
+	GroupPermissionAdminReports
 )
+
+// DelegatedAdminPermissions lists every per-section admin permission bit.
+// GroupPermissionIsAdmin implies all of them.
+func DelegatedAdminPermissions() []GroupPermission {
+	return []GroupPermission{
+		GroupPermissionAdminUsers,
+		GroupPermissionAdminGroups,
+		GroupPermissionAdminFiles,
+		GroupPermissionAdminShares,
+		GroupPermissionAdminStorage,
+		GroupPermissionAdminQueue,
+		GroupPermissionAdminSettings,
+		GroupPermissionAdminPayment,
+		GroupPermissionAdminEvents,
+		GroupPermissionAdminReports,
+	}
+}
+
+// AdminPermissionBits returns all admin-capable bits, including IsAdmin.
+func AdminPermissionBits() []GroupPermission {
+	return append([]GroupPermission{GroupPermissionIsAdmin}, DelegatedAdminPermissions()...)
+}
 
 const (
 	NodeCapabilityNone NodeCapability = iota
@@ -394,6 +459,11 @@ const (
 	ProfilePublicShareOnly = ShareLinksInProfileLevel("")
 	ProfileAllShare        = ShareLinksInProfileLevel("all_share")
 	ProfileHideShare       = ShareLinksInProfileLevel("hide_share")
+	// ProfileSharePublic is the explicit "password-free shares only" choice.
+	// The empty value (ProfilePublicShareOnly) doubles as "inherit the
+	// site-wide default"; ProfileSharePublic lets a user force public-only
+	// visibility even when the site default differs (#3390).
+	ProfileSharePublic = ShareLinksInProfileLevel("public_share")
 )
 
 const (

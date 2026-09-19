@@ -385,6 +385,26 @@ func TypeContainsFold(v string) predicate.StoragePolicy {
 	return predicate.StoragePolicy(sql.FieldContainsFold(FieldType, v))
 }
 
+// StatusEQ applies the EQ predicate on the "status" field.
+func StatusEQ(v Status) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldEQ(FieldStatus, v))
+}
+
+// StatusNEQ applies the NEQ predicate on the "status" field.
+func StatusNEQ(v Status) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldNEQ(FieldStatus, v))
+}
+
+// StatusIn applies the In predicate on the "status" field.
+func StatusIn(vs ...Status) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldIn(FieldStatus, vs...))
+}
+
+// StatusNotIn applies the NotIn predicate on the "status" field.
+func StatusNotIn(vs ...Status) predicate.StoragePolicy {
+	return predicate.StoragePolicy(sql.FieldNotIn(FieldStatus, vs...))
+}
+
 // ServerEQ applies the EQ predicate on the "server" field.
 func ServerEQ(v string) predicate.StoragePolicy {
 	return predicate.StoragePolicy(sql.FieldEQ(FieldServer, v))

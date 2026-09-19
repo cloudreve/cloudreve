@@ -27,6 +27,10 @@ type SiteConfig struct {
 	CustomNavItems []setting.CustomNavItem `json:"custom_nav_items,omitempty"`
 	CustomHTML     *setting.CustomHTML     `json:"custom_html,omitempty"`
 
+	// Share section
+	ShareDefaultPrivate        bool   `json:"share_default_private,omitempty"`
+	DefaultShareLinksInProfile string `json:"default_share_links_in_profile,omitempty"`
+
 	// Login Section
 	LoginCaptcha     bool                `json:"login_captcha,omitempty"`
 	RegCaptcha       bool                `json:"reg_captcha,omitempty"`
@@ -43,6 +47,11 @@ type SiteConfig struct {
 	PrivacyPolicyUrl string              `json:"privacy_policy_url,omitempty"`
 	SSOEnabled       bool                `json:"sso_enabled,omitempty"`
 	SSODisplayName   string              `json:"sso_display_name,omitempty"`
+	SSOAutoRedirect  bool                `json:"sso_auto_redirect,omitempty"`
+
+	// DownloadCDNRoutes exposes configured CDN mirror endpoints so clients
+	// can offer a download-route picker (#2987).
+	DownloadCDNRoutes []setting.CDNRoute `json:"download_cdn_routes,omitempty"`
 
 	// Explorer section
 	Icons                string                     `json:"icons,omitempty"`
@@ -58,6 +67,10 @@ type SiteConfig struct {
 	CustomProps          []types.CustomProps        `json:"custom_props,omitempty"`
 	ShowEncryptionStatus bool                       `json:"show_encryption_status,omitempty"`
 	FullTextSearch       bool                       `json:"full_text_search,omitempty"`
+	// RemoteDownloadProviders lists distinct downloader providers offered by
+	// active remote-download-capable nodes, so clients can let users pick
+	// between e.g. Aria2 and qBittorrent per download.
+	RemoteDownloadProviders []string `json:"remote_download_providers,omitempty"`
 
 	// Thumbnail section
 	ThumbExts []string `json:"thumb_exts,omitempty"`
@@ -102,6 +115,7 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 			TosUrl:           legalDocs.TermsOfService,
 			SSOEnabled:       sso.Enabled && sso.Issuer != "" && sso.ClientID != "",
 			SSODisplayName:   sso.DisplayName,
+			SSOAutoRedirect:  sso.AutoRedirect,
 		}, nil
 	case "explorer":
 		explorerSettings := settings.ExplorerFrontendSettings(c)
@@ -117,18 +131,19 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 			}
 		}
 		return &SiteConfig{
-			MaxBatchSize:         maxBatchSize,
-			FileViewers:          fileViewers,
-			DefaultViewerMapping: settings.DefaultViewerMapping(c),
-			Icons:                explorerSettings.Icons,
-			MapProvider:          mapSettings.Provider,
-			GoogleMapTileType:    mapSettings.GoogleTileType,
-			MapboxAK:             mapSettings.MapboxAK,
-			ThumbnailWidth:       w,
-			ThumbnailHeight:      h,
-			CustomProps:          customProps,
-			ShowEncryptionStatus: showEncryptionStatus,
-			FullTextSearch:       settings.FTSEnabled(c),
+			MaxBatchSize:            maxBatchSize,
+			FileViewers:             fileViewers,
+			DefaultViewerMapping:    settings.DefaultViewerMapping(c),
+			Icons:                   explorerSettings.Icons,
+			MapProvider:             mapSettings.Provider,
+			GoogleMapTileType:       mapSettings.GoogleTileType,
+			MapboxAK:                mapSettings.MapboxAK,
+			ThumbnailWidth:          w,
+			ThumbnailHeight:         h,
+			CustomProps:             customProps,
+			ShowEncryptionStatus:    showEncryptionStatus,
+			FullTextSearch:          settings.FTSEnabled(c),
+			RemoteDownloadProviders: remoteDownloadProviders(c, dep),
 		}, nil
 	case "emojis":
 		emojis := settings.EmojiPresets(c)
@@ -196,23 +211,27 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 	appSetting := settings.AppSetting(c)
 	customNavItems := settings.CustomNavItems(c)
 	customHTML := settings.CustomHTML(c)
+	shareDefaults := settings.ShareDefaults(c)
 	return &SiteConfig{
-		InstanceID:      siteBasic.ID,
-		SiteName:        siteBasic.Name,
-		Themes:          themes.Themes,
-		DefaultTheme:    themes.DefaultTheme,
-		User:            &userRes,
-		Logo:            logo.Normal,
-		LogoLight:       logo.Light,
-		CaptchaType:     settings.CaptchaType(c),
-		TurnstileSiteID: settings.TurnstileCaptcha(c).Key,
-		ReCaptchaKey:    reCaptcha.Key,
-		CapInstanceURL:  capCaptcha.InstanceURL,
-		CapSiteKey:      capCaptcha.SiteKey,
-		CapAssetServer:  capCaptcha.AssetServer,
-		AppPromotion:    appSetting.Promotion,
-		CustomNavItems:  customNavItems,
-		CustomHTML:      customHTML,
+		InstanceID:                 siteBasic.ID,
+		SiteName:                   siteBasic.Name,
+		Themes:                     themes.Themes,
+		DefaultTheme:               themes.DefaultTheme,
+		User:                       &userRes,
+		Logo:                       logo.Normal,
+		LogoLight:                  logo.Light,
+		CaptchaType:                settings.CaptchaType(c),
+		TurnstileSiteID:            settings.TurnstileCaptcha(c).Key,
+		ReCaptchaKey:               reCaptcha.Key,
+		CapInstanceURL:             capCaptcha.InstanceURL,
+		CapSiteKey:                 capCaptcha.SiteKey,
+		CapAssetServer:             capCaptcha.AssetServer,
+		AppPromotion:               appSetting.Promotion,
+		CustomNavItems:             customNavItems,
+		CustomHTML:                 customHTML,
+		ShareDefaultPrivate:        shareDefaults.PrivateByDefault,
+		DefaultShareLinksInProfile: string(shareDefaults.LinksInProfile),
+		DownloadCDNRoutes:          settings.DownloadCDNRoutes(c),
 	}, nil
 }
 
@@ -255,4 +274,25 @@ func GetCaptchaImage(c *gin.Context) *CaptchaResponse {
 		Image:  base64stringD,
 		Ticket: idKeyD,
 	}
+}
+
+// remoteDownloadProviders returns the distinct downloader providers offered by
+// active nodes with remote-download capability, in stable sorted order.
+func remoteDownloadProviders(c *gin.Context, dep dependency.Dep) []string {
+	nodes, err := dep.NodeClient().ListActiveNodes(c, nil)
+	if err != nil {
+		return nil
+	}
+	seen := map[string]bool{}
+	var providers []string
+	for _, n := range nodes {
+		if n.Capabilities == nil || !n.Capabilities.Enabled(int(types.NodeCapabilityRemoteDownload)) ||
+			n.Settings == nil || n.Settings.Provider == "" || seen[string(n.Settings.Provider)] {
+			continue
+		}
+		seen[string(n.Settings.Provider)] = true
+		providers = append(providers, string(n.Settings.Provider))
+	}
+	sort.Strings(providers)
+	return providers
 }

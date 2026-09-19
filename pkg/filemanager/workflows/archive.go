@@ -125,6 +125,11 @@ func (m *CreateArchiveTask) Do(ctx context.Context) (task.Status, error) {
 	}
 	m.state = state
 
+	// Prefer the node hosting the first source file's storage policy.
+	if len(m.state.Uris) > 0 {
+		preferPolicyNode(ctx, dep, &m.state.NodeState, m.state.Uris[0])
+	}
+
 	// select node
 	node, err := allocateNode(ctx, dep, &m.state.NodeState, types.NodeCapabilityCreateArchive)
 	if err != nil {

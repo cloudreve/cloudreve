@@ -61,6 +61,9 @@ type (
 		GetActiveByID(ctx context.Context, id int) (*ent.User, error)
 		// SetStatus Set user to given status
 		SetStatus(ctx context.Context, u *ent.User, status user.Status) (*ent.User, error)
+		// LiftExpiredBan restores a banned user whose ban_expires has passed.
+		// It returns the (possibly updated) user; permanent bans are untouched.
+		LiftExpiredBan(ctx context.Context, u *ent.User) (*ent.User, error)
 		// AnonymousUser returns the anonymous user.
 		AnonymousUser(ctx context.Context) (*ent.User, error)
 		// GetLoginUserByID returns the login user by its ID. It emits some errors and fallback to anonymous user.
@@ -104,6 +107,10 @@ type (
 		ListUsers(ctx context.Context, args *ListUserParameters) (*ListUserResult, error)
 		// Upsert upserts a user.
 		Upsert(ctx context.Context, u *ent.User, password, twoFa string) (*ent.User, error)
+		// UpdateLastLogin stamps the user's last successful sign-in time.
+		UpdateLastLogin(ctx context.Context, uid int) error
+		// BatchUpdate applies a status and/or group change to the given users.
+		BatchUpdate(ctx context.Context, ids []int, status *user.Status, groupID int) (int, error)
 		// Delete deletes a user.
 		Delete(ctx context.Context, uid int) error
 		// CalculateStorage calculate user's storage from scratch and update user's storage.
@@ -115,6 +122,7 @@ type (
 		Status  user.Status
 		Nick    string
 		Email   string
+		IDs     []int
 	}
 	ListUserResult struct {
 		*PaginationResults
@@ -364,6 +372,46 @@ func (c *userClient) SetStatus(ctx context.Context, u *ent.User, status user.Sta
 	return c.client.User.UpdateOne(u).SetStatus(status).Save(ctx)
 }
 
+func (c *userClient) UpdateLastLogin(ctx context.Context, uid int) error {
+	return c.client.User.UpdateOneID(uid).SetLastLogin(time.Now()).Exec(ctx)
+}
+
+// BatchUpdate applies a status and/or group change to the given user IDs and
+// returns the number of updated rows. Ban lifts/expiry fields are cleared when
+// a user is (re)activated or banned through this path.
+func (c *userClient) BatchUpdate(ctx context.Context, ids []int, status *user.Status, groupID int) (int, error) {
+	if len(ids) == 0 {
+		return 0, nil
+	}
+
+	stm := c.client.User.Update().Where(user.IDIn(ids...))
+	if status != nil {
+		stm.SetStatus(*status).ClearBanExpires().ClearBanReason()
+	}
+	if groupID > 0 {
+		stm.SetGroupUsers(groupID)
+	}
+	return stm.Save(ctx)
+}
+
+func (c *userClient) LiftExpiredBan(ctx context.Context, u *ent.User) (*ent.User, error) {
+	banned := u.Status == user.StatusManualBanned || u.Status == user.StatusSysBanned
+	if !banned || u.BanExpires == nil || u.BanExpires.After(time.Now()) {
+		return u, nil
+	}
+
+	if err := c.client.User.UpdateOneID(u.ID).
+		SetStatus(user.StatusActive).
+		ClearBanExpires().
+		Exec(ctx); err != nil {
+		return nil, err
+	}
+
+	u.Status = user.StatusActive
+	u.BanExpires = nil
+	return u, nil
+}
+
 func (c *userClient) Create(ctx context.Context, args *NewUserArgs) (*ent.User, error) {
 	// Try to check if there's user with same email.
 	if existedUser, err := c.GetByEmail(ctx, args.Email); err == nil {
@@ -527,6 +575,9 @@ func (c *userClient) ListUsers(ctx context.Context, args *ListUserParameters) (*
 	if args.Email != "" {
 		query = query.Where(user.EmailContainsFold(args.Email))
 	}
+	if len(args.IDs) > 0 {
+		query = query.Where(user.IDIn(args.IDs...))
+	}
 	query.Order(getUserOrderOption(args)...)
 
 	// Count total items
@@ -579,6 +630,14 @@ func (c *userClient) Upsert(ctx context.Context, u *ent.User, password, twoFa st
 		SetStatus(u.Status).
 		SetGroupID(u.GroupUsers)
 
+	if u.Status == user.StatusManualBanned || u.Status == user.StatusSysBanned {
+		q.SetNillableBanExpires(u.BanExpires)
+		q.SetBanReason(u.BanReason)
+	} else {
+		q.ClearBanExpires()
+		q.ClearBanReason()
+	}
+
 	if password != "" {
 		pwdDigest, err := digestPassword(password)
 		if err != nil {
@@ -605,6 +664,8 @@ func getUserOrderOption(args *ListUserParameters) []user.OrderOption {
 		return []user.OrderOption{user.ByEmail(orderTerm), user.ByID(orderTerm)}
 	case user.FieldUpdatedAt:
 		return []user.OrderOption{user.ByUpdatedAt(orderTerm), user.ByID(orderTerm)}
+	case user.FieldLastLogin:
+		return []user.OrderOption{user.ByLastLogin(orderTerm), user.ByID(orderTerm)}
 	default:
 		return []user.OrderOption{user.ByID(orderTerm)}
 	}

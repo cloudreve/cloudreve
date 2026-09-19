@@ -1,6 +1,8 @@
-import { useContext, useMemo } from "react";
+import { Box } from "@mui/material";
+import { useCallback, useContext, useMemo } from "react";
 import { Virtuoso } from "react-virtuoso";
-import { useAppSelector } from "../../../../redux/hooks.ts";
+import { useAppDispatch, useAppSelector } from "../../../../redux/hooks.ts";
+import { setSelected } from "../../../../redux/fileManagerSlice.ts";
 import DndWrappedFile from "../../Dnd/DndWrappedFile.tsx";
 import { FmIndexContext } from "../../FmIndexContext.tsx";
 import { FmFile, loadingPlaceHolderNumb } from "../GridView/GridView.tsx";
@@ -14,6 +16,7 @@ export interface ListBodyProps {
 
 const ListBody = ({ columns }: ListBodyProps) => {
   const fmIndex = useContext(FmIndexContext);
+  const dispatch = useAppDispatch();
   const files = useAppSelector((state) => state.fileManager[fmIndex].list?.files);
   const mixedType = useAppSelector((state) => state.fileManager[fmIndex].list?.mixed_type);
   const pagination = useAppSelector((state) => state.fileManager[fmIndex].list?.pagination);
@@ -46,25 +49,38 @@ const ListBody = ({ columns }: ListBodyProps) => {
     return list;
   }, [files, mixedType, pagination, search_params]);
 
+  // Clicking empty space below/around rows clears the selection (#3223);
+  // row clicks are excluded via the data-fm-row marker.
+  const onBackgroundClick = useCallback(
+    (e: React.MouseEvent<HTMLElement>) => {
+      if (!(e.target as HTMLElement).closest("[data-fm-row]")) {
+        dispatch(setSelected({ index: fmIndex, value: [] }));
+      }
+    },
+    [dispatch, fmIndex],
+  );
+
   return (
-    <Virtuoso
-      style={{
-        height: "100%",
-      }}
-      increaseViewportBy={180}
-      data={list}
-      itemContent={(index, file) => (
-        <DndWrappedFile
-          columns={columns}
-          key={file.id}
-          component={Row}
-          search={search_params}
-          index={index}
-          showThumb={showThumb}
-          file={file}
-        />
-      )}
-    />
+    <Box sx={{ height: "100%" }} onClick={onBackgroundClick}>
+      <Virtuoso
+        style={{
+          height: "100%",
+        }}
+        increaseViewportBy={180}
+        data={list}
+        itemContent={(index, file) => (
+          <DndWrappedFile
+            columns={columns}
+            key={file.id}
+            component={Row}
+            search={search_params}
+            index={index}
+            showThumb={showThumb}
+            file={file}
+          />
+        )}
+      />
+    </Box>
   );
 };
 

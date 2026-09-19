@@ -361,7 +361,7 @@ func init() {
 	// storagepolicy.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	storagepolicy.UpdateDefaultUpdatedAt = storagepolicyDescUpdatedAt.UpdateDefault.(func() time.Time)
 	// storagepolicyDescSettings is the schema descriptor for settings field.
-	storagepolicyDescSettings := storagepolicyFields[10].Descriptor()
+	storagepolicyDescSettings := storagepolicyFields[11].Descriptor()
 	// storagepolicy.DefaultSettings holds the default value on creation for the settings field.
 	storagepolicy.DefaultSettings = storagepolicyDescSettings.Default.(*types.PolicySetting)
 	taskMixin := schema.Task{}.Mixin()
@@ -383,6 +383,10 @@ func init() {
 	task.DefaultUpdatedAt = taskDescUpdatedAt.Default.(func() time.Time)
 	// task.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	task.UpdateDefaultUpdatedAt = taskDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// taskDescHidden is the schema descriptor for hidden field.
+	taskDescHidden := taskFields[6].Descriptor()
+	// task.DefaultHidden holds the default value on creation for the hidden field.
+	task.DefaultHidden = taskDescHidden.Default.(bool)
 	userMixin := schema.User{}.Mixin()
 	userMixinHooks0 := userMixin[0].Hooks()
 	user.Hooks[0] = userMixinHooks0[0]
@@ -411,11 +415,11 @@ func init() {
 	// user.NickValidator is a validator for the "nick" field. It is called by the builders before save.
 	user.NickValidator = userDescNick.Validators[0].(func(string) error)
 	// userDescStorage is the schema descriptor for storage field.
-	userDescStorage := userFields[4].Descriptor()
+	userDescStorage := userFields[7].Descriptor()
 	// user.DefaultStorage holds the default value on creation for the storage field.
 	user.DefaultStorage = userDescStorage.Default.(int64)
 	// userDescSettings is the schema descriptor for settings field.
-	userDescSettings := userFields[7].Descriptor()
+	userDescSettings := userFields[10].Descriptor()
 	// user.DefaultSettings holds the default value on creation for the settings field.
 	user.DefaultSettings = userDescSettings.Default.(*types.UserSetting)
 }

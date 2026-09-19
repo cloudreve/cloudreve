@@ -181,6 +181,7 @@ func (m *Migrator) Migrate() error {
 	// Continue from the current step
 	if m.state.Step <= StepSchema {
 		m.l.Info("Creating basic v4 table schema...")
+		inventory.RepairHeatWaveNotSecondary(m.l, m.v4client, context.Background())
 		if err := m.v4client.Schema.Create(context.Background()); err != nil {
 			return fmt.Errorf("failed creating schema resources: %w", err)
 		}

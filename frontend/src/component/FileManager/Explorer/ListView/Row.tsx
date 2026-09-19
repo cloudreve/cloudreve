@@ -91,6 +91,7 @@ const Row = memo((props: FileBlockProps) => {
 
   return (
     <RowContainer
+      data-fm-row
       transparent={isDragging || fileDisabled}
       isDropOver={isDropOver && !isDragging}
       ref={setRefFunc}

@@ -6,6 +6,7 @@ import {
   getFileEntityUrl,
   getFileList,
   getFileThumb,
+  isNameConflictBatchError,
   sendCreateFile,
   sendDeleteFiles,
   sendEmptyTrash,
@@ -75,7 +76,7 @@ import {
 } from "../globalStateSlice.ts";
 import { ConfigLoadState, Viewers } from "../siteConfigSlice.ts";
 import { AppThunk } from "../store.ts";
-import { confirmOperation, deleteConfirmation, renameForm, requestCreateNew, selectPath } from "./dialog.ts";
+import { confirmOperation, deleteConfirmation, renameForm, requestCreateNew, selectOption, selectPath } from "./dialog.ts";
 import { downloadSingleFile } from "./download.ts";
 import { navigateToPath, refreshFileList, updateUserCapacity } from "./filemanager.ts";
 import { queueLoadShareInfo } from "./share.ts";
@@ -380,6 +381,7 @@ export function submitRenameFile(index: number, file: FileResponse, newName: str
         sendRenameFile({
           uri: file.path,
           new_name: newName,
+          expect_id: file.id,
         }),
       );
     } catch (e) {
@@ -665,14 +667,47 @@ export function moveFiles(index: number, src: FileResponse[], dst: string, isCop
       return;
     }
 
+    const moveReq = (onConflict?: "skip" | "overwrite") => ({
+      uris: src.map((f) => f.path),
+      dst,
+      copy: isCopy,
+      expect_ids: src.map((f) => f.id),
+      on_conflict: onConflict,
+    });
+    const moveLabel = isCopy ? "application:modals.processingCopying" : "application:modals.processingMoving";
+
     let success = true;
     try {
-      await longRunningTaskWithSnackbar(
-        dispatch(sendMoveFile({ uris: src.map((f) => f.path), dst, copy: isCopy })),
-        isCopy ? "application:modals.processingCopying" : "application:modals.processingMoving",
-      );
+      await longRunningTaskWithSnackbar(dispatch(sendMoveFile(moveReq())), moveLabel);
     } catch (e) {
       success = false;
+      if (isNameConflictBatchError(e as Error)) {
+        const onConflict = await dispatch(
+          selectOption(
+            [
+              {
+                name: i18next.t("application:modals.overwrite"),
+                description: i18next.t("application:modals.conflictOverwriteDes"),
+                value: "overwrite",
+              },
+              {
+                name: i18next.t("application:modals.skip"),
+                description: i18next.t("application:modals.conflictSkipDes"),
+                value: "skip",
+              },
+            ],
+            "application:modals.nameConflict",
+          ),
+        ).catch(() => undefined);
+        if (onConflict == "skip" || onConflict == "overwrite") {
+          try {
+            await longRunningTaskWithSnackbar(dispatch(sendMoveFile(moveReq(onConflict))), moveLabel);
+            success = true;
+          } catch (e) {
+            // Retried operation failed; error snackbar already shown.
+          }
+        }
+      }
     }
 
     if (isCopy) {

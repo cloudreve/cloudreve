@@ -17,7 +17,7 @@ import { bindTrigger, usePopupState } from "material-ui-popup-state/hooks";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { GroupPermission } from "../../../api/user.ts";
+import { isAnyAdmin } from "../../../api/user.ts";
 import { useAppDispatch } from "../../../redux/hooks.ts";
 import { signout } from "../../../redux/thunks/session.ts";
 import SessionManager, { Session } from "../../../session";
@@ -47,7 +47,7 @@ const UserPopover = ({ open, onClose, ...rest }: PopoverProps) => {
   }
 
   const isAdmin = useMemo(() => {
-    return GroupBS(user).enabled(GroupPermission.is_admin);
+    return isAnyAdmin(GroupBS(user));
   }, [user.group?.permission]);
 
   const signWithHint = (email: string) => {

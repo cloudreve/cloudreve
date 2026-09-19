@@ -1,4 +1,4 @@
-import { Box, Fade, Grow, InputBase, PopoverProps, Tooltip, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { Box, Fade, Grow, IconButton, InputBase, PopoverProps, Tooltip, Typography, useMediaQuery, useTheme } from "@mui/material";
 import React, { memo, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { sizeToString } from "../../../../util";
 import CrUri, { SearchParam } from "../../../../util/uri.ts";
@@ -21,6 +21,7 @@ import { loadFileThumb, patchCustomProp } from "../../../../redux/thunks/file.ts
 import AutoHeight from "../../../Common/AutoHeight.tsx";
 import { NoWrapBox } from "../../../Common/StyledComponents.tsx";
 import TimeBadge from "../../../Common/TimeBadge.tsx";
+import Dismiss from "../../../Icons/Dismiss.tsx";
 import Info from "../../../Icons/Info.tsx";
 import { DisplayOption } from "../../ContextMenu/useActionDisplayOpt.ts";
 import FileBadge from "../../FileBadge.tsx";
@@ -392,6 +393,7 @@ const CustomPropsCell = memo(({ file, customProp, readOnly }: CustomPropsCellPro
   const dispatch = useAppDispatch();
   const fmIndex = useContext(FmIndexContext);
   const [loading, setLoading] = useState(false);
+  const [mouseOver, setMouseOver] = useState(false);
 
   const stopPropagation = useCallback((e: React.SyntheticEvent) => {
     e.stopPropagation();
@@ -407,6 +409,18 @@ const CustomPropsCell = memo(({ file, customProp, readOnly }: CustomPropsCellPro
     [dispatch, fmIndex, file, customProp.id],
   );
 
+  const onDelete = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (loading || readOnly) return;
+      setLoading(true);
+      dispatch(patchCustomProp(fmIndex, file, customProp.id, "", true)).finally(() => {
+        setLoading(false);
+      });
+    },
+    [dispatch, fmIndex, file, customProp.id, loading, readOnly],
+  );
+
   return (
     <Box
       onClick={stopPropagation}
@@ -414,9 +428,18 @@ const CustomPropsCell = memo(({ file, customProp, readOnly }: CustomPropsCellPro
       onMouseDown={stopPropagation}
       onMouseMove={stopPropagation}
       onDragStart={stopPropagation}
-      sx={{ width: "100%" }}
+      onMouseEnter={() => setMouseOver(true)}
+      onMouseLeave={() => setMouseOver(false)}
+      sx={{ width: "100%", display: "flex", alignItems: "center" }}
     >
-      {getPropsContent(customProp, onChange, loading, readOnly)}
+      <Box sx={{ flex: 1, minWidth: 0 }}>{getPropsContent(customProp, onChange, loading, readOnly)}</Box>
+      {!readOnly && (
+        <Grow in={mouseOver} unmountOnExit>
+          <IconButton size="small" onClick={onDelete} disabled={loading}>
+            <Dismiss fontSize="small" />
+          </IconButton>
+        </Grow>
+      )}
     </Box>
   );
 });

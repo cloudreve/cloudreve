@@ -6,9 +6,12 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/auth"
 	"github.com/stretchr/testify/assert"
 	testMock "github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -53,7 +56,7 @@ func TestWithContext(t *testing.T) {
 
 func TestHTTPClient_Request(t *testing.T) {
 	asserts := assert.New(t)
-	client := NewClientDeprecated(WithSlaveMeta(1))
+	client := NewClient(nil, WithSlaveMeta(1))
 
 	// 正常
 	{
@@ -236,7 +239,7 @@ func TestBlackHole(t *testing.T) {
 
 func TestHTTPClient_TPSLimit(t *testing.T) {
 	a := assert.New(t)
-	client := NewClientDeprecated()
+	client := NewClient(nil)
 
 	finished := make(chan struct{})
 	go func() {
@@ -270,4 +273,44 @@ func TestHTTPClient_TPSLimit(t *testing.T) {
 		a.Fail("Request should be finished in 1 second.")
 	}
 
+}
+
+func TestWithSignBaseTime(t *testing.T) {
+	asserts := assert.New(t)
+	options := newDefaultOption()
+	asserts.True(options.signBaseTime.IsZero())
+
+	future := time.Now().Add(time.Hour)
+	WithSignBaseTime(future).apply(options)
+	asserts.Equal(future, options.signBaseTime)
+}
+
+func TestSignBaseTimeShiftsExpiry(t *testing.T) {
+	asserts := assert.New(t)
+
+	var authHeader string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader = r.Header.Get("Authorization")
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte(`{"code":0}`))
+	}))
+	defer srv.Close()
+
+	client := NewClient(nil, WithEndpoint(srv.URL))
+	base := time.Now().Add(2 * time.Hour)
+	resp := client.Request(
+		"POST",
+		"/upload",
+		strings.NewReader("{}"),
+		WithCredential(auth.HMACAuth{SecretKey: []byte("k")}, 60),
+		WithSignBaseTime(base),
+	)
+	asserts.NoError(resp.Err)
+
+	// Authorization: Cr <base64sign>:<expires>
+	parts := strings.Split(authHeader, ":")
+	require.GreaterOrEqual(t, len(parts), 2)
+	expires, err := strconv.ParseInt(parts[len(parts)-1], 10, 64)
+	asserts.NoError(err)
+	asserts.InDelta(base.Add(60*time.Second).Unix(), expires, 5)
 }

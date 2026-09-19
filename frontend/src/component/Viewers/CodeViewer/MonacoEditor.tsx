@@ -107,6 +107,11 @@ export interface MonacoEditorProps extends MonacoEditorBaseProps {
   minHeight?: string | number;
 
   onSave?: React.MutableRefObject<() => void>;
+
+  /**
+   * Desired end-of-line sequence applied to the model via setEOL.
+   */
+  eol?: "LF" | "CRLF";
 }
 
 // ============ Diff Editor ============
@@ -206,6 +211,7 @@ function MonacoEditor({
   className,
   uri,
   onSave,
+  eol,
 }: MonacoEditorProps) {
   const containerElement = useRef<HTMLDivElement | null>(null);
 
@@ -321,6 +327,13 @@ function MonacoEditor({
       monaco.editor.setModelLanguage(model, language);
     }
   }, [language]);
+
+  useEffect(() => {
+    if (editor.current && eol) {
+      const model = editor.current.getModel();
+      model?.setEOL(eol == "LF" ? monaco.editor.EndOfLineSequence.LF : monaco.editor.EndOfLineSequence.CRLF);
+    }
+  }, [eol]);
 
   useEffect(() => {
     if (editor.current) {

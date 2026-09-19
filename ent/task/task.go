@@ -34,6 +34,8 @@ const (
 	FieldCorrelationID = "correlation_id"
 	// FieldUserTasks holds the string denoting the user_tasks field in the database.
 	FieldUserTasks = "user_tasks"
+	// FieldHidden holds the string denoting the hidden field in the database.
+	FieldHidden = "hidden"
 	// EdgeUser holds the string denoting the user edge name in mutations.
 	EdgeUser = "user"
 	// Table holds the table name of the task in the database.
@@ -59,6 +61,7 @@ var Columns = []string{
 	FieldPrivateState,
 	FieldCorrelationID,
 	FieldUserTasks,
+	FieldHidden,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -85,6 +88,8 @@ var (
 	DefaultUpdatedAt func() time.Time
 	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
 	UpdateDefaultUpdatedAt func() time.Time
+	// DefaultHidden holds the default value on creation for the "hidden" field.
+	DefaultHidden bool
 )
 
 // Status defines the type for the "status" enum field.
@@ -163,6 +168,11 @@ func ByCorrelationID(opts ...sql.OrderTermOption) OrderOption {
 // ByUserTasks orders the results by the user_tasks field.
 func ByUserTasks(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUserTasks, opts...).ToFunc()
+}
+
+// ByHidden orders the results by the hidden field.
+func ByHidden(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldHidden, opts...).ToFunc()
 }
 
 // ByUserField orders the results by user field.

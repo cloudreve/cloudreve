@@ -33,7 +33,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 	"github.com/gin-gonic/gin"
 	"github.com/samber/lo"
-	"golang.org/x/tools/container/intsets"
+	"math"
 )
 
 const (
@@ -41,7 +41,13 @@ const (
 )
 
 func stripPrefix(p string, u *ent.User) (string, *fs.URI, int, error) {
-	base, err := fs.NewUriFromString(u.Edges.DavAccounts[0].URI)
+	// Bearer-authenticated users carry no dav account; mount them at their
+	// "my" root. Basic-auth users keep their configured mount point (#3548).
+	baseUri := fs.NewMyUri("")
+	if len(u.Edges.DavAccounts) > 0 {
+		baseUri = u.Edges.DavAccounts[0].URI
+	}
+	base, err := fs.NewUriFromString(baseUri)
 	if err != nil {
 		return "", nil, http.StatusInternalServerError, err
 	}
@@ -190,7 +196,29 @@ func confirmLock(c *gin.Context, fm manager.FileManager, user *ent.User, srcAnc,
 	return nil, nil, http.StatusPreconditionFailed, ErrLocked
 }
 
+// davWriteForbidden reports whether the user is confined to read-only WebDAV
+// access, either by a group-level restriction or a read-only dav account.
+// Read-only access allows GET/HEAD/OPTIONS/PROPFIND and rejects every
+// state-changing method.
+func davWriteForbidden(user *ent.User) bool {
+	if user == nil {
+		return false
+	}
+	if len(user.Edges.DavAccounts) > 0 &&
+		user.Edges.DavAccounts[0].Options.Enabled(int(types.DavAccountReadOnly)) {
+		return true
+	}
+	if user.Edges.Group != nil &&
+		user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionWebDAVReadOnly)) {
+		return true
+	}
+	return false
+}
+
 func handleMkcol(c *gin.Context, user *ent.User, fm manager.FileManager) (status int, err error) {
+	if davWriteForbidden(user) {
+		return http.StatusForbidden, nil
+	}
 	_, reqPath, status, err := stripPrefix(c.Request.URL.Path, user)
 	if err != nil {
 		return status, err
@@ -227,6 +255,9 @@ func handleMkcol(c *gin.Context, user *ent.User, fm manager.FileManager) (status
 }
 
 func handlePut(c *gin.Context, user *ent.User, fm manager.FileManager) (status int, err error) {
+	if davWriteForbidden(user) {
+		return http.StatusForbidden, nil
+	}
 	_, reqPath, status, err := stripPrefix(c.Request.URL.Path, user)
 	if err != nil {
 		return status, err
@@ -237,7 +268,8 @@ func handlePut(c *gin.Context, user *ent.User, fm manager.FileManager) (status i
 		return purposeStatusCodeFromError(err), err
 	}
 
-	if user.Edges.DavAccounts[0].Options.Enabled(int(types.DavAccountDisableSysFiles)) {
+	if len(user.Edges.DavAccounts) > 0 &&
+		user.Edges.DavAccounts[0].Options.Enabled(int(types.DavAccountDisableSysFiles)) {
 		if strings.HasPrefix(reqPath.Name(), ".") {
 			return http.StatusMethodNotAllowed, nil
 		}
@@ -439,6 +471,12 @@ func handleRangedPut(ctx context.Context, c *gin.Context, user *ent.User, m mana
 		return http.StatusInternalServerError, err
 	}
 	if !allReceived {
+		// If the session record vanished mid-upload, coverage can never
+		// complete — fail so the client retries rather than leaving a stuck
+		// placeholder.
+		if _, ok := kv.Get(manager.UploadSessionCachePrefix + sessionKey); !ok {
+			return http.StatusConflict, errors.New("upload session expired")
+		}
 		return http.StatusCreated, nil
 	}
 
@@ -466,7 +504,7 @@ func handleOptions(c *gin.Context, user *ent.User, fm manager.FileManager) (stat
 		if target, _, err := fm.SharedAddressTranslation(c, reqPath); err == nil {
 			allow = allow[:1]
 			read, update, del, create := true, true, true, true
-			if target.OwnerID() != user.ID {
+			if target.OwnerID() != user.ID || davWriteForbidden(user) {
 				update = false
 				del = false
 				create = false
@@ -475,7 +513,10 @@ func handleOptions(c *gin.Context, user *ent.User, fm manager.FileManager) (stat
 				allow = append(allow, "DELETE", "MOVE")
 			}
 			if read {
-				allow = append(allow, "COPY", "PROPFIND")
+				if !davWriteForbidden(user) {
+					allow = append(allow, "COPY")
+				}
+				allow = append(allow, "PROPFIND")
 				if target.Type() == types.FileTypeFile {
 					allow = append(allow, "GET", "HEAD", "POST")
 				}
@@ -526,7 +567,8 @@ func handleGetHeadPost(c *gin.Context, user *ent.User, fm manager.FileManager) (
 
 	es.Apply(entitysource.WithSpeedLimit(int64(user.Edges.Group.SpeedLimit)))
 	if es.ShouldInternalProxy() ||
-		(user.Edges.DavAccounts[0].Options.Enabled(int(types.DavAccountProxy)) &&
+		(len(user.Edges.DavAccounts) > 0 &&
+			user.Edges.DavAccounts[0].Options.Enabled(int(types.DavAccountProxy)) &&
 			user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionWebDAVProxy))) {
 		es.Serve(c.Writer, c.Request)
 	} else {
@@ -559,6 +601,9 @@ func handleUnlock(c *gin.Context, user *ent.User, fm manager.FileManager) (retSt
 }
 
 func handleLock(c *gin.Context, user *ent.User, fm manager.FileManager) (retStatus int, retErr error) {
+	if davWriteForbidden(user) {
+		return http.StatusForbidden, nil
+	}
 	duration, err := parseTimeout(c.Request.Header.Get("Timeout"))
 	if err != nil {
 		return http.StatusBadRequest, err
@@ -732,6 +777,9 @@ func handlePropfind(c *gin.Context, user *ent.User, fm manager.FileManager) (sta
 }
 
 func handleDelete(c *gin.Context, user *ent.User, fm manager.FileManager) (status int, err error) {
+	if davWriteForbidden(user) {
+		return http.StatusForbidden, nil
+	}
 	_, reqPath, status, err := stripPrefix(c.Request.URL.Path, user)
 	if err != nil {
 		return status, err
@@ -759,6 +807,9 @@ func handleDelete(c *gin.Context, user *ent.User, fm manager.FileManager) (statu
 }
 
 func handleCopyMove(c *gin.Context, user *ent.User, fm manager.FileManager) (status int, err error) {
+	if davWriteForbidden(user) {
+		return http.StatusForbidden, nil
+	}
 	hdr := c.Request.Header.Get("Destination")
 	if hdr == "" {
 		return http.StatusBadRequest, errInvalidDestination
@@ -832,7 +883,7 @@ func handleCopyMove(c *gin.Context, user *ent.User, fm manager.FileManager) (sta
 			}
 		}
 
-		return performCopyMove(ctx, fm, srcUri, dstUri, dstFolderUri, true, overwrite, dstExists)
+		return performCopyMove(ctx, fm, srcUri, dstUri, dstFolderUri, true, overwrite, dstExists, hashid.EncodeUserID(hasher, user.ID))
 	}
 
 	release, ls, status, err := confirmLock(c, fm, user, srcTarget, dstTarget, srcUri, dstUri)
@@ -850,13 +901,14 @@ func handleCopyMove(c *gin.Context, user *ent.User, fm manager.FileManager) (sta
 			return http.StatusBadRequest, errInvalidDepth
 		}
 	}
-	return performCopyMove(ctx, fm, srcUri, dstUri, dstFolderUri, false, overwrite, dstExists)
+	return performCopyMove(ctx, fm, srcUri, dstUri, dstFolderUri, false, overwrite, dstExists, hashid.EncodeUserID(hasher, user.ID))
 }
 
 type copyMoveOperations interface {
 	Delete(ctx context.Context, path []*fs.URI, opts ...fs.Option) error
 	MoveOrCopy(ctx context.Context, src []*fs.URI, dst *fs.URI, isCopy bool) error
 	Rename(ctx context.Context, path *fs.URI, newName string) (fs.File, error)
+	SharedAddressTranslation(ctx context.Context, path *fs.URI, opts ...fs.Option) (fs.File, *fs.URI, error)
 }
 
 func parseOverwrite(value string) (bool, error) {
@@ -875,7 +927,20 @@ func performCopyMove(
 	fm copyMoveOperations,
 	srcUri, dstUri, dstFolderUri *fs.URI,
 	isCopy, overwrite, dstExists bool,
+	uid string,
 ) (int, error) {
+	if srcUri.Name() != dstUri.Name() {
+		// A renamed move/copy lands at dstFolder/srcName before the rename;
+		// a different resource already occupying that path would hit the
+		// UNIQUE(parent, name) constraint mid-operation.
+		_, intermediateUri, err := fm.SharedAddressTranslation(ctx, dstFolderUri.Join(srcUri.Name()))
+		if err == nil && !intermediateUri.IsSame(srcUri, uid) {
+			return http.StatusPreconditionFailed, errDestinationExists
+		} else if err != nil && !ent.IsNotFound(err) {
+			return purposeStatusCodeFromError(err), err
+		}
+	}
+
 	if dstExists {
 		if !overwrite {
 			return http.StatusPreconditionFailed, errDestinationExists
@@ -902,6 +967,9 @@ func performCopyMove(
 }
 
 func handleProppatch(c *gin.Context, user *ent.User, fm manager.FileManager) (status int, err error) {
+	if davWriteForbidden(user) {
+		return http.StatusForbidden, nil
+	}
 	_, reqPath, status, err := stripPrefix(c.Request.URL.Path, user)
 	if err != nil {
 		return status, err
@@ -993,7 +1061,7 @@ func makePropstatResponse(href string, pstats []Propstat) *response {
 }
 
 const (
-	infiniteDepth = intsets.MaxInt
+	infiniteDepth = math.MaxInt
 	invalidDepth  = -2
 )
 

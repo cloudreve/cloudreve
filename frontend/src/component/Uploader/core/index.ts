@@ -169,11 +169,22 @@ export default class UploadManager {
         throw new UploaderError(UploaderErrorName.NoPolicySelected, "No policy selected.");
       }
 
-      this.fileInput.onchange = (ev: Event) => this.addFiles(ev, dst, resolve, reject);
-      this.directoryInput.onchange = (ev: Event) => this.addFiles(ev, dst, resolve, reject);
-      this.fileInput.value = "";
-      this.directoryInput.value = "";
-      type == SelectType.File ? this.fileInput.click() : this.directoryInput.click();
+      const input = type == SelectType.File ? this.fileInput : this.directoryInput;
+      // Some mobile pickers deliver multi-selections via several `change`
+      // events; the first resolve would swallow the rest. Accumulate and
+      // resolve once the picker goes quiet (#3571).
+      let files: File[] = [];
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      input.onchange = (ev: Event) => {
+        const target = ev.target as HTMLInputElement;
+        if (target?.files?.length) {
+          files = files.concat(Array.from(target.files));
+        }
+        clearTimeout(timer);
+        timer = setTimeout(() => this.addFiles(files, dst, resolve, reject), 400);
+      };
+      input.value = "";
+      input.click();
     });
   };
 

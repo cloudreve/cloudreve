@@ -10,8 +10,7 @@ import (
 func AdminSummary(c *gin.Context) {
 	service := ParametersFromContext[*admin.SummaryService](c, admin.SummaryParamCtx{})
 	res, err := service.Summary(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 
@@ -22,8 +21,7 @@ func AdminSummary(c *gin.Context) {
 func AdminGetSettings(c *gin.Context) {
 	service := ParametersFromContext[*admin.GetSettingService](c, admin.GetSettingParamCtx{})
 	res, err := service.GetSetting(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 
@@ -33,8 +31,7 @@ func AdminGetSettings(c *gin.Context) {
 func AdminSetSettings(c *gin.Context) {
 	service := ParametersFromContext[*admin.SetSettingService](c, admin.SetSettingParamCtx{})
 	res, err := service.SetSetting(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 
@@ -45,8 +42,7 @@ func AdminSetSettings(c *gin.Context) {
 func AdminListGroups(c *gin.Context) {
 	service := ParametersFromContext[*admin.AdminListService](c, admin.AdminListServiceParamsCtx{})
 	res, err := service.List(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 
@@ -56,8 +52,7 @@ func AdminListGroups(c *gin.Context) {
 func AdminFetchWopi(c *gin.Context) {
 	service := ParametersFromContext[*admin.FetchWOPIDiscoveryService](c, admin.FetchWOPIDiscoveryParamCtx{})
 	res, err := service.Fetch(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 
@@ -68,8 +63,7 @@ func AdminFetchWopi(c *gin.Context) {
 func AdminTestThumbGenerator(c *gin.Context) {
 	service := ParametersFromContext[*admin.ThumbGeneratorTestService](c, admin.ThumbGeneratorTestParamCtx{})
 	res, err := service.Test(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 
@@ -78,8 +72,7 @@ func AdminTestThumbGenerator(c *gin.Context) {
 
 func AdminGetQueueMetrics(c *gin.Context) {
 	res, err := admin.GetQueueMetrics(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -88,8 +81,7 @@ func AdminGetQueueMetrics(c *gin.Context) {
 func AdminListPolicies(c *gin.Context) {
 	service := ParametersFromContext[*admin.AdminListService](c, admin.AdminListServiceParamsCtx{})
 	res, err := service.Policies(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -98,8 +90,7 @@ func AdminListPolicies(c *gin.Context) {
 func AdminGetPolicy(c *gin.Context) {
 	service := ParametersFromContext[*admin.SingleStoragePolicyService](c, admin.GetStoragePolicyParamCtx{})
 	res, err := service.Get(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -109,8 +100,7 @@ func AdminGetPolicy(c *gin.Context) {
 func AdminSendTestMail(c *gin.Context) {
 	service := ParametersFromContext[*admin.TestSMTPService](c, admin.TestSMTPParamCtx{})
 	err := service.Test(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{})
@@ -119,8 +109,7 @@ func AdminSendTestMail(c *gin.Context) {
 func AdminCreatePolicy(c *gin.Context) {
 	service := ParametersFromContext[*admin.CreateStoragePolicyService](c, admin.CreateStoragePolicyParamCtx{})
 	res, err := service.Create(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -129,8 +118,7 @@ func AdminCreatePolicy(c *gin.Context) {
 func AdminUpdatePolicy(c *gin.Context) {
 	service := ParametersFromContext[*admin.UpdateStoragePolicyService](c, admin.UpdateStoragePolicyParamCtx{})
 	res, err := service.Update(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -139,8 +127,7 @@ func AdminUpdatePolicy(c *gin.Context) {
 func AdminListNodes(c *gin.Context) {
 	service := ParametersFromContext[*admin.AdminListService](c, admin.AdminListServiceParamsCtx{})
 	res, err := service.Nodes(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -149,8 +136,7 @@ func AdminListNodes(c *gin.Context) {
 func AdminGetNode(c *gin.Context) {
 	service := ParametersFromContext[*admin.SingleNodeService](c, admin.SingleNodeParamCtx{})
 	res, err := service.Get(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -164,8 +150,7 @@ func AdminClearEntityUrlCache(c *gin.Context) {
 func AdminCreateStoragePolicyCors(c *gin.Context) {
 	service := ParametersFromContext[*admin.CreateStoragePolicyCorsService](c, admin.CreateStoragePolicyCorsParamCtx{})
 	err := service.Create(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 
@@ -175,8 +160,7 @@ func AdminCreateStoragePolicyCors(c *gin.Context) {
 func AdminOdOAuthURL(c *gin.Context) {
 	service := ParametersFromContext[*admin.GetOauthRedirectService](c, admin.GetOauthRedirectParamCtx{})
 	res, err := service.GetOAuth(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -190,8 +174,7 @@ func AdminGetPolicyOAuthCallbackURL(c *gin.Context) {
 func AdminGetPolicyOAuthStatus(c *gin.Context) {
 	service := ParametersFromContext[*admin.SingleStoragePolicyService](c, admin.GetStoragePolicyParamCtx{})
 	res, err := service.GetOauthCredentialStatus(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -200,8 +183,7 @@ func AdminGetPolicyOAuthStatus(c *gin.Context) {
 func AdminFinishOauthCallback(c *gin.Context) {
 	service := ParametersFromContext[*admin.FinishOauthCallbackService](c, admin.FinishOauthCallbackParamCtx{})
 	err := service.Finish(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{})
@@ -210,8 +192,7 @@ func AdminFinishOauthCallback(c *gin.Context) {
 func AdminGetSharePointDriverRoot(c *gin.Context) {
 	service := ParametersFromContext[*admin.SingleStoragePolicyService](c, admin.GetStoragePolicyParamCtx{})
 	res, err := service.GetSharePointDriverRoot(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -220,8 +201,7 @@ func AdminGetSharePointDriverRoot(c *gin.Context) {
 func AdminDeletePolicy(c *gin.Context) {
 	service := ParametersFromContext[*admin.SingleStoragePolicyService](c, admin.GetStoragePolicyParamCtx{})
 	err := service.Delete(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{})
@@ -230,8 +210,7 @@ func AdminDeletePolicy(c *gin.Context) {
 func AdminGetGroup(c *gin.Context) {
 	service := ParametersFromContext[*admin.SingleGroupService](c, admin.SingleGroupParamCtx{})
 	res, err := service.Get(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -240,8 +219,7 @@ func AdminGetGroup(c *gin.Context) {
 func AdminCreateGroup(c *gin.Context) {
 	service := ParametersFromContext[*admin.UpsertGroupService](c, admin.UpsertGroupParamCtx{})
 	res, err := service.Create(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -250,8 +228,7 @@ func AdminCreateGroup(c *gin.Context) {
 func AdminUpdateGroup(c *gin.Context) {
 	service := ParametersFromContext[*admin.UpsertGroupService](c, admin.UpsertGroupParamCtx{})
 	res, err := service.Update(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -260,8 +237,7 @@ func AdminUpdateGroup(c *gin.Context) {
 func AdminListUsers(c *gin.Context) {
 	service := ParametersFromContext[*admin.AdminListService](c, admin.AdminListServiceParamsCtx{})
 	res, err := service.Users(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -270,8 +246,7 @@ func AdminListUsers(c *gin.Context) {
 func AdminGetUser(c *gin.Context) {
 	service := ParametersFromContext[*admin.SingleUserService](c, admin.SingleUserParamCtx{})
 	res, err := service.Get(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -280,8 +255,7 @@ func AdminGetUser(c *gin.Context) {
 func AdminUpdateUser(c *gin.Context) {
 	service := ParametersFromContext[*admin.UpsertUserService](c, admin.UpsertUserParamCtx{})
 	res, err := service.Update(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -290,8 +264,7 @@ func AdminUpdateUser(c *gin.Context) {
 func AdminCreateUser(c *gin.Context) {
 	service := ParametersFromContext[*admin.UpsertUserService](c, admin.UpsertUserParamCtx{})
 	res, err := service.Create(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -357,8 +330,7 @@ func AdminCreateUser(c *gin.Context) {
 func AdminDeleteGroup(c *gin.Context) {
 	service := ParametersFromContext[*admin.SingleGroupService](c, admin.SingleGroupParamCtx{})
 	err := service.Delete(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{})
@@ -368,8 +340,7 @@ func AdminDeleteGroup(c *gin.Context) {
 func AdminTestSlave(c *gin.Context) {
 	service := ParametersFromContext[*admin.TestNodeService](c, admin.TestNodeParamCtx{})
 	err := service.Test(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{})
@@ -379,8 +350,7 @@ func AdminTestSlave(c *gin.Context) {
 func AdminTestDownloader(c *gin.Context) {
 	service := ParametersFromContext[*admin.TestNodeDownloaderService](c, admin.TestNodeDownloaderParamCtx{})
 	res, err := service.Test(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -389,8 +359,7 @@ func AdminTestDownloader(c *gin.Context) {
 func AdminCreateNode(c *gin.Context) {
 	service := ParametersFromContext[*admin.UpsertNodeService](c, admin.UpsertNodeParamCtx{})
 	res, err := service.Create(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -399,8 +368,7 @@ func AdminCreateNode(c *gin.Context) {
 func AdminUpdateNode(c *gin.Context) {
 	service := ParametersFromContext[*admin.UpsertNodeService](c, admin.UpsertNodeParamCtx{})
 	res, err := service.Update(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -409,8 +377,7 @@ func AdminUpdateNode(c *gin.Context) {
 func AdminDeleteNode(c *gin.Context) {
 	service := ParametersFromContext[*admin.SingleNodeService](c, admin.SingleNodeParamCtx{})
 	err := service.Delete(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{})
@@ -420,8 +387,17 @@ func AdminDeleteNode(c *gin.Context) {
 func AdminDeleteUser(c *gin.Context) {
 	service := ParametersFromContext[*admin.BatchUserService](c, admin.BatchUserParamCtx{})
 	err := service.Delete(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{})
+}
+
+// AdminBatchUpdateUser 批量更新用户
+func AdminBatchUpdateUser(c *gin.Context) {
+	service := ParametersFromContext[*admin.BatchUserUpdateService](c, admin.BatchUserUpdateParamCtx{})
+	err := service.Update(c)
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{})
@@ -430,8 +406,7 @@ func AdminDeleteUser(c *gin.Context) {
 func AdminListFiles(c *gin.Context) {
 	service := ParametersFromContext[*admin.AdminListService](c, admin.AdminListServiceParamsCtx{})
 	res, err := service.Files(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -440,8 +415,7 @@ func AdminListFiles(c *gin.Context) {
 func AdminGetFile(c *gin.Context) {
 	service := ParametersFromContext[*admin.SingleFileService](c, admin.SingleFileParamCtx{})
 	res, err := service.Get(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -450,8 +424,7 @@ func AdminGetFile(c *gin.Context) {
 func AdminUpdateFile(c *gin.Context) {
 	service := ParametersFromContext[*admin.UpsertFileService](c, admin.UpsertFileParamCtx{})
 	res, err := service.Update(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -460,8 +433,7 @@ func AdminUpdateFile(c *gin.Context) {
 func AdminGetFileUrl(c *gin.Context) {
 	service := ParametersFromContext[*admin.SingleFileService](c, admin.SingleFileParamCtx{})
 	res, err := service.Url(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -470,8 +442,7 @@ func AdminGetFileUrl(c *gin.Context) {
 func AdminBatchDeleteFile(c *gin.Context) {
 	service := ParametersFromContext[*admin.BatchFileService](c, admin.BatchFileParamCtx{})
 	err := service.Delete(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 
@@ -481,8 +452,7 @@ func AdminBatchDeleteFile(c *gin.Context) {
 func AdminListEntities(c *gin.Context) {
 	service := ParametersFromContext[*admin.AdminListService](c, admin.AdminListServiceParamsCtx{})
 	res, err := service.Entities(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 
@@ -492,8 +462,7 @@ func AdminListEntities(c *gin.Context) {
 func AdminGetEntity(c *gin.Context) {
 	service := ParametersFromContext[*admin.SingleEntityService](c, admin.SingleEntityParamCtx{})
 	res, err := service.Get(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -502,8 +471,7 @@ func AdminGetEntity(c *gin.Context) {
 func AdminGetEntityUrl(c *gin.Context) {
 	service := ParametersFromContext[*admin.SingleEntityService](c, admin.SingleEntityParamCtx{})
 	res, err := service.Url(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -512,8 +480,7 @@ func AdminGetEntityUrl(c *gin.Context) {
 func AdminBatchDeleteEntity(c *gin.Context) {
 	service := ParametersFromContext[*admin.BatchEntityService](c, admin.BatchEntityParamCtx{})
 	err := service.Delete(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 }
@@ -521,8 +488,7 @@ func AdminBatchDeleteEntity(c *gin.Context) {
 func AdminCleanupTask(c *gin.Context) {
 	service := ParametersFromContext[*admin.CleanupTaskService](c, admin.CleanupTaskParameterCtx{})
 	err := service.CleanupTask(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 
@@ -532,8 +498,7 @@ func AdminCleanupTask(c *gin.Context) {
 func AdminListTasks(c *gin.Context) {
 	service := ParametersFromContext[*admin.AdminListService](c, admin.AdminListServiceParamsCtx{})
 	res, err := service.Tasks(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -542,8 +507,7 @@ func AdminListTasks(c *gin.Context) {
 func AdminGetTask(c *gin.Context) {
 	service := ParametersFromContext[*admin.SingleTaskService](c, admin.SingleTaskParamCtx{})
 	res, err := service.Get(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -552,8 +516,7 @@ func AdminGetTask(c *gin.Context) {
 func AdminBatchDeleteTask(c *gin.Context) {
 	service := ParametersFromContext[*admin.BatchTaskService](c, admin.BatchTaskParamCtx{})
 	err := service.Delete(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{})
@@ -562,8 +525,7 @@ func AdminBatchDeleteTask(c *gin.Context) {
 func AdminListShares(c *gin.Context) {
 	service := ParametersFromContext[*admin.AdminListService](c, admin.AdminListServiceParamsCtx{})
 	res, err := service.Shares(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -572,8 +534,7 @@ func AdminListShares(c *gin.Context) {
 func AdminGetShare(c *gin.Context) {
 	service := ParametersFromContext[*admin.SingleShareService](c, admin.SingleShareParamCtx{})
 	res, err := service.Get(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -582,8 +543,7 @@ func AdminGetShare(c *gin.Context) {
 func AdminBatchDeleteShare(c *gin.Context) {
 	service := ParametersFromContext[*admin.BatchShareService](c, admin.BatchShareParamCtx{})
 	err := service.Delete(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{})
@@ -592,8 +552,7 @@ func AdminBatchDeleteShare(c *gin.Context) {
 func AdminCalibrateStorage(c *gin.Context) {
 	service := ParametersFromContext[*admin.SingleUserService](c, admin.SingleUserParamCtx{})
 	res, err := service.CalibrateStorage(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -603,8 +562,7 @@ func AdminCalibrateStorage(c *gin.Context) {
 func AdminListOAuthClients(c *gin.Context) {
 	service := ParametersFromContext[*admin.AdminListService](c, admin.AdminListServiceParamsCtx{})
 	res, err := service.OAuthClients(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -614,8 +572,7 @@ func AdminListOAuthClients(c *gin.Context) {
 func AdminGetOAuthClient(c *gin.Context) {
 	service := ParametersFromContext[*admin.SingleOAuthClientService](c, admin.SingleOAuthClientParamCtx{})
 	res, err := service.Get(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -625,8 +582,7 @@ func AdminGetOAuthClient(c *gin.Context) {
 func AdminCreateOAuthClient(c *gin.Context) {
 	service := ParametersFromContext[*admin.UpsertOAuthClientService](c, admin.UpsertOAuthClientParamCtx{})
 	res, err := service.Create(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -636,8 +592,7 @@ func AdminCreateOAuthClient(c *gin.Context) {
 func AdminUpdateOAuthClient(c *gin.Context) {
 	service := ParametersFromContext[*admin.UpsertOAuthClientService](c, admin.UpsertOAuthClientParamCtx{})
 	res, err := service.Update(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -647,8 +602,7 @@ func AdminUpdateOAuthClient(c *gin.Context) {
 func AdminDeleteOAuthClient(c *gin.Context) {
 	service := ParametersFromContext[*admin.SingleOAuthClientService](c, admin.SingleOAuthClientParamCtx{})
 	err := service.Delete(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{})
@@ -658,8 +612,7 @@ func AdminDeleteOAuthClient(c *gin.Context) {
 func AdminBatchDeleteOAuthClient(c *gin.Context) {
 	service := ParametersFromContext[*admin.BatchOAuthClientService](c, admin.BatchOAuthClientParamCtx{})
 	err := service.Delete(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{})

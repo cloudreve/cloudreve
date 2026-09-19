@@ -23,6 +23,7 @@ import { UserSettings as UserSettingsType } from "../../../api/user.ts";
 import { languages } from "../../../i18n.ts";
 import { setPreferredTheme } from "../../../redux/globalStateSlice.ts";
 import { useAppDispatch, useAppSelector } from "../../../redux/hooks.ts";
+import { ViewersByID } from "../../../redux/siteConfigSlice.ts";
 import { clearLocalCustomView } from "../../../redux/thunks/filemanager.ts";
 import { selectLanguage } from "../../../redux/thunks/settings.ts";
 import SessionManager, { UserSettings } from "../../../session";
@@ -85,6 +86,29 @@ const PreferenceSetting = ({ setting, setSetting }: PreferenceSettingProps) => {
   const [folderClickAction, setFolderClickAction] = useState(
     SessionManager.getWithFallback(UserSettings.FolderClickAction),
   );
+  const [trashRetentionDays, setTrashRetentionDays] = useState(
+    Math.round((setting.trash_retention ?? 0) / 86400),
+  );
+
+  const onTrashRetentionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const days = Math.max(0, parseInt(e.target.value) || 0);
+    setTrashRetentionDays(days);
+  };
+
+  const saveTrashRetention = () => {
+    const seconds = trashRetentionDays * 86400;
+    if (seconds == (setting.trash_retention ?? 0)) {
+      return;
+    }
+    setLoading(true);
+    dispatch(sendUpdateUserSetting({ trash_retention: seconds }))
+      .then(() => {
+        setSetting({ ...setting, trash_retention: seconds });
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
 
   const onRetentionCheckChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setVersionRetentionEnabled(e.target.checked);
@@ -106,6 +130,7 @@ const PreferenceSetting = ({ setting, setSetting }: PreferenceSettingProps) => {
     setVersionRetentionEnabled(setting.version_retention_enabled);
     setVersionRetentionMax(setting.version_retention_max);
     setVersionRetentionExts(setting.version_retention_ext);
+    setTrashRetentionDays(Math.round((setting.trash_retention ?? 0) / 86400));
   }, [setting]);
 
   const selectTimeZone = (value: string) => {
@@ -190,6 +215,27 @@ const PreferenceSetting = ({ setting, setSetting }: PreferenceSettingProps) => {
     }
   };
 
+  const preferredViewerEntries = useMemo(
+    () => Object.entries(setting.preferred_viewers ?? {}),
+    [setting.preferred_viewers],
+  );
+
+  const removePreferredViewer = (ext: string) => {
+    const next = { ...(setting.preferred_viewers ?? {}) };
+    delete next[ext];
+    setSetting({ ...setting, preferred_viewers: next });
+    setLoading(true);
+    dispatch(sendUpdateUserSetting({ preferred_viewers: next }))
+      .then(() => {
+        const session = SessionManager.currentLoginOrNull();
+        if (session?.user) {
+          SessionManager.updateUserIfExist({ ...session.user, preferred_viewers: next });
+        }
+        SessionManager.set(UserSettings.OpenWithPrefix + ext, undefined);
+      })
+      .finally(() => setLoading(false));
+  };
+
   return (
     <Stack spacing={3}>
       <SettingForm title={t("setting.language")} lgWidth={3}>
@@ -233,14 +279,16 @@ const PreferenceSetting = ({ setting, setSetting }: PreferenceSettingProps) => {
       </SettingForm>
       <SettingForm title={t("setting.themeColor")} lgWidth={12}>
         <SelectorBox sx={{ gap: 1 }}>
-          {Object.keys(themeOptions).map((color, index) => (
-            <ColorCircle
-              size={30}
-              color={color}
-              onClick={() => applyTheme(color)}
-              selected={(preferredTheme && preferredTheme == color) || (!preferredTheme && defaultTheme == color)}
-            />
-          ))}
+          {Object.keys(themeOptions)
+            .filter((color) => !themeOptions[color]?.hidden)
+            .map((color, index) => (
+              <ColorCircle
+                size={30}
+                color={color}
+                onClick={() => applyTheme(color)}
+                selected={(preferredTheme && preferredTheme == color) || (!preferredTheme && defaultTheme == color)}
+              />
+            ))}
         </SelectorBox>
       </SettingForm>
       <SettingForm title={t("setting.versionRetention")}>
@@ -325,6 +373,16 @@ const PreferenceSetting = ({ setting, setSetting }: PreferenceSettingProps) => {
           </Stack>
         </OutlinedSettingBox>
       </SettingForm>
+      <SettingForm title={t("setting.trashRetention")} lgWidth={12}>
+        <DenseFilledTextField
+          type="number"
+          value={trashRetentionDays}
+          onChange={onTrashRetentionChange}
+          onBlur={saveTrashRetention}
+          inputProps={{ min: 0, step: 1 }}
+          helperText={t("setting.trashRetentionDes")}
+        />
+      </SettingForm>
       <SettingForm title={t("setting.syncView")} lgWidth={12}>
         <ToggleButtonGroup
           color="primary"
@@ -372,6 +430,25 @@ const PreferenceSetting = ({ setting, setSetting }: PreferenceSettingProps) => {
           </ToggleButton>
         </ToggleButtonGroup>
         <FormHelperText>{t("setting.folderClickActionDes")}</FormHelperText>
+      </SettingForm>
+      <SettingForm title={t("setting.preferredViewers")} lgWidth={12}>
+        <Box>
+          {preferredViewerEntries.length == 0 && (
+            <FormHelperText>{t("setting.preferredViewersEmpty")}</FormHelperText>
+          )}
+          <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 1 }}>
+            {preferredViewerEntries.map(([ext, viewerId]) => (
+              <Chip
+                key={ext}
+                size="small"
+                label={`.${ext} → ${ViewersByID[viewerId] ? t(ViewersByID[viewerId].display_name) : viewerId}`}
+                onDelete={() => removePreferredViewer(ext)}
+                disabled={loading}
+              />
+            ))}
+          </Stack>
+          <FormHelperText>{t("setting.preferredViewersDes")}</FormHelperText>
+        </Box>
       </SettingForm>
     </Stack>
   );

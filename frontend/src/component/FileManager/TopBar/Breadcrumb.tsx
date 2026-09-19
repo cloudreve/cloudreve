@@ -69,7 +69,7 @@ const Breadcrumb = (props: BreadcrumbProps) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const hiddenOpen = Boolean(anchorEl);
   const hiddenExpandButtonRef = useRef<HTMLButtonElement>();
-  const chainRef = useRef(null);
+  const chainRef = useRef<HTMLElement>(null);
 
   const openHiddenMenu = (e: React.MouseEvent<HTMLElement>) => {
     e.stopPropagation();
@@ -129,16 +129,39 @@ const Breadcrumb = (props: BreadcrumbProps) => {
 
   const isOverflow = useIsOverflow(chainRef, (_isOverflow) => {});
 
+  // Width needed to render the full chain, captured before collapsing.
+  const requiredWidthRef = useRef(0);
+
   useEffect(() => {
     if (isOverflow && !isMobile) {
+      requiredWidthRef.current = chainRef.current?.scrollWidth ?? requiredWidthRef.current;
       setMaxHiding(buttons.length - 1);
     }
   }, [isOverflow, isMobile]);
+
+  // Restore the full chain once the container can fit it again. A dedicated
+  // observer is needed: isOverflow stays false once the collapsed chain fits,
+  // so it cannot drive the restore itself (#3288).
+  useEffect(() => {
+    const el = chainRef.current;
+    if (!el || props.displayOnly) {
+      return;
+    }
+    const observer = new ResizeObserver(() => {
+      if (requiredWidthRef.current > 0 && el.clientWidth >= requiredWidthRef.current) {
+        requiredWidthRef.current = 0;
+        setMaxHiding(0);
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // Cancel collapse when elements are less than previous
   useEffect(() => {
     const current = elements?.length ?? 0;
     if (previousElements.current > current) {
+      requiredWidthRef.current = 0;
       setTimeout(() => {
         setMaxHiding(0);
       }, theme.transitions.duration.standard);

@@ -3,13 +3,14 @@ import { useTranslation } from "react-i18next";
 import { useSnackbar } from "notistack";
 import { useAppDispatch, useAppSelector } from "../../../../redux/hooks.ts";
 import React, { useEffect, useState } from "react";
-import { Box, DialogContent, FormControl, Stack, styled, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { Box, DialogContent, FormControl, Stack, styled, Tooltip, Typography, useMediaQuery, useTheme } from "@mui/material";
 import { CSSTransition, SwitchTransition } from "react-transition-group";
 import AutoHeight from "../../../Common/AutoHeight.tsx";
 import FacebookCircularProgress from "../../../Common/CircularProgress.tsx";
 import { get2FAInitSecret, sendUpdateUserSetting } from "../../../../api/api.ts";
 import { QRCodeSVG } from "qrcode.react";
 import SessionManager from "../../../../session";
+import { copyToClipboard } from "../../../../util";
 import { MuiOtpInput } from "mui-one-time-password-input";
 
 export interface Enable2FADialogProps {
@@ -129,6 +130,25 @@ const Enable2FADialog = ({ open, onClose, on2FAEnabled }: Enable2FADialogProps) 
                       <Typography variant={"body2"} sx={{ mt: 1 }}>
                         {t("setting.2faDescription")}
                       </Typography>
+                      <Tooltip title={t("setting.copySecret")}>
+                        <Typography
+                          variant={"body2"}
+                          onClick={() => {
+                            copyToClipboard(secret);
+                            enqueueSnackbar({ message: t("setting.secretCopied"), variant: "success" });
+                          }}
+                          sx={{
+                            mt: 1,
+                            fontFamily: "monospace",
+                            letterSpacing: 1,
+                            cursor: "pointer",
+                            wordBreak: "break-all",
+                            userSelect: "all",
+                          }}
+                        >
+                          {secret}
+                        </Typography>
+                      </Tooltip>
                       <Typography variant={"body2"} sx={{ mt: 1 }}>
                         {t("setting.inputCurrent2FACode")}
                       </Typography>

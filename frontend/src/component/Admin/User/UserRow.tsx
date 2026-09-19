@@ -8,6 +8,7 @@ import { useAppDispatch } from "../../../redux/hooks";
 import { confirmOperation } from "../../../redux/thunks/dialog";
 import { sizeToString } from "../../../util";
 import { NoWrapTableCell, NoWrapTypography, SquareChip } from "../../Common/StyledComponents";
+import TimeBadge from "../../Common/TimeBadge";
 import UserAvatar from "../../Common/User/UserAvatar";
 import Delete from "../../Icons/Delete";
 import PersonPasskey from "../../Icons/PersonPasskey";
@@ -99,6 +100,9 @@ const UserRow = ({ user, loading, deleting, selected, onDelete, onDetails, onSel
         <NoWrapTableCell>
           <Skeleton variant="text" width={100} />
         </NoWrapTableCell>
+        <NoWrapTableCell>
+          <Skeleton variant="text" width={100} />
+        </NoWrapTableCell>
       </TableRow>
     );
   }
@@ -164,6 +168,15 @@ const UserRow = ({ user, loading, deleting, selected, onDelete, onDetails, onSel
         </NoWrapTypography>
       </NoWrapTableCell>
       <NoWrapTableCell>{sizeToString(user?.storage ?? 0)}</NoWrapTableCell>
+      <NoWrapTableCell>
+        {user?.last_login ? (
+          <TimeBadge datetime={user.last_login} variant="inherit" />
+        ) : (
+          <NoWrapTypography variant="inherit" color="text.secondary">
+            -
+          </NoWrapTypography>
+        )}
+      </NoWrapTableCell>
       <NoWrapTableCell>
         <IconButton size="small" onClick={onDeleteClick} disabled={deleteLoading || deleting}>
           <Delete fontSize="small" />

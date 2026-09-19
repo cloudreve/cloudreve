@@ -106,6 +106,7 @@ import {
   DownloadWorkflowService,
   ImportWorkflowService,
   ListTaskService,
+  BlobAuditWorkflowService,
   RebuildFTSIndexWorkflowService,
   SetDownloadFilesService,
   TaskListResponse,
@@ -468,10 +469,21 @@ export function sendMoveFile(req: MoveFileService): ThunkResponse<void> {
         {
           ...defaultOpts,
           skipBatchError: req.uris.length == 1,
+          // Leave conflict failures silent: the caller prompts for
+          // overwrite/skip first (#3159).
+          bypassSnackbar: isNameConflictBatchError,
         },
       ),
     );
   };
+}
+
+export function isNameConflictBatchError(e: Error): boolean {
+  return (
+    e instanceof AppError &&
+    e.code == Code.BatchOperationNotFullyCompleted &&
+    Object.values(e.aggregatedError ?? {}).some((r) => r.code == Code.ObjectExist)
+  );
 }
 
 export function sendRestoreFile(req: DeleteFileService): ThunkResponse<void> {
@@ -567,6 +579,23 @@ export function sendDeleteShare(id: string): ThunkResponse<void> {
         "/share/" + id,
         {
           method: "DELETE",
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function sendDeleteShares(ids: string[]): ThunkResponse<void> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/share",
+        {
+          method: "DELETE",
+          data: { ids },
         },
         {
           ...defaultOpts,
@@ -882,6 +911,54 @@ export function getTasks(req: ListTaskService): ThunkResponse<TaskListResponse> 
         {
           params: req,
           method: "GET",
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function sendCancelTask(id: string): ThunkResponse<undefined> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/workflow/${id}/cancel`,
+        {
+          method: "POST",
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function sendDeleteTask(id: string): ThunkResponse<undefined> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/workflow/${id}`,
+        {
+          method: "DELETE",
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function sendRetryTask(id: string): ThunkResponse<undefined> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/workflow/${id}/retry`,
+        {
+          method: "POST",
         },
         {
           ...defaultOpts,
@@ -1263,6 +1340,40 @@ export function sendEmailActivate(id: string, sign: string): ThunkResponse<User>
     return await dispatch(
       send(
         `/user/activate/${id}?sign=${encodeURIComponent(sign)}`,
+        {
+          method: "GET",
+        },
+        {
+          ...defaultOpts,
+          noCredential: true,
+        },
+      ),
+    );
+  };
+}
+
+export function sendRequestEmailChange(newEmail: string, password: string): ThunkResponse {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/user/setting/email`,
+        {
+          method: "POST",
+          data: { new_email: newEmail, password },
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function sendEmailChangeActivate(id: string, sign: string): ThunkResponse {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/user/activate_email/${id}?sign=${encodeURIComponent(sign)}`,
         {
           method: "GET",
         },
@@ -1786,6 +1897,26 @@ export function batchDeleteUser(args: BatchIDService): ThunkResponse<void> {
   };
 }
 
+export interface BatchUserUpdateService {
+  ids: number[];
+  status?: "active" | "inactive" | "manual_banned";
+  group_id?: number;
+}
+
+export function batchUpdateUser(args: BatchUserUpdateService): ThunkResponse<void> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/admin/user/batch/update`,
+        { method: "POST", data: args },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
 export function getFlattenFileList(args: AdminListService): ThunkResponse<ListFileResponse> {
   return async (dispatch, _getState) => {
     return await dispatch(
@@ -2182,6 +2313,23 @@ export function sendFullTextSearch(query: string, offset?: number): ThunkRespons
         {
           method: "GET",
           params,
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function sendBlobAuditTask(req: BlobAuditWorkflowService): ThunkResponse<TaskResponse> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/workflow/blobAudit",
+        {
+          data: req,
+          method: "POST",
         },
         {
           ...defaultOpts,

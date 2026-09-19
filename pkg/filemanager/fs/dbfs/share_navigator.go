@@ -278,12 +278,7 @@ func (n *shareNavigator) latestSharedSingleFile(ctx context.Context) (*File, err
 }
 
 func (n *shareNavigator) Capabilities(isSearching bool) *fs.NavigatorProps {
-	res := &fs.NavigatorProps{
-		Capability:            shareNavigatorCapability,
-		OrderDirectionOptions: fullOrderDirectionOption,
-		OrderByOptions:        fullOrderByOption,
-		MaxPageSize:           n.config.MaxPageSize,
-	}
+	res := baseNavigatorProps(shareNavigatorCapability, n.config.MaxPageSize)
 
 	// Once the share is resolved, narrow capabilities to what its props grant.
 	// This set is stamped onto resolved files and consulted by writePermitted.
@@ -351,27 +346,24 @@ func (n *shareNavigator) shareCapabilities() *boolset.BooleanSet {
 }
 
 func (n *shareNavigator) FollowTx(ctx context.Context) (func(), error) {
-	if _, ok := ctx.Value(inventory.TxCtx{}).(*inventory.Tx); !ok {
-		return nil, fmt.Errorf("navigator: no inherited transaction found in context")
-	}
-	newFileClient, _, _, err := inventory.WithTx(ctx, n.fileClient)
+	oldBase := n.baseNavigator.fileClient
+	revertFile, err := followTxClients(ctx, &n.fileClient)
 	if err != nil {
 		return nil, err
 	}
 
-	newSharClient, _, _, err := inventory.WithTx(ctx, n.shareClient)
-
-	oldFileClient, oldShareClient := n.fileClient, n.shareClient
-	revert := func() {
-		n.fileClient = oldFileClient
-		n.shareClient = oldShareClient
-		n.baseNavigator.fileClient = oldFileClient
+	revertShare, err := followTxClients(ctx, &n.shareClient)
+	if err != nil {
+		revertFile()
+		return nil, err
 	}
 
-	n.fileClient = newFileClient
-	n.shareClient = newSharClient
-	n.baseNavigator.fileClient = newFileClient
-	return revert, nil
+	n.baseNavigator.fileClient = n.fileClient
+	return func() {
+		revertShare()
+		revertFile()
+		n.baseNavigator.fileClient = oldBase
+	}, nil
 }
 
 func (n *shareNavigator) ExecuteHook(ctx context.Context, hookType fs.HookType, file *File) error {

@@ -17,42 +17,35 @@ type OauthService struct {
 //// GDriveAuth Google Drive 更新认证信息
 //func (service *OauthService) GDriveAuth(c *gin.Context) serializer.Response {
 //	if service.Error != "" {
-//		return serializer.ParamErrDeprecated(service.Error, nil)
 //	}
 //
 //	// validate required scope
 //	if missing, found := lo.Find[string](googledrive.RequiredScope, func(item string) bool {
 //		return !strings.Contains(service.Scope, item)
 //	}); found {
-//		return serializer.ParamErrDeprecated(fmt.Sprintf("Missing required scope: %s", missing), nil)
 //	}
 //
 //	policyID, ok := util.GetSession(c, "googledrive_oauth_policy").(uint)
 //	if !ok {
-//		return serializer.ErrDeprecated(serializer.CodeNotFound, "", nil)
 //	}
 //
 //	util.DeleteSession(c, "googledrive_oauth_policy")
 //
 //	policy, err := model.GetPolicyByID(policyID)
 //	if err != nil {
-//		return serializer.ErrDeprecated(serializer.CodePolicyNotExist, "", nil)
 //	}
 //
 //	client, err := googledrive.NewClient(&policy)
 //	if err != nil {
-//		return serializer.ErrDeprecated(serializer.CodeInternalSetting, "Failed to initialize Google Drive client", err)
 //	}
 //
 //	credential, err := client.ObtainToken(c, service.Code, "")
 //	if err != nil {
-//		return serializer.ErrDeprecated(serializer.CodeInternalSetting, "Failed to fetch AccessToken", err)
 //	}
 //
 //	// 更新存储策略的 RefreshToken
 //	client.Policy.AccessKey = credential.RefreshToken
 //	if err := client.Policy.SaveAndClearCache(); err != nil {
-//		return serializer.DBErrDeprecated("Failed to update RefreshToken", err)
 //	}
 //
 //	cache.Deletes([]string{client.Policy.AccessKey}, googledrive.TokenCachePrefix)
@@ -62,41 +55,34 @@ type OauthService struct {
 // OdAuth OneDrive 更新认证信息
 func (service *OauthService) OdAuth(c *gin.Context) serializer.Response {
 	//if service.Error != "" {
-	//	return serializer.ParamErrDeprecated(service.ErrorMsg, nil)
 	//}
 	//
 	//policyID, ok := util.GetSession(c, "onedrive_oauth_policy").(uint)
 	//if !ok {
-	//	return serializer.ErrDeprecated(serializer.CodeNotFound, "", nil)
 	//}
 	//
 	//util.DeleteSession(c, "onedrive_oauth_policy")
 	//
 	//policy, err := model.GetPolicyByID(policyID)
 	//if err != nil {
-	//	return serializer.ErrDeprecated(serializer.CodePolicyNotExist, "", nil)
 	//}
 	//
 	//client, err := onedrive.NewClient(&policy)
 	//if err != nil {
-	//	return serializer.ErrDeprecated(serializer.CodeInternalSetting, "Failed to initialize OneDrive client", err)
 	//}
 	//
 	//credential, err := client.ObtainToken(c, onedrive.WithCode(service.Code))
 	//if err != nil {
-	//	return serializer.ErrDeprecated(serializer.CodeInternalSetting, "Failed to fetch AccessToken", err)
 	//}
 	//
 	//// 更新存储策略的 RefreshToken
 	//client.Policy.AccessKey = credential.RefreshToken
 	//if err := client.Policy.SaveAndClearCache(); err != nil {
-	//	return serializer.DBErrDeprecated("Failed to update RefreshToken", err)
 	//}
 	//
 	//cache.Deletes([]string{client.Policy.AccessKey}, "onedrive_")
 	//if client.Policy.OptionsSerialized.OdDriver != "" && strings.Contains(client.Policy.OptionsSerialized.OdDriver, "http") {
 	//	if err := querySharePointSiteID(c, client.Policy); err != nil {
-	//		return serializer.ErrDeprecated(serializer.CodeInternalSetting, "Failed to query SharePoint basic ID", err)
 	//	}
 	//}
 

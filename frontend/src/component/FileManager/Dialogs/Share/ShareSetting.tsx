@@ -28,6 +28,7 @@ import Edit from "../../../Icons/Edit.tsx";
 import Eye from "../../../Icons/Eye.tsx";
 import EyeOff from "../../../Icons/EyeOff.tsx";
 import FolderAdd from "../../../Icons/FolderAdd.tsx";
+import RenameOutlined from "../../../Icons/RenameOutlined.tsx";
 import TableSettingsOutlined from "../../../Icons/TableSettings.tsx";
 import Timer from "../../../Icons/Timer.tsx";
 import Upload from "../../../Icons/Upload.tsx";
@@ -87,6 +88,7 @@ export interface ShareSetting {
   allow_edit?: boolean;
   preview_only?: boolean;
   upload_only?: boolean;
+  note?: string;
   downloads?: boolean;
   expires?: boolean;
 
@@ -208,6 +210,37 @@ const ShareSettingContent = ({ setting, file, editing, onSettingChange }: ShareS
               </Collapse>
             </Stack>
           )}
+        </AccordionDetails>
+      </Accordion>
+      <Accordion expanded={expanded === "note"} onChange={handleExpand("note")}>
+        <AccordionSummary aria-controls="panel-note-content" id="panel-note-header">
+          <StyledListItemButton>
+            <ListItemIcon>
+              <RenameOutlined />
+            </ListItemIcon>
+            <ListItemText
+              primary={t("application:modals.shareNote")}
+              secondary={setting.note || undefined}
+              secondaryTypographyProps={{ noWrap: true }}
+            />
+          </StyledListItemButton>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            {t("application:modals.shareNoteDes")}
+          </Typography>
+          <FormControl variant="standard" fullWidth>
+            <FilledTextField
+              label={t("application:modals.shareNote")}
+              slotProps={{
+                htmlInput: {
+                  maxLength: 255,
+                },
+              }}
+              value={setting.note ?? ""}
+              onChange={(e) => onSettingChange({ ...setting, note: e.target.value })}
+            />
+          </FormControl>
         </AccordionDetails>
       </Accordion>
       <Accordion expanded={expanded === "preview_only"} onChange={handleExpand("preview_only")}>

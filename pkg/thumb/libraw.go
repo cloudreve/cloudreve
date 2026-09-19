@@ -30,7 +30,7 @@ type LibRawGenerator struct {
 }
 
 func (l *LibRawGenerator) Generate(ctx context.Context, es entitysource.EntitySource, ext string, previous *Result) (*Result, error) {
-	if !util.IsInExtensionListExt(l.settings.LibRawThumbExts(ctx), ext) {
+	if !util.IsExtInList(l.settings.LibRawThumbExts(ctx), ext) {
 		return nil, fmt.Errorf("unsupported video format: %w", ErrPassThrough)
 	}
 

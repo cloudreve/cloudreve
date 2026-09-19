@@ -102,6 +102,25 @@ dockers:
       - .build/entrypoint.sh
     image_templates:
       - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-arm64"
+  - dockerfile: Dockerfile.slim
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--provenance=false"
+    goos: linux
+    goarch: amd64
+    goamd64: v1
+    image_templates:
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-slim-amd64"
+  - dockerfile: Dockerfile.slim
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--provenance=false"
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-slim-arm64"
 
 docker_manifests:
   - name_template: "ghcr.io/dvorinka/cloudreve:latest"
@@ -116,3 +135,11 @@ docker_manifests:
     image_templates:
       - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-amd64"
       - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-arm64"
+  - name_template: "ghcr.io/dvorinka/cloudreve:slim"
+    image_templates:
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-slim-amd64"
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-slim-arm64"
+  - name_template: "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-slim"
+    image_templates:
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-slim-amd64"
+      - "ghcr.io/dvorinka/cloudreve:{{ .Tag }}-slim-arm64"

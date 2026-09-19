@@ -85,6 +85,21 @@ func Password(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldPassword, v))
 }
 
+// BanExpires applies equality check predicate on the "ban_expires" field. It's identical to BanExpiresEQ.
+func BanExpires(v time.Time) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldBanExpires, v))
+}
+
+// BanReason applies equality check predicate on the "ban_reason" field. It's identical to BanReasonEQ.
+func BanReason(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldBanReason, v))
+}
+
+// LastLogin applies equality check predicate on the "last_login" field. It's identical to LastLoginEQ.
+func LastLogin(v time.Time) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldLastLogin, v))
+}
+
 // Storage applies equality check predicate on the "storage" field. It's identical to StorageEQ.
 func Storage(v int64) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldStorage, v))
@@ -458,6 +473,181 @@ func StatusIn(vs ...Status) predicate.User {
 // StatusNotIn applies the NotIn predicate on the "status" field.
 func StatusNotIn(vs ...Status) predicate.User {
 	return predicate.User(sql.FieldNotIn(FieldStatus, vs...))
+}
+
+// BanExpiresEQ applies the EQ predicate on the "ban_expires" field.
+func BanExpiresEQ(v time.Time) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldBanExpires, v))
+}
+
+// BanExpiresNEQ applies the NEQ predicate on the "ban_expires" field.
+func BanExpiresNEQ(v time.Time) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldBanExpires, v))
+}
+
+// BanExpiresIn applies the In predicate on the "ban_expires" field.
+func BanExpiresIn(vs ...time.Time) predicate.User {
+	return predicate.User(sql.FieldIn(FieldBanExpires, vs...))
+}
+
+// BanExpiresNotIn applies the NotIn predicate on the "ban_expires" field.
+func BanExpiresNotIn(vs ...time.Time) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldBanExpires, vs...))
+}
+
+// BanExpiresGT applies the GT predicate on the "ban_expires" field.
+func BanExpiresGT(v time.Time) predicate.User {
+	return predicate.User(sql.FieldGT(FieldBanExpires, v))
+}
+
+// BanExpiresGTE applies the GTE predicate on the "ban_expires" field.
+func BanExpiresGTE(v time.Time) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldBanExpires, v))
+}
+
+// BanExpiresLT applies the LT predicate on the "ban_expires" field.
+func BanExpiresLT(v time.Time) predicate.User {
+	return predicate.User(sql.FieldLT(FieldBanExpires, v))
+}
+
+// BanExpiresLTE applies the LTE predicate on the "ban_expires" field.
+func BanExpiresLTE(v time.Time) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldBanExpires, v))
+}
+
+// BanExpiresIsNil applies the IsNil predicate on the "ban_expires" field.
+func BanExpiresIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldBanExpires))
+}
+
+// BanExpiresNotNil applies the NotNil predicate on the "ban_expires" field.
+func BanExpiresNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldBanExpires))
+}
+
+// BanReasonEQ applies the EQ predicate on the "ban_reason" field.
+func BanReasonEQ(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldBanReason, v))
+}
+
+// BanReasonNEQ applies the NEQ predicate on the "ban_reason" field.
+func BanReasonNEQ(v string) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldBanReason, v))
+}
+
+// BanReasonIn applies the In predicate on the "ban_reason" field.
+func BanReasonIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldIn(FieldBanReason, vs...))
+}
+
+// BanReasonNotIn applies the NotIn predicate on the "ban_reason" field.
+func BanReasonNotIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldBanReason, vs...))
+}
+
+// BanReasonGT applies the GT predicate on the "ban_reason" field.
+func BanReasonGT(v string) predicate.User {
+	return predicate.User(sql.FieldGT(FieldBanReason, v))
+}
+
+// BanReasonGTE applies the GTE predicate on the "ban_reason" field.
+func BanReasonGTE(v string) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldBanReason, v))
+}
+
+// BanReasonLT applies the LT predicate on the "ban_reason" field.
+func BanReasonLT(v string) predicate.User {
+	return predicate.User(sql.FieldLT(FieldBanReason, v))
+}
+
+// BanReasonLTE applies the LTE predicate on the "ban_reason" field.
+func BanReasonLTE(v string) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldBanReason, v))
+}
+
+// BanReasonContains applies the Contains predicate on the "ban_reason" field.
+func BanReasonContains(v string) predicate.User {
+	return predicate.User(sql.FieldContains(FieldBanReason, v))
+}
+
+// BanReasonHasPrefix applies the HasPrefix predicate on the "ban_reason" field.
+func BanReasonHasPrefix(v string) predicate.User {
+	return predicate.User(sql.FieldHasPrefix(FieldBanReason, v))
+}
+
+// BanReasonHasSuffix applies the HasSuffix predicate on the "ban_reason" field.
+func BanReasonHasSuffix(v string) predicate.User {
+	return predicate.User(sql.FieldHasSuffix(FieldBanReason, v))
+}
+
+// BanReasonIsNil applies the IsNil predicate on the "ban_reason" field.
+func BanReasonIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldBanReason))
+}
+
+// BanReasonNotNil applies the NotNil predicate on the "ban_reason" field.
+func BanReasonNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldBanReason))
+}
+
+// BanReasonEqualFold applies the EqualFold predicate on the "ban_reason" field.
+func BanReasonEqualFold(v string) predicate.User {
+	return predicate.User(sql.FieldEqualFold(FieldBanReason, v))
+}
+
+// BanReasonContainsFold applies the ContainsFold predicate on the "ban_reason" field.
+func BanReasonContainsFold(v string) predicate.User {
+	return predicate.User(sql.FieldContainsFold(FieldBanReason, v))
+}
+
+// LastLoginEQ applies the EQ predicate on the "last_login" field.
+func LastLoginEQ(v time.Time) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldLastLogin, v))
+}
+
+// LastLoginNEQ applies the NEQ predicate on the "last_login" field.
+func LastLoginNEQ(v time.Time) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldLastLogin, v))
+}
+
+// LastLoginIn applies the In predicate on the "last_login" field.
+func LastLoginIn(vs ...time.Time) predicate.User {
+	return predicate.User(sql.FieldIn(FieldLastLogin, vs...))
+}
+
+// LastLoginNotIn applies the NotIn predicate on the "last_login" field.
+func LastLoginNotIn(vs ...time.Time) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldLastLogin, vs...))
+}
+
+// LastLoginGT applies the GT predicate on the "last_login" field.
+func LastLoginGT(v time.Time) predicate.User {
+	return predicate.User(sql.FieldGT(FieldLastLogin, v))
+}
+
+// LastLoginGTE applies the GTE predicate on the "last_login" field.
+func LastLoginGTE(v time.Time) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldLastLogin, v))
+}
+
+// LastLoginLT applies the LT predicate on the "last_login" field.
+func LastLoginLT(v time.Time) predicate.User {
+	return predicate.User(sql.FieldLT(FieldLastLogin, v))
+}
+
+// LastLoginLTE applies the LTE predicate on the "last_login" field.
+func LastLoginLTE(v time.Time) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldLastLogin, v))
+}
+
+// LastLoginIsNil applies the IsNil predicate on the "last_login" field.
+func LastLoginIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldLastLogin))
+}
+
+// LastLoginNotNil applies the NotNil predicate on the "last_login" field.
+func LastLoginNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldLastLogin))
 }
 
 // StorageEQ applies the EQ predicate on the "storage" field.

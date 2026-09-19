@@ -52,14 +52,12 @@ func (service *BatchSettingChangeService) Change() serializer.Response {
 	//	if err := tx.Model(&model.Setting{}).Where("name = ?", setting.Key).Update("value", setting.Value).Error; err != nil {
 	//		cache.Deletes(cacheClean, "setting_")
 	//		tx.Rollback()
-	//		return serializer.ErrDeprecated(serializer.CodeUpdateSetting, "Setting "+setting.Key+" failed to update", err)
 	//	}
 	//
 	//	cacheClean = append(cacheClean, setting.Key)
 	//}
 	//
 	//if err := tx.Commit().Error; err != nil {
-	//	return serializer.DBErrDeprecated("Failed to update setting", err)
 	//}
 	//
 	//cache.Deletes(cacheClean, "setting_")

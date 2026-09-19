@@ -8,8 +8,12 @@ import (
 	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
+	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cluster"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs/dbfs"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager"
 	"github.com/cloudreve/Cloudreve/v4/pkg/queue"
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 )
@@ -59,4 +63,39 @@ func prepareTempFolder(ctx context.Context, dep dependency.Dep, t queue.Task) (s
 
 	dep.Logger().Info("Temp folder created: %s", tempPath)
 	return tempPath, nil
+}
+
+// preferPolicyNode seeds the preferred node with the node hosting the given
+// file's storage policy, so data-heavy tasks run where the blob already
+// lives. No-op when the URI is invalid, has no entity, or the policy is not
+// bound to a node — the pool then falls back to weighted selection.
+func preferPolicyNode(ctx context.Context, dep dependency.Dep, state *NodeState, uriStr string) {
+	if state.NodeID > 0 {
+		return
+	}
+
+	uri, err := fs.NewUriFromString(uriStr)
+	if err != nil {
+		return
+	}
+
+	fm := manager.NewFileManager(dep, inventory.UserFromContext(ctx))
+	defer fm.Recycle()
+
+	file, err := fm.Get(ctx, uri, dbfs.WithFileEntities())
+	if err != nil || file == nil {
+		return
+	}
+
+	entity := file.PrimaryEntity()
+	if entity == nil {
+		return
+	}
+
+	policy, err := dep.StoragePolicyClient().GetPolicyByID(ctx, entity.PolicyID())
+	if err != nil || policy == nil {
+		return
+	}
+
+	state.NodeID = policy.NodeID
 }

@@ -164,6 +164,7 @@ const Settings = () => {
                     "siteName",
                     "siteDes",
                     "siteURL",
+                    "download_cdn_routes",
                     "siteScript",
                     "pwa_small_icon",
                     "pwa_medium_icon",
@@ -198,9 +199,11 @@ const Settings = () => {
                     "sso_client_secret",
                     "sso_scopes",
                     "sso_register_enabled",
+                    "sso_auto_redirect",
                     "email_filter_mode",
                     "email_filter_list",
                     "email_disable_subaddress",
+                    "email_subaddress_chars",
                     "siteURL",
                   ]}
                 >

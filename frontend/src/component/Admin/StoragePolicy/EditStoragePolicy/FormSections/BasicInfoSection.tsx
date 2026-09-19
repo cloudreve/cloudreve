@@ -14,7 +14,7 @@ import { useCallback, useContext, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link as RouterLink } from "react-router-dom";
 import { createStoragePolicyCors, getOneDriveDriverRoot } from "../../../../../api/api";
-import { StoragePolicy } from "../../../../../api/dashboard";
+import { PolicyStatus, StoragePolicy } from "../../../../../api/dashboard";
 import { PolicyType } from "../../../../../api/explorer";
 import { useAppDispatch } from "../../../../../redux/hooks";
 import { DefaultCloseAction } from "../../../../Common/Snackbar/snackbar";
@@ -289,6 +289,21 @@ const BasicInfoSection = () => {
           <FormControl fullWidth>
             <DenseFilledTextField required value={values.name} onChange={onNameChange} />
             <NoMarginHelperText>{t("policy.policyName")}</NoMarginHelperText>
+          </FormControl>
+        </SettingForm>
+        <SettingForm title={t("policy.status")} lgWidth={5}>
+          <FormControl fullWidth>
+            <DenseSelect
+              value={values.status ?? PolicyStatus.active}
+              onChange={(e) => setPolicy((prev) => ({ ...prev, status: e.target.value as PolicyStatus }))}
+            >
+              {Object.values(PolicyStatus).map((value) => (
+                <SquareMenuItem value={value} key={value}>
+                  <ListItemText slotProps={{ primary: { variant: "body2" } }}>{t(`node.${value}`)}</ListItemText>
+                </SquareMenuItem>
+              ))}
+            </DenseSelect>
+            <NoMarginHelperText>{t("policy.statusDes")}</NoMarginHelperText>
           </FormControl>
         </SettingForm>
         {showBucket && (

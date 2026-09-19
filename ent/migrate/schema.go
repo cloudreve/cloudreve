@@ -419,6 +419,7 @@ var (
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"mysql": "datetime"}},
 		{Name: "name", Type: field.TypeString},
 		{Name: "type", Type: field.TypeString},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"active", "suspended"}, Default: "active"},
 		{Name: "server", Type: field.TypeString, Nullable: true},
 		{Name: "bucket_name", Type: field.TypeString, Nullable: true},
 		{Name: "is_private", Type: field.TypeBool, Nullable: true},
@@ -438,7 +439,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "storage_policies_nodes_storage_policy",
-				Columns:    []*schema.Column{StoragePoliciesColumns[15]},
+				Columns:    []*schema.Column{StoragePoliciesColumns[16]},
 				RefColumns: []*schema.Column{NodesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -455,6 +456,7 @@ var (
 		{Name: "public_state", Type: field.TypeJSON},
 		{Name: "private_state", Type: field.TypeString, Nullable: true, Size: 2147483647},
 		{Name: "correlation_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "hidden", Type: field.TypeBool, Default: false},
 		{Name: "user_tasks", Type: field.TypeInt, Nullable: true},
 	}
 	// TasksTable holds the schema information for the "tasks" table.
@@ -465,7 +467,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "tasks_users_tasks",
-				Columns:    []*schema.Column{TasksColumns[9]},
+				Columns:    []*schema.Column{TasksColumns[10]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -481,6 +483,9 @@ var (
 		{Name: "nick", Type: field.TypeString, Size: 100},
 		{Name: "password", Type: field.TypeString, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"active", "inactive", "manual_banned", "sys_banned"}, Default: "active"},
+		{Name: "ban_expires", Type: field.TypeTime, Nullable: true},
+		{Name: "ban_reason", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "last_login", Type: field.TypeTime, Nullable: true},
 		{Name: "storage", Type: field.TypeInt64, Default: 0},
 		{Name: "two_factor_secret", Type: field.TypeString, Nullable: true},
 		{Name: "avatar", Type: field.TypeString, Nullable: true},
@@ -495,7 +500,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "users_groups_users",
-				Columns:    []*schema.Column{UsersColumns[12]},
+				Columns:    []*schema.Column{UsersColumns[15]},
 				RefColumns: []*schema.Column{GroupsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},

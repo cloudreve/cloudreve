@@ -77,8 +77,8 @@ func NewThumbFromFile(file io.Reader, ext string) (*Thumb, error) {
 	}, nil
 }
 
-// GetThumb 生成给定最大尺寸的缩略图
-func (image *Thumb) GetThumb(width, height uint) {
+// Resize 生成给定最大尺寸的缩略图（就地修改）
+func (image *Thumb) Resize(width, height uint) {
 	//image.src = resize.Thumbnail(width, height, image.src, resize.Lanczos3)
 	image.src = Thumbnail(width, height, image.src)
 }
@@ -170,7 +170,7 @@ func (b Builtin) Generate(ctx context.Context, es entitysource.EntitySource, ext
 	}
 
 	w, h := b.settings.ThumbSize(ctx)
-	img.GetThumb(uint(w), uint(h))
+	img.Resize(uint(w), uint(h))
 	tempPath := filepath.Join(
 		util.DataPath(b.settings.TempPath(ctx)),
 		thumbTempFolder,

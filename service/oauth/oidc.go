@@ -37,6 +37,7 @@ func (s *DiscoveryService) Get(c *gin.Context) *DiscoveryResponse {
 		},
 		TokenEndpointAuthMethods: []string{
 			"client_secret_post",
+			"none",
 		},
 		CodeChallengeMethodsSupported: []string{
 			"S256",

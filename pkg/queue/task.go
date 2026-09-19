@@ -104,6 +104,7 @@ const (
 	RelocateTaskType              = "relocate"
 	RemoteDownloadTaskType        = "remote_download"
 	ImportTaskType                = "import"
+	BlobAuditTaskType             = "blob_audit"
 
 	FullTextIndexTaskType       = "full_text_index"
 	FullTextCopyTaskType        = "full_text_copy"
@@ -393,6 +394,12 @@ func init() {
 				q.metric.IncFailureTask()
 				return persistTask(ctx, task, newStatus, q)
 			},
+			task.StatusCanceled: func(ctx context.Context, task Task, newStatus task.Status, q *queue) error {
+				if q.registry != nil {
+					q.registry.Delete(task.ID())
+				}
+				return persistTask(ctx, task, newStatus, q)
+			},
 		},
 		task.StatusProcessing: {
 			task.StatusQueued: persistTask,
@@ -468,6 +475,18 @@ func init() {
 				q.metric.IncFailureTask()
 				return persistTask(ctx, task, newStatus, q)
 			},
+			task.StatusCanceled: func(ctx context.Context, task Task, newStatus task.Status, q *queue) error {
+				q.metric.DecSuspendingTask()
+				if q.registry != nil {
+					q.registry.Delete(task.ID())
+				}
+				return persistTask(ctx, task, newStatus, q)
+			},
+		},
+		task.StatusError: {
+			// Manual retry re-queues a failed task with its original args
+			// (#2823). RetryCount history is preserved in PublicState.
+			task.StatusQueued: persistTask,
 		},
 	}
 

@@ -10,9 +10,12 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { sendCancelTask, sendDeleteTask, sendRetryTask } from "../../../api/api.ts";
 import { TaskResponse, TaskStatus } from "../../../api/workflow.ts";
-import { StyledTableContainerPaper } from "../../Common/StyledComponents.tsx";
+import { useAppDispatch } from "../../../redux/hooks.ts";
+import { SecondaryLoadingButton, StyledTableContainerPaper } from "../../Common/StyledComponents.tsx";
 import DownloadFileList from "./DownloadFileList.tsx";
 import TaskProgress from "./TaskProgress.tsx";
 import TaskProps from "./TaskProps.tsx";
@@ -20,10 +23,44 @@ import TaskProps from "./TaskProps.tsx";
 export interface TaskDetailProps {
   task: TaskResponse;
   downloading?: boolean;
+  onRetried?: () => void;
 }
 
-const TaskDetail = ({ task, downloading }: TaskDetailProps) => {
+const TaskDetail = ({ task, downloading, onRetried }: TaskDetailProps) => {
   const { t } = useTranslation();
+  const dispatch = useAppDispatch();
+  const [retrying, setRetrying] = useState(false);
+  const [canceling, setCanceling] = useState(false);
+
+  const retry = () => {
+    setRetrying(true);
+    dispatch(sendRetryTask(task.id))
+      .then(() => onRetried?.())
+      .catch(() => {})
+      .finally(() => setRetrying(false));
+  };
+
+  const cancel = () => {
+    setCanceling(true);
+    dispatch(sendCancelTask(task.id))
+      .then(() => onRetried?.())
+      .catch(() => {})
+      .finally(() => setCanceling(false));
+  };
+
+  const [deleting, setDeleting] = useState(false);
+
+  const deleteRecord = () => {
+    setDeleting(true);
+    dispatch(sendDeleteTask(task.id))
+      .then(() => onRetried?.())
+      .catch(() => {})
+      .finally(() => setDeleting(false));
+  };
+
+  const cancelable = task.status == TaskStatus.queued || task.status == TaskStatus.suspending;
+  const deletable =
+    task.status == TaskStatus.completed || task.status == TaskStatus.error || task.status == TaskStatus.canceled;
   return (
     <Stack spacing={2}>
       <Stack spacing={1}>
@@ -46,7 +83,48 @@ const TaskDetail = ({ task, downloading }: TaskDetailProps) => {
             })}
           </Alert>
         )}
-        {task.status == TaskStatus.error && <Alert severity={"error"}>{task.error}</Alert>}
+        {cancelable && (
+          <SecondaryLoadingButton
+            size="small"
+            variant="outlined"
+            color="error"
+            loading={canceling}
+            onClick={cancel}
+            sx={{ alignSelf: "flex-start" }}
+          >
+            {t("common:cancel")}
+          </SecondaryLoadingButton>
+        )}
+        {deletable && (
+          <SecondaryLoadingButton
+            size="small"
+            variant="outlined"
+            color="error"
+            loading={deleting}
+            onClick={deleteRecord}
+            sx={{ alignSelf: "flex-start" }}
+          >
+            {t("common:delete")}
+          </SecondaryLoadingButton>
+        )}
+        {task.status == TaskStatus.error && (
+          <Alert
+            severity={"error"}
+            action={
+              <SecondaryLoadingButton
+                size="small"
+                variant="outlined"
+                color="error"
+                loading={retrying}
+                onClick={retry}
+              >
+                {t("uploader.retry")}
+              </SecondaryLoadingButton>
+            }
+          >
+            {task.error}
+          </Alert>
+        )}
         <TaskProgress
           taskId={task.id}
           taskStatus={task.status}

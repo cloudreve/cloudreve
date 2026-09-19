@@ -22,10 +22,9 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
 	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
-	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 	"github.com/gofrs/uuid"
 	"github.com/samber/lo"
-	"golang.org/x/tools/container/intsets"
+	"math"
 )
 
 const (
@@ -43,7 +42,43 @@ type (
 	// IsDownloadCtxKey marks the request as an explicit file download (as
 	// opposed to an inline preview fetch). Navigator hooks consult it.
 	IsDownloadCtxKey struct{}
+	// ExpectedSourceIDsCtxKey carries source-file identity preconditions
+	// for move/copy/rename: a []int positionally aligned with the source
+	// URI list. An entry of 0 disables the check for that position (#3565).
+	ExpectedSourceIDsCtxKey struct{}
+	// MoveConflictCtxKey carries the on-conflict policy for move/copy:
+	// "skip" drops colliding entries, "overwrite" deletes the colliding
+	// destination first. Empty keeps the fail-fast default (#3159).
+	MoveConflictCtxKey struct{}
 )
+
+const (
+	MoveConflictSkip      = "skip"
+	MoveConflictOverwrite = "overwrite"
+)
+
+// moveConflictMode returns the configured on-conflict policy.
+func moveConflictMode(ctx context.Context) string {
+	mode, _ := ctx.Value(MoveConflictCtxKey{}).(string)
+	return mode
+}
+
+// WithExpectedSourceIDs records the expected database IDs of the source
+// files so a delayed/retried request cannot silently operate on a new
+// file that reused the same path.
+func WithExpectedSourceIDs(ctx context.Context, ids []int) context.Context {
+	return context.WithValue(ctx, ExpectedSourceIDsCtxKey{}, ids)
+}
+
+// sourceIDMismatch reports whether the resolved file violates the
+// expected-source precondition at the given position.
+func sourceIDMismatch(ctx context.Context, pos int, actual int) bool {
+	expected, ok := ctx.Value(ExpectedSourceIDsCtxKey{}).([]int)
+	if !ok || pos >= len(expected) || expected[pos] == 0 {
+		return false
+	}
+	return expected[pos] != actual
+}
 
 // writePermitted reports whether the user may mutate file under the given
 // capability. File owners are always permitted; non-owners (e.g. share
@@ -57,26 +92,41 @@ func (f *DBFS) writePermitted(file *File, capability NavigatorCapability) bool {
 	return caps != nil && caps.Enabled(int(capability))
 }
 
-func NewDatabaseFS(u *ent.User, fileClient inventory.FileClient, shareClient inventory.ShareClient,
-	l logging.Logger, ls lock.LockSystem, settingClient setting.Provider,
-	storagePolicyClient inventory.StoragePolicyClient, hasher hashid.Encoder, userClient inventory.UserClient,
-	cache, stateKv cache.Driver, directLinkClient inventory.DirectLinkClient, encryptorFactory encrypt.CryptorFactory, eventHub eventhub.EventHub) fs.FileSystem {
+// DBFSDependencies groups the collaborators wired into a DBFS instance so the
+// constructor call site names each dependency.
+type DBFSDependencies struct {
+	FileClient          inventory.FileClient
+	ShareClient         inventory.ShareClient
+	UserClient          inventory.UserClient
+	StoragePolicyClient inventory.StoragePolicyClient
+	DirectLinkClient    inventory.DirectLinkClient
+	Logger              logging.Logger
+	LockSystem          lock.LockSystem
+	SettingProvider     setting.Provider
+	Hasher              hashid.Encoder
+	Cache               cache.Driver
+	StateKV             cache.Driver
+	EncryptorFactory    encrypt.CryptorFactory
+	EventHub            eventhub.EventHub
+}
+
+func NewDatabaseFS(u *ent.User, deps DBFSDependencies) fs.FileSystem {
 	return &DBFS{
 		user:                u,
 		navigators:          make(map[string]Navigator),
-		fileClient:          fileClient,
-		shareClient:         shareClient,
-		l:                   l,
-		ls:                  ls,
-		settingClient:       settingClient,
-		storagePolicyClient: storagePolicyClient,
-		hasher:              hasher,
-		userClient:          userClient,
-		cache:               cache,
-		stateKv:             stateKv,
-		directLinkClient:    directLinkClient,
-		encryptorFactory:    encryptorFactory,
-		eventHub:            eventHub,
+		fileClient:          deps.FileClient,
+		shareClient:         deps.ShareClient,
+		l:                   deps.Logger,
+		ls:                  deps.LockSystem,
+		settingClient:       deps.SettingProvider,
+		storagePolicyClient: deps.StoragePolicyClient,
+		hasher:              deps.Hasher,
+		userClient:          deps.UserClient,
+		cache:               deps.Cache,
+		stateKv:             deps.StateKV,
+		directLinkClient:    deps.DirectLinkClient,
+		encryptorFactory:    deps.EncryptorFactory,
+		eventHub:            deps.EventHub,
 	}
 }
 
@@ -485,7 +535,7 @@ func (f *DBFS) Get(ctx context.Context, path *fs.URI, opts ...fs.Option) (fs.Fil
 
 			// disable load metadata to speed up
 			ctxWalk := context.WithValue(ctx, inventory.LoadFilePublicMetadata{}, false)
-			if err := navigator.Walk(ctxWalk, []*File{target}, limit, intsets.MaxInt, func(files []*File, l int) error {
+			if err := navigator.Walk(ctxWalk, []*File{target}, limit, math.MaxInt, func(files []*File, l int) error {
 				for _, file := range files {
 					if file.ID() == target.ID() {
 						continue
@@ -804,7 +854,14 @@ func (f *DBFS) navigatorId(path *fs.URI) string {
 func generateSavePath(policy *ent.StoragePolicy, req *fs.UploadRequest, user *ent.User) string {
 	currentTime := time.Now()
 	dynamicReplace := func(rule string, pathAvailable bool) string {
-		return util.ReplaceMagicVar(rule, fs.Separator, pathAvailable, false, currentTime, user.ID, req.Props.Uri.Name(), req.Props.Uri.Dir(), "")
+		return fs.ReplaceMagicVar(rule, fs.MagicVarProps{
+			FsSeparator:   fs.Separator,
+			PathAvailable: pathAvailable,
+			Time:          currentTime,
+			UserID:        user.ID,
+			OriginName:    req.Props.Uri.Name(),
+			OriginPath:    req.Props.Uri.Dir(),
+		})
 	}
 
 	dirRule := policy.DirNameRule

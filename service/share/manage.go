@@ -22,7 +22,7 @@ type (
 	ShareCreateService struct {
 		Uri             string `json:"uri" binding:"required"`
 		IsPrivate       bool   `json:"is_private"`
-		Password        string `json:"password" binding:"omitempty,max=32,alphanum"`
+		Password        string `json:"password" binding:"omitempty,max=32"`
 		RemainDownloads int    `json:"downloads"`
 		Expire          int    `json:"expire"`
 		ShareView       bool   `json:"share_view"`
@@ -31,6 +31,8 @@ type (
 		AllowEdit       bool   `json:"allow_edit"`
 		PreviewOnly     bool   `json:"preview_only"`
 		UploadOnly      bool   `json:"upload_only"`
+		// Optional owner-defined note shown on My Shares (#3570).
+		Note string `json:"note" binding:"omitempty,max=255"`
 	}
 	ShareCreateParamCtx struct{}
 
@@ -98,6 +100,7 @@ func (service *ShareCreateService) Upsert(c *gin.Context, existed int) (string, 
 		AllowEdit:       service.AllowEdit,
 		PreviewOnly:     service.PreviewOnly,
 		UploadOnly:      service.UploadOnly,
+		Note:            service.Note,
 	})
 	if err != nil {
 		return "", err

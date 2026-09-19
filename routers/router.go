@@ -431,6 +431,12 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				middleware.HashID(hashid.UserID),
 				controllers.UserActivate,
 			)
+			// 邮箱更换确认 Done
+			user.GET("activate_email/:id",
+				middleware.SignRequired(dep.GeneralAuth()),
+				middleware.HashID(hashid.UserID),
+				controllers.UserActivateEmailChange,
+			)
 			// 获取用户头像
 			user.GET("avatar/:id",
 				middleware.HashID(hashid.UserID),
@@ -589,6 +595,24 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 			wf.GET("progress/:id",
 				middleware.HashID(hashid.TaskID),
 				controllers.GetTaskPhaseProgress,
+			)
+			// Retry a failed task with its original args
+			wf.POST(":id/retry",
+				middleware.RequiredScopes(types.ScopeWorkflowWrite),
+				middleware.HashID(hashid.TaskID),
+				controllers.RetryTask,
+			)
+			// Cancel a queued or suspending task
+			wf.POST(":id/cancel",
+				middleware.RequiredScopes(types.ScopeWorkflowWrite),
+				middleware.HashID(hashid.TaskID),
+				controllers.CancelTask,
+			)
+			// Delete (hide) a finished task record
+			wf.DELETE(":id",
+				middleware.RequiredScopes(types.ScopeWorkflowWrite),
+				middleware.HashID(hashid.TaskID),
+				controllers.DeleteTask,
 			)
 			// Create task to create an archive file
 			wf.POST("archive",
@@ -796,6 +820,13 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				controllers.FromJSON[explorer.RebuildFTSIndexWorkflowService](explorer.CreateRebuildFTSIndexParamCtx{}),
 				controllers.RebuildFTSIndex,
 			)
+			// Create task to audit physical blobs against the entities table
+			wf.POST("blobAudit",
+				middleware.IsAdmin(),
+				middleware.RequiredScopes(types.ScopeWorkflowWrite, types.ScopeAdminWrite),
+				controllers.FromJSON[explorer.BlobAuditWorkflowService](explorer.BlobAuditParamCtx{}),
+				controllers.BlobAudit,
+			)
 
 			// 取得文件外链
 			source := file.Group("source")
@@ -899,7 +930,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 		auth.Use(middleware.LoginRequired())
 		{
 			// 管理
-			admin := auth.Group("admin", middleware.IsAdmin())
+			admin := auth.Group("admin", middleware.IsAdminOrDelegated())
 			admin.Use(middleware.RequiredScopes(types.ScopeAdminRead))
 			{
 				admin.GET("summary",
@@ -907,7 +938,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					controllers.AdminSummary,
 				)
 
-				settings := admin.Group("settings")
+				settings := admin.Group("settings", middleware.AdminSection(types.GroupPermissionAdminSettings))
 				{
 					// Get settings
 					settings.POST("",
@@ -923,7 +954,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				}
 
 				// 用户组管理
-				group := admin.Group("group")
+				group := admin.Group("group", middleware.AdminSection(types.GroupPermissionAdminGroups))
 				{
 					// 列出用户组
 					group.POST("",
@@ -955,7 +986,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 				}
 
-				tool := admin.Group("tool")
+				tool := admin.Group("tool", middleware.AdminSection(types.GroupPermissionAdminSettings))
 				{
 					tool.GET("wopi",
 						middleware.RequiredScopes(types.ScopeAdminWrite),
@@ -977,7 +1008,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 				}
 
-				queue := admin.Group("queue")
+				queue := admin.Group("queue", middleware.AdminSection(types.GroupPermissionAdminQueue))
 				{
 					queue.GET("metrics", controllers.AdminGetQueueMetrics)
 					// List tasks
@@ -1009,7 +1040,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				}
 
 				// 存储策略管理
-				policy := admin.Group("policy")
+				policy := admin.Group("policy", middleware.AdminSection(types.GroupPermissionAdminStorage))
 				{
 					// 列出存储策略
 					policy.POST("",
@@ -1075,7 +1106,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 				}
 
-				node := admin.Group("node")
+				node := admin.Group("node", middleware.AdminSection(types.GroupPermissionAdminStorage))
 				{
 					node.POST("",
 						controllers.FromJSON[adminsvc.AdminListService](adminsvc.AdminListServiceParamsCtx{}),
@@ -1112,7 +1143,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 				}
 
-				oauthClient := admin.Group("oauthClient")
+				oauthClient := admin.Group("oauthClient", middleware.AdminSection(types.GroupPermissionAdminSettings))
 				{
 					// List OAuth clients
 					oauthClient.POST("",
@@ -1150,7 +1181,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 				}
 
-				user := admin.Group("user")
+				user := admin.Group("user", middleware.AdminSection(types.GroupPermissionAdminUsers))
 				{
 					// 列出用户
 					user.POST("",
@@ -1182,6 +1213,12 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 							controllers.FromJSON[adminsvc.BatchUserService](adminsvc.BatchUserParamCtx{}),
 							controllers.AdminDeleteUser,
 						)
+						// 批量更新用户
+						batch.POST("update",
+							middleware.RequiredScopes(types.ScopeAdminWrite),
+							controllers.FromJSON[adminsvc.BatchUserUpdateService](adminsvc.BatchUserUpdateParamCtx{}),
+							controllers.AdminBatchUpdateUser,
+						)
 					}
 					user.POST(":id/calibrate",
 						middleware.RequiredScopes(types.ScopeAdminWrite),
@@ -1190,7 +1227,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 				}
 
-				file := admin.Group("file")
+				file := admin.Group("file", middleware.AdminSection(types.GroupPermissionAdminFiles))
 				{
 					// 列出文件
 					file.POST("",
@@ -1221,7 +1258,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 				}
 
-				entity := admin.Group("entity")
+				entity := admin.Group("entity", middleware.AdminSection(types.GroupPermissionAdminFiles))
 				{
 					// List blobs
 					entity.POST("",
@@ -1246,7 +1283,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 				}
 
-				share := admin.Group("share")
+				share := admin.Group("share", middleware.AdminSection(types.GroupPermissionAdminShares))
 				{
 					// List shares
 					share.POST("",
@@ -1315,6 +1352,13 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 					// 获得二步验证初始化信息
 					setting.GET("2fa", controllers.UserInit2FA)
+					// 请求更换邮箱（向新地址发送确认链接）
+					setting.POST("email",
+						middleware.RequiredScopes(types.ScopeUserSecurityInfoWrite),
+						middleware.RateLimitByIP("email_change", 5, time.Hour),
+						controllers.FromJSON[usersvc.RequestEmailChangeService](usersvc.RequestEmailChangeParamCtx{}),
+						controllers.UserRequestEmailChange,
+					)
 				}
 			}
 

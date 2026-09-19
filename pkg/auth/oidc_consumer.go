@@ -43,6 +43,11 @@ type OIDCUserInfo struct {
 	Picture           string `json:"picture,omitempty"`
 	Email             string `json:"email,omitempty"`
 	EmailVerified     *bool  `json:"email_verified,omitempty"`
+	// AD FS-style alternates, mirrored from the ID-token claims.
+	UPN        string `json:"upn,omitempty"`
+	UniqueName string `json:"unique_name,omitempty"`
+	GivenName  string `json:"given_name,omitempty"`
+	FamilyName string `json:"family_name,omitempty"`
 }
 
 // Validate checks the discovery document has the endpoints the code flow requires.

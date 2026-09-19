@@ -3,6 +3,7 @@ package middleware
 import (
 	"crypto/subtle"
 	"net/http"
+	"strings"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/ent"
@@ -104,44 +105,77 @@ func LoginRequired() gin.HandlerFunc {
 // WebDAVAuth 验证WebDAV登录及权限
 func WebDAVAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		username, password, ok := c.Request.BasicAuth()
-		if !ok {
-			// OPTIONS 请求不需要鉴权
-			if c.Request.Method == http.MethodOptions {
-				c.Next()
-				return
-			}
-			c.Writer.Header()["WWW-Authenticate"] = []string{`Basic realm="cloudreve"`}
-			c.Status(http.StatusUnauthorized)
-			c.Abort()
-			return
-		}
-
 		dep := dependency.FromContext(c)
 		l := dep.Logger()
-		userClient := dep.UserClient()
-		expectedUser, err := userClient.GetActiveByDavAccount(c, username, password)
-		if err != nil {
-			if username == "" {
-				if u, err := userClient.GetByEmail(c, username); err == nil {
-					// Try login with known user but incorrect password, record audit log
-					SetUserCtxByUser(c, u)
+
+		username, password, ok := c.Request.BasicAuth()
+		var expectedUser *ent.User
+		bearerAuth := false
+		if !ok {
+			// Bearer auth: accept Cloudreve API access tokens so OIDC-only
+			// users and API clients can mount without a DAV password (#3548).
+			if !strings.HasPrefix(c.GetHeader(auth.AuthorizationHeader), auth.TokenHeaderPrefix) {
+				// OPTIONS 请求不需要鉴权
+				if c.Request.Method == http.MethodOptions {
+					c.Next()
+					return
 				}
+				c.Writer.Header().Add("WWW-Authenticate", `Basic realm="cloudreve"`)
+				c.Writer.Header().Add("WWW-Authenticate", `Bearer realm="cloudreve"`)
+				c.Status(http.StatusUnauthorized)
+				c.Abort()
+				return
 			}
 
-			l.Debug("WebDAVAuth: failed to get user %q with provided credential: %s", username, err)
-			c.Status(http.StatusUnauthorized)
-			c.Abort()
-			return
-		}
+			if _, err := dep.TokenAuth().VerifyAndRetrieveUser(c); err != nil {
+				l.Debug("WebDAVAuth: bearer token rejected: %s", err)
+				c.Status(http.StatusUnauthorized)
+				c.Abort()
+				return
+			}
 
-		// Validate dav account
-		accounts, err := expectedUser.Edges.DavAccountsOrErr()
-		if err != nil || len(accounts) == 0 {
-			l.Debug("WebDAVAuth: failed to get user dav accounts %q with provided credential: %s", username, err)
-			c.Status(http.StatusUnauthorized)
-			c.Abort()
-			return
+			uid := inventory.UserIDFromContext(c)
+			if uid == 0 {
+				c.Status(http.StatusUnauthorized)
+				c.Abort()
+				return
+			}
+
+			if err := SetUserCtx(c, uid); err != nil {
+				l.Debug("WebDAVAuth: failed to load bearer user %d: %s", uid, err)
+				c.Status(http.StatusUnauthorized)
+				c.Abort()
+				return
+			}
+
+			expectedUser = inventory.UserFromContext(c)
+			bearerAuth = true
+		} else {
+			userClient := dep.UserClient()
+			var err error
+			expectedUser, err = userClient.GetActiveByDavAccount(c, username, password)
+			if err != nil {
+				if username == "" {
+					if u, err := userClient.GetByEmail(c, username); err == nil {
+						// Try login with known user but incorrect password, record audit log
+						SetUserCtxByUser(c, u)
+					}
+				}
+
+				l.Debug("WebDAVAuth: failed to get user %q with provided credential: %s", username, err)
+				c.Status(http.StatusUnauthorized)
+				c.Abort()
+				return
+			}
+
+			// Validate dav account
+			accounts, err := expectedUser.Edges.DavAccountsOrErr()
+			if err != nil || len(accounts) == 0 {
+				l.Debug("WebDAVAuth: failed to get user dav accounts %q with provided credential: %s", username, err)
+				c.Status(http.StatusUnauthorized)
+				c.Abort()
+				return
+			}
 		}
 
 		// 用户组已启用WebDAV？
@@ -160,17 +194,38 @@ func WebDAVAuth() gin.HandlerFunc {
 			return
 		}
 
-		// 检查是否只读
-		if expectedUser.Edges.DavAccounts[0].Options.Enabled(int(types.DavAccountReadOnly)) {
-			switch c.Request.Method {
-			case http.MethodDelete, http.MethodPut, "MKCOL", "COPY", "MOVE", "LOCK", "UNLOCK":
+		// Scoped client tokens need at least Files.Read; tokens without
+		// Files.Write are confined to read-only access.
+		if bearerAuth {
+			if err := auth.CheckScope(c, types.ScopeFilesRead); err != nil {
 				c.Status(http.StatusForbidden)
 				c.Abort()
 				return
 			}
 		}
 
-		SetUserCtxByUser(c, expectedUser)
+		// 检查是否只读
+		readOnly := group.Permissions.Enabled(int(types.GroupPermissionWebDAVReadOnly))
+		if len(expectedUser.Edges.DavAccounts) > 0 &&
+			expectedUser.Edges.DavAccounts[0].Options.Enabled(int(types.DavAccountReadOnly)) {
+			readOnly = true
+		}
+		if bearerAuth && auth.CheckScope(c, types.ScopeFilesWrite) != nil {
+			readOnly = true
+		}
+
+		if readOnly {
+			switch c.Request.Method {
+			case http.MethodDelete, http.MethodPut, "MKCOL", "COPY", "MOVE", "LOCK", "UNLOCK", "PROPPATCH":
+				c.Status(http.StatusForbidden)
+				c.Abort()
+				return
+			}
+		}
+
+		if !bearerAuth {
+			SetUserCtxByUser(c, expectedUser)
+		}
 		c.Next()
 	}
 }
@@ -274,6 +329,64 @@ func IsAdmin() gin.HandlerFunc {
 			c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeNoPermissionErr, "", nil))
 			c.Abort()
 			return
+		}
+
+		c.Next()
+	}
+}
+
+// IsAdminOrDelegated allows full admins and delegated administrators (groups
+// carrying at least one per-section admin permission bit).
+func IsAdminOrDelegated() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		user := inventory.UserFromContext(c)
+		permissions := user.Edges.Group.Permissions
+		if !permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+			delegated := false
+			for _, p := range types.DelegatedAdminPermissions() {
+				if permissions.Enabled(int(p)) {
+					delegated = true
+					break
+				}
+			}
+
+			if !delegated {
+				c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeNoPermissionErr, "", nil))
+				c.Abort()
+				return
+			}
+		}
+
+		c.Next()
+	}
+}
+
+// AdminSection requires the full admin permission or at least one of the
+// given delegated admin section permissions. Delegated-admin passes are
+// audit-logged since they exercise elevated permissions without full admin.
+func AdminSection(sections ...types.GroupPermission) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		user := inventory.UserFromContext(c)
+		permissions := user.Edges.Group.Permissions
+		if !permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+			allowed := false
+			for _, p := range sections {
+				if permissions.Enabled(int(p)) {
+					allowed = true
+					break
+				}
+			}
+
+			if !allowed {
+				c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeNoPermissionErr, "", nil))
+				c.Abort()
+				return
+			}
+
+			dependency.FromContext(c).Logger().Info(
+				"Delegated admin %q (uid=%d) accessed %s %s",
+				user.Email, user.ID, c.Request.Method, c.FullPath(),
+			)
 		}
 
 		c.Next()

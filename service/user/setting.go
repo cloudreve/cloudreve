@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
@@ -230,9 +231,38 @@ type (
 		TwoFACode               *string   `json:"two_fa_code" binding:"omitempty"`
 		DisableViewSync         *bool     `json:"disable_view_sync" binding:"omitempty"`
 		ShareLinksInProfile     *string   `json:"share_links_in_profile" binding:"omitempty"`
+		// ShareDefaultPrivate accepts "true", "false" or "" (clear the
+		// override and inherit the site default).
+		ShareDefaultPrivate *string `json:"share_default_private" binding:"omitempty"`
+		// PreferredViewers replaces the whole extension → viewer-id map.
+		PreferredViewers *map[string]string `json:"preferred_viewers" binding:"omitempty"`
+		// TrashRetention overrides group trash retention, in seconds.
+		// 0 clears the override. Capped at ~10 years.
+		TrashRetention *int `json:"trash_retention" binding:"omitempty,min=0,max=315360000"`
 	}
 	PatchUserSettingParamsCtx struct{}
 )
+
+var (
+	preferredViewerExtPattern = regexp.MustCompile(`^[a-z0-9]{1,20}$`)
+	preferredViewerIDPattern  = regexp.MustCompile(`^[\w.\-:]{1,64}$`)
+)
+
+const preferredViewersMaxEntries = 200
+
+// validatePreferredViewers bounds the extension → viewer-id map to sane
+// shapes so it can't be abused as arbitrary JSON storage.
+func validatePreferredViewers(m map[string]string) error {
+	if len(m) > preferredViewersMaxEntries {
+		return serializer.NewError(serializer.CodeParamErr, "Too many preferred viewers", nil)
+	}
+	for ext, viewerID := range m {
+		if !preferredViewerExtPattern.MatchString(ext) || !preferredViewerIDPattern.MatchString(viewerID) {
+			return serializer.NewError(serializer.CodeParamErr, "Invalid preferred viewer entry", nil)
+		}
+	}
+	return nil
+}
 
 func (s *PatchUserSetting) Patch(c *gin.Context) error {
 	dep := dependency.FromContext(c)
@@ -277,7 +307,38 @@ func (s *PatchUserSetting) Patch(c *gin.Context) error {
 	}
 
 	if s.ShareLinksInProfile != nil {
-		u.Settings.ShareLinksInProfile = types.ShareLinksInProfileLevel(*s.ShareLinksInProfile)
+		level := types.ShareLinksInProfileLevel(*s.ShareLinksInProfile)
+		switch level {
+		case types.ProfilePublicShareOnly, types.ProfileAllShare, types.ProfileHideShare, types.ProfileSharePublic:
+		default:
+			return serializer.NewError(serializer.CodeParamErr, "Invalid share links visibility", nil)
+		}
+		u.Settings.ShareLinksInProfile = level
+		saveSetting = true
+	}
+
+	if s.ShareDefaultPrivate != nil {
+		if *s.ShareDefaultPrivate != "" && *s.ShareDefaultPrivate != "true" && *s.ShareDefaultPrivate != "false" {
+			return serializer.NewError(serializer.CodeParamErr, "Invalid share privacy default", nil)
+		}
+		u.Settings.ShareDefaultPrivate = nil
+		if *s.ShareDefaultPrivate != "" {
+			v := *s.ShareDefaultPrivate == "true"
+			u.Settings.ShareDefaultPrivate = &v
+		}
+		saveSetting = true
+	}
+
+	if s.PreferredViewers != nil {
+		if err := validatePreferredViewers(*s.PreferredViewers); err != nil {
+			return err
+		}
+		u.Settings.PreferredViewers = *s.PreferredViewers
+		saveSetting = true
+	}
+
+	if s.TrashRetention != nil {
+		u.Settings.TrashRetention = *s.TrashRetention
 		saveSetting = true
 	}
 

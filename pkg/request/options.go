@@ -20,6 +20,7 @@ type options struct {
 	header            http.Header
 	sign              auth.Auth
 	signTTL           int64
+	signBaseTime      time.Time
 	ctx               context.Context
 	contentLength     int64
 	masterMeta        bool
@@ -85,6 +86,15 @@ func WithCredential(instance auth.Auth, ttl int64) Option {
 		if ttl > 0 {
 			o.signTTL = ttl
 		}
+	})
+}
+
+// WithSignBaseTime overrides the "now" used to compute the signature expiry
+// timestamp. Slave clients use it to compensate clock skew against the master
+// once the offset is learned from a signature-expired response (#3242).
+func WithSignBaseTime(t time.Time) Option {
+	return optionFunc(func(o *options) {
+		o.signBaseTime = t
 	})
 }
 

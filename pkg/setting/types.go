@@ -82,6 +82,7 @@ type SSO struct {
 	ClientSecret    string
 	Scopes          string
 	RegisterEnabled bool
+	AutoRedirect    bool
 }
 
 type EmailFilterMode int
@@ -97,6 +98,9 @@ type EmailFilter struct {
 	Mode              EmailFilterMode
 	List              []string
 	DisableSubAddress bool
+	// SubAddressChars are the characters treated as sub-address separators in
+	// the local part when DisableSubAddress is on. Empty falls back to "+".
+	SubAddressChars string
 }
 
 type DBFS struct {
@@ -244,6 +248,9 @@ type CustomNavItem struct {
 	Icon string `json:"icon"`
 	Name string `json:"name"`
 	URL  string `json:"url"`
+	// Scope limits display: "" or "public" shows to everyone, "user" only
+	// to logged-in accounts (#3578).
+	Scope string `json:"scope,omitempty"`
 }
 
 type CustomHTML struct {

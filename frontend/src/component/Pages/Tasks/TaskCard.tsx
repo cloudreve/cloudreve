@@ -17,7 +17,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useInView } from "react-intersection-observer";
 import { FileType } from "../../../api/explorer.ts";
-import { TaskResponse, TaskType } from "../../../api/workflow.ts";
+import { getTasksPhaseProgress } from "../../../api/api.ts";
+import { TaskResponse, TaskStatus, TaskType } from "../../../api/workflow.ts";
 import { useAppDispatch } from "../../../redux/hooks.ts";
 import { DefaultButton } from "../../Common/StyledComponents.tsx";
 import FileIcon from "../../FileManager/Explorer/FileIcon.tsx";
@@ -96,6 +97,7 @@ export interface TaskCardProps {
   showProgress?: boolean;
   task?: TaskResponse;
   onLoad?: () => void;
+  onRetried?: () => void;
 }
 
 const taskIconsMap: {
@@ -107,7 +109,7 @@ const taskIconsMap: {
   [TaskType.import]: ArrowImport,
 };
 
-const TaskCard = ({ loading, showProgress, onLoad, task }: TaskCardProps) => {
+const TaskCard = ({ loading, showProgress, onLoad, onRetried, task }: TaskCardProps) => {
   const { t } = useTranslation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -119,6 +121,42 @@ const TaskCard = ({ loading, showProgress, onLoad, task }: TaskCardProps) => {
   });
 
   const [expanded, setExpanded] = useState(false);
+  const [transferPercent, setTransferPercent] = useState<number | undefined>(undefined);
+
+  // During the transfer phase the summary's download counters are frozen at
+  // 100%; poll the live phase progress so the card bar keeps moving while
+  // files are imported to storage.
+  const transferring =
+    task?.type === TaskType.remote_download &&
+    task?.status === TaskStatus.processing &&
+    task?.summary?.phase === "transfer";
+
+  useEffect(() => {
+    if (!transferring || !task) {
+      setTransferPercent(undefined);
+      return;
+    }
+    let cancelled = false;
+    const fetchProgress = () => {
+      dispatch(getTasksPhaseProgress(task.id))
+        .then((res) => {
+          if (cancelled) {
+            return;
+          }
+          const upload = res?.["upload"];
+          if (upload && upload.total > 0) {
+            setTransferPercent((100 * upload.current) / upload.total);
+          }
+        })
+        .catch(() => {});
+    };
+    fetchProgress();
+    const iv = setInterval(fetchProgress, 2500);
+    return () => {
+      cancelled = true;
+      clearInterval(iv);
+    };
+  }, [transferring, task?.id]);
 
   useEffect(() => {
     if (!inView) {
@@ -151,8 +189,10 @@ const TaskCard = ({ loading, showProgress, onLoad, task }: TaskCardProps) => {
           fullWidth
           percentage={
             showProgress
-              ? ((task?.summary?.props?.download?.downloaded ?? 0) * 100) /
-                Math.max(task?.summary?.props?.download?.total ?? 0, 1)
+              ? transferring && transferPercent != undefined
+                ? transferPercent
+                : ((task?.summary?.props?.download?.downloaded ?? 0) * 100) /
+                  Math.max(task?.summary?.props?.download?.total ?? 0, 1)
               : undefined
           }
           startIcon={
@@ -208,13 +248,14 @@ const TaskCard = ({ loading, showProgress, onLoad, task }: TaskCardProps) => {
                   status={task.status}
                   error={task.error}
                   summary={task.summary}
+                  transferPercent={transferPercent}
                 />
               )}
             </Typography>
           </Box>
         </SummaryButton>
       </AccordionSummary>
-      <AccordionDetails>{task && <TaskDetail task={task} downloading={showProgress} />}</AccordionDetails>
+      <AccordionDetails>{task && <TaskDetail task={task} downloading={showProgress} onRetried={onRetried} />}</AccordionDetails>
     </Accordion>
   );
 };

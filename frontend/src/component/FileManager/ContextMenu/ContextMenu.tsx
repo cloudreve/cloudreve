@@ -1,5 +1,5 @@
 import { Box, Divider, ListItemIcon, ListItemText, Menu, MenuItem, styled, Typography, useTheme } from "@mui/material";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { closeContextMenu } from "../../../redux/fileManagerSlice.ts";
 import { CreateNewDialogType } from "../../../redux/globalStateSlice.ts";
@@ -106,6 +106,23 @@ const ContextMenu = ({ fmIndex = 0 }: ContextMenuProps) => {
   const onClose = useCallback(() => {
     dispatch(closeContextMenu({ index: fmIndex, value: undefined }));
   }, [dispatch]);
+
+  // The menu overlay lets pointer events fall through to the file list, so
+  // dismiss it manually on any click outside the menu paper — the same event
+  // still reaches the file underneath (upstream #3278).
+  useEffect(() => {
+    if (!contextMenuOpen) {
+      return;
+    }
+    const onPointerDown = (e: PointerEvent) => {
+      if ((e.target as HTMLElement | null)?.closest?.(".MuiMenu-paper")) {
+        return;
+      }
+      dispatch(closeContextMenu({ index: fmIndex, value: undefined }));
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [contextMenuOpen, dispatch, fmIndex]);
 
   const showOpenWithCascading = displayOpt.showOpenWithCascading && displayOpt.showOpenWithCascading();
   const showOpenWith = displayOpt.showOpenWith && displayOpt.showOpenWith();
@@ -379,6 +396,14 @@ const ContextMenu = ({ fmIndex = 0 }: ContextMenuProps) => {
       onClose={onClose}
       disableAutoFocusItem
       open={Boolean(contextMenuOpen)}
+      style={{ pointerEvents: "none" }}
+      slotProps={{
+        paper: {
+          style: {
+            pointerEvents: "auto",
+          },
+        },
+      }}
       anchorReference="anchorPosition"
       anchorPosition={{
         top: contextMenuPos?.y ?? 0,

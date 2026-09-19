@@ -126,6 +126,66 @@ func (uu *UserUpdate) SetNillableStatus(u *user.Status) *UserUpdate {
 	return uu
 }
 
+// SetBanExpires sets the "ban_expires" field.
+func (uu *UserUpdate) SetBanExpires(t time.Time) *UserUpdate {
+	uu.mutation.SetBanExpires(t)
+	return uu
+}
+
+// SetNillableBanExpires sets the "ban_expires" field if the given value is not nil.
+func (uu *UserUpdate) SetNillableBanExpires(t *time.Time) *UserUpdate {
+	if t != nil {
+		uu.SetBanExpires(*t)
+	}
+	return uu
+}
+
+// ClearBanExpires clears the value of the "ban_expires" field.
+func (uu *UserUpdate) ClearBanExpires() *UserUpdate {
+	uu.mutation.ClearBanExpires()
+	return uu
+}
+
+// SetBanReason sets the "ban_reason" field.
+func (uu *UserUpdate) SetBanReason(s string) *UserUpdate {
+	uu.mutation.SetBanReason(s)
+	return uu
+}
+
+// SetNillableBanReason sets the "ban_reason" field if the given value is not nil.
+func (uu *UserUpdate) SetNillableBanReason(s *string) *UserUpdate {
+	if s != nil {
+		uu.SetBanReason(*s)
+	}
+	return uu
+}
+
+// ClearBanReason clears the value of the "ban_reason" field.
+func (uu *UserUpdate) ClearBanReason() *UserUpdate {
+	uu.mutation.ClearBanReason()
+	return uu
+}
+
+// SetLastLogin sets the "last_login" field.
+func (uu *UserUpdate) SetLastLogin(t time.Time) *UserUpdate {
+	uu.mutation.SetLastLogin(t)
+	return uu
+}
+
+// SetNillableLastLogin sets the "last_login" field if the given value is not nil.
+func (uu *UserUpdate) SetNillableLastLogin(t *time.Time) *UserUpdate {
+	if t != nil {
+		uu.SetLastLogin(*t)
+	}
+	return uu
+}
+
+// ClearLastLogin clears the value of the "last_login" field.
+func (uu *UserUpdate) ClearLastLogin() *UserUpdate {
+	uu.mutation.ClearLastLogin()
+	return uu
+}
+
 // SetStorage sets the "storage" field.
 func (uu *UserUpdate) SetStorage(i int64) *UserUpdate {
 	uu.mutation.ResetStorage()
@@ -623,6 +683,24 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := uu.mutation.Status(); ok {
 		_spec.SetField(user.FieldStatus, field.TypeEnum, value)
+	}
+	if value, ok := uu.mutation.BanExpires(); ok {
+		_spec.SetField(user.FieldBanExpires, field.TypeTime, value)
+	}
+	if uu.mutation.BanExpiresCleared() {
+		_spec.ClearField(user.FieldBanExpires, field.TypeTime)
+	}
+	if value, ok := uu.mutation.BanReason(); ok {
+		_spec.SetField(user.FieldBanReason, field.TypeString, value)
+	}
+	if uu.mutation.BanReasonCleared() {
+		_spec.ClearField(user.FieldBanReason, field.TypeString)
+	}
+	if value, ok := uu.mutation.LastLogin(); ok {
+		_spec.SetField(user.FieldLastLogin, field.TypeTime, value)
+	}
+	if uu.mutation.LastLoginCleared() {
+		_spec.ClearField(user.FieldLastLogin, field.TypeTime)
 	}
 	if value, ok := uu.mutation.Storage(); ok {
 		_spec.SetField(user.FieldStorage, field.TypeInt64, value)
@@ -1142,6 +1220,66 @@ func (uuo *UserUpdateOne) SetNillableStatus(u *user.Status) *UserUpdateOne {
 	if u != nil {
 		uuo.SetStatus(*u)
 	}
+	return uuo
+}
+
+// SetBanExpires sets the "ban_expires" field.
+func (uuo *UserUpdateOne) SetBanExpires(t time.Time) *UserUpdateOne {
+	uuo.mutation.SetBanExpires(t)
+	return uuo
+}
+
+// SetNillableBanExpires sets the "ban_expires" field if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableBanExpires(t *time.Time) *UserUpdateOne {
+	if t != nil {
+		uuo.SetBanExpires(*t)
+	}
+	return uuo
+}
+
+// ClearBanExpires clears the value of the "ban_expires" field.
+func (uuo *UserUpdateOne) ClearBanExpires() *UserUpdateOne {
+	uuo.mutation.ClearBanExpires()
+	return uuo
+}
+
+// SetBanReason sets the "ban_reason" field.
+func (uuo *UserUpdateOne) SetBanReason(s string) *UserUpdateOne {
+	uuo.mutation.SetBanReason(s)
+	return uuo
+}
+
+// SetNillableBanReason sets the "ban_reason" field if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableBanReason(s *string) *UserUpdateOne {
+	if s != nil {
+		uuo.SetBanReason(*s)
+	}
+	return uuo
+}
+
+// ClearBanReason clears the value of the "ban_reason" field.
+func (uuo *UserUpdateOne) ClearBanReason() *UserUpdateOne {
+	uuo.mutation.ClearBanReason()
+	return uuo
+}
+
+// SetLastLogin sets the "last_login" field.
+func (uuo *UserUpdateOne) SetLastLogin(t time.Time) *UserUpdateOne {
+	uuo.mutation.SetLastLogin(t)
+	return uuo
+}
+
+// SetNillableLastLogin sets the "last_login" field if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableLastLogin(t *time.Time) *UserUpdateOne {
+	if t != nil {
+		uuo.SetLastLogin(*t)
+	}
+	return uuo
+}
+
+// ClearLastLogin clears the value of the "last_login" field.
+func (uuo *UserUpdateOne) ClearLastLogin() *UserUpdateOne {
+	uuo.mutation.ClearLastLogin()
 	return uuo
 }
 
@@ -1672,6 +1810,24 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 	}
 	if value, ok := uuo.mutation.Status(); ok {
 		_spec.SetField(user.FieldStatus, field.TypeEnum, value)
+	}
+	if value, ok := uuo.mutation.BanExpires(); ok {
+		_spec.SetField(user.FieldBanExpires, field.TypeTime, value)
+	}
+	if uuo.mutation.BanExpiresCleared() {
+		_spec.ClearField(user.FieldBanExpires, field.TypeTime)
+	}
+	if value, ok := uuo.mutation.BanReason(); ok {
+		_spec.SetField(user.FieldBanReason, field.TypeString, value)
+	}
+	if uuo.mutation.BanReasonCleared() {
+		_spec.ClearField(user.FieldBanReason, field.TypeString)
+	}
+	if value, ok := uuo.mutation.LastLogin(); ok {
+		_spec.SetField(user.FieldLastLogin, field.TypeTime, value)
+	}
+	if uuo.mutation.LastLoginCleared() {
+		_spec.ClearField(user.FieldLastLogin, field.TypeTime)
 	}
 	if value, ok := uuo.mutation.Storage(); ok {
 		_spec.SetField(user.FieldStorage, field.TypeInt64, value)

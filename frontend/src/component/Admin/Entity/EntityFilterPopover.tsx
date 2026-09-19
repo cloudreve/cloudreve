@@ -14,6 +14,8 @@ export interface EntityFilterPopoverProps extends PopoverProps {
   setOwner: (owner: string) => void;
   type?: EntityType;
   setType: (type?: EntityType) => void;
+  refCount: string;
+  setRefCount: (refCount: string) => void;
   clearFilters: () => void;
 }
 
@@ -24,6 +26,8 @@ const EntityFilterPopover = ({
   setOwner,
   type,
   setType,
+  refCount,
+  setRefCount,
   clearFilters,
   onClose,
   open,
@@ -35,6 +39,8 @@ const EntityFilterPopover = ({
   const [localStoragePolicy, setLocalStoragePolicy] = useState(storagePolicy);
   const [localOwner, setLocalOwner] = useState(owner);
   const [localType, setLocalType] = useState(type);
+  const [localRefCountOp, setLocalRefCountOp] = useState("");
+  const [localRefCountValue, setLocalRefCountValue] = useState("");
 
   // Initialize local state when popup opens
   useEffect(() => {
@@ -42,6 +48,9 @@ const EntityFilterPopover = ({
       setLocalStoragePolicy(storagePolicy);
       setLocalOwner(owner);
       setLocalType(type);
+      const [op, value] = refCount.split(":");
+      setLocalRefCountOp(refCount ? op : "");
+      setLocalRefCountValue(value ?? "");
     }
   }, [open]);
 
@@ -50,6 +59,9 @@ const EntityFilterPopover = ({
     setStoragePolicy(localStoragePolicy);
     setOwner(localOwner);
     setType(localType);
+    setRefCount(
+      localRefCountOp == "" ? "" : localRefCountOp == "stale" ? "stale" : `${localRefCountOp}:${localRefCountValue || "0"}`,
+    );
     onClose?.({}, "backdropClick");
   };
 
@@ -58,6 +70,8 @@ const EntityFilterPopover = ({
     setLocalStoragePolicy("");
     setLocalOwner("");
     setLocalType(undefined);
+    setLocalRefCountOp("");
+    setLocalRefCountValue("");
     clearFilters();
     onClose?.({}, "backdropClick");
   };
@@ -126,6 +140,43 @@ const EntityFilterPopover = ({
               />
             </SquareMenuItem>
           </DenseSelect>
+        </SettingForm>
+
+        <SettingForm title={t("file.referenceCount")} noContainer lgWidth={12}>
+          <Stack direction="row" spacing={1}>
+            <DenseSelect
+              displayEmpty
+              value={localRefCountOp}
+              onChange={(e) => setLocalRefCountOp(e.target.value)}
+              sx={{ minWidth: 140 }}
+            >
+              <SquareMenuItem value="">
+                <ListItemText primary={<em>{t("user.all")}</em>} slotProps={{ primary: { variant: "body2" } }} />
+              </SquareMenuItem>
+              <SquareMenuItem value="stale">
+                <ListItemText primary={t("file.awaitingRecycle")} slotProps={{ primary: { variant: "body2" } }} />
+              </SquareMenuItem>
+              <SquareMenuItem value="gt">
+                <ListItemText primary={t("file.refCountGt")} slotProps={{ primary: { variant: "body2" } }} />
+              </SquareMenuItem>
+              <SquareMenuItem value="lt">
+                <ListItemText primary={t("file.refCountLt")} slotProps={{ primary: { variant: "body2" } }} />
+              </SquareMenuItem>
+              <SquareMenuItem value="eq">
+                <ListItemText primary={t("file.refCountEq")} slotProps={{ primary: { variant: "body2" } }} />
+              </SquareMenuItem>
+            </DenseSelect>
+            {localRefCountOp != "" && localRefCountOp != "stale" && (
+              <DenseFilledTextField
+                value={localRefCountValue}
+                onChange={(e) => setLocalRefCountValue(e.target.value.replace(/\D/g, ""))}
+                placeholder="0"
+                size="small"
+                inputProps={{ inputMode: "numeric" }}
+                sx={{ width: 80 }}
+              />
+            )}
+          </Stack>
         </SettingForm>
 
         <SettingForm title={t("file.storagePolicy")} noContainer lgWidth={12}>

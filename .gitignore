@@ -43,3 +43,5 @@ cloudreve
 # Monorepo staging dir for asset packaging (transient)
 /assets/
 pkg/util/test/
+.desloppify/
+scorecard.png

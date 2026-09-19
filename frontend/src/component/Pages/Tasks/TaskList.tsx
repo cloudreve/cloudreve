@@ -105,7 +105,7 @@ const TaskList = () => {
           title={t("application:navbar.taskQueue")}
         />
         {tasks.map((task) => (
-          <TaskCard key={task.id} task={task} />
+          <TaskCard key={task.id} task={task} onRetried={refresh} />
         ))}
         {nextPageToken != undefined && (
           <TaskCard onLoad={loadNextPage(tasks, nextPageToken)} loading={true} key={nextPageToken} />

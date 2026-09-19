@@ -1,7 +1,7 @@
-import { Box, Button, Checkbox, Popover, PopoverProps, Stack, styled } from "@mui/material";
+import { Box, Button, Checkbox, MenuItem, Popover, PopoverProps, Stack, styled } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { DenseFilledTextField, SmallFormControlLabel } from "../../Common/StyledComponents";
+import { DenseFilledTextField, DenseSelect, SmallFormControlLabel } from "../../Common/StyledComponents";
 import SettingForm from "../../Pages/Setting/SettingForm";
 import SinglePolicySelectionInput from "../Common/SinglePolicySelectionInput";
 
@@ -18,6 +18,8 @@ export interface FileFilterPopoverProps extends PopoverProps {
   setHasDirectLink: (hasDirectLink: boolean) => void;
   isUploading: boolean;
   setIsUploading: (isUploading: boolean) => void;
+  deleted: string;
+  setDeleted: (deleted: string) => void;
   clearFilters: () => void;
 }
 
@@ -40,6 +42,8 @@ const FileFilterPopover = ({
   setHasDirectLink,
   isUploading,
   setIsUploading,
+  deleted,
+  setDeleted,
   clearFilters,
   onClose,
   open,
@@ -54,6 +58,7 @@ const FileFilterPopover = ({
   const [localHasShareLink, setLocalHasShareLink] = useState(hasShareLink);
   const [localHasDirectLink, setLocalHasDirectLink] = useState(hasDirectLink);
   const [localIsUploading, setLocalIsUploading] = useState(isUploading);
+  const [localDeleted, setLocalDeleted] = useState(deleted);
 
   // Initialize local state when popup opens
   useEffect(() => {
@@ -64,6 +69,7 @@ const FileFilterPopover = ({
       setLocalHasShareLink(hasShareLink);
       setLocalHasDirectLink(hasDirectLink);
       setLocalIsUploading(isUploading);
+      setLocalDeleted(deleted);
     }
   }, [open]);
 
@@ -75,6 +81,7 @@ const FileFilterPopover = ({
     setHasShareLink(localHasShareLink);
     setHasDirectLink(localHasDirectLink);
     setIsUploading(localIsUploading);
+    setDeleted(localDeleted);
     onClose?.({}, "backdropClick");
   };
 
@@ -86,6 +93,7 @@ const FileFilterPopover = ({
     setLocalHasShareLink(false);
     setLocalHasDirectLink(false);
     setLocalIsUploading(false);
+    setLocalDeleted("");
     clearFilters();
     onClose?.({}, "backdropClick");
   };
@@ -141,6 +149,19 @@ const FileFilterPopover = ({
             emptyValue={-1}
             emptyText={t("user.all")}
           />
+        </SettingForm>
+
+        <SettingForm title={t("file.deletedState")} noContainer lgWidth={12}>
+          <DenseSelect
+            fullWidth
+            size="small"
+            value={localDeleted}
+            onChange={(e) => setLocalDeleted(e.target.value as string)}
+          >
+            <MenuItem value="">{t("user.all")}</MenuItem>
+            <MenuItem value="false">{t("file.liveOnly")}</MenuItem>
+            <MenuItem value="true">{t("file.trashOnly")}</MenuItem>
+          </DenseSelect>
         </SettingForm>
 
         <SettingForm title={t("file.otherConditions")} noContainer lgWidth={12}>

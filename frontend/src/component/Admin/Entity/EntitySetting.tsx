@@ -39,6 +39,7 @@ import EntityRow from "./EntityRow";
 export const StoragePolicyQuery = "storage_policy";
 export const UserQuery = "user";
 export const TypeQuery = "type";
+export const RefCountQuery = "ref_count";
 
 const EntitySetting = () => {
   const { t } = useTranslation("dashboard");
@@ -58,6 +59,7 @@ const EntitySetting = () => {
   const [storagePolicy, setStoragePolicy] = useQueryState(StoragePolicyQuery, { defaultValue: "" });
   const [user, setUser] = useQueryState(UserQuery, { defaultValue: "" });
   const [type, setType] = useQueryState(TypeQuery, { defaultValue: "" });
+  const [refCount, setRefCount] = useQueryState(RefCountQuery, { defaultValue: "" });
   const [count, setCount] = useState(0);
   const [selected, setSelected] = useState<readonly number[]>([]);
   const filterPopupState = usePopupState({
@@ -79,11 +81,12 @@ const EntitySetting = () => {
     setStoragePolicy("");
     setUser("");
     setType("");
-  }, [setStoragePolicy, setUser, setType]);
+    setRefCount("");
+  }, [setStoragePolicy, setUser, setType, setRefCount]);
 
   useEffect(() => {
     fetchEntities();
-  }, [page, pageSize, orderBy, orderDirection, storagePolicy, user, type]);
+  }, [page, pageSize, orderBy, orderDirection, storagePolicy, user, type, refCount]);
 
   const fetchEntities = () => {
     setLoading(true);
@@ -107,6 +110,10 @@ const EntitySetting = () => {
 
     if (type) {
       params.conditions!.entity_type = type;
+    }
+
+    if (refCount) {
+      params.conditions!.entity_ref_count = refCount;
     }
 
     dispatch(getEntityList(params))
@@ -202,6 +209,8 @@ const EntitySetting = () => {
             setOwner={setUser}
             type={type !== "" ? parseInt(type) : undefined}
             setType={(type) => setType(type !== undefined ? type.toString() : "")}
+            refCount={refCount}
+            setRefCount={setRefCount}
             clearFilters={clearFilters}
           />
 

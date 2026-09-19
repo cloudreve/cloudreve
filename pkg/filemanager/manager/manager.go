@@ -127,6 +127,7 @@ type (
 		AllowEdit       bool
 		PreviewOnly     bool
 		UploadOnly      bool
+		Note            string
 	}
 
 	FullTextSearchResults struct {
@@ -164,9 +165,21 @@ func NewFileManager(dep dependency.Dep, u *ent.User) FileManager {
 		l:        dep.Logger(),
 		user:     u,
 		settings: dep.SettingProvider(),
-		fs: dbfs.NewDatabaseFS(u, dep.FileClient(), dep.ShareClient(), dep.Logger(), dep.LockSystem(),
-			dep.SettingProvider(), dep.StoragePolicyClient(), dep.HashIDEncoder(), dep.UserClient(), dep.KV(), dep.NavigatorStateKV(),
-			dep.DirectLinkClient(), dep.EncryptorFactory(context.TODO()), dep.EventHub()),
+		fs: dbfs.NewDatabaseFS(u, dbfs.DBFSDependencies{
+			FileClient:          dep.FileClient(),
+			ShareClient:         dep.ShareClient(),
+			UserClient:          dep.UserClient(),
+			StoragePolicyClient: dep.StoragePolicyClient(),
+			DirectLinkClient:    dep.DirectLinkClient(),
+			Logger:              dep.Logger(),
+			LockSystem:          dep.LockSystem(),
+			SettingProvider:     dep.SettingProvider(),
+			Hasher:              dep.HashIDEncoder(),
+			Cache:               dep.KV(),
+			StateKV:             dep.NavigatorStateKV(),
+			EncryptorFactory:    dep.EncryptorFactory(context.TODO()),
+			EventHub:            dep.EventHub(),
+		}),
 		kv:           dep.KV(),
 		config:       config,
 		auth:         dep.GeneralAuth(),

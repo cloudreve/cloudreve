@@ -61,6 +61,7 @@ export interface GroupSetting {
   max_walked_files?: number;
   trash_retention?: number;
   redirected_source?: boolean;
+  login_ip_whitelist?: string[];
 }
 
 export interface AdminListGroupResponse {
@@ -123,9 +124,15 @@ export interface CommonMixin {
   deleted_at?: string;
 }
 
+export enum PolicyStatus {
+  active = "active",
+  suspended = "suspended",
+}
+
 export interface StoragePolicy extends CommonMixin {
   name: string;
   type: PolicyType;
+  status?: PolicyStatus;
   server?: string;
   bucket_name?: string;
   is_private?: boolean;
@@ -217,6 +224,7 @@ export interface PolicySetting {
   is_file_type_deny_list?: boolean;
   file_regexp?: string;
   is_name_regexp_deny_list?: boolean;
+  allow_native_name?: boolean;
   od_redirect?: string;
   custom_proxy?: boolean;
   proxy_server?: string;
@@ -256,6 +264,9 @@ export interface User extends CommonMixin {
   avatar?: string;
   credit?: number;
   group_expires?: string;
+  ban_expires?: string;
+  ban_reason?: string;
+  last_login?: string;
   notify_date?: string;
   group_users?: number;
   previous_group?: number;

@@ -3,6 +3,7 @@
 package storagepolicy
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent"
@@ -26,6 +27,8 @@ const (
 	FieldName = "name"
 	// FieldType holds the string denoting the type field in the database.
 	FieldType = "type"
+	// FieldStatus holds the string denoting the status field in the database.
+	FieldStatus = "status"
 	// FieldServer holds the string denoting the server field in the database.
 	FieldServer = "server"
 	// FieldBucketName holds the string denoting the bucket_name field in the database.
@@ -94,6 +97,7 @@ var Columns = []string{
 	FieldDeletedAt,
 	FieldName,
 	FieldType,
+	FieldStatus,
 	FieldServer,
 	FieldBucketName,
 	FieldIsPrivate,
@@ -134,6 +138,32 @@ var (
 	DefaultSettings *types.PolicySetting
 )
 
+// Status defines the type for the "status" enum field.
+type Status string
+
+// StatusActive is the default value of the Status enum.
+const DefaultStatus = StatusActive
+
+// Status values.
+const (
+	StatusActive    Status = "active"
+	StatusSuspended Status = "suspended"
+)
+
+func (s Status) String() string {
+	return string(s)
+}
+
+// StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
+func StatusValidator(s Status) error {
+	switch s {
+	case StatusActive, StatusSuspended:
+		return nil
+	default:
+		return fmt.Errorf("storagepolicy: invalid enum value for status field: %q", s)
+	}
+}
+
 // OrderOption defines the ordering options for the StoragePolicy queries.
 type OrderOption func(*sql.Selector)
 
@@ -165,6 +195,11 @@ func ByName(opts ...sql.OrderTermOption) OrderOption {
 // ByType orders the results by the type field.
 func ByType(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldType, opts...).ToFunc()
+}
+
+// ByStatus orders the results by the status field.
+func ByStatus(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldStatus, opts...).ToFunc()
 }
 
 // ByServer orders the results by the server field.

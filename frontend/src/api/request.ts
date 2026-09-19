@@ -137,6 +137,7 @@ export const Code = {
   IncorrectPassword: 40069,
   LockConflict: 40073,
   StaleVersion: 40076,
+  ObjectExist: 40004,
   BatchOperationNotFullyCompleted: 40081,
   DomainNotLicensed: 40087,
   AnonymouseAccessDenied: 40088,

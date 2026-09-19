@@ -126,6 +126,9 @@ func (m *ExtractArchiveTask) Do(ctx context.Context) (task.Status, error) {
 	}
 	m.state = state
 
+	// Prefer the node hosting the source file's storage policy.
+	preferPolicyNode(ctx, dep, &m.state.NodeState, m.state.Uri)
+
 	// select node
 	node, err := allocateNode(ctx, dep, &m.state.NodeState, types.NodeCapabilityExtractArchive)
 	if err != nil {
@@ -375,7 +378,7 @@ func (m *ExtractArchiveTask) masterExtractArchive(ctx context.Context, dep depen
 			return nil
 		}
 
-		rawPath := util.FormSlash(f.NameInArchive)
+		rawPath := util.FormSlash(strings.ToValidUTF8(f.NameInArchive, "�"))
 		savePath := dst.JoinRaw(rawPath)
 
 		// If file mask is not empty, check if the path is in the mask
@@ -751,7 +754,7 @@ func (m *SlaveExtractArchiveTask) Do(ctx context.Context) (task.Status, error) {
 			return nil
 		}
 
-		rawPath := util.FormSlash(f.NameInArchive)
+		rawPath := util.FormSlash(strings.ToValidUTF8(f.NameInArchive, "�"))
 		savePath := dst.JoinRaw(rawPath)
 
 		// If file mask is not empty, check if the path is in the mask

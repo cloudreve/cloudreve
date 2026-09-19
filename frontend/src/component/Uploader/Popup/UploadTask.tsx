@@ -5,11 +5,13 @@ import MuiAccordionSummary from "@mui/material/AccordionSummary";
 import Chip from "@mui/material/Chip";
 import { lighten, useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
+import dayjs from "dayjs";
 import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FileType } from "../../../api/explorer.ts";
 import { navigateToPath } from "../../../redux/thunks/filemanager.ts";
 import { sizeToString } from "../../../util";
+import { formatDuration } from "../../../util/datetime.ts";
 import { NoWrapBox } from "../../Common/StyledComponents.tsx";
 import FileTypeIcon from "../../FileManager/Explorer/FileTypeIcon.tsx";
 import ArrowClockwiseFilled from "../../Icons/ArrowClockwiseFilled.tsx";
@@ -68,6 +70,16 @@ const getSpeedText = (speed: number, speedAvg: number, useSpeedAvg: boolean) => 
   }
 
   return `${sizeToString(displayedSpeed ? displayedSpeed : 0)}/s`;
+};
+
+// ETA from remaining bytes over the displayed speed; empty when speed is
+// unknown or zero.
+const getEtaText = (speed: number, speedAvg: number, useSpeedAvg: boolean, loaded: number, total: number) => {
+  const displayedSpeed = useSpeedAvg ? speedAvg : speed;
+  if (!displayedSpeed || displayedSpeed <= 0 || total <= loaded) {
+    return "";
+  }
+  return formatDuration(dayjs.duration(Math.ceil((total - loaded) / displayedSpeed), "seconds"));
 };
 
 const getErrMsg = (error?: Error) => {
@@ -165,6 +177,7 @@ export default function UploadTask({
         );
       case Status.processing:
         if (progress) {
+          const eta = getEtaText(speed, speedAvg, useAvgSpeed, progress.total.loaded, progress.total.size);
           return (
             <div>
               {t("progressDescriptionFull", {
@@ -172,6 +185,7 @@ export default function UploadTask({
                 uploaded: sizeToString(progress.total.loaded),
                 total: sizeToString(progress.total.size),
                 percentage: progress.total.percent.toFixed(2),
+                eta: eta ? t("etaSuffix", { eta }) : "",
               })}
             </div>
           );

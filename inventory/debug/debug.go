@@ -5,7 +5,7 @@ import (
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"fmt"
-	"github.com/google/uuid"
+	"github.com/gofrs/uuid"
 	"time"
 )
 
@@ -85,7 +85,7 @@ func (d *DebugDriver) Tx(ctx context.Context) (dialect.Tx, error) {
 	if err != nil {
 		return nil, err
 	}
-	id := uuid.New().String()
+	id := uuid.Must(uuid.NewV4()).String()
 	d.log(ctx, fmt.Sprintf("driver.Tx(%s): started", id))
 	return &DebugTx{tx, id, d.log, ctx}, nil
 }
@@ -102,7 +102,7 @@ func (d *DebugDriver) BeginTx(ctx context.Context, opts *sql.TxOptions) (dialect
 	if err != nil {
 		return nil, err
 	}
-	id := uuid.New().String()
+	id := uuid.Must(uuid.NewV4()).String()
 	d.log(ctx, fmt.Sprintf("driver.BeginTx(%s): started", id))
 	return &DebugTx{tx, id, d.log, ctx}, nil
 }

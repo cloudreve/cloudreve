@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -42,9 +44,16 @@ type (
 	}
 	RemoteDownloadTaskPhase string
 	RemoteDownloadTaskState struct {
-		SrcFileUri         string                 `json:"src_file_uri,omitempty"`
-		SrcUri             string                 `json:"src_uri,omitempty"`
-		Dst                string                 `json:"dst,omitempty"`
+		SrcFileUri string `json:"src_file_uri,omitempty"`
+		SrcUri     string `json:"src_uri,omitempty"`
+		Dst        string `json:"dst,omitempty"`
+		FileName   string `json:"file_name,omitempty"`
+		// Provider pins the task to a node offering this downloader provider
+		// (e.g. "aria2"/"qbittorrent"). Empty = pool picks any capable node.
+		Provider           string                 `json:"provider,omitempty"`
+		HTTPUsername       string                 `json:"http_username,omitempty"`
+		HTTPPassword       string                 `json:"http_password,omitempty"`
+		HTTPHeaders        []string               `json:"http_headers,omitempty"`
 		Handle             *downloader.TaskHandle `json:"handle,omitempty"`
 		Status             *downloader.TaskStatus `json:"status,omitempty"`
 		NodeState          `json:",inline"`
@@ -54,6 +63,10 @@ type (
 		GetTaskStatusTried int                     `json:"get_task_status_tried,omitempty"`
 		Transferred        map[int]interface{}     `json:"transferred,omitempty"`
 		Failed             int                     `json:"failed,omitempty"`
+		// ResumeMonitorAfterTransfer marks an early transfer batch taken while
+		// the download is still running: after it completes, return to Monitor
+		// instead of awaiting seeding.
+		ResumeMonitorAfterTransfer bool `json:"resume_monitor_after_transfer,omitempty"`
 	}
 )
 
@@ -81,13 +94,31 @@ func init() {
 	queue.RegisterResumableTaskFactory(queue.RemoteDownloadTaskType, NewRemoteDownloadTaskFromModel)
 }
 
+// RemoteDownloadTaskOption carries optional per-task parameters supplied by
+// the user: a custom output file name and HTTP basic-auth credentials for
+// plain HTTP(S) sources.
+type RemoteDownloadTaskOption struct {
+	FileName     string
+	Provider     string
+	HTTPUsername string
+	HTTPPassword string
+	HTTPHeaders  []string
+}
+
 // NewRemoteDownloadTask creates a new RemoteDownloadTask
-func NewRemoteDownloadTask(ctx context.Context, src string, srcFile, dst string) (queue.Task, error) {
+func NewRemoteDownloadTask(ctx context.Context, src string, srcFile, dst string, opts *RemoteDownloadTaskOption) (queue.Task, error) {
 	state := &RemoteDownloadTaskState{
 		SrcUri:     src,
 		SrcFileUri: srcFile,
 		Dst:        dst,
 		NodeState:  NodeState{},
+	}
+	if opts != nil {
+		state.FileName = sanitizeFileName(opts.FileName)
+		state.Provider = opts.Provider
+		state.HTTPUsername = opts.HTTPUsername
+		state.HTTPPassword = opts.HTTPPassword
+		state.HTTPHeaders = opts.HTTPHeaders
 	}
 	stateBytes, err := json.Marshal(state)
 	if err != nil {
@@ -126,6 +157,12 @@ func (m *RemoteDownloadTask) Do(ctx context.Context) (task.Status, error) {
 		return task.StatusError, fmt.Errorf("failed to unmarshal state: %w", err)
 	}
 	m.state = state
+
+	// Resolve a user-picked downloader provider to a preferred node. Runs only
+	// until a node is locked in; falls back to any capable node if no match.
+	if m.state.NodeID == 0 && m.state.Provider != "" {
+		m.state.NodeID = providerNodeID(ctx, dep, m.state.Provider)
+	}
 
 	// select node
 	node, err := allocateNode(ctx, dep, &m.state.NodeState, types.NodeCapabilityRemoteDownload)
@@ -214,8 +251,10 @@ func (m *RemoteDownloadTask) createDownloadTask(ctx context.Context, dep depende
 		torrentUrl = torrentUrls[0].Url
 	}
 
+	options, taskUrl := m.buildDownloadOptions(ctx, user.Edges.Group.Settings.RemoteDownloadOptions, torrentUrl)
+
 	// Create download task
-	handle, err := m.d.CreateTask(ctx, torrentUrl, user.Edges.Group.Settings.RemoteDownloadOptions)
+	handle, err := m.d.CreateTask(ctx, taskUrl, options)
 	if err != nil {
 		return task.StatusError, fmt.Errorf("failed to create download task: %w", err)
 	}
@@ -223,6 +262,58 @@ func (m *RemoteDownloadTask) createDownloadTask(ctx context.Context, dep depende
 	m.state.Handle = handle
 	m.state.Phase = RemoteDownloadTaskPhaseMonitor
 	return task.StatusSuspending, nil
+}
+
+// buildDownloadOptions overlays per-task options (custom file name, HTTP
+// credentials) onto the group's remote-download options. Custom name and
+// credentials only apply to plain HTTP(S) source URLs on aria2; qBittorrent
+// accepts a torrent rename and carries HTTP auth in the URL userinfo.
+func (m *RemoteDownloadTask) buildDownloadOptions(ctx context.Context, base map[string]interface{}, srcUrl string) (map[string]interface{}, string) {
+	if m.state.FileName == "" && m.state.HTTPUsername == "" && len(m.state.HTTPHeaders) == 0 {
+		return base, srcUrl
+	}
+
+	options := maps.Clone(base)
+	if options == nil {
+		options = map[string]interface{}{}
+	}
+
+	isHttpSrc := m.state.SrcFileUri == "" && (strings.HasPrefix(m.state.SrcUri, "http://") || strings.HasPrefix(m.state.SrcUri, "https://"))
+	switch m.node.Settings(ctx).Provider {
+	case types.DownloaderProviderQBittorrent:
+		if m.state.FileName != "" {
+			options["rename"] = m.state.FileName
+		}
+		if isHttpSrc {
+			if m.state.HTTPUsername != "" {
+				if u, err := url.Parse(srcUrl); err == nil {
+					u.User = url.UserPassword(m.state.HTTPUsername, m.state.HTTPPassword)
+					srcUrl = u.String()
+				}
+			}
+			// qBittorrent's add API only accepts a cookie field, not arbitrary
+			// headers — pass through any Cookie: line the user supplied.
+			for _, h := range m.state.HTTPHeaders {
+				if k, v, ok := strings.Cut(h, ":"); ok && strings.EqualFold(strings.TrimSpace(k), "cookie") {
+					options["cookie"] = strings.TrimSpace(v)
+				}
+			}
+		}
+	default:
+		if isHttpSrc {
+			if m.state.FileName != "" {
+				options["out"] = m.state.FileName
+			}
+			if m.state.HTTPUsername != "" {
+				options["http-user"] = m.state.HTTPUsername
+				options["http-passwd"] = m.state.HTTPPassword
+			}
+			if len(m.state.HTTPHeaders) > 0 {
+				options["header"] = m.state.HTTPHeaders
+			}
+		}
+	}
+	return options, srcUrl
 }
 
 // buildSSRFOptions composes the SSRF policy for a download: the assigned
@@ -313,6 +404,13 @@ func (m *RemoteDownloadTask) monitor(ctx context.Context, dep dependency.Dep) (t
 		m.l.Info("Download task seeding completed")
 		return task.StatusCompleted, nil
 	case downloader.StatusDownloading:
+		if m.hasEarlyTransferCandidates(status) {
+			m.l.Info("Some files already completed, starting early transfer.")
+			m.state.Phase = RemoteDownloadTaskPhaseTransfer
+			m.state.ResumeMonitorAfterTransfer = true
+			m.ResumeAfter(0)
+			return task.StatusSuspending, nil
+		}
 		m.ResumeAfter(resumeAfter)
 		return task.StatusSuspending, nil
 	case downloader.StatusUnknown, downloader.StatusError:
@@ -321,6 +419,19 @@ func (m *RemoteDownloadTask) monitor(ctx context.Context, dep dependency.Dep) (t
 
 	m.ResumeAfter(resumeAfter)
 	return task.StatusSuspending, nil
+}
+
+// hasEarlyTransferCandidates reports whether any selected file finished
+// downloading but has not been transferred to the user's storage yet.
+func (m *RemoteDownloadTask) hasEarlyTransferCandidates(status *downloader.TaskStatus) bool {
+	for _, f := range status.Files {
+		if f.Selected && f.Progress >= 1 {
+			if _, ok := m.state.Transferred[f.Index]; !ok {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (m *RemoteDownloadTask) slaveTransfer(ctx context.Context, dep dependency.Dep) (task.Status, error) {
@@ -350,6 +461,11 @@ func (m *RemoteDownloadTask) slaveTransfer(ctx context.Context, dep dependency.D
 
 			// Skip already transferred
 			if _, ok := m.state.Transferred[f.Index]; ok {
+				continue
+			}
+
+			// During early transfer batches only completed files are picked.
+			if m.state.ResumeMonitorAfterTransfer && f.Progress < 1 {
 				continue
 			}
 
@@ -404,12 +520,30 @@ func (m *RemoteDownloadTask) slaveTransfer(ctx context.Context, dep dependency.D
 			}
 
 			m.l.Warning("Slave task %d failed to transfer %d files, retrying...", slaveTaskId, len(m.state.SlaveUploadState.Files)-len(m.state.SlaveUploadState.Transferred))
+			if m.state.ResumeMonitorAfterTransfer {
+				// Early transfer batch failed while the download continues -
+				// return to monitoring; the final transfer pass retries them.
+				m.state.ResumeMonitorAfterTransfer = false
+				m.state.Phase = RemoteDownloadTaskPhaseMonitor
+				m.ResumeAfter(0)
+				return task.StatusSuspending, nil
+			}
 			return task.StatusError, fmt.Errorf(
 				"slave task failed to transfer %d files, first 5 errors: %s",
 				len(m.state.SlaveUploadState.Files)-len(m.state.SlaveUploadState.Transferred),
 				m.state.SlaveUploadState.First5TransferErrors,
 			)
 		} else {
+			if m.state.ResumeMonitorAfterTransfer {
+				for i := range m.state.SlaveUploadState.Transferred {
+					m.state.Transferred[m.state.SlaveUploadState.Files[i].Index] = struct{}{}
+				}
+				m.state.SlaveUploadTaskID = 0
+				m.state.ResumeMonitorAfterTransfer = false
+				m.state.Phase = RemoteDownloadTaskPhaseMonitor
+				m.ResumeAfter(0)
+				return task.StatusSuspending, nil
+			}
 			m.state.Phase = RemoteDownloadTaskPhaseAwaitSeeding
 			m.ResumeAfter(0)
 			return task.StatusSuspending, nil
@@ -443,6 +577,11 @@ func (m *RemoteDownloadTask) masterTransfer(ctx context.Context, dep dependency.
 	allFiles := make([]downloader.TaskFile, 0, len(m.state.Status.Files))
 	for _, f := range m.state.Status.Files {
 		if f.Selected {
+			// Early transfer batches only pick completed files; files still
+			// downloading are left for the final transfer pass.
+			if m.state.ResumeMonitorAfterTransfer && f.Progress < 1 {
+				continue
+			}
 			allFiles = append(allFiles, f)
 			totalSize += f.Size
 			totalCount++
@@ -546,12 +685,27 @@ func (m *RemoteDownloadTask) masterTransfer(ctx context.Context, dep dependency.
 
 	wg.Wait()
 	if failed > 0 {
+		if m.state.ResumeMonitorAfterTransfer {
+			// Early batch failed while the download continues - return to
+			// monitoring; the final transfer pass retries the failed files.
+			m.l.Warning("Early transfer batch failed for %d file(s), will retry after download completes.", failed)
+			m.state.ResumeMonitorAfterTransfer = false
+			m.state.Phase = RemoteDownloadTaskPhaseMonitor
+			m.ResumeAfter(0)
+			return task.StatusSuspending, nil
+		}
 		m.state.Failed = int(failed)
 		m.l.Error("Failed to transfer %d file(s).", failed)
 		return task.StatusError, fmt.Errorf("failed to transfer %d file(s), first 5 errors: %s", failed, ae.FormatFirstN(5))
 	}
 
 	m.l.Info("All files transferred.")
+	if m.state.ResumeMonitorAfterTransfer {
+		m.state.ResumeMonitorAfterTransfer = false
+		m.state.Phase = RemoteDownloadTaskPhaseMonitor
+		m.ResumeAfter(0)
+		return task.StatusSuspending, nil
+	}
 	m.state.Phase = RemoteDownloadTaskPhaseAwaitSeeding
 	return task.StatusSuspending, nil
 }
@@ -679,6 +833,31 @@ func (m *RemoteDownloadTask) Progress(ctx context.Context) queue.Progresses {
 }
 
 func sanitizeFileName(name string) string {
-	r := strings.NewReplacer("\\", "_", ":", "_", "*", "_", "?", "_", "\"", "_", "<", "_", ">", "_", "|", "_")
+	r := strings.NewReplacer("\\", "_", "/", "_", ":", "_", "*", "_", "?", "_", "\"", "_", "<", "_", ">", "_", "|", "_")
 	return r.Replace(name)
+}
+
+// providerNodeID resolves a downloader provider name to the lowest-ID active
+// node offering it for remote download. Returns 0 when no node matches, which
+// makes the pool fall back to any capable node.
+func providerNodeID(ctx context.Context, dep dependency.Dep, provider string) int {
+	nodes, err := dep.NodeClient().ListActiveNodes(ctx, nil)
+	if err != nil {
+		return 0
+	}
+	return PickProviderNode(nodes, provider)
+}
+
+func PickProviderNode(nodes []*ent.Node, provider string) int {
+	best := 0
+	for _, n := range nodes {
+		if n.Capabilities == nil || !n.Capabilities.Enabled(int(types.NodeCapabilityRemoteDownload)) ||
+			n.Settings == nil || string(n.Settings.Provider) != provider {
+			continue
+		}
+		if best == 0 || n.ID < best {
+			best = n.ID
+		}
+	}
+	return best
 }

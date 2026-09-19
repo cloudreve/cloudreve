@@ -30,6 +30,8 @@ export interface SiteConfig {
   register_enabled?: boolean;
   sso_enabled?: boolean;
   sso_display_name?: string;
+  sso_auto_redirect?: boolean;
+  download_cdn_routes?: { name: string; url: string }[];
   logo?: string;
   logo_light?: string;
   tos_url?: string;
@@ -54,6 +56,9 @@ export interface SiteConfig {
   thumb_exts?: string[];
   show_encryption_status?: boolean;
   full_text_search?: boolean;
+  remote_download_providers?: string[];
+  share_default_private?: boolean;
+  default_share_links_in_profile?: string;
 }
 
 export interface CaptchaResponse {
@@ -65,6 +70,7 @@ export interface CustomNavItem {
   name: string;
   url: string;
   icon: string;
+  scope?: "public" | "user";
 }
 
 export interface CustomHTML {

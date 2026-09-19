@@ -246,6 +246,10 @@ type (
 	RenameFileService      struct {
 		Uri     string `json:"uri" binding:"required"`
 		NewName string `json:"new_name" binding:"required,min=1,max=255"`
+		// ExpectID optionally carries the hashid of the file the caller
+		// believes sits at Uri; the rename fails with a conflict if the
+		// resolved file differs (retried request after path reuse, #3565).
+		ExpectID string `json:"expect_id"`
 	}
 )
 
@@ -258,6 +262,14 @@ func (service *RenameFileService) Rename(c *gin.Context) (*FileResponse, error) 
 	uri, err := fs.NewUriFromString(service.Uri)
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
+	}
+
+	if service.ExpectID != "" {
+		expectID, err := dep.HashIDEncoder().Decode(service.ExpectID, hashid.FileID)
+		if err != nil {
+			return nil, serializer.NewError(serializer.CodeParamErr, "unknown expect_id", err)
+		}
+		util.WithValue(c, dbfs.ExpectedSourceIDsCtxKey{}, []int{expectID})
 	}
 
 	file, err := m.Rename(c, uri, service.NewName)
@@ -274,6 +286,16 @@ type (
 		Uris []string `json:"uris" binding:"required,min=1"`
 		Dst  string   `json:"dst" binding:"required"`
 		Copy bool     `json:"copy"`
+		// ExpectIDs optionally carries the hashids of the source files the
+		// caller selected, positionally aligned with Uris; a mismatch fails
+		// that entry with a conflict (#3565). An empty string entry skips
+		// the check for that position.
+		ExpectIDs []string `json:"expect_ids"`
+		// OnConflict selects the behaviour when a destination child with
+		// the same name exists: "skip" drops the colliding source,
+		// "overwrite" deletes the destination object first. Empty keeps
+		// the default fail-fast behaviour (#3159).
+		OnConflict string `json:"on_conflict" binding:"omitempty,eq=skip|eq=overwrite"`
 	}
 )
 
@@ -295,6 +317,28 @@ func (s *MoveFileService) Move(c *gin.Context) error {
 	dst, err := fs.NewUriFromString(s.Dst)
 	if err != nil {
 		return serializer.NewError(serializer.CodeParamErr, "unknown destination uri", err)
+	}
+
+	if len(s.ExpectIDs) > 0 {
+		if len(s.ExpectIDs) != len(s.Uris) {
+			return serializer.NewError(serializer.CodeParamErr, "expect_ids must align with uris", nil)
+		}
+		ids := make([]int, len(s.ExpectIDs))
+		for i, e := range s.ExpectIDs {
+			if e == "" {
+				continue
+			}
+			id, err := dep.HashIDEncoder().Decode(e, hashid.FileID)
+			if err != nil {
+				return serializer.NewError(serializer.CodeParamErr, "unknown expect_ids entry", err)
+			}
+			ids[i] = id
+		}
+		util.WithValue(c, dbfs.ExpectedSourceIDsCtxKey{}, ids)
+	}
+
+	if s.OnConflict != "" {
+		util.WithValue(c, dbfs.MoveConflictCtxKey{}, s.OnConflict)
 	}
 
 	return m.MoveOrCopy(c, uris, dst, s.Copy)

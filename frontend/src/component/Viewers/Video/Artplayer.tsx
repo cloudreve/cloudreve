@@ -82,7 +82,7 @@ const playM3u8 =
       hls.loadSource(url);
       hls.attachMedia(video);
       art.hls = hls;
-      art.on("destroy", () => hls.destroy());
+      hookMediaDestroy(art, "hls");
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = url;
     } else {
@@ -106,10 +106,33 @@ const playFlv = (video: HTMLVideoElement, url: string, art: Artplayer) => {
     flv.attachMediaElement(video);
     flv.load();
     art.flv = flv;
-    art.on("destroy", () => flv.destroy());
+    hookMediaDestroy(art, "flv");
   } else {
     art.notice.show = "Unsupported playback format: flv";
   }
+};
+
+// Registers a single destroy hook per media type. switchUrl() re-invokes the
+// customType handler and would otherwise stack one handler per player —
+// destroying a stale, already-destroyed instance (mpegts null-derefs, #3139).
+const hookedPlayers = new WeakMap<Artplayer, Set<string>>();
+const hookMediaDestroy = (art: Artplayer, key: "hls" | "flv") => {
+  let flags = hookedPlayers.get(art);
+  if (!flags) {
+    flags = new Set();
+    hookedPlayers.set(art, flags);
+  }
+  if (flags.has(key)) {
+    return;
+  }
+  flags.add(key);
+  art.on("destroy", () => {
+    try {
+      art[key]?.destroy();
+    } catch (e) {
+      console.warn(`Failed to destroy ${key} player:`, e);
+    }
+  });
 };
 
 export default function Player({

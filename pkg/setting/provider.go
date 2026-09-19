@@ -246,6 +246,12 @@ type (
 		SSO(ctx context.Context) *SSO
 		// EmailFilter returns the sign-up email restriction settings.
 		EmailFilter(ctx context.Context) *EmailFilter
+		// ShareDefaults returns the site-wide share defaults applied when a
+		// user has not overridden them in their personal settings.
+		ShareDefaults(ctx context.Context) *ShareDefaults
+		// DownloadCDNRoutes returns the configured alternative download
+		// endpoints users can pick from (e.g. CDN mirrors of the site).
+		DownloadCDNRoutes(ctx context.Context) []CDNRoute
 	}
 	UseFirstSiteUrlCtxKey = struct{}
 )
@@ -905,6 +911,7 @@ func (s *settingProvider) SSO(ctx context.Context) *SSO {
 		ClientSecret:    s.getString(ctx, "sso_client_secret", ""),
 		Scopes:          strings.Join(scopeList, " "),
 		RegisterEnabled: s.getBoolean(ctx, "sso_register_enabled", true),
+		AutoRedirect:    s.getBoolean(ctx, "sso_auto_redirect", false),
 	}
 }
 
@@ -929,11 +936,64 @@ func (s *settingProvider) EmailFilter(ctx context.Context) *EmailFilter {
 		Mode:              mode,
 		List:              list,
 		DisableSubAddress: s.getBoolean(ctx, "email_disable_subaddress", false),
+		SubAddressChars:   s.getString(ctx, "email_subaddress_chars", "+"),
 	}
 }
 
 func (s *settingProvider) ExposeUserEmail(ctx context.Context) bool {
 	return s.getBoolean(ctx, "expose_user_email", true)
+}
+
+// ShareDefaults holds the site-wide share defaults (#3390).
+type ShareDefaults struct {
+	// LinksInProfile is the default profile share visibility applied when a
+	// user's own share_links_in_profile is unset.
+	LinksInProfile types.ShareLinksInProfileLevel
+	// PrivateByDefault makes new shares default to private (random password).
+	PrivateByDefault bool
+}
+
+// CDNRoute is an alternative download endpoint offered to users when
+// downloading files, e.g. a CDN mirror fronting the site.
+type CDNRoute struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}
+
+func (s *settingProvider) DownloadCDNRoutes(ctx context.Context) []CDNRoute {
+	raw := s.getString(ctx, "download_cdn_routes", "")
+	routes := make([]CDNRoute, 0)
+	for _, line := range strings.Split(raw, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		name, u, found := strings.Cut(line, "=")
+		if !found {
+			continue
+		}
+		u = strings.TrimRight(strings.TrimSpace(u), "/")
+		parsed, err := url.Parse(u)
+		if err != nil || parsed.Scheme == "" || parsed.Host == "" ||
+			(parsed.Scheme != "http" && parsed.Scheme != "https") {
+			continue
+		}
+		routes = append(routes, CDNRoute{Name: strings.TrimSpace(name), URL: u})
+	}
+	return routes
+}
+
+func (s *settingProvider) ShareDefaults(ctx context.Context) *ShareDefaults {
+	level := types.ShareLinksInProfileLevel(s.getString(ctx, "default_share_links_in_profile", ""))
+	switch level {
+	case types.ProfilePublicShareOnly, types.ProfileAllShare, types.ProfileHideShare:
+	default:
+		level = types.ProfilePublicShareOnly
+	}
+	return &ShareDefaults{
+		LinksInProfile:   level,
+		PrivateByDefault: s.getBoolean(ctx, "share_default_private", false),
+	}
 }
 
 func (s *settingProvider) SiteBasic(ctx context.Context) *SiteBasic {

@@ -5,6 +5,7 @@ import (
 	rawsql "database/sql"
 	"database/sql/driver"
 	"fmt"
+	"strings"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -37,6 +38,12 @@ func InitializeDBClient(l logging.Logger,
 			return nil, fmt.Errorf("failed to migrate database: %w", err)
 		}
 	} else {
+		// Version is current, but additive schema changes (new columns)
+		// still need to reach existing databases between releases.
+		RepairHeatWaveNotSecondary(l, client, ctx)
+		if err := client.Schema.Create(ctx); err != nil {
+			return nil, fmt.Errorf("failed to apply additive schema changes: %w", err)
+		}
 		l.Info("Database schema is up to date.")
 	}
 
@@ -68,7 +75,7 @@ func NewRawEntClient(l logging.Logger, config conf.ConfigProvider) (*ent.Client,
 	// If Database connection string provided, use it directly.
 	if dbConfig.DatabaseURL != "" {
 		l.Info("Connect to database with connection string")
-		client, err = sql.Open(string(confDBType), dbConfig.DatabaseURL)
+		client, err = sql.Open(string(confDBType), ensureMySQLParseTime(confDBType, dbConfig.DatabaseURL))
 	} else {
 
 		switch confDBType {
@@ -136,6 +143,25 @@ func NewRawEntClient(l logging.Logger, config conf.ConfigProvider) (*ent.Client,
 	return ent.NewClient(driverOpt), nil
 }
 
+// ensureMySQLParseTime appends parseTime=True to a user-provided MySQL DSN
+// when absent. Without it the driver returns DATETIME columns as strings,
+// which fail to scan into time.Time fields (cloudreve/cloudreve#2872).
+func ensureMySQLParseTime(dbType conf.DBType, dsn string) string {
+	if dbType != conf.MySqlDB {
+		return dsn
+	}
+	idx := strings.IndexByte(dsn, '?')
+	if idx < 0 {
+		return dsn + "?parseTime=True"
+	}
+	for _, p := range strings.Split(dsn[idx+1:], "&") {
+		if strings.HasPrefix(strings.ToLower(p), "parsetime=") {
+			return dsn
+		}
+	}
+	return dsn + "&parseTime=True"
+}
+
 type sqlite3Driver struct {
 	*sqlite.Driver
 }
@@ -149,9 +175,18 @@ func (d sqlite3Driver) Open(name string) (conn driver.Conn, err error) {
 	if err != nil {
 		return
 	}
-	_, err = conn.(sqlite3DriverConn).Exec("PRAGMA foreign_keys = ON;", nil)
-	if err != nil {
-		_ = conn.Close()
+	// WAL lets readers coexist with the writer; busy_timeout makes a brief
+	// lock wait instead of failing instantly with SQLITE_BUSY (#2917).
+	for _, pragma := range []string{
+		"PRAGMA journal_mode = WAL;",
+		"PRAGMA synchronous = NORMAL;",
+		"PRAGMA busy_timeout = 5000;",
+		"PRAGMA foreign_keys = ON;",
+	} {
+		if _, err = conn.(sqlite3DriverConn).Exec(pragma, nil); err != nil {
+			_ = conn.Close()
+			return
+		}
 	}
 	return
 }

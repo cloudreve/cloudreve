@@ -19,6 +19,31 @@ import (
 	"github.com/samber/lo"
 )
 
+// followTxClients swaps each client field to its tx-bound instance from the
+// transaction in ctx, returning a revert closure that restores the originals.
+func followTxClients[T inventory.TxOperator](ctx context.Context, fields ...*T) (func(), error) {
+	if _, ok := ctx.Value(inventory.TxCtx{}).(*inventory.Tx); !ok {
+		return nil, fmt.Errorf("navigator: no inherited transaction found in context")
+	}
+
+	olds := make([]T, len(fields))
+	for i, f := range fields {
+		newClient, _, _, err := inventory.WithTx(ctx, *f)
+		if err != nil {
+			return nil, err
+		}
+
+		olds[i] = *f
+		*f = newClient
+	}
+
+	return func() {
+		for i, f := range fields {
+			*f = olds[i]
+		}
+	}, nil
+}
+
 var (
 	ErrFsNotInitialized = fmt.Errorf("fs not initialized")
 	ErrPermissionDenied = serializer.NewError(serializer.CodeNoPermissionErr, "Permission denied", nil)
@@ -32,6 +57,17 @@ var (
 	searchLimitedOrderByOption = []string{"created_at"}
 	fullOrderDirectionOption   = []string{"asc", "desc"}
 )
+
+// baseNavigatorProps builds the shared NavigatorProps skeleton; navigators
+// adjust search options on top.
+func baseNavigatorProps(capability *boolset.BooleanSet, maxPageSize int) *fs.NavigatorProps {
+	return &fs.NavigatorProps{
+		Capability:            capability,
+		OrderDirectionOptions: fullOrderDirectionOption,
+		OrderByOptions:        fullOrderByOption,
+		MaxPageSize:           maxPageSize,
+	}
+}
 
 type (
 	// Navigator is a navigator for database file system.

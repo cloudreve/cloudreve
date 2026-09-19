@@ -16,8 +16,7 @@ import (
 // StartLoginAuthn 开始注册WebAuthn登录
 func StartLoginAuthn(c *gin.Context) {
 	res, err := user.PreparePasskeyLogin(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 
@@ -28,9 +27,7 @@ func StartLoginAuthn(c *gin.Context) {
 func FinishLoginAuthn(c *gin.Context) {
 	service := ParametersFromContext[*user.FinishPasskeyLoginService](c, user.FinishPasskeyLoginParameterCtx{})
 	u, err := service.FinishPasskeyLogin(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -40,8 +37,7 @@ func FinishLoginAuthn(c *gin.Context) {
 // StartRegAuthn 开始注册WebAuthn信息
 func StartRegAuthn(c *gin.Context) {
 	res, err := user.PreparePasskeyRegister(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 
@@ -52,8 +48,7 @@ func StartRegAuthn(c *gin.Context) {
 func FinishRegAuthn(c *gin.Context) {
 	service := ParametersFromContext[*user.FinishPasskeyRegisterService](c, user.FinishPasskeyRegisterParameterCtx{})
 	res, err := service.FinishPasskeyRegister(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 
@@ -64,8 +59,7 @@ func FinishRegAuthn(c *gin.Context) {
 func UserDeletePasskey(c *gin.Context) {
 	service := ParametersFromContext[*user.DeletePasskeyService](c, user.DeletePasskeyParameterCtx{})
 	err := service.DeletePasskey(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
+	if respondErr(c, err) {
 		return
 	}
 
@@ -76,9 +70,7 @@ func UserDeletePasskey(c *gin.Context) {
 func UserLoginValidation(c *gin.Context) {
 	service := ParametersFromContext[*user.UserLoginService](c, user.LoginParameterCtx{})
 	expectedUser, twoFaSession, err := service.Login(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -97,9 +89,7 @@ func UserLoginValidation(c *gin.Context) {
 func UserLogin2FAValidation(c *gin.Context) {
 	service := ParametersFromContext[*user.OtpValidationService](c, user.OtpValidationParameterCtx{})
 	expectedUser, err := service.Verify2FA(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -110,9 +100,7 @@ func UserLogin2FAValidation(c *gin.Context) {
 // UserIssueToken generates new token pair for user
 func UserIssueToken(c *gin.Context) {
 	resp, err := user.IssueToken(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -125,9 +113,7 @@ func UserIssueToken(c *gin.Context) {
 func UserRefreshToken(c *gin.Context) {
 	service := ParametersFromContext[*user.RefreshTokenService](c, user.RefreshTokenParameterCtx{})
 	resp, err := service.Refresh(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -145,9 +131,7 @@ func UserRegister(c *gin.Context) {
 // UserSendReset 发送密码重设邮件
 func UserSendReset(c *gin.Context) {
 	service := ParametersFromContext[*user.UserResetEmailService](c, user.UserResetEmailParameterCtx{})
-	if err := service.Reset(c); err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if err := service.Reset(c); respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{})
@@ -157,9 +141,7 @@ func UserSendReset(c *gin.Context) {
 func UserReset(c *gin.Context) {
 	service := ParametersFromContext[*user.UserResetService](c, user.UserResetParameterCtx{})
 	res, err := service.Reset(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 	c.JSON(200, serializer.Response{Data: res})
@@ -170,13 +152,23 @@ func UserActivate(c *gin.Context) {
 	c.JSON(200, user.ActivateUser(c))
 }
 
+// UserRequestEmailChange starts the self-service email change flow.
+func UserRequestEmailChange(c *gin.Context) {
+	service := ParametersFromContext[*user.RequestEmailChangeService](c, user.RequestEmailChangeParamCtx{})
+	respond(c, service.Request(c), serializer.Response{})
+}
+
+// UserActivateEmailChange applies the pending email change from the signed
+// confirmation link.
+func UserActivateEmailChange(c *gin.Context) {
+	respond(c, user.ActivateEmailChange(c), serializer.Response{})
+}
+
 // UserSignOut 用户退出登录
 func UserSignOut(c *gin.Context) {
 	service := ParametersFromContext[*user.RefreshTokenService](c, user.RefreshTokenParameterCtx{})
 	res, err := service.Delete(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -196,9 +188,7 @@ func UserMe(c *gin.Context) {
 // UserGet 获取用户信息
 func UserGet(c *gin.Context) {
 	u, err := user.GetUser(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -215,9 +205,7 @@ func UserGet(c *gin.Context) {
 // UserStorage 获取用户的存储信息
 func UserStorage(c *gin.Context) {
 	res, err := user.GetUserCapacity(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -229,9 +217,7 @@ func UserStorage(c *gin.Context) {
 // UserSetting 获取用户设定
 func UserSetting(c *gin.Context) {
 	res, err := user.GetUserSettings(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -242,21 +228,14 @@ func UserSetting(c *gin.Context) {
 
 // UploadAvatar 从文件上传头像
 func UploadAvatar(c *gin.Context) {
-	if err := user.UpdateUserAvatar(c); err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		return
-	}
-
-	c.JSON(200, serializer.Response{})
+	respond(c, user.UpdateUserAvatar(c), serializer.Response{})
 }
 
 // GetUserAvatar 获取用户头像
 func GetUserAvatar(c *gin.Context) {
 	service := ParametersFromContext[*user.GetAvatarService](c, user.GetAvatarServiceParamsCtx{})
 	err := service.Get(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 }
@@ -265,9 +244,7 @@ func GetUserAvatar(c *gin.Context) {
 func UpdateOption(c *gin.Context) {
 	service := ParametersFromContext[*user.PatchUserSetting](c, user.PatchUserSettingParamsCtx{})
 	err := service.Patch(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -320,9 +297,7 @@ func UpdateOption(c *gin.Context) {
 // UserInit2FA 初始化二步验证
 func UserInit2FA(c *gin.Context) {
 	secret, err := user.Init2FA(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -346,9 +321,7 @@ func UserPerformCopySession(c *gin.Context) {
 func UserPrepareLogin(c *gin.Context) {
 	service := ParametersFromContext[*user.PrepareLoginService](c, user.PrepareLoginParameterCtx{})
 	res, err := service.Prepare(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -372,9 +345,7 @@ func UserSSOCallback(c *gin.Context) {
 func UserSSOExchange(c *gin.Context) {
 	service := ParametersFromContext[*user.SSOExchangeService](c, user.SSOExchangeParameterCtx{})
 	res, err := service.SSOExchange(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -385,9 +356,7 @@ func UserSSOExchange(c *gin.Context) {
 func UserSearch(c *gin.Context) {
 	service := ParametersFromContext[*user.SearchUserService](c, user.SearchUserParamCtx{})
 	u, err := service.Search(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -403,9 +372,7 @@ func UserSearch(c *gin.Context) {
 func ListPublicShare(c *gin.Context) {
 	service := ParametersFromContext[*share.ListShareService](c, share.ListShareParamCtx{})
 	resp, err := service.ListInUserProfile(c, hashid.FromContext(c))
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 

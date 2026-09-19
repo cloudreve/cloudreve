@@ -1,5 +1,6 @@
 import {
   Box,
+  Checkbox,
   Chip,
   Grid,
   ListItemIcon,
@@ -30,6 +31,7 @@ import TimeBadge from "../../Common/TimeBadge.tsx";
 import { DenseDivider, SquareMenuItem } from "../../FileManager/ContextMenu/ContextMenu.tsx";
 import FileTypeIcon from "../../FileManager/Explorer/FileTypeIcon.tsx";
 import Clipboard from "../../Icons/Clipboard.tsx";
+import CloudDownloadOutlined from "../../Icons/CloudDownloadOutlined.tsx";
 import DeleteOutlined from "../../Icons/DeleteOutlined.tsx";
 import Eye from "../../Icons/Eye.tsx";
 import LinkEdit from "../../Icons/LinkEdit.tsx";
@@ -42,6 +44,9 @@ export interface ShareCardProps {
   onLoad?: () => void;
   loading?: boolean;
   onShareDeleted: (id: string) => void;
+  selecting?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
 interface ActionMenuProps extends MenuProps {
@@ -127,7 +132,7 @@ const ActionMenu = ({ share, onShareDeleted, onClose, ...rest }: ActionMenuProps
   );
 };
 
-const ShareCard = ({ share, onShareDeleted, onLoad, loading }: ShareCardProps) => {
+const ShareCard = ({ share, onShareDeleted, onLoad, loading, selecting, selected, onToggleSelect }: ShareCardProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { ref, inView } = useInView({
@@ -162,18 +167,27 @@ const ShareCard = ({ share, onShareDeleted, onLoad, loading }: ShareCardProps) =
           expanded={false}
           onContextMenu={(e) => {
             e.preventDefault();
+            if (selecting) {
+              return;
+            }
             if (share?.owner?.id === user?.user.id) {
               popupState.open(e);
             }
           }}
           sx={{ p: 0, minHeight: 0, width: "100%", textAlign: "left" }}
-          {...(share?.owner?.id != user?.user.id
+          {...(selecting && share?.owner?.id == user?.user.id
             ? {
                 onClick: () => {
-                  window.open(share?.url ?? "#", "_blank");
+                  share && onToggleSelect?.(share.id);
                 },
               }
-            : bindTrigger(popupState))}
+            : share?.owner?.id != user?.user.id
+              ? {
+                  onClick: () => {
+                    window.open(share?.url ?? "#", "_blank");
+                  },
+                }
+              : bindTrigger(popupState))}
         >
           <Box
             sx={{
@@ -187,7 +201,9 @@ const ShareCard = ({ share, onShareDeleted, onLoad, loading }: ShareCardProps) =
                 p: 1.5,
               }}
             >
-              {share ? (
+              {selecting ? (
+                <Checkbox size="small" checked={selected ?? false} disableRipple sx={{ p: 0, mt: 0.5 }} />
+              ) : share ? (
                 <FileTypeIcon
                   sx={{
                     fontSize: 32,
@@ -218,6 +234,13 @@ const ShareCard = ({ share, onShareDeleted, onLoad, loading }: ShareCardProps) =
                   <Chip size="small" label={t("application:share.expired")} sx={{ ml: 1, height: 18 }} />
                 )}
               </Box>
+              {share?.note && (
+                <Tooltip title={share.note}>
+                  <NoWrapTypography variant={"body2"} color={"text.secondary"}>
+                    {share.note}
+                  </NoWrapTypography>
+                </Tooltip>
+              )}
               <Box>
                 <Tooltip title={share?.name ?? ""}>
                   <NoWrapTypography variant={"body2"} color={"text.secondary"}>
@@ -248,6 +271,12 @@ const ShareCard = ({ share, onShareDeleted, onLoad, loading }: ShareCardProps) =
                         >
                           <Eye sx={{ ml: 1, mr: 0.5 }} fontSize={"small"} />
                           {share?.visited ?? 0}
+                          <Tooltip title={t("application:share.downloads")}>
+                            <Box sx={{ display: "flex", alignItems: "center" }}>
+                              <CloudDownloadOutlined sx={{ ml: 1, mr: 0.5 }} fontSize={"small"} />
+                              {share?.downloaded ?? 0}
+                            </Box>
+                          </Tooltip>
                         </Box>
                       </Box>
                     )}

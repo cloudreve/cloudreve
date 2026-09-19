@@ -9,6 +9,25 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+// respondErr writes the standard serialized error body and aborts the chain
+// when err is non-nil. Handlers use it as `if respondErr(c, err) { return }`.
+func respondErr(c *gin.Context, err error) bool {
+	if err == nil {
+		return false
+	}
+	c.JSON(200, serializer.Err(c, err))
+	c.Abort()
+	return true
+}
+
+// respond writes err as an error body, or ok as the success body.
+func respond(c *gin.Context, err error, ok any) {
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, ok)
+}
+
 // ParamErrorMsg 根据Validator返回的错误信息给出错误提示
 func ParamErrorMsg(filed string, tag string) string {
 	// 未通过验证的表单域与中文对应
@@ -40,11 +59,12 @@ func ParamErrorMsg(filed string, tag string) string {
 }
 
 // ErrorResponse 返回错误消息
-func ErrorResponse(err error) serializer.Response {
+func ErrorResponse(c *gin.Context, err error) serializer.Response {
 	// 处理 Validator 产生的错误
 	if ve, ok := err.(validator.ValidationErrors); ok {
 		for _, e := range ve {
-			return serializer.ParamErrDeprecated(
+			return serializer.ParamErr(
+				c,
 				ParamErrorMsg(e.Field(), e.Tag()),
 				err,
 			)
@@ -52,10 +72,10 @@ func ErrorResponse(err error) serializer.Response {
 	}
 
 	if _, ok := err.(*json.UnmarshalTypeError); ok {
-		return serializer.ParamErrDeprecated("JSON marshall error", err)
+		return serializer.ParamErr(c, "JSON marshall error", err)
 	}
 
-	return serializer.ParamErrDeprecated("Parameter error", err)
+	return serializer.ParamErr(c, "Parameter error", err)
 }
 
 // FromJSON Parse and validate JSON from request body
@@ -66,7 +86,7 @@ func FromJSON[T any](ctxKey any) gin.HandlerFunc {
 			c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), ctxKey, &service))
 			c.Next()
 		} else {
-			c.JSON(200, ErrorResponse(err))
+			c.JSON(200, ErrorResponse(c, err))
 			c.Abort()
 		}
 	}
@@ -80,7 +100,7 @@ func FromQuery[T any](ctxKey any) gin.HandlerFunc {
 			c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), ctxKey, &service))
 			c.Next()
 		} else {
-			c.JSON(200, ErrorResponse(err))
+			c.JSON(200, ErrorResponse(c, err))
 			c.Abort()
 		}
 	}
@@ -93,7 +113,7 @@ func FromForm[T any](ctxKey any) gin.HandlerFunc {
 			c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), ctxKey, &service))
 			c.Next()
 		} else {
-			c.JSON(200, ErrorResponse(err))
+			c.JSON(200, ErrorResponse(c, err))
 			c.Abort()
 		}
 	}
@@ -107,7 +127,7 @@ func FromUri[T any](ctxKey any) gin.HandlerFunc {
 			c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), ctxKey, &service))
 			c.Next()
 		} else {
-			c.JSON(200, ErrorResponse(err))
+			c.JSON(200, ErrorResponse(c, err))
 			c.Abort()
 		}
 	}

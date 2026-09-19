@@ -98,7 +98,7 @@ func (handler *Driver) Thumb(ctx context.Context, expire *time.Time, ext string,
 		return "", fmt.Errorf("parse server url failed: %w", err)
 	}
 
-	thumbURL := routes.SlaveThumbUrl(serverURL, e.Source(), ext)
+	thumbURL := routes.SlaveThumbUrl(serverURL, e.Source(), ext, e.ID())
 	signedThumbURL, err := auth.SignURI(ctx, handler.AuthInstance, thumbURL.String(), expire)
 	if err != nil {
 		return "", err

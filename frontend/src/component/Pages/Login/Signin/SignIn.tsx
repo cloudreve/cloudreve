@@ -14,7 +14,7 @@ import {
   sendPrepareLogin,
   sendResetEmail,
 } from "../../../../api/api.ts";
-import { AppError, Code } from "../../../../api/request.ts";
+import { ApiPrefix, AppError, Code } from "../../../../api/request.ts";
 import { AppRegistration, GrantService, LoginResponse, PrepareLoginResponse } from "../../../../api/user.ts";
 import { clearOAuthApp, setOAuthApp, setOAuthAppLoading } from "../../../../redux/globalStateSlice.ts";
 import { useAppDispatch, useAppSelector } from "../../../../redux/hooks.ts";
@@ -86,6 +86,7 @@ const EmailLogin = ({ oauthConsent }: SignInProps) => {
 
   // Get OAuth app from Redux
   const app = useAppSelector((state) => state.globalState.oauthApp);
+  const { sso_enabled, sso_auto_redirect } = useAppSelector((state) => state.siteConfig.login.config);
 
   const [phase, setPhase] = useState<EmailLoginPhase>(EmailLoginPhase.CollectEmail);
   const [email, setEmail] = useState("");
@@ -310,6 +311,18 @@ const EmailLogin = ({ oauthConsent }: SignInProps) => {
         variant: "error",
         action: DefaultCloseAction,
       });
+    }
+
+    // Auto-redirect to the configured SSO provider. `nosso` and an existing
+    // sso_error keep the password form reachable for admin recovery.
+    if (sso_enabled && sso_auto_redirect && !ssoError && !query.get("nosso") && !isOAuthFlow) {
+      const target = new URL(ApiPrefix + "/session/sso", window.location.origin);
+      const redirect = query.get("redirect");
+      if (redirect) {
+        target.searchParams.set("redirect", redirect);
+      }
+      window.location.replace(target.toString());
+      return;
     }
 
     const init = async () => {

@@ -46,13 +46,11 @@ func (service *ListFolderService) List(c *gin.Context) serializer.Response {
 	//	// 列取存储策略中的目录
 	//	policy, err := model.GetPolicyByID(service.ID)
 	//	if err != nil {
-	//		return serializer.ErrDeprecated(serializer.CodePolicyNotExist, "", err)
 	//	}
 	//
 	//	// 创建文件系统
 	//	fs, err := filesystem.NewAnonymousFileSystem()
 	//	if err != nil {
-	//		return serializer.ErrDeprecated(serializer.CodeCreateFSError, "", err)
 	//	}
 	//	defer fs.Recycle()
 	//
@@ -60,7 +58,6 @@ func (service *ListFolderService) List(c *gin.Context) serializer.Response {
 	//	fs.Policy = &policy
 	//	res, err := fs.ListPhysical(c.Request.Context(), service.Path)
 	//	if err != nil {
-	//		return serializer.ErrDeprecated(serializer.CodeListFilesError, "", err)
 	//	}
 	//
 	//	return serializer.Response{
@@ -73,20 +70,17 @@ func (service *ListFolderService) List(c *gin.Context) serializer.Response {
 	//// 查找用户
 	//user, err := model.GetUserByID(service.ID)
 	//if err != nil {
-	//	return serializer.ErrDeprecated(serializer.CodeUserNotFound, "", err)
 	//}
 	//
 	//// 创建文件系统
 	//fs, err := filesystem.NewFileSystem(&user)
 	//if err != nil {
-	//	return serializer.ErrDeprecated(serializer.CodeCreateFSError, "", err)
 	//}
 	//defer fs.Recycle()
 	//
 	//// 列取目录
 	//res, err := fs.List(c.Request.Context(), service.Path, nil)
 	//if err != nil {
-	//	return serializer.ErrDeprecated(serializer.CodeListFilesError, "", err)
 	//}
 
 	//return serializer.Response{
@@ -100,7 +94,6 @@ func (service *ListFolderService) List(c *gin.Context) serializer.Response {
 func (service *FileBatchService) Delete(c *gin.Context) serializer.Response {
 	//files, err := model.GetFilesByIDs(service.ID, 0)
 	//if err != nil {
-	//	return serializer.DBErrDeprecated("Failed to list files for deleting", err)
 	//}
 	//
 	//// 根据用户分组
@@ -157,6 +150,7 @@ const (
 	fileMetadataCondition   = "file_metadata"
 	fileSharedCondition     = "file_shared"
 	fileDirectLinkCondition = "file_direct_link"
+	fileDeletedCondition    = "file_deleted"
 )
 
 func (service *AdminListService) Files(c *gin.Context) (*ListFileResponse, error) {
@@ -177,6 +171,7 @@ func (service *AdminListService) Files(c *gin.Context) (*ListFileResponse, error
 		metadata   string
 		shared     bool
 		directLink bool
+		deleted    *bool
 	)
 
 	if service.Conditions[fileUserCondition] != "" {
@@ -205,6 +200,13 @@ func (service *AdminListService) Files(c *gin.Context) (*ListFileResponse, error
 		directLink = true
 	}
 
+	switch service.Conditions[fileDeletedCondition] {
+	case "true":
+		deleted = lo.ToPtr(true)
+	case "false":
+		deleted = lo.ToPtr(false)
+	}
+
 	res, err := fileClient.FlattenListFiles(ctx, &inventory.FlattenListFileParameters{
 		PaginationArgs: &inventory.PaginationArgs{
 			Page:     service.Page - 1,
@@ -218,6 +220,7 @@ func (service *AdminListService) Files(c *gin.Context) (*ListFileResponse, error
 		HasMetadata:     metadata,
 		Shared:          shared,
 		HasDirectLink:   directLink,
+		Deleted:         deleted,
 	})
 
 	if err != nil {
@@ -398,6 +401,9 @@ const (
 	entityUserCondition   = "entity_user"
 	entityPolicyCondition = "entity_policy"
 	entityTypeCondition   = "entity_type"
+	// entityRefCountCondition filters by reference count: "stale" (<=0, i.e.
+	// awaiting recycle) or "gt:N" / "lt:N" / "eq:N" comparisons.
+	entityRefCountCondition = "entity_ref_count"
 )
 
 func (s *AdminListService) Entities(c *gin.Context) (*ListEntityResponse, error) {
@@ -412,6 +418,7 @@ func (s *AdminListService) Entities(c *gin.Context) (*ListEntityResponse, error)
 		policyID   int
 		err        error
 		entityType *types.EntityType
+		refCount   *inventory.ReferenceCountFilter
 	)
 
 	if s.Conditions[entityUserCondition] != "" {
@@ -438,6 +445,13 @@ func (s *AdminListService) Entities(c *gin.Context) (*ListEntityResponse, error)
 		entityType = &t
 	}
 
+	if s.Conditions[entityRefCountCondition] != "" {
+		refCount, err = inventory.ParseReferenceCountFilter(s.Conditions[entityRefCountCondition])
+		if err != nil {
+			return nil, serializer.NewError(serializer.CodeParamErr, "Invalid reference count filter", err)
+		}
+	}
+
 	res, err := fileClient.ListEntities(ctx, &inventory.ListEntityParameters{
 		PaginationArgs: &inventory.PaginationArgs{
 			Page:     s.Page - 1,
@@ -448,6 +462,7 @@ func (s *AdminListService) Entities(c *gin.Context) (*ListEntityResponse, error)
 		UserID:          userID,
 		StoragePolicyID: policyID,
 		EntityType:      entityType,
+		ReferenceCount:  refCount,
 	})
 
 	if err != nil {

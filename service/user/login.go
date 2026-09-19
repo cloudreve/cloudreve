@@ -3,6 +3,8 @@ package user
 import (
 	"context"
 	"fmt"
+	"net/netip"
+	"strings"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/ent"
@@ -88,8 +90,12 @@ func (service *UserResetEmailService) Reset(c *gin.Context) error {
 		return serializer.NewError(serializer.CodeUserNotFound, "User not found", err)
 	}
 
+	if u, err = userClient.LiftExpiredBan(c, u); err != nil {
+		return serializer.NewError(serializer.CodeDBError, "Failed to lift expired ban", err)
+	}
+
 	if u.Status == user.StatusManualBanned || u.Status == user.StatusSysBanned {
-		return serializer.NewError(serializer.CodeUserBaned, "This user is banned", nil)
+		return banError(u, "This user is banned")
 	}
 
 	if u.Status == user.StatusInactive {
@@ -127,6 +133,9 @@ func (service *UserLoginService) Login(c *gin.Context) (*ent.User, string, error
 
 	ctx := context.WithValue(c, inventory.LoadUserGroup{}, true)
 	expectedUser, err := userClient.GetByEmail(ctx, service.UserName)
+	if err == nil {
+		expectedUser, err = userClient.LiftExpiredBan(ctx, expectedUser)
+	}
 
 	// 一系列校验
 	if err != nil {
@@ -134,9 +143,11 @@ func (service *UserLoginService) Login(c *gin.Context) (*ent.User, string, error
 	} else if checkErr := inventory.CheckPassword(expectedUser, service.Password); checkErr != nil {
 		err = serializer.NewError(serializer.CodeInvalidPassword, "Incorrect password or email address", err)
 	} else if expectedUser.Status == user.StatusManualBanned || expectedUser.Status == user.StatusSysBanned {
-		err = serializer.NewError(serializer.CodeUserBaned, "This account has been blocked", nil)
+		err = banError(expectedUser, "This account has been blocked")
 	} else if expectedUser.Status == user.StatusInactive {
 		err = serializer.NewError(serializer.CodeUserNotActivated, "This account is not activated", nil)
+	} else if ipErr := checkLoginIPWhitelist(c.ClientIP(), expectedUser.Edges.Group); ipErr != nil {
+		err = ipErr
 	}
 
 	if err != nil {
@@ -159,6 +170,12 @@ type (
 func IssueToken(c *gin.Context) (*BuiltinLoginResponse, error) {
 	dep := dependency.FromContext(c)
 	u := inventory.UserFromContext(c)
+
+	// Best-effort last-login stamp; a failed update must not block sign-in.
+	if err := dep.UserClient().UpdateLastLogin(c, u.ID); err != nil {
+		dep.Logger().Warning("Failed to update last_login for user %d: %s", u.ID, err)
+	}
+
 	token, err := dep.TokenAuth().Issue(c, &auth.IssueTokenArgs{
 		User:        u,
 		RootTokenID: nil,
@@ -262,4 +279,36 @@ func (service *PrepareLoginService) Prepare(c *gin.Context) (*PrepareLoginRespon
 		WebAuthnEnabled: len(expectedUser.Edges.Passkey) > 0,
 		PasswordEnabled: expectedUser.Password != "",
 	}, nil
+}
+
+// checkLoginIPWhitelist enforces a group's login IP whitelist. Entries are
+// exact IPs or CIDR ranges; an empty or nil list allows all addresses.
+// Malformed entries are ignored so a bad admin value cannot lock everyone out.
+func checkLoginIPWhitelist(clientIP string, group *ent.Group) error {
+	if group == nil || group.Settings == nil || len(group.Settings.LoginIPWhitelist) == 0 {
+		return nil
+	}
+
+	addr, err := netip.ParseAddr(clientIP)
+	if err != nil {
+		return serializer.NewError(serializer.CodeNoPermissionErr, "Cannot determine client IP", err)
+	}
+
+	for _, entry := range group.Settings.LoginIPWhitelist {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+		if prefix, perr := netip.ParsePrefix(entry); perr == nil {
+			if prefix.Contains(addr) {
+				return nil
+			}
+			continue
+		}
+		if entryAddr, aerr := netip.ParseAddr(entry); aerr == nil && entryAddr == addr {
+			return nil
+		}
+	}
+
+	return serializer.NewError(serializer.CodeNoPermissionErr, "Login from this IP address is not allowed", nil)
 }

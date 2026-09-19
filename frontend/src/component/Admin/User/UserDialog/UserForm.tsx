@@ -65,6 +65,30 @@ const UserForm = ({ reload, setLoading }: { reload: () => void; setLoading: (loa
     [setUser],
   );
 
+  const banned = values.status == UserStatus.manual_banned || values.status == UserStatus.sys_banned;
+
+  // datetime-local inputs want "YYYY-MM-DDTHH:mm" in local time; the API
+  // stores RFC3339.
+  const toLocalInput = (iso?: string) => {
+    if (!iso) {
+      return "";
+    }
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) {
+      return "";
+    }
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const onBanExpiresChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const v = e.target.value;
+      setUser((prev) => ({ ...prev, ban_expires: v ? new Date(v).toISOString() : undefined }));
+    },
+    [setUser],
+  );
+
   const onGroupChange = useCallback(
     (value: string) => {
       setUser((prev) => ({ ...prev, group_users: parseInt(value) }));
@@ -179,6 +203,28 @@ const UserForm = ({ reload, setLoading }: { reload: () => void; setLoading: (loa
                 </DenseSelect>
               </FormControl>
             </SettingForm>
+            {banned && (
+              <>
+                <SettingForm title={t("user.banExpires")} noContainer lgWidth={6}>
+                  <DenseFilledTextField
+                    fullWidth
+                    type="datetime-local"
+                    value={toLocalInput(values.ban_expires)}
+                    onChange={onBanExpiresChange}
+                    slotProps={{ inputLabel: { shrink: true } }}
+                  />
+                  <NoMarginHelperText>{t("user.banExpiresDes")}</NoMarginHelperText>
+                </SettingForm>
+                <SettingForm title={t("user.banReason")} noContainer lgWidth={6}>
+                  <DenseFilledTextField
+                    fullWidth
+                    value={values.ban_reason ?? ""}
+                    onChange={(e) => setUser((prev) => ({ ...prev, ban_reason: e.target.value }))}
+                  />
+                  <NoMarginHelperText>{t("user.banReasonDes")}</NoMarginHelperText>
+                </SettingForm>
+              </>
+            )}
             <SettingForm title={t("user.group")} noContainer lgWidth={6}>
               <GroupSelectionInput value={values.group_users?.toString() ?? ""} onChange={onGroupChange} fullWidth />
             </SettingForm>

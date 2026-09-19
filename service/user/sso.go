@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
@@ -170,9 +171,18 @@ func (service *SSOCallbackService) SSOCallback(c *gin.Context) {
 		return
 	}
 
-	email := strings.ToLower(strings.TrimSpace(claims.Email))
+	// Profile claims resolve across standard and AD FS-style alternates;
+	// AD FS userinfo returns only sub, so the ID token is the primary
+	// source for name/email/upn (#3572).
+	email := firstEmailClaim(claims.Email, claims.UPN, claims.UniqueName)
 	name := claims.Name
+	if name == "" {
+		name = strings.TrimSpace(claims.GivenName + " " + claims.FamilyName)
+	}
 	preferred := claims.PreferredUsername
+	if preferred == "" {
+		preferred = claims.UniqueName
+	}
 
 	// Some providers omit email from the ID token; fall back to userinfo.
 	if email == "" && tokens.AccessToken != "" && discovery.UserinfoEndpoint != "" {
@@ -180,12 +190,18 @@ func (service *SSOCallbackService) SSOCallback(c *gin.Context) {
 		if err != nil {
 			dep.Logger().Warning("SSO userinfo request failed: %s", err)
 		} else {
-			email = strings.ToLower(strings.TrimSpace(info.Email))
+			email = firstEmailClaim(info.Email, info.UPN, info.UniqueName)
 			if name == "" {
 				name = info.Name
+				if name == "" {
+					name = strings.TrimSpace(info.GivenName + " " + info.FamilyName)
+				}
 			}
 			if preferred == "" {
 				preferred = info.PreferredUsername
+				if preferred == "" {
+					preferred = info.UniqueName
+				}
 			}
 		}
 	}
@@ -239,11 +255,15 @@ func (service *SSOExchangeService) SSOExchange(c *gin.Context) (any, error) {
 		return nil, serializer.NewError(serializer.CodeCredentialInvalid, "Invalid SSO ticket", nil)
 	}
 
-	u, err := dep.UserClient().GetByID(c, uid)
+	ctx := context.WithValue(c, inventory.LoadUserGroup{}, true)
+	u, err := dep.UserClient().GetByID(ctx, uid)
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeUserNotFound, "User not found", err)
 	}
-	if err := checkUserStatus(u); err != nil {
+	if u, err = dep.UserClient().LiftExpiredBan(c, u); err != nil {
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to lift expired ban", err)
+	}
+	if err := checkUserStatus(c, u); err != nil {
 		return nil, err
 	}
 
@@ -255,9 +275,12 @@ func (service *SSOExchangeService) SSOExchange(c *gin.Context) (any, error) {
 func ssoResolveUser(c *gin.Context, dep dependency.Dep, sso *setting.SSO, email, name, preferred string) (*ent.User, error) {
 	userClient := dep.UserClient()
 
-	u, err := userClient.GetByEmail(c, email)
+	u, err := userClient.GetByEmail(context.WithValue(c, inventory.LoadUserGroup{}, true), email)
 	if err == nil {
-		if err := checkUserStatus(u); err != nil {
+		if u, err = userClient.LiftExpiredBan(c, u); err != nil {
+			return nil, serializer.NewError(serializer.CodeDBError, "Failed to lift expired ban", err)
+		}
+		if err := checkUserStatus(c, u); err != nil {
 			return nil, err
 		}
 		return u, nil
@@ -291,14 +314,25 @@ func ssoResolveUser(c *gin.Context, dep dependency.Dep, sso *setting.SSO, email,
 	return newUser, nil
 }
 
-func checkUserStatus(u *ent.User) error {
+// banError renders the ban error. When a ban reason is configured it is
+// sent as the message so the frontend can render it next to the
+// localized "blocked" text (#2478).
+func banError(u *ent.User, fallback string) error {
+	msg := fallback
+	if u.BanReason != "" {
+		msg = u.BanReason
+	}
+	return serializer.NewError(serializer.CodeUserBaned, msg, nil)
+}
+
+func checkUserStatus(c *gin.Context, u *ent.User) error {
 	switch u.Status {
 	case user.StatusSysBanned, user.StatusManualBanned:
-		return serializer.NewError(serializer.CodeUserBaned, "User is banned", nil)
+		return banError(u, "User is banned")
 	case user.StatusInactive:
 		return serializer.NewError(serializer.CodeUserNotActivated, "User is not activated", nil)
 	}
-	return nil
+	return checkLoginIPWhitelist(c.ClientIP(), u.Edges.Group)
 }
 
 // CheckEmailAllowed enforces the sign-up email filter. Shared by the classic
@@ -309,8 +343,14 @@ func CheckEmailAllowed(filter *setting.EmailFilter, email string) error {
 		return serializer.NewError(serializer.CodeParamErr, "Invalid email", nil)
 	}
 
-	if filter.DisableSubAddress && strings.Contains(local, "+") {
-		return serializer.NewError(serializer.CodeParamErr, "Sub-address emails are not allowed", nil)
+	if filter.DisableSubAddress {
+		chars := filter.SubAddressChars
+		if chars == "" {
+			chars = "+"
+		}
+		if strings.ContainsAny(local, chars) {
+			return serializer.NewError(serializer.CodeParamErr, "Sub-address emails are not allowed", nil)
+		}
 	}
 
 	domain = strings.ToLower(domain)
@@ -581,4 +621,17 @@ func fetchOIDCUserInfo(c *gin.Context, client request.Client, endpoint, accessTo
 	}
 
 	return &info, nil
+}
+
+// firstEmailClaim returns the first candidate usable as an email address.
+// AD FS upn/unique_name are accepted only when email-shaped, since
+// DOMAIN\user and non-routable identifiers cannot serve as addresses.
+func firstEmailClaim(candidates ...string) string {
+	for _, c := range candidates {
+		c = strings.ToLower(strings.TrimSpace(c))
+		if strings.Contains(c, "@") {
+			return c
+		}
+	}
+	return ""
 }

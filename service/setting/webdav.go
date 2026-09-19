@@ -42,11 +42,9 @@ type WebDAVMountCreateService struct {
 //	folderID, _ := c.Get("object_id")
 //	folder, err := model.GetFoldersByIDs([]uint{folderID.(uint)}, user.ID)
 //	if err != nil || len(folder) == 0 {
-//		return serializer.ErrDeprecated(serializer.CodeParentNotExist, "", err)
 //	}
 //
 //	if err := folder[0].Mount(0); err != nil {
-//		return serializer.DBErrDeprecated("Failed to update folder record", err)
 //	}
 //
 //	return serializer.Response{}

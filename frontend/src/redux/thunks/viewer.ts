@@ -23,6 +23,7 @@ import {
   setImageEditor,
   setImageViewer,
   setMarkdownViewer,
+  setModelViewer,
   setMusicPlayer,
   setPdfViewer,
   setPhotopeaViewer,
@@ -54,6 +55,7 @@ export const builtInViewers = {
   music: "music",
   excalidraw: "excalidraw",
   archive: "archive",
+  model3d: "model3d",
 };
 
 export function openViewers(
@@ -72,11 +74,17 @@ export function openViewers(
     const ext = fileExtension(file.name) ?? "";
     const entitySize = size ?? file.size;
 
-    // Try user preference
-    const userPreference = SessionManager.get(UserSettings.OpenWithPrefix + ext);
-    if (!ignorePreference && userPreference && ViewersByID[userPreference]) {
-      dispatch(openViewer(file, ViewersByID[userPreference], entitySize, preferredVersion));
-      return;
+    // Try user preference — the server-synced map wins over the per-device
+    // localStorage copy so the choice follows the user across devices. A
+    // stale server entry (viewer removed site-wide) falls back to local.
+    if (!ignorePreference) {
+      const serverPreference = SessionManager.currentUser()?.preferred_viewers?.[ext];
+      const localPreference = SessionManager.get(UserSettings.OpenWithPrefix + ext);
+      const userPreference = [serverPreference, localPreference].find((id) => id && ViewersByID[id]);
+      if (userPreference) {
+        dispatch(openViewer(file, ViewersByID[userPreference], entitySize, preferredVersion));
+        return;
+      }
     }
 
     const viewerOptions = Viewers[ext];
@@ -236,6 +244,15 @@ export function openViewer(
               open: true,
               file,
               version: preferredVersion,
+            }),
+          );
+          break;
+        case builtInViewers.model3d:
+          dispatch(
+            setModelViewer({
+              open: true,
+              file,
+              version: preferredVersion ?? primaryEntity,
             }),
           );
           break;

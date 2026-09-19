@@ -29,6 +29,12 @@ const profileSettingOptions: {
   icon?: ((props: SvgIconProps) => JSX.Element) | typeof Eye;
 }[] = [
   {
+    value: ShareLinksInProfileLevel.site_default,
+    label: "application:setting.shareSiteDefault",
+    description: "application:setting.shareSiteDefaultDes",
+    icon: Globe,
+  },
+  {
     value: ShareLinksInProfileLevel.public_share_only,
     label: "application:setting.publicShareOnly",
     description: "application:setting.publicShareOnlyDes",
@@ -53,7 +59,7 @@ export const useProfileSettingSummary = (value: ShareLinksInProfileLevel) => {
 
   const summary = useMemo(() => {
     const option = profileSettingOptions.find((opt) => opt.value === (value ?? ""));
-    return option ? t(option.label) : t("application:setting.publicShareOnly");
+    return option ? t(option.label) : t("application:setting.shareSiteDefault");
   }, [value, t]);
 
   return summary;

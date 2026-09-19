@@ -91,6 +91,11 @@ func UserTasks(v int) predicate.Task {
 	return predicate.Task(sql.FieldEQ(FieldUserTasks, v))
 }
 
+// Hidden applies equality check predicate on the "hidden" field. It's identical to HiddenEQ.
+func Hidden(v bool) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldHidden, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Task {
 	return predicate.Task(sql.FieldEQ(FieldCreatedAt, v))
@@ -459,6 +464,16 @@ func UserTasksIsNil() predicate.Task {
 // UserTasksNotNil applies the NotNil predicate on the "user_tasks" field.
 func UserTasksNotNil() predicate.Task {
 	return predicate.Task(sql.FieldNotNull(FieldUserTasks))
+}
+
+// HiddenEQ applies the EQ predicate on the "hidden" field.
+func HiddenEQ(v bool) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldHidden, v))
+}
+
+// HiddenNEQ applies the NEQ predicate on the "hidden" field.
+func HiddenNEQ(v bool) predicate.Task {
+	return predicate.Task(sql.FieldNEQ(FieldHidden, v))
 }
 
 // HasUser applies the HasEdge predicate on the "user" edge.

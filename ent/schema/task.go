@@ -26,6 +26,8 @@ func (Task) Fields() []ent.Field {
 			Optional().
 			Immutable(),
 		field.Int("user_tasks").Optional(),
+		// hidden is set when the owner deletes the task record; admin views keep it.
+		field.Bool("hidden").Default(false),
 	}
 }
 

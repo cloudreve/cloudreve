@@ -141,6 +141,28 @@ const SSOSettings = () => {
             />
             <NoMarginHelperText>{t("settings.ssoRegisterEnabledDes")}</NoMarginHelperText>
           </FormControl>
+          <FormControl fullWidth>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={isTrueVal(values.sso_auto_redirect)}
+                  onChange={(e) =>
+                    setSettings({
+                      sso_auto_redirect: e.target.checked ? "1" : "0",
+                    })
+                  }
+                />
+              }
+              label={<Typography variant="body2">{t("settings.ssoAutoRedirect")}</Typography>}
+            />
+            <NoMarginHelperText>
+              <Trans
+                i18nKey="settings.ssoAutoRedirectDes"
+                ns="dashboard"
+                components={[<Code key="0" />]}
+              />
+            </NoMarginHelperText>
+          </FormControl>
         </SettingSectionContent>
       </AccordionDetails>
     </StyledAccordion>

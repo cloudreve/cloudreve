@@ -134,12 +134,7 @@ func (n *myNavigator) walkNext(ctx context.Context, root *File, next string, isL
 }
 
 func (n *myNavigator) Capabilities(isSearching bool) *fs.NavigatorProps {
-	res := &fs.NavigatorProps{
-		Capability:            myNavigatorCapability,
-		OrderDirectionOptions: fullOrderDirectionOption,
-		OrderByOptions:        fullOrderByOption,
-		MaxPageSize:           n.config.MaxPageSize,
-	}
+	res := baseNavigatorProps(myNavigatorCapability, n.config.MaxPageSize)
 	if isSearching {
 		res.OrderByOptions = nil
 		res.OrderDirectionOptions = nil
@@ -153,27 +148,24 @@ func (n *myNavigator) Walk(ctx context.Context, levelFiles []*File, limit, depth
 }
 
 func (n *myNavigator) FollowTx(ctx context.Context) (func(), error) {
-	if _, ok := ctx.Value(inventory.TxCtx{}).(*inventory.Tx); !ok {
-		return nil, fmt.Errorf("navigator: no inherited transaction found in context")
-	}
-	newFileClient, _, _, err := inventory.WithTx(ctx, n.fileClient)
+	oldBase := n.baseNavigator.fileClient
+	revertFile, err := followTxClients(ctx, &n.fileClient)
 	if err != nil {
 		return nil, err
 	}
 
-	newUserClient, _, _, err := inventory.WithTx(ctx, n.userClient)
-
-	oldFileClient, oldUserClient := n.fileClient, n.userClient
-	revert := func() {
-		n.fileClient = oldFileClient
-		n.userClient = oldUserClient
-		n.baseNavigator.fileClient = oldFileClient
+	revertUser, err := followTxClients(ctx, &n.userClient)
+	if err != nil {
+		revertFile()
+		return nil, err
 	}
 
-	n.fileClient = newFileClient
-	n.userClient = newUserClient
-	n.baseNavigator.fileClient = newFileClient
-	return revert, nil
+	n.baseNavigator.fileClient = n.fileClient
+	return func() {
+		revertUser()
+		revertFile()
+		n.baseNavigator.fileClient = oldBase
+	}, nil
 }
 
 func (n *myNavigator) ExecuteHook(ctx context.Context, hookType fs.HookType, file *File) error {

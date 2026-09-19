@@ -136,7 +136,6 @@ func (service *SlavePingService) Test(c *gin.Context) error {
 func (service *SlaveTestService) Test() serializer.Response {
 	//slave, err := url.Parse(service.Server)
 	//if err != nil {
-	//	return serializer.ParamErrDeprecated("Failed to parse slave node server URL: "+err.Error(), nil)
 	//}
 	//
 	//controller, _ := url.Parse("/api/v3/slave/ping")
@@ -147,7 +146,6 @@ func (service *SlaveTestService) Test() serializer.Response {
 	//}
 	//bodyByte, _ := json.Marshal(body)
 	//
-	//r := request.NewClientDeprecated()
 	//res, err := r.Request(
 	//	"POST",
 	//	slave.ResolveReference(controller).String(),
@@ -159,11 +157,9 @@ func (service *SlaveTestService) Test() serializer.Response {
 	//	),
 	//).DecodeResponse()
 	//if err != nil {
-	//	return serializer.ParamErrDeprecated("Failed to connect to slave node: "+err.Error(), nil)
 	//}
 	//
 	//if res.Code != 0 {
-	//	return serializer.ParamErrDeprecated("Successfully connected to slave node, but slave returns: "+res.Msg, nil)
 	//}
 
 	return serializer.Response{}
@@ -176,7 +172,6 @@ func (service *PathTestService) Test() serializer.Response {
 	//path = filepath.Join(path, "test.txt")
 	//file, err := util.CreatNestedFile(util.RelativePath(path))
 	//if err != nil {
-	//	return serializer.ParamErrDeprecated(fmt.Sprintf("Failed to create \"%s\": %s", path, err.Error()), nil)
 	//}
 	//
 	//file.Close()

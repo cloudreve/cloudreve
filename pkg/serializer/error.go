@@ -285,20 +285,12 @@ const (
 	CodeNotSet = -1
 )
 
-// DBErrDeprecated 数据库操作失败
+// DBErr 数据库操作失败
 func DBErr(c context.Context, msg string, err error) Response {
 	if msg == "" {
 		msg = "Database operation failed."
 	}
 	return ErrWithDetails(c, CodeDBError, msg, err)
-}
-
-// DBErrDeprecated 数据库操作失败
-func DBErrDeprecated(msg string, err error) Response {
-	if msg == "" {
-		msg = "Database operation failed."
-	}
-	return ErrDeprecated(CodeDBError, msg, err)
 }
 
 // ParamErr 各种参数错误
@@ -307,36 +299,6 @@ func ParamErr(c context.Context, msg string, err error) Response {
 		msg = "Invalid parameters."
 	}
 	return ErrWithDetails(c, CodeParamErr, msg, err)
-}
-
-// ParamErrDeprecated 各种参数错误
-// Deprecated
-func ParamErrDeprecated(msg string, err error) Response {
-	if msg == "" {
-		msg = "Invalid parameters."
-	}
-	return ErrDeprecated(CodeParamErr, msg, err)
-}
-
-// ErrDeprecated 通用错误处理
-func ErrDeprecated(errCode int, msg string, err error) Response {
-	// 底层错误是AppError，则尝试从AppError中获取详细信息
-	var appError AppError
-	if errors.As(err, &appError) {
-		errCode = appError.Code
-		err = appError.RawError
-		msg = appError.Msg
-	}
-
-	res := Response{
-		Code: errCode,
-		Msg:  msg,
-	}
-	// 生产环境隐藏底层报错
-	if err != nil && gin.Mode() != gin.ReleaseMode {
-		res.Error = err.Error()
-	}
-	return res
 }
 
 // ErrWithDetails 通用错误处理

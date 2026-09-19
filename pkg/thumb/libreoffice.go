@@ -27,7 +27,7 @@ type LibreOfficeGenerator struct {
 }
 
 func (l *LibreOfficeGenerator) Generate(ctx context.Context, es entitysource.EntitySource, ext string, previous *Result) (*Result, error) {
-	if !util.IsInExtensionListExt(l.settings.LibreOfficeThumbExts(ctx), ext) {
+	if !util.IsExtInList(l.settings.LibreOfficeThumbExts(ctx), ext) {
 		return nil, fmt.Errorf("unsupported video format: %w", ErrPassThrough)
 	}
 
@@ -79,7 +79,7 @@ func (l *LibreOfficeGenerator) Generate(ctx context.Context, es entitysource.Ent
 
 	if err := cmd.Run(); err != nil {
 		l.l.Warning("Failed to invoke LibreOffice: %s", stdErr.String())
-		return &Result{Path: tempOutputPath}, fmt.Errorf("failed to invoke LibreOffice: %w, raw output: %s", err, stdErr.String())
+		return &Result{Path: tempOutputPath}, fmt.Errorf("failed to invoke LibreOffice: %w, raw output: %s: %w", err, stdErr.String(), ErrPassThrough)
 	}
 
 	return &Result{

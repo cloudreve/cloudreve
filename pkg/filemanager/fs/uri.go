@@ -356,9 +356,9 @@ func SearchCategoryFromString(s string) setting.SearchCategory {
 
 func NewShareUri(id, password string) string {
 	if password != "" {
-		return fmt.Sprintf("%s://%s:%s@%s", constants.CloudreveScheme, id, password, constants.FileSystemShare)
+		return fmt.Sprintf("%s://%s@%s", constants.CloudreveScheme, url.UserPassword(id, password), constants.FileSystemShare)
 	}
-	return fmt.Sprintf("%s://%s@%s", constants.CloudreveScheme, id, constants.FileSystemShare)
+	return fmt.Sprintf("%s://%s@%s", constants.CloudreveScheme, url.User(id), constants.FileSystemShare)
 }
 
 func NewMyUri(id string) string {

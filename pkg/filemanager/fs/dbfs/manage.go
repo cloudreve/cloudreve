@@ -16,7 +16,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
 	"github.com/samber/lo"
-	"golang.org/x/tools/container/intsets"
+	"math"
 )
 
 func (f *DBFS) Create(ctx context.Context, path *fs.URI, fileType types.FileType, opts ...fs.Option) (fs.File, error) {
@@ -83,8 +83,9 @@ func (f *DBFS) Create(ctx context.Context, path *fs.URI, fileType types.FileType
 			return nil, fs.ErrNotSupportedAction.WithError(fmt.Errorf("parent must be a valid folder"))
 		}
 
-		// Validate object name
-		if err := validateFileName(desired[i]); err != nil {
+		// Validate object name — folder segments keep the strict rule set
+		// since their governing policy is ambiguous.
+		if err := validateFileName(desired[i], nil); err != nil {
 			return nil, fs.ErrIllegalObjectName.WithError(err)
 		}
 
@@ -160,6 +161,9 @@ func (f *DBFS) Rename(ctx context.Context, path *fs.URI, newName string) (fs.Fil
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get target file: %w", err)
 	}
+	if sourceIDMismatch(ctx, 0, target.Model.ID) {
+		return nil, nil, fs.ErrModified.WithError(fmt.Errorf("source file no longer matches the expected file"))
+	}
 	oldName := target.Name()
 
 	if _, ok := ctx.Value(ByPassOwnerCheckCtxKey{}).(bool); !ok && !f.writePermitted(target, NavigatorCapabilityRenameFile) {
@@ -171,16 +175,17 @@ func (f *DBFS) Rename(ctx context.Context, path *fs.URI, newName string) (fs.Fil
 		return nil, nil, fs.ErrNotSupportedAction.WithError(fmt.Errorf("cannot modify root folder"))
 	}
 
-	// Validate new name
-	if err := validateFileName(newName); err != nil {
-		return nil, nil, fs.ErrIllegalObjectName.WithError(err)
-	}
-
-	// If target is a file, validate file extension
 	policy, err := f.getPreferredPolicy(ctx, target)
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// Validate new name
+	if err := validateFileName(newName, policy); err != nil {
+		return nil, nil, fs.ErrIllegalObjectName.WithError(err)
+	}
+
+	// If target is a file, validate file extension
 
 	if target.Type() == types.FileTypeFile {
 		if err := validateExtension(newName, policy); err != nil {
@@ -305,11 +310,16 @@ func (f *DBFS) SoftDelete(ctx context.Context, path ...*fs.URI) error {
 			return serializer.NewError(serializer.CodeDBError, "failed to soft-delete file", err)
 		}
 
-		// Save restore uri into metadata
+		// Save restore uri into metadata. A user-level retention overrides
+		// the group default when set.
+		retention := target.Owner().Edges.Group.Settings.TrashRetention
+		if us := target.Owner().Settings; us != nil && us.TrashRetention > 0 {
+			retention = us.TrashRetention
+		}
 		if err := fc.UpsertMetadata(ctx, target.Model, map[string]string{
 			MetadataRestoreUri: target.Uri(true).String(),
 			MetadataExpectedCollectTime: strconv.FormatInt(
-				time.Now().Add(time.Duration(target.Owner().Edges.Group.Settings.TrashRetention)*time.Second).Unix(),
+				time.Now().Add(time.Duration(retention)*time.Second).Unix(),
 				10),
 		}, nil); err != nil {
 			_ = inventory.Rollback(tx)
@@ -557,11 +567,12 @@ func (f *DBFS) MoveOrCopy(ctx context.Context, path []*fs.URI, dst *fs.URI, isCo
 
 	ae := serializer.NewAggregateError()
 	fileNavGroup := make(map[Navigator][]*File)
+	navOf := make(map[*File]Navigator)
 	dstRootPath := destination.Uri(true)
 	ctx = context.WithValue(ctx, inventory.LoadFileEntity{}, true)
 	ctx = context.WithValue(ctx, inventory.LoadFileMetadata{}, true)
 
-	for _, p := range path {
+	for i, p := range path {
 		// Get navigator
 		navigator, err := f.getNavigator(ctx, p, NavigatorCapabilityLockFile)
 		if err != nil {
@@ -579,6 +590,11 @@ func (f *DBFS) MoveOrCopy(ctx context.Context, path []*fs.URI, dst *fs.URI, isCo
 		target, err := f.getFileByPath(ctx, navigator, p)
 		if err != nil {
 			ae.Add(p.String(), fmt.Errorf("failed to get file: %w", err))
+			continue
+		}
+
+		if sourceIDMismatch(ctx, i, target.Model.ID) {
+			ae.Add(p.String(), fs.ErrModified.WithError(fmt.Errorf("source file no longer matches the expected file")))
 			continue
 		}
 
@@ -607,12 +623,20 @@ func (f *DBFS) MoveOrCopy(ctx context.Context, path []*fs.URI, dst *fs.URI, isCo
 		}
 
 		targets = append(targets, target)
+		navOf[target] = navigator
 		if isCopy {
 			if _, ok := fileNavGroup[navigator]; !ok {
 				fileNavGroup[navigator] = make([]*File, 0)
 			}
 			fileNavGroup[navigator] = append(fileNavGroup[navigator], target)
 		}
+	}
+
+	// Resolve name conflicts against existing destination children before
+	// locking: skip drops the colliding target, overwrite deletes the
+	// colliding destination object first (#3159).
+	if mode := moveConflictMode(ctx); mode != "" && len(targets) > 0 {
+		targets, fileNavGroup = f.resolveMoveConflicts(ctx, targets, navOf, destination, isCopy, mode, ae)
 	}
 
 	indexDiff := &fs.IndexDiff{}
@@ -855,7 +879,7 @@ func (f *DBFS) deleteFiles(ctx context.Context, targets map[Navigator][]*File, f
 		// listing resolves via HasParentWith, so parent rows must stay
 		// alive until their level has been fetched.
 		folderModels := make([]*ent.File, 0, 64)
-		if err := n.Walk(ctx, files, intsets.MaxInt, intsets.MaxInt, func(targets []*File, level int) error {
+		if err := n.Walk(ctx, files, math.MaxInt, math.MaxInt, func(targets []*File, level int) error {
 			indexToDelete = append(indexToDelete, lo.Map(targets, func(item *File, index int) int {
 				return item.ID()
 			})...)
@@ -924,7 +948,7 @@ func (f *DBFS) copyFiles(ctx context.Context, targets map[Navigator][]*File, des
 			initialDstMap[file.Model.FileChildren] = dstAncestors
 		}
 
-		if err := n.Walk(ctx, files, limit, intsets.MaxInt, func(targets []*File, level int) error {
+		if err := n.Walk(ctx, files, limit, math.MaxInt, func(targets []*File, level int) error {
 			// check capacity for each file
 			sizeTotal := int64(0)
 			for _, file := range targets {
@@ -1042,4 +1066,49 @@ func (f *DBFS) moveFiles(ctx context.Context, targets []*File, destination *File
 	}
 
 	return storageDiff, nil, nil
+}
+
+// resolveMoveConflicts filters or replaces targets whose names collide
+// with existing destination children (#3159). "skip" drops the colliding
+// target with a per-file ErrFileExisted; "overwrite" deletes the
+// colliding destination object through the regular Delete path first.
+func (f *DBFS) resolveMoveConflicts(ctx context.Context, targets []*File, navOf map[*File]Navigator, destination *File, isCopy bool, mode string, ae *serializer.AggregateError) ([]*File, map[Navigator][]*File) {
+	surviving := make([]*File, 0, len(targets))
+	group := make(map[Navigator][]*File)
+	dstBase := destination.Uri(true)
+
+	for _, target := range targets {
+		dstName := target.Name()
+		if !isCopy {
+			if _, ok := target.Metadata()[MetadataRestoreUri]; ok {
+				dstName = target.DisplayName()
+			}
+		}
+
+		_, err := f.fileClient.GetChildFile(ctx, destination.Model, destination.OwnerID(), dstName, false)
+		if err != nil && !ent.IsNotFound(err) {
+			ae.Add(target.Uri(true).String(), fmt.Errorf("failed to check destination conflict: %w", err))
+			continue
+		}
+
+		if err == nil {
+			// Destination already holds an object under the same name.
+			if mode == MoveConflictSkip {
+				ae.Add(target.Uri(true).String(), fs.ErrFileExisted)
+				continue
+			}
+			if _, _, err := f.Delete(ctx, []*fs.URI{dstBase.Join(dstName)}); err != nil {
+				ae.Add(target.Uri(true).String(), err)
+				continue
+			}
+		}
+
+		surviving = append(surviving, target)
+		if isCopy {
+			nav := navOf[target]
+			group[nav] = append(group[nav], target)
+		}
+	}
+
+	return surviving, group
 }

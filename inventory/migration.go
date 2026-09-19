@@ -41,6 +41,8 @@ func needMigration(client *ent.Client, ctx context.Context, requiredDbVersion st
 func migrate(l logging.Logger, client *ent.Client, ctx context.Context, kv cache.Driver, requiredDbVersion string) error {
 	l.Info("Start initializing database schema...")
 	l.Info("Creating basic table schema...")
+	repairLegacyUserGroupColumn(l, client, ctx)
+	RepairHeatWaveNotSecondary(l, client, ctx)
 	if err := client.Schema.Create(ctx); err != nil {
 		return fmt.Errorf("Failed creating schema resources: %w", err)
 	}
@@ -65,6 +67,154 @@ func migrate(l logging.Logger, client *ent.Client, ctx context.Context, kv cache
 
 	client.Setting.Create().SetName(DBVersionPrefix + requiredDbVersion).SetValue("installed").Save(ctx)
 	return nil
+}
+
+// repairLegacyUserGroupColumn backfills users.group_users before ent's
+// auto-migration. v3 bound user groups via a nullable group_id column (or no
+// column at all for groupless users); the v4 schema requires NOT NULL
+// group_users, so the schema copy fails mid-upgrade on old databases
+// (upstream #2934). All statements are error-tolerant: on a fresh install
+// the users/groups tables simply do not exist yet and every statement no-ops.
+func repairLegacyUserGroupColumn(l logging.Logger, client *ent.Client, ctx context.Context) {
+	if _, err := client.ExecContext(ctx, `ALTER TABLE users ADD COLUMN group_users INTEGER`); err != nil {
+		l.Debug("Skip adding group_users column: %s", err)
+	}
+
+	// Prefer the legacy group_id binding when present; otherwise fall back to
+	// the first non-admin group (id 1 is the seeded admin group), then any group.
+	queries := []string{
+		`UPDATE users SET group_users = COALESCE(group_id, (SELECT MIN(id) FROM groups WHERE id <> 1), (SELECT MIN(id) FROM groups)) WHERE group_users IS NULL`,
+		`UPDATE users SET group_users = COALESCE((SELECT MIN(id) FROM groups WHERE id <> 1), (SELECT MIN(id) FROM groups)) WHERE group_users IS NULL`,
+	}
+	for _, q := range queries {
+		_, err := client.ExecContext(ctx, q)
+		if err == nil {
+			return
+		}
+		l.Debug("Skip legacy group_users backfill: %s", err)
+	}
+}
+
+// RepairHeatWaveNotSecondary strips the MySQL HeatWave `NOT SECONDARY` column
+// attribute before ent's schema migration. Atlas treats it as an unknown EXTRA
+// value and aborts schema inspection (upstream #3452). For every flagged column
+// we replay its own definition from SHOW CREATE TABLE minus the attribute via
+// ALTER TABLE ... MODIFY COLUMN, which clears it without touching the logical
+// schema. On non-MySQL backends the INFORMATION_SCHEMA query fails and the whole
+// function is a no-op.
+func RepairHeatWaveNotSecondary(l logging.Logger, client *ent.Client, ctx context.Context) {
+	rows, err := client.QueryContext(ctx,
+		`SELECT TABLE_NAME, COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+		 WHERE TABLE_SCHEMA = DATABASE() AND UPPER(EXTRA) LIKE '%NOT SECONDARY%'`)
+	if err != nil {
+		l.Debug("Skip HeatWave NOT SECONDARY repair: %s", err)
+		return
+	}
+
+	var flagged [][2]string
+	for rows.Next() {
+		var table, column string
+		if err := rows.Scan(&table, &column); err != nil {
+			l.Debug("Skip HeatWave NOT SECONDARY repair scan: %s", err)
+			rows.Close()
+			return
+		}
+		flagged = append(flagged, [2]string{table, column})
+	}
+	rows.Close()
+
+	for _, tc := range flagged {
+		def, err := heatWaveColumnDef(client, ctx, tc[0], tc[1])
+		if err != nil {
+			l.Warning("Skip NOT SECONDARY repair for %s.%s: %s", tc[0], tc[1], err)
+			continue
+		}
+
+		stm := fmt.Sprintf("ALTER TABLE `%s` MODIFY COLUMN %s",
+			strings.ReplaceAll(tc[0], "`", "``"), def)
+		if _, err := client.ExecContext(ctx, stm); err != nil {
+			l.Warning("Failed to strip NOT SECONDARY on %s.%s: %s", tc[0], tc[1], err)
+			continue
+		}
+		l.Info("Stripped HeatWave NOT SECONDARY attribute on %s.%s", tc[0], tc[1])
+	}
+}
+
+// heatWaveColumnDef extracts a column's full definition from SHOW CREATE TABLE
+// and returns it without the `NOT SECONDARY` attribute, ready for use after
+// ALTER TABLE ... MODIFY COLUMN.
+func heatWaveColumnDef(client *ent.Client, ctx context.Context, table, column string) (string, error) {
+	rows, err := client.QueryContext(ctx,
+		fmt.Sprintf("SHOW CREATE TABLE `%s`", strings.ReplaceAll(table, "`", "``")))
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+
+	var name, ddl string
+	if !rows.Next() {
+		return "", fmt.Errorf("table %s not found", table)
+	}
+	if err := rows.Scan(&name, &ddl); err != nil {
+		return "", err
+	}
+
+	return extractColumnDef(ddl, column)
+}
+
+// extractColumnDef finds `column`'s definition line in SHOW CREATE TABLE output
+// and returns it without the `NOT SECONDARY` attribute.
+func extractColumnDef(ddl, column string) (string, error) {
+	quoted := "`" + strings.ReplaceAll(column, "`", "``") + "`"
+	for _, line := range strings.Split(ddl, "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, quoted+" ") {
+			continue
+		}
+		def := stripNotSecondary(strings.TrimSuffix(line, ","))
+		if findNotSecondary(def) >= 0 {
+			return "", fmt.Errorf("failed to strip NOT SECONDARY from column %s", column)
+		}
+		return def, nil
+	}
+	return "", fmt.Errorf("column %s not found in table definition", column)
+}
+
+func stripNotSecondary(def string) string {
+	// Remove the `NOT SECONDARY` attribute clause, but not the same words
+	// inside a quoted literal (e.g. DEFAULT 'not secondary').
+	out := def
+	for {
+		idx := findNotSecondary(out)
+		if idx < 0 {
+			return strings.TrimSpace(out)
+		}
+		out = out[:idx] + out[idx+len("NOT SECONDARY"):]
+	}
+}
+
+// findNotSecondary returns the index of the first `NOT SECONDARY` occurrence
+// outside single-quoted string literals, or -1.
+func findNotSecondary(def string) int {
+	const marker = "NOT SECONDARY"
+	upper := strings.ToUpper(def)
+	inQuote := false
+	for i := 0; i+len(marker) <= len(upper); i++ {
+		if upper[i] == '\'' {
+			if inQuote && i+1 < len(upper) && upper[i+1] == '\'' {
+				i++ // escaped '' inside a literal
+				continue
+			}
+			inQuote = !inQuote
+		}
+		if !inQuote && strings.HasPrefix(upper[i:], marker) {
+			end := i + len(marker)
+			if (i == 0 || upper[i-1] == ' ') && (end == len(upper) || upper[end] == ' ' || upper[end] == ',') {
+				return i
+			}
+		}
+	}
+	return -1
 }
 
 func migrateDefaultSettings(l logging.Logger, client *ent.Client, ctx context.Context, kv cache.Driver) {
@@ -288,11 +438,9 @@ func migrateMasterNode(l logging.Logger, client *ent.Client, ctx context.Context
 
 const (
 	OAuthClientDesktopGUID        = "393a1839-f52e-498e-9972-e77cc2241eee"
-	OAuthClientDesktopSecret      = "8GaQIu3lOSdqYoDHi9cR8IZ4pvuMH8ya"
 	OAuthClientDesktopName        = "application:oauth.desktop"
 	OAuthClientDesktopRedirectURI = "/callback/desktop"
 	OAuthClientiOSGUID            = "220db97a-44a3-44f7-99b6-d767262b4daa"
-	OAuthClientiOSSecret          = "1kxOW4IyVOkPlsKCnTwzfHyP8XrbpfaF"
 	OAuthClientiOSName            = "application:setting.iOSApp"
 	OAuthClientiOSRedirectURI     = "/callback/ios"
 )
@@ -316,7 +464,7 @@ func migrateOAuthClientiOS(l logging.Logger, client *ent.Client, ctx context.Con
 	}
 	if _, err := client.OAuthClient.Create().
 		SetGUID(OAuthClientiOSGUID).
-		SetSecret(OAuthClientiOSSecret).
+		SetSecret("").
 		SetName(OAuthClientiOSName).
 		SetRedirectUris([]string{OAuthClientiOSRedirectURI}).
 		SetScopes([]string{"profile", "email", "openid", "offline_access", "UserInfo.Write", "UserSecurityInfo.Write", "Workflow.Write", "Files.Write", "Shares.Write", "Finance.Write", "DavAccount.Write"}).
@@ -337,7 +485,7 @@ func migrateOAuthClientDesktop(l logging.Logger, client *ent.Client, ctx context
 
 	if _, err := client.OAuthClient.Create().
 		SetGUID(OAuthClientDesktopGUID).
-		SetSecret(OAuthClientDesktopSecret).
+		SetSecret("").
 		SetName(OAuthClientDesktopName).
 		SetRedirectUris([]string{OAuthClientDesktopRedirectURI}).
 		SetScopes([]string{"profile", "email", "openid", "offline_access", "UserInfo.Write", "Workflow.Write", "Files.Write", "Shares.Write"}).
@@ -579,6 +727,47 @@ var patches = []Patch{
 		},
 	},
 	{
+		Name:       "apply_default_model3d_viewer",
+		EndVersion: "4.20.0",
+		Func: func(l logging.Logger, client *ent.Client, ctx context.Context) error {
+			fileViewersSetting, err := client.Setting.Query().Where(setting.Name("file_viewers")).First(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to query file_viewers setting: %w", err)
+			}
+
+			var fileViewers []types.ViewerGroup
+			if err := json.Unmarshal([]byte(fileViewersSetting.Value), &fileViewers); err != nil {
+				return fmt.Errorf("failed to unmarshal file_viewers setting: %w", err)
+			}
+
+			for _, viewer := range fileViewers[0].Viewers {
+				if viewer.ID == "model3d" {
+					return nil
+				}
+			}
+
+			var defaultModelViewer types.Viewer
+			for _, viewer := range defaultFileViewers[0].Viewers {
+				if viewer.ID == "model3d" {
+					defaultModelViewer = viewer
+					break
+				}
+			}
+
+			fileViewers[0].Viewers = append(fileViewers[0].Viewers, defaultModelViewer)
+			newFileViewersSetting, err := json.Marshal(fileViewers)
+			if err != nil {
+				return fmt.Errorf("failed to marshal file_viewers setting: %w", err)
+			}
+
+			if _, err := client.Setting.UpdateOne(fileViewersSetting).SetValue(string(newFileViewersSetting)).Save(ctx); err != nil {
+				return fmt.Errorf("failed to update file_viewers setting: %w", err)
+			}
+
+			return nil
+		},
+	},
+	{
 		Name:       "reset_secret_key",
 		EndVersion: "4.13.0",
 		Func: func(l logging.Logger, client *ent.Client, ctx context.Context) error {
@@ -586,6 +775,23 @@ var patches = []Patch{
 			ctx = context.WithValue(ctx, debug.SkipDbLogging{}, true)
 			if err := client.Setting.Update().Where(setting.Name("secret_key")).SetValue(newSecretKey).Exec(ctx); err != nil {
 				return fmt.Errorf("failed to update secret_key setting: %w", err)
+			}
+
+			return nil
+		},
+	},
+	{
+		// Built-in desktop/iOS clients are public clients shipped in binaries —
+		// a shared hardcoded secret authenticates nothing. Blank it so token
+		// exchange relies on PKCE (RFC 8252) instead.
+		Name:       "oauth_builtin_public_clients",
+		EndVersion: "4.20.0",
+		Func: func(l logging.Logger, client *ent.Client, ctx context.Context) error {
+			if _, err := client.OAuthClient.Update().
+				Where(oauthclient.GUIDIn(OAuthClientDesktopGUID, OAuthClientiOSGUID)).
+				SetSecret("").
+				Save(ctx); err != nil {
+				return fmt.Errorf("failed to clear built-in OAuth client secrets: %w", err)
 			}
 
 			return nil
@@ -620,7 +826,7 @@ func applyPatches(l logging.Logger, client *ent.Client, ctx context.Context, req
 		return fmt.Errorf("failed to parse required version %s: %w", requiredDbVersion, err)
 	}
 
-	if latestAppliedVersion == nil || requiredVersion.Compare(requiredVersion) > 0 {
+	if latestAppliedVersion == nil || requiredVersion.Compare(latestAppliedVersion) > 0 {
 		latestAppliedVersion = requiredVersion
 	}
 

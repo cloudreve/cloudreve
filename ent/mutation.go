@@ -12519,6 +12519,7 @@ type StoragePolicyMutation struct {
 	deleted_at      *time.Time
 	name            *string
 	_type           *string
+	status          *storagepolicy.Status
 	server          *string
 	bucket_name     *string
 	is_private      *bool
@@ -12835,6 +12836,42 @@ func (m *StoragePolicyMutation) OldType(ctx context.Context) (v string, err erro
 // ResetType resets all changes to the "type" field.
 func (m *StoragePolicyMutation) ResetType() {
 	m._type = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *StoragePolicyMutation) SetStatus(s storagepolicy.Status) {
+	m.status = &s
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *StoragePolicyMutation) Status() (r storagepolicy.Status, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the StoragePolicy entity.
+// If the StoragePolicy object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *StoragePolicyMutation) OldStatus(ctx context.Context) (v storagepolicy.Status, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *StoragePolicyMutation) ResetStatus() {
+	m.status = nil
 }
 
 // SetServer sets the "server" field.
@@ -13571,7 +13608,7 @@ func (m *StoragePolicyMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *StoragePolicyMutation) Fields() []string {
-	fields := make([]string, 0, 15)
+	fields := make([]string, 0, 16)
 	if m.created_at != nil {
 		fields = append(fields, storagepolicy.FieldCreatedAt)
 	}
@@ -13586,6 +13623,9 @@ func (m *StoragePolicyMutation) Fields() []string {
 	}
 	if m._type != nil {
 		fields = append(fields, storagepolicy.FieldType)
+	}
+	if m.status != nil {
+		fields = append(fields, storagepolicy.FieldStatus)
 	}
 	if m.server != nil {
 		fields = append(fields, storagepolicy.FieldServer)
@@ -13635,6 +13675,8 @@ func (m *StoragePolicyMutation) Field(name string) (ent.Value, bool) {
 		return m.Name()
 	case storagepolicy.FieldType:
 		return m.GetType()
+	case storagepolicy.FieldStatus:
+		return m.Status()
 	case storagepolicy.FieldServer:
 		return m.Server()
 	case storagepolicy.FieldBucketName:
@@ -13674,6 +13716,8 @@ func (m *StoragePolicyMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldName(ctx)
 	case storagepolicy.FieldType:
 		return m.OldType(ctx)
+	case storagepolicy.FieldStatus:
+		return m.OldStatus(ctx)
 	case storagepolicy.FieldServer:
 		return m.OldServer(ctx)
 	case storagepolicy.FieldBucketName:
@@ -13737,6 +13781,13 @@ func (m *StoragePolicyMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetType(v)
+		return nil
+	case storagepolicy.FieldStatus:
+		v, ok := value.(storagepolicy.Status)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
 		return nil
 	case storagepolicy.FieldServer:
 		v, ok := value.(string)
@@ -13956,6 +14007,9 @@ func (m *StoragePolicyMutation) ResetField(name string) error {
 	case storagepolicy.FieldType:
 		m.ResetType()
 		return nil
+	case storagepolicy.FieldStatus:
+		m.ResetStatus()
+		return nil
 	case storagepolicy.FieldServer:
 		m.ResetServer()
 		return nil
@@ -14158,6 +14212,7 @@ type TaskMutation struct {
 	public_state   **types.TaskPublicState
 	private_state  *string
 	correlation_id *uuid.UUID
+	hidden         *bool
 	clearedFields  map[string]struct{}
 	user           *int
 	cleareduser    bool
@@ -14640,6 +14695,42 @@ func (m *TaskMutation) ResetUserTasks() {
 	delete(m.clearedFields, task.FieldUserTasks)
 }
 
+// SetHidden sets the "hidden" field.
+func (m *TaskMutation) SetHidden(b bool) {
+	m.hidden = &b
+}
+
+// Hidden returns the value of the "hidden" field in the mutation.
+func (m *TaskMutation) Hidden() (r bool, exists bool) {
+	v := m.hidden
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHidden returns the old "hidden" field's value of the Task entity.
+// If the Task object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskMutation) OldHidden(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldHidden is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldHidden requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHidden: %w", err)
+	}
+	return oldValue.Hidden, nil
+}
+
+// ResetHidden resets all changes to the "hidden" field.
+func (m *TaskMutation) ResetHidden() {
+	m.hidden = nil
+}
+
 // SetUserID sets the "user" edge to the User entity by id.
 func (m *TaskMutation) SetUserID(id int) {
 	m.user = &id
@@ -14714,7 +14805,7 @@ func (m *TaskMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TaskMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 10)
 	if m.created_at != nil {
 		fields = append(fields, task.FieldCreatedAt)
 	}
@@ -14742,6 +14833,9 @@ func (m *TaskMutation) Fields() []string {
 	if m.user != nil {
 		fields = append(fields, task.FieldUserTasks)
 	}
+	if m.hidden != nil {
+		fields = append(fields, task.FieldHidden)
+	}
 	return fields
 }
 
@@ -14768,6 +14862,8 @@ func (m *TaskMutation) Field(name string) (ent.Value, bool) {
 		return m.CorrelationID()
 	case task.FieldUserTasks:
 		return m.UserTasks()
+	case task.FieldHidden:
+		return m.Hidden()
 	}
 	return nil, false
 }
@@ -14795,6 +14891,8 @@ func (m *TaskMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldCorrelationID(ctx)
 	case task.FieldUserTasks:
 		return m.OldUserTasks(ctx)
+	case task.FieldHidden:
+		return m.OldHidden(ctx)
 	}
 	return nil, fmt.Errorf("unknown Task field %s", name)
 }
@@ -14866,6 +14964,13 @@ func (m *TaskMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetUserTasks(v)
+		return nil
+	case task.FieldHidden:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHidden(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Task field %s", name)
@@ -14973,6 +15078,9 @@ func (m *TaskMutation) ResetField(name string) error {
 	case task.FieldUserTasks:
 		m.ResetUserTasks()
 		return nil
+	case task.FieldHidden:
+		m.ResetHidden()
+		return nil
 	}
 	return fmt.Errorf("unknown Task field %s", name)
 }
@@ -15064,6 +15172,9 @@ type UserMutation struct {
 	nick                *string
 	password            *string
 	status              *user.Status
+	ban_expires         *time.Time
+	ban_reason          *string
+	last_login          *time.Time
 	storage             *int64
 	addstorage          *int64
 	two_factor_secret   *string
@@ -15475,6 +15586,153 @@ func (m *UserMutation) OldStatus(ctx context.Context) (v user.Status, err error)
 // ResetStatus resets all changes to the "status" field.
 func (m *UserMutation) ResetStatus() {
 	m.status = nil
+}
+
+// SetBanExpires sets the "ban_expires" field.
+func (m *UserMutation) SetBanExpires(t time.Time) {
+	m.ban_expires = &t
+}
+
+// BanExpires returns the value of the "ban_expires" field in the mutation.
+func (m *UserMutation) BanExpires() (r time.Time, exists bool) {
+	v := m.ban_expires
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBanExpires returns the old "ban_expires" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldBanExpires(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBanExpires is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBanExpires requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBanExpires: %w", err)
+	}
+	return oldValue.BanExpires, nil
+}
+
+// ClearBanExpires clears the value of the "ban_expires" field.
+func (m *UserMutation) ClearBanExpires() {
+	m.ban_expires = nil
+	m.clearedFields[user.FieldBanExpires] = struct{}{}
+}
+
+// BanExpiresCleared returns if the "ban_expires" field was cleared in this mutation.
+func (m *UserMutation) BanExpiresCleared() bool {
+	_, ok := m.clearedFields[user.FieldBanExpires]
+	return ok
+}
+
+// ResetBanExpires resets all changes to the "ban_expires" field.
+func (m *UserMutation) ResetBanExpires() {
+	m.ban_expires = nil
+	delete(m.clearedFields, user.FieldBanExpires)
+}
+
+// SetBanReason sets the "ban_reason" field.
+func (m *UserMutation) SetBanReason(s string) {
+	m.ban_reason = &s
+}
+
+// BanReason returns the value of the "ban_reason" field in the mutation.
+func (m *UserMutation) BanReason() (r string, exists bool) {
+	v := m.ban_reason
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBanReason returns the old "ban_reason" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldBanReason(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBanReason is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBanReason requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBanReason: %w", err)
+	}
+	return oldValue.BanReason, nil
+}
+
+// ClearBanReason clears the value of the "ban_reason" field.
+func (m *UserMutation) ClearBanReason() {
+	m.ban_reason = nil
+	m.clearedFields[user.FieldBanReason] = struct{}{}
+}
+
+// BanReasonCleared returns if the "ban_reason" field was cleared in this mutation.
+func (m *UserMutation) BanReasonCleared() bool {
+	_, ok := m.clearedFields[user.FieldBanReason]
+	return ok
+}
+
+// ResetBanReason resets all changes to the "ban_reason" field.
+func (m *UserMutation) ResetBanReason() {
+	m.ban_reason = nil
+	delete(m.clearedFields, user.FieldBanReason)
+}
+
+// SetLastLogin sets the "last_login" field.
+func (m *UserMutation) SetLastLogin(t time.Time) {
+	m.last_login = &t
+}
+
+// LastLogin returns the value of the "last_login" field in the mutation.
+func (m *UserMutation) LastLogin() (r time.Time, exists bool) {
+	v := m.last_login
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastLogin returns the old "last_login" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldLastLogin(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastLogin is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastLogin requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastLogin: %w", err)
+	}
+	return oldValue.LastLogin, nil
+}
+
+// ClearLastLogin clears the value of the "last_login" field.
+func (m *UserMutation) ClearLastLogin() {
+	m.last_login = nil
+	m.clearedFields[user.FieldLastLogin] = struct{}{}
+}
+
+// LastLoginCleared returns if the "last_login" field was cleared in this mutation.
+func (m *UserMutation) LastLoginCleared() bool {
+	_, ok := m.clearedFields[user.FieldLastLogin]
+	return ok
+}
+
+// ResetLastLogin resets all changes to the "last_login" field.
+func (m *UserMutation) ResetLastLogin() {
+	m.last_login = nil
+	delete(m.clearedFields, user.FieldLastLogin)
 }
 
 // SetStorage sets the "storage" field.
@@ -16222,7 +16480,7 @@ func (m *UserMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 12)
+	fields := make([]string, 0, 15)
 	if m.created_at != nil {
 		fields = append(fields, user.FieldCreatedAt)
 	}
@@ -16243,6 +16501,15 @@ func (m *UserMutation) Fields() []string {
 	}
 	if m.status != nil {
 		fields = append(fields, user.FieldStatus)
+	}
+	if m.ban_expires != nil {
+		fields = append(fields, user.FieldBanExpires)
+	}
+	if m.ban_reason != nil {
+		fields = append(fields, user.FieldBanReason)
+	}
+	if m.last_login != nil {
+		fields = append(fields, user.FieldLastLogin)
 	}
 	if m.storage != nil {
 		fields = append(fields, user.FieldStorage)
@@ -16281,6 +16548,12 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 		return m.Password()
 	case user.FieldStatus:
 		return m.Status()
+	case user.FieldBanExpires:
+		return m.BanExpires()
+	case user.FieldBanReason:
+		return m.BanReason()
+	case user.FieldLastLogin:
+		return m.LastLogin()
 	case user.FieldStorage:
 		return m.Storage()
 	case user.FieldTwoFactorSecret:
@@ -16314,6 +16587,12 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldPassword(ctx)
 	case user.FieldStatus:
 		return m.OldStatus(ctx)
+	case user.FieldBanExpires:
+		return m.OldBanExpires(ctx)
+	case user.FieldBanReason:
+		return m.OldBanReason(ctx)
+	case user.FieldLastLogin:
+		return m.OldLastLogin(ctx)
 	case user.FieldStorage:
 		return m.OldStorage(ctx)
 	case user.FieldTwoFactorSecret:
@@ -16381,6 +16660,27 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetStatus(v)
+		return nil
+	case user.FieldBanExpires:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBanExpires(v)
+		return nil
+	case user.FieldBanReason:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBanReason(v)
+		return nil
+	case user.FieldLastLogin:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastLogin(v)
 		return nil
 	case user.FieldStorage:
 		v, ok := value.(int64)
@@ -16468,6 +16768,15 @@ func (m *UserMutation) ClearedFields() []string {
 	if m.FieldCleared(user.FieldPassword) {
 		fields = append(fields, user.FieldPassword)
 	}
+	if m.FieldCleared(user.FieldBanExpires) {
+		fields = append(fields, user.FieldBanExpires)
+	}
+	if m.FieldCleared(user.FieldBanReason) {
+		fields = append(fields, user.FieldBanReason)
+	}
+	if m.FieldCleared(user.FieldLastLogin) {
+		fields = append(fields, user.FieldLastLogin)
+	}
 	if m.FieldCleared(user.FieldTwoFactorSecret) {
 		fields = append(fields, user.FieldTwoFactorSecret)
 	}
@@ -16496,6 +16805,15 @@ func (m *UserMutation) ClearField(name string) error {
 		return nil
 	case user.FieldPassword:
 		m.ClearPassword()
+		return nil
+	case user.FieldBanExpires:
+		m.ClearBanExpires()
+		return nil
+	case user.FieldBanReason:
+		m.ClearBanReason()
+		return nil
+	case user.FieldLastLogin:
+		m.ClearLastLogin()
 		return nil
 	case user.FieldTwoFactorSecret:
 		m.ClearTwoFactorSecret()
@@ -16534,6 +16852,15 @@ func (m *UserMutation) ResetField(name string) error {
 		return nil
 	case user.FieldStatus:
 		m.ResetStatus()
+		return nil
+	case user.FieldBanExpires:
+		m.ResetBanExpires()
+		return nil
+	case user.FieldBanReason:
+		m.ResetBanReason()
+		return nil
+	case user.FieldLastLogin:
+		m.ResetLastLogin()
 		return nil
 	case user.FieldStorage:
 		m.ResetStorage()

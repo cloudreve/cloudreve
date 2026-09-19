@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/ent"
@@ -151,16 +152,10 @@ func (handler *Driver) Put(ctx context.Context, file *fs.UploadRequest) error {
 	}
 	defer out.Close()
 
-	stat, err := out.Stat()
-	if err != nil {
-		handler.l.Warning("Failed to read file info: %s", err)
-		return err
-	}
-
-	if stat.Size() < file.Offset {
-		return errors.New("size of unfinished uploaded chunks is not as expected")
-	}
-
+	// Chunks may arrive out of order under concurrent uploads, so the current
+	// file size is not a valid precondition for the chunk offset. Positioned
+	// writes are safe here; a missing range is caught by the assembled-size
+	// check in CompleteUpload.
 	if _, err := out.Seek(file.Offset, io.SeekStart); err != nil {
 		return fmt.Errorf("failed to seek to desired offset %d: %s", file.Offset, err)
 	}
@@ -184,6 +179,8 @@ func (handler *Driver) Delete(ctx context.Context, files ...string) ([]string, e
 				handler.l.Warning("Failed to delete file: %s", err)
 				retErr = err
 				deleteFailed = append(deleteFailed, value)
+			} else {
+				handler.pruneEmptyAncestors(filePath)
 			}
 		}
 
@@ -192,6 +189,23 @@ func (handler *Driver) Delete(ctx context.Context, files ...string) ([]string, e
 	}
 
 	return deleteFailed, retErr
+}
+
+// pruneEmptyAncestors removes empty parent directories left behind by a
+// deleted blob (#3290). os.Remove fails on non-empty directories, so the
+// walk self-terminates; the climb is also bounded to the application
+// root so it can never escape the storage tree.
+func (handler *Driver) pruneEmptyAncestors(filePath string) {
+	root := filepath.Dir(util.RelativePath("x"))
+	for dir := filepath.Dir(filePath); ; dir = filepath.Dir(dir) {
+		rel, err := filepath.Rel(root, dir)
+		if err != nil || rel == "." || strings.HasPrefix(rel, "..") {
+			return
+		}
+		if err := os.Remove(dir); err != nil {
+			return
+		}
+	}
 }
 
 // Thumb 获取文件缩略图
@@ -259,6 +273,24 @@ func (handler *Driver) CancelToken(ctx context.Context, uploadSession *fs.Upload
 }
 
 func (handler *Driver) CompleteUpload(ctx context.Context, session *fs.UploadSession) error {
+	// Concurrent chunks are written at their own offsets and may land out of
+	// order; verify the assembled file matches the declared size before
+	// reporting success so a missing or lost range fails loudly instead of
+	// leaving a corrupted blob.
+	if session.Props != nil && session.Props.SavePath != "" {
+		stat, err := os.Stat(handler.LocalPath(ctx, session.Props.SavePath))
+		if err != nil {
+			return fmt.Errorf("failed to stat uploaded file: %w", err)
+		}
+		if stat.Size() != session.Props.Size {
+			return serializer.NewError(
+				serializer.CodeUploadFailed,
+				fmt.Sprintf("uploaded file size mismatch: expected %d, got %d", session.Props.Size, stat.Size()),
+				nil,
+			)
+		}
+	}
+
 	if session.Callback == "" {
 		return nil
 	}

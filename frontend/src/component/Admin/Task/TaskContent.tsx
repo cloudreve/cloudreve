@@ -133,6 +133,11 @@ export const TaskContent = memo(({ task, openEntity, openFile }: TaskContentProp
         return t("task.fullTextDelete", {
           count: privateState?.file_ids?.length ?? 0,
         });
+      case TaskType.blob_audit:
+        return t("task.blobAudit", {
+          policyID: privateState?.policy_id ?? 0,
+          count: privateState?.orphan_count ?? 0,
+        });
       default:
         return "";
     }

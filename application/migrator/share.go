@@ -36,7 +36,6 @@ func (m *Migrator) migrateShare() error {
 
 		tx, err := m.v4client.Tx(ctx)
 		if err != nil {
-			_ = tx.Rollback()
 			return fmt.Errorf("failed to start transaction: %w", err)
 		}
 

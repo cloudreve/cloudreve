@@ -27,6 +27,8 @@ export interface TaskSummaryStatusProps {
   summary?: TaskSummary;
   error?: string;
   simplified?: boolean;
+  // Live transfer-phase progress percent for remote downloads.
+  transferPercent?: number;
 }
 
 interface TaskStatusContentProps {
@@ -46,7 +48,7 @@ const TaskStatusContent = forwardRef(({ icon, title, color, ...props }: TaskStat
   );
 });
 
-const TaskSummaryStatus = ({ type, status, summary, error, simplified }: TaskSummaryStatusProps) => {
+const TaskSummaryStatus = ({ type, status, summary, error, simplified, transferPercent }: TaskSummaryStatusProps) => {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const theme = useTheme();
@@ -111,7 +113,11 @@ const TaskSummaryStatus = ({ type, status, summary, error, simplified }: TaskSum
         } else if (summary?.phase == "transfer") {
           return (
             <TaskStatusContent
-              title={t("download.transferring")}
+              title={
+                transferPercent != undefined
+                  ? `${t("download.transferring")} ${transferPercent.toFixed(0)}%`
+                  : t("download.transferring")
+              }
               icon={<ArrowSyncCircleFilledSpin fontSize={"small"} />}
               color={theme.palette.primary.main}
             />

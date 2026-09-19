@@ -131,7 +131,7 @@ const TreeFiles = React.memo(
                   ))
               : shadowChild}
           </TreeFile>
-          {limit < childTreeFiles.length ? (
+          {!flatten && limit < childTreeFiles.length ? (
             <SideNavItem level={level + 1} label={t("navbar.showMore")} onClick={() => setLimit((l) => l + 50)} />
           ) : null}
         </>

@@ -63,7 +63,7 @@ func TestMemoStore_Get(t *testing.T) {
 	// 过期
 	{
 		_ = store.Set("string", "string_val", 1)
-		time.Sleep(time.Duration(2) * time.Second)
+		store.Store.Store("string", itemWithTTL{Value: "string_val", Expires: time.Now().Unix() - 1})
 		val, ok := store.Get("string")
 		asserts.Nil(val)
 		asserts.False(ok)
@@ -141,7 +141,7 @@ func TestMemoStore_GarbageCollect(t *testing.T) {
 	asserts := assert.New(t)
 	store := NewMemoStore("", logging.NewConsoleLogger(logging.LevelDebug))
 	store.Set("test", 1, 1)
-	time.Sleep(time.Duration(2000) * time.Millisecond)
+	store.Store.Store("test", itemWithTTL{Value: 1, Expires: time.Now().Unix() - 1})
 	store.GarbageCollect(logging.NewConsoleLogger(logging.LevelDebug))
 	_, ok := store.Get("test")
 	asserts.False(ok)

@@ -13,6 +13,7 @@ import {
 } from "@mui/material";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { sendUpdateUserSetting } from "../../../api/api.ts";
 import { Viewer, ViewerType } from "../../../api/explorer.ts";
 import { closeViewerSelector } from "../../../redux/globalStateSlice.ts";
 import { useAppDispatch, useAppSelector } from "../../../redux/hooks.ts";
@@ -129,7 +130,15 @@ const OpenWith = () => {
     }
 
     if (always) {
-      SessionManager.set(UserSettings.OpenWithPrefix + ext, viewer?.id ?? selectedViewer?.id);
+      const viewerId = viewer?.id ?? selectedViewer?.id;
+      SessionManager.set(UserSettings.OpenWithPrefix + ext, viewerId);
+      const user = SessionManager.currentUser();
+      if (user && viewerId) {
+        const merged = { ...(user.preferred_viewers ?? {}), [ext]: viewerId };
+        dispatch(sendUpdateUserSetting({ preferred_viewers: merged }))
+          .then(() => SessionManager.updateUserIfExist({ ...user, preferred_viewers: merged }))
+          .catch(() => {});
+      }
     }
 
     dispatch(

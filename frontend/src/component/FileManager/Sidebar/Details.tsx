@@ -50,6 +50,7 @@ const Details = ({ target, inPhotoViewer, setTarget, targetDisplayOptions }: Det
             setThumbSrc(null);
           }}
           src={thumbSrc}
+          draggable={false}
           sx={{
             borderRadius: "8px",
           }}
