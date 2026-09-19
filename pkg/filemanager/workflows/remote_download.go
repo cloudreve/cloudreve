@@ -301,7 +301,11 @@ func (m *RemoteDownloadTask) buildDownloadOptions(ctx context.Context, base map[
 		}
 	case types.DownloaderProviderYtDlp:
 		if isHttpSrc {
-			if m.state.FileName != "" {
+			// "output" becomes a yt-dlp -o template: reject path separators
+			// and "%(" template fields so a user-chosen name cannot escape
+			// the task temp dir or expand yt-dlp metadata.
+			if m.state.FileName != "" && !strings.ContainsAny(m.state.FileName, `/\`) &&
+				!strings.Contains(m.state.FileName, "%(") && m.state.FileName != ".." {
 				options["output"] = m.state.FileName
 			}
 			if m.state.HTTPUsername != "" {
