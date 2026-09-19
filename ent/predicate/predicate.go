@@ -9,6 +9,9 @@ import (
 // AclEntry is the predicate function for aclentry builders.
 type AclEntry func(*sql.Selector)
 
+// ActivityEvent is the predicate function for activityevent builders.
+type ActivityEvent func(*sql.Selector)
+
 // CreditTxn is the predicate function for credittxn builders.
 type CreditTxn func(*sql.Selector)
 

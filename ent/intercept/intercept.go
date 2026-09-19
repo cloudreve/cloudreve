@@ -9,6 +9,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/aclentry"
+	"github.com/cloudreve/Cloudreve/v4/ent/activityevent"
 	"github.com/cloudreve/Cloudreve/v4/ent/credittxn"
 	"github.com/cloudreve/Cloudreve/v4/ent/davaccount"
 	"github.com/cloudreve/Cloudreve/v4/ent/directlink"
@@ -113,6 +114,33 @@ func (f TraverseAclEntry) Traverse(ctx context.Context, q ent.Query) error {
 		return f(ctx, q)
 	}
 	return fmt.Errorf("unexpected query type %T. expect *ent.AclEntryQuery", q)
+}
+
+// The ActivityEventFunc type is an adapter to allow the use of ordinary function as a Querier.
+type ActivityEventFunc func(context.Context, *ent.ActivityEventQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f ActivityEventFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.ActivityEventQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.ActivityEventQuery", q)
+}
+
+// The TraverseActivityEvent type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseActivityEvent func(context.Context, *ent.ActivityEventQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseActivityEvent) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseActivityEvent) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.ActivityEventQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.ActivityEventQuery", q)
 }
 
 // The CreditTxnFunc type is an adapter to allow the use of ordinary function as a Querier.
@@ -660,6 +688,8 @@ func NewQuery(q ent.Query) (Query, error) {
 	switch q := q.(type) {
 	case *ent.AclEntryQuery:
 		return &query[*ent.AclEntryQuery, predicate.AclEntry, aclentry.OrderOption]{typ: ent.TypeAclEntry, tq: q}, nil
+	case *ent.ActivityEventQuery:
+		return &query[*ent.ActivityEventQuery, predicate.ActivityEvent, activityevent.OrderOption]{typ: ent.TypeActivityEvent, tq: q}, nil
 	case *ent.CreditTxnQuery:
 		return &query[*ent.CreditTxnQuery, predicate.CreditTxn, credittxn.OrderOption]{typ: ent.TypeCreditTxn, tq: q}, nil
 	case *ent.DavAccountQuery:

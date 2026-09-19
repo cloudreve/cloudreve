@@ -13,6 +13,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/downloader"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs/dbfs"
@@ -279,6 +280,8 @@ func (service *ArchiveWorkflowService) CreateExtractTask(c *gin.Context) (*TaskR
 		return nil, serializer.NewError(serializer.CodeCreateTaskError, "Failed to queue task", err)
 	}
 
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventExtractArchive,
+		activity.Extra(map[string]any{"src": service.Src, "dst": service.Dst}))
 	return BuildTaskResponse(t, nil, hasher), nil
 }
 
@@ -323,6 +326,8 @@ func (service *ArchiveWorkflowService) CreateCompressTask(c *gin.Context) (*Task
 		return nil, serializer.NewError(serializer.CodeCreateTaskError, "Failed to queue task", err)
 	}
 
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventCreateArchive,
+		activity.Extra(map[string]any{"src": service.Src, "dst": service.Dst}))
 	return BuildTaskResponse(t, nil, hasher), nil
 }
 

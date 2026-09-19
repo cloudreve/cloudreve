@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/ent/aclentry"
+	"github.com/cloudreve/Cloudreve/v4/ent/activityevent"
 	"github.com/cloudreve/Cloudreve/v4/ent/credittxn"
 	"github.com/cloudreve/Cloudreve/v4/ent/davaccount"
 	"github.com/cloudreve/Cloudreve/v4/ent/directlink"
@@ -53,6 +54,25 @@ func init() {
 	aclentry.DefaultUpdatedAt = aclentryDescUpdatedAt.Default.(func() time.Time)
 	// aclentry.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	aclentry.UpdateDefaultUpdatedAt = aclentryDescUpdatedAt.UpdateDefault.(func() time.Time)
+	activityeventMixin := schema.ActivityEvent{}.Mixin()
+	activityeventMixinHooks0 := activityeventMixin[0].Hooks()
+	activityevent.Hooks[0] = activityeventMixinHooks0[0]
+	activityeventMixinInters0 := activityeventMixin[0].Interceptors()
+	activityevent.Interceptors[0] = activityeventMixinInters0[0]
+	activityeventMixinFields0 := activityeventMixin[0].Fields()
+	_ = activityeventMixinFields0
+	activityeventFields := schema.ActivityEvent{}.Fields()
+	_ = activityeventFields
+	// activityeventDescCreatedAt is the schema descriptor for created_at field.
+	activityeventDescCreatedAt := activityeventMixinFields0[0].Descriptor()
+	// activityevent.DefaultCreatedAt holds the default value on creation for the created_at field.
+	activityevent.DefaultCreatedAt = activityeventDescCreatedAt.Default.(func() time.Time)
+	// activityeventDescUpdatedAt is the schema descriptor for updated_at field.
+	activityeventDescUpdatedAt := activityeventMixinFields0[1].Descriptor()
+	// activityevent.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	activityevent.DefaultUpdatedAt = activityeventDescUpdatedAt.Default.(func() time.Time)
+	// activityevent.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	activityevent.UpdateDefaultUpdatedAt = activityeventDescUpdatedAt.UpdateDefault.(func() time.Time)
 	credittxnMixin := schema.CreditTxn{}.Mixin()
 	credittxnMixinHooks0 := credittxnMixin[0].Hooks()
 	credittxn.Hooks[0] = credittxnMixinHooks0[0]

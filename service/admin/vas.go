@@ -9,6 +9,8 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/credittxn"
 	"github.com/cloudreve/Cloudreve/v4/ent/giftcode"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
 	"github.com/gin-gonic/gin"
 )
@@ -107,5 +109,7 @@ func (service *AdjustCreditService) Create(c *gin.Context) error {
 		return serializer.NewError(serializer.CodeDBError, "Failed to adjust credits", err)
 	}
 
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventPointsChange,
+		activity.Extra(map[string]any{"target_user": target.ID, "delta": service.Delta, "des": service.Des}))
 	return nil
 }

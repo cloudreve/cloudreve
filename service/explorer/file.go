@@ -10,6 +10,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/auth"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cluster/routes"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
@@ -117,6 +118,10 @@ func (s *GetDirectLinkService) Get(c *gin.Context) ([]DirectLinkResponse, error)
 	}
 
 	res, err := m.GetDirectLink(c, uris...)
+	if err == nil {
+		activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventGetDirectLink,
+			activity.Extra(map[string]any{"uris": s.Uris}))
+	}
 	return BuildDirectLinkResponse(res), err
 }
 
@@ -142,6 +147,8 @@ func DeleteDirectLink(c *gin.Context) error {
 		return serializer.NewError(serializer.CodeDBError, "Failed to delete direct link", err)
 	}
 
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventDeleteDirectLink,
+		activity.File(link.Edges.File.ID))
 	return nil
 }
 
@@ -505,6 +512,11 @@ func (s *FileURLService) Get(c *gin.Context) (*FileURLResponse, error) {
 	)
 	if err != nil && !s.SkipError {
 		return nil, fmt.Errorf("failed to get entity url: %w", err)
+	}
+
+	if s.Download {
+		activity.Record(c, settings, dep.ActivityClient(), types.EventEntityDownloaded,
+			activity.Extra(map[string]any{"uris": s.Uris}))
 	}
 
 	//if !s.NoCache && earliestExpire != nil {

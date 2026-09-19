@@ -10,6 +10,12 @@ func (m *AclEntryMutation) SetRawID(t int) {
 
 // SetUpdatedAt sets the "updated_at" field.
 
+func (m *ActivityEventMutation) SetRawID(t int) {
+	m.id = &t
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+
 func (m *CreditTxnMutation) SetRawID(t int) {
 	m.id = &t
 }

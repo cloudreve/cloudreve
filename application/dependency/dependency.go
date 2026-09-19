@@ -110,6 +110,8 @@ type Dep interface {
 	AclClient() inventory.AclClient
 	// VasClient Get a singleton inventory.VasClient instance for credits, gift codes and grants.
 	VasClient() inventory.VasClient
+	// ActivityClient Get a singleton inventory.ActivityClient instance for the audit event store.
+	ActivityClient() inventory.ActivityClient
 	// TaskClient Get a singleton inventory.TaskClient instance for access DB task store.
 	TaskClient() inventory.TaskClient
 	// ForkWithLogger create a shallow copy of dependency with a new correlated logger, used as per-request dep.
@@ -168,6 +170,7 @@ type dependency struct {
 	shareClient           inventory.ShareClient
 	aclClient             inventory.AclClient
 	vasClient             inventory.VasClient
+	activityClient        inventory.ActivityClient
 	settingProvider       setting.Provider
 	userClient            inventory.UserClient
 	groupClient           inventory.GroupClient
@@ -844,6 +847,15 @@ func (d *dependency) VasClient() inventory.VasClient {
 
 	d.vasClient = inventory.NewVasClient(d.DBClient(), d.ConfigProvider().Database().Type)
 	return d.vasClient
+}
+
+func (d *dependency) ActivityClient() inventory.ActivityClient {
+	if d.activityClient != nil {
+		return d.activityClient
+	}
+
+	d.activityClient = inventory.NewActivityClient(d.DBClient(), d.ConfigProvider().Database().Type)
+	return d.activityClient
 }
 
 func (d *dependency) TaskClient() inventory.TaskClient {

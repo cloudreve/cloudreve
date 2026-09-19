@@ -10,6 +10,8 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/auth"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cluster/routes"
 	"github.com/cloudreve/Cloudreve/v4/pkg/email"
@@ -151,6 +153,8 @@ func (service *UserLoginService) Login(c *gin.Context) (*ent.User, string, error
 	}
 
 	if err != nil {
+		activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventUserLoginFailed,
+			activity.Extra(map[string]any{"email": service.UserName}))
 		return nil, "", err
 	}
 
@@ -183,6 +187,8 @@ func IssueToken(c *gin.Context) (*BuiltinLoginResponse, error) {
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeEncryptError, "Failed to issue token pair", err)
 	}
+
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventUserLogin)
 
 	return &BuiltinLoginResponse{
 		User:  BuildUser(u, dep.HashIDEncoder()),

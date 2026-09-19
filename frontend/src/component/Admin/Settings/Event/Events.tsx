@@ -9,9 +9,11 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { useContext } from "react";
+import { useContext, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { AuditLogType } from "../../../../api/explorer";
+import { DenseFilledTextField } from "../../../Common/StyledComponents.tsx";
+import SettingForm from "../../../Pages/Setting/SettingForm.tsx";
 import { NoMarginHelperText, SettingSection, SettingSectionContent } from "../Settings";
 import { SettingContext } from "../SettingWrapper";
 
@@ -130,6 +132,44 @@ const Events = () => {
   const { t } = useTranslation("dashboard");
   const { formRef, setSettings, values } = useContext(SettingContext);
 
+  // Enabled set. Missing/unparseable setting means "record everything".
+  const enabled = useMemo(() => {
+    try {
+      const parsed = JSON.parse(values.audit_log_enabled || "");
+      return Array.isArray(parsed) ? new Set<number>(parsed) : null;
+    } catch {
+      return null;
+    }
+  }, [values.audit_log_enabled]);
+
+  const isEnabled = (eventType: number) => enabled === null || enabled.has(eventType);
+
+  const writeEnabled = (next: Set<number>) => {
+    setSettings({ audit_log_enabled: JSON.stringify([...next]) });
+  };
+
+  const toggleEvent = (eventType: number, checked: boolean) => {
+    const next = new Set<number>(enabled ?? Object.values(AuditLogType));
+    if (checked) {
+      next.add(eventType);
+    } else {
+      next.delete(eventType);
+    }
+    writeEnabled(next);
+  };
+
+  const toggleCategory = (events: number[], checked: boolean) => {
+    const next = new Set<number>(enabled ?? Object.values(AuditLogType));
+    for (const e of events) {
+      if (checked) {
+        next.add(e);
+      } else {
+        next.delete(e);
+      }
+    }
+    writeEnabled(next);
+  };
+
   return (
     <Box component={"form"} ref={formRef} onSubmit={(e) => e.preventDefault()}>
       <Stack spacing={5}>
@@ -140,6 +180,18 @@ const Events = () => {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             {t("settings.auditLogDes")}
           </Typography>
+
+          <SettingForm lgWidth={5}>
+            <DenseFilledTextField
+              fullWidth
+              type="number"
+              label={t("settings.auditRetentionDays")}
+              value={values.audit_log_retention_days ?? ""}
+              onChange={(e) => setSettings({ audit_log_retention_days: e.target.value })}
+              inputProps={{ min: 0 }}
+            />
+            <NoMarginHelperText>{t("settings.auditRetentionDaysDes")}</NoMarginHelperText>
+          </SettingForm>
 
           {Object.entries(eventCategories).map(([categoryKey, category]) => (
             <SettingSection key={categoryKey}>
@@ -159,7 +211,14 @@ const Events = () => {
                           variant: "body2",
                         },
                       }}
-                      control={<Checkbox size={"small"} checked={false} />}
+                      control={
+                        <Checkbox
+                          size={"small"}
+                          checked={category.events.every(isEnabled)}
+                          indeterminate={category.events.some(isEnabled) && !category.events.every(isEnabled)}
+                          onChange={(e) => toggleCategory(category.events, e.target.checked)}
+                        />
+                      }
                       label={t("settings.toggleAll")}
                     />
                     <NoMarginHelperText>{t("settings.toggleAllDes")}</NoMarginHelperText>
@@ -174,7 +233,13 @@ const Events = () => {
                             variant: "body2",
                           },
                         }}
-                        control={<Checkbox size={"small"} checked={false} />}
+                        control={
+                          <Checkbox
+                            size={"small"}
+                            checked={isEnabled(eventType)}
+                            onChange={(e) => toggleEvent(eventType, e.target.checked)}
+                          />
+                        }
                         label={t(`settings.event.${getEventName(eventType)}`, getEventName(eventType))}
                       />
                     </Grid>

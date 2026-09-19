@@ -13,6 +13,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cache"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/encrypt"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/eventhub"
@@ -99,6 +100,7 @@ type DBFSDependencies struct {
 	ShareClient         inventory.ShareClient
 	AclClient           inventory.AclClient
 	VasClient           inventory.VasClient
+	ActivityClient      inventory.ActivityClient
 	UserClient          inventory.UserClient
 	StoragePolicyClient inventory.StoragePolicyClient
 	DirectLinkClient    inventory.DirectLinkClient
@@ -120,6 +122,7 @@ func NewDatabaseFS(u *ent.User, deps DBFSDependencies) fs.FileSystem {
 		shareClient:         deps.ShareClient,
 		aclClient:           deps.AclClient,
 		vasClient:           deps.VasClient,
+		activityClient:      deps.ActivityClient,
 		l:                   deps.Logger,
 		ls:                  deps.LockSystem,
 		settingClient:       deps.SettingProvider,
@@ -143,6 +146,7 @@ type DBFS struct {
 	shareClient         inventory.ShareClient
 	aclClient           inventory.AclClient
 	vasClient           inventory.VasClient
+	activityClient      inventory.ActivityClient
 	directLinkClient    inventory.DirectLinkClient
 	l                   logging.Logger
 	ls                  lock.LockSystem
@@ -725,6 +729,7 @@ func (f *DBFS) createFile(ctx context.Context, parent *File, name string, fileTy
 	file.SetEntities([]*ent.Entity{entity})
 	newFile := newFile(parent, file)
 	f.emitFileCreated(ctx, newFile)
+	f.record(ctx, types.EventFileCreate, activity.File(newFile.ID()), activity.Extra(map[string]any{"uri": newFile.Uri(false).String()}))
 	return newFile, nil
 }
 

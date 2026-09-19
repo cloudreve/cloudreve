@@ -329,6 +329,7 @@
     "mediaInfo": "媒体信息",
     "details": "详情",
     "activity": "活动",
+    "activityDes": "{{name}} 上的已记录操作。",
     "goToSharedLink": "转到分享链接",
     "saveShortcut": "保存分享为快捷方式",
     "customizeIcon": "自定义图标",

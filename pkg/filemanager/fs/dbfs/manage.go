@@ -12,6 +12,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
@@ -233,6 +234,7 @@ func (f *DBFS) Rename(ctx context.Context, path *fs.URI, newName string) (fs.Fil
 	}
 
 	f.emitFileRenamed(ctx, target, newName)
+	f.record(ctx, types.EventFileRename, activity.File(target.ID()), activity.Extra(map[string]any{"old_name": oldName, "new_name": newName}))
 
 	originalMetadata := target.Metadata()
 	newFile := target.Replace(updated)
@@ -333,6 +335,9 @@ func (f *DBFS) SoftDelete(ctx context.Context, path ...*fs.URI) error {
 	}
 
 	f.emitFileDeleted(ctx, targets...)
+	for _, target := range targets {
+		f.record(ctx, types.EventMoveToTrash, activity.File(target.ID()), activity.Extra(map[string]any{"uri": target.Uri(false).String()}))
+	}
 
 	return ae.Aggregate()
 }
@@ -417,6 +422,9 @@ func (f *DBFS) Delete(ctx context.Context, path []*fs.URI, opts ...fs.Option) ([
 		return nil, nil, serializer.NewError(serializer.CodeDBError, "Failed to commit delete change", err)
 	}
 	f.emitFileDeleted(ctx, targets...)
+	for _, target := range targets {
+		f.record(ctx, types.EventDeleteFile, activity.File(target.ID()), activity.Extra(map[string]any{"uri": target.Uri(false).String()}))
+	}
 	return newStaleEntities, &fs.IndexDiff{
 		IndexToDelete: indexToDelete,
 	}, ae.Aggregate()
@@ -701,8 +709,10 @@ func (f *DBFS) MoveOrCopy(ctx context.Context, path []*fs.URI, dst *fs.URI, isCo
 		for _, target := range targets {
 			if isCopy {
 				f.emitFileCreated(ctx, newFile(destination, copiedNewTargetsMap[target.ID()]))
+				f.record(ctx, types.EventCopyTo, activity.File(target.ID()), activity.Extra(map[string]any{"dst": destination.Uri(false).String()}))
 			} else {
 				f.emitFileMoved(ctx, target, destination)
+				f.record(ctx, types.EventMoveTo, activity.File(target.ID()), activity.Extra(map[string]any{"dst": destination.Uri(false).String()}))
 			}
 		}
 

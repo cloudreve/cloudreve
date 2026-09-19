@@ -10,6 +10,8 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/auth"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cluster/routes"
 	"github.com/cloudreve/Cloudreve/v4/pkg/email"
@@ -102,6 +104,8 @@ func (service *UserRegisterService) Register(c *gin.Context) serializer.Response
 	if err := inventory.Commit(tx); err != nil {
 		return serializer.DBErr(c, "Failed to commit user row", err)
 	}
+
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventUserSignup)
 
 	if isEmailRequired {
 		if err := sendActivationEmail(c, dep, expectedUser); err != nil {

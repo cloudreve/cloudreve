@@ -707,6 +707,8 @@
     "emailEventsDes": "Events related to email sending and notifications.",
     "toggleAll": "Toggle all",
     "toggleAllDes": "Enable or disable all events in this category.",
+    "auditRetentionDays": "Retention (days)",
+    "auditRetentionDaysDes": "Delete events older than this many days. 0 keeps events forever.",
     "event": {
       "file_imported": "External file imported",
       "server_start": "Server start",
@@ -1589,6 +1591,7 @@
     "linkedEntity": "Linked Blob",
     "linkedShare": "Linked share",
     "rawContent": "Raw content",
+    "noEvents": "No events recorded yet",
     "confirmDelete": "Are you sure you want to delete this event?",
     "deleteXEvents": "Delete {{num}} events",
     "confirmBatchDelete": "Are you sure you want to delete {{num}} events?"

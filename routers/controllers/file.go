@@ -390,6 +390,19 @@ func DeleteAcl(c *gin.Context) {
 	c.JSON(200, serializer.Response{})
 }
 
+// GetFileActivity lists audit events for a file the caller owns.
+func GetFileActivity(c *gin.Context) {
+	service := ParametersFromContext[*explorer.FileActivityService](c, explorer.FileActivityParamCtx{})
+	resp, err := service.Get(c)
+	if respondErr(c, err) {
+		return
+	}
+
+	c.JSON(200, serializer.Response{
+		Data: resp,
+	})
+}
+
 // SearchAclSubjects resolves selectable ACL subjects (users by exact email,
 // groups by name).
 func SearchAclSubjects(c *gin.Context) {

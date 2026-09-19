@@ -9,6 +9,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
@@ -62,6 +63,9 @@ func (service *BatchDeleteShareService) Delete(c *gin.Context) error {
 		return serializer.NewError(serializer.CodeDBError, "Failed to delete shares", err)
 	}
 
+	for _, id := range ids {
+		activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventDeleteShare, activity.Share(id))
+	}
 	return nil
 }
 
@@ -106,6 +110,16 @@ func (service *ShareCreateService) Upsert(c *gin.Context, existed int) (string, 
 		return "", err
 	}
 
+	eventType := types.EventShare
+	if existed > 0 {
+		eventType = types.EventEditShare
+	}
+	opts := []activity.Opt{activity.Share(share.ID)}
+	if share.Edges.File != nil {
+		opts = append(opts, activity.File(share.Edges.File.ID))
+	}
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), eventType, opts...)
+
 	base := dep.SettingProvider().SiteURL(c)
 	return explorer.BuildShareLink(share, dep.HashIDEncoder(), base, true), nil
 }
@@ -133,5 +147,6 @@ func DeleteShare(c *gin.Context, shareId int) error {
 		return serializer.NewError(serializer.CodeDBError, "Failed to delete share", err)
 	}
 
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventDeleteShare, activity.Share(share.ID))
 	return nil
 }

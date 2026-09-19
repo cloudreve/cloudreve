@@ -333,6 +333,15 @@ func AdminAdjustCredit(c *gin.Context) {
 	c.JSON(200, serializer.Response{})
 }
 
+func AdminListEvents(c *gin.Context) {
+	service := ParametersFromContext[*admin.EventListService](c, admin.EventListParamCtx{})
+	res, err := service.Get(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
+
 //	func AdminHashIDEncode(c *gin.Context) {
 //		service := ParametersFromContext[*admin.HashIDService](c, admin.HashIDParamCtx{})
 //		resp, err := service.Encode(c)

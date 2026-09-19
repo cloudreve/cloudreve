@@ -101,6 +101,7 @@ export interface DisplayOption {
   showDirectLinkManagement?: boolean;
   showManageShares?: boolean;
   showAcl?: boolean;
+  showActivity?: boolean;
   showCreateArchive?: boolean;
   showResetThumb?: boolean;
   showDirPolicy?: boolean;
@@ -357,11 +358,14 @@ export const getActionOpt = (
     !!targets[0].owned &&
     !!currentUser &&
     groupBs.enabled(GroupPermission.set_explicit_user);
+  // Any owner can inspect their own file's audit trail.
+  display.showActivity = targets.length == 1 && !!targets[0].owned && !!currentUser;
 
   display.showMore =
     display.showVersionControl ||
     display.showManageShares ||
     display.showAcl ||
+    display.showActivity ||
     display.showCreateArchive ||
     display.showDirectLinkManagement ||
     display.showResetThumb;

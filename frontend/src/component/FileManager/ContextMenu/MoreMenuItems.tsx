@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { closeContextMenu } from "../../../redux/fileManagerSlice.ts";
 import {
   setAclDialog,
+  setActivityDialog,
   setCreateArchiveDialog,
   setDirectLinkManagementDialog,
   setManageShareDialog,
@@ -20,6 +21,7 @@ import HistoryOutlined from "../../Icons/HistoryOutlined.tsx";
 import ImageArrowCounterclockwise from "../../Icons/ImageAarowCounterclockwise.tsx";
 import LinkSetting from "../../Icons/LinkSetting.tsx";
 import PersonLock from "../../Icons/PersonLock.tsx";
+import TaskListOutlined from "../../Icons/TaskListOutlined.tsx";
 import { CascadingContext, CascadingMenuItem } from "./CascadingMenu.tsx";
 import { SubMenuItemsProps } from "./OrganizeMenuItems.tsx";
 
@@ -93,6 +95,23 @@ const MoreMenuItems = ({ displayOpt, targets }: SubMenuItemsProps) => {
             <PersonLock fontSize="small" />
           </ListItemIcon>
           <ListItemText>{t("application:fileManager.permissions")}</ListItemText>
+        </CascadingMenuItem>
+      )}
+      {displayOpt.showActivity && (
+        <CascadingMenuItem
+          onClick={onClick(() =>
+            dispatch(
+              setActivityDialog({
+                open: true,
+                file: targets[0],
+              }),
+            ),
+          )}
+        >
+          <ListItemIcon>
+            <TaskListOutlined fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t("application:fileManager.activity")}</ListItemText>
         </CascadingMenuItem>
       )}
       {displayOpt.showDirectLinkManagement && (

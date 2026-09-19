@@ -7,6 +7,8 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/credittxn"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
 	"github.com/gin-gonic/gin"
 )
@@ -90,6 +92,8 @@ func (service *RedeemGiftCodeService) Create(c *gin.Context) (*ent.GiftCode, err
 		}
 	}
 
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventRedeemGiftCode,
+		activity.Extra(map[string]any{"code": gc.Code, "type": string(gc.Type), "amount": gc.Amount}))
 	return gc, nil
 }
 

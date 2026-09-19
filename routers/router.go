@@ -826,6 +826,11 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					controllers.DeleteAcl,
 				)
 			}
+			// Per-file audit activity (Activity dialog)
+			file.GET("activity",
+				controllers.FromQuery[explorer.FileActivityService](explorer.FileActivityParamCtx{}),
+				controllers.GetFileActivity,
+			)
 			// Version management
 			version := file.Group("version", middleware.RequiredScopes(types.ScopeFilesWrite))
 			{
@@ -1307,6 +1312,15 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 						middleware.RequiredScopes(types.ScopeAdminWrite),
 						controllers.FromJSON[adminsvc.AdjustCreditService](adminsvc.AdjustCreditParamCtx{}),
 						controllers.AdminAdjustCredit,
+					)
+				}
+
+				event := admin.Group("event", middleware.AdminSection(types.GroupPermissionAdminEvents))
+				{
+					// 列出审计事件
+					event.GET("",
+						controllers.FromQuery[adminsvc.EventListService](adminsvc.EventListParamCtx{}),
+						controllers.AdminListEvents,
 					)
 				}
 

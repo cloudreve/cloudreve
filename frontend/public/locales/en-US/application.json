@@ -329,6 +329,7 @@
     "mediaInfo": "Media info",
     "details": "Details",
     "activity": "Activity",
+    "activityDes": "Recorded actions on {{name}}.",
     "goToSharedLink": "Go to shared link",
     "saveShortcut": "Save share link as shortcut",
     "customizeIcon": "Customize icon",

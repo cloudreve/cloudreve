@@ -5,12 +5,22 @@ import (
 	"path"
 	"strings"
 
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/auth/requestinfo"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/eventhub"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 	"github.com/samber/lo"
 )
+
+// record writes an audit event for the operation. Best-effort: nil-safe
+// for stateless/test FS instances and never fails the caller.
+func (f *DBFS) record(ctx context.Context, eventType int, opts ...activity.Opt) {
+	if f.activityClient == nil {
+		return
+	}
+	activity.Record(ctx, f.settingClient, f.activityClient, eventType, opts...)
+}
 
 func (f *DBFS) emitFileCreated(ctx context.Context, file *File) {
 	subscribers := f.getEligibleSubscriber(ctx, file, true)

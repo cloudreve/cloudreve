@@ -11,6 +11,7 @@ import VersionControl from "./VersionControl.tsx";
 import ManageShares from "./Share/ManageShares.tsx";
 import StoragePolicy from "./StoragePolicy.tsx";
 import AclDialog from "./Acl/AclDialog.tsx";
+import ActivityDialog from "./Activity/ActivityDialog.tsx";
 import StaleVersionConfirm from "./StaleVersionConfirm.tsx";
 import SaveAs from "./SaveAs.tsx";
 import Photopea from "../../Viewers/Photopea/Photopea.tsx";
@@ -62,6 +63,7 @@ const Dialogs = () => {
       <VersionControl />
       <ManageShares />
       <AclDialog />
+      <ActivityDialog />
       <StaleVersionConfirm />
       <SaveAs />
       <Photopea />

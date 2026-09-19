@@ -654,6 +654,24 @@ export interface GiftCodeListResponse {
   total: number;
 }
 
+export interface ActivityEvent {
+  id: string;
+  type: number;
+  actor_id?: string;
+  actor_name?: string;
+  ip?: string;
+  cid?: string;
+  file_id?: string;
+  share_id?: string;
+  extra?: Record<string, unknown>;
+  created_at: number;
+}
+
+export interface ActivityEventListResponse {
+  events: ActivityEvent[];
+  total: number;
+}
+
 export interface CreateGiftCodeService {
   type: "points" | "storage" | "group";
   amount: number;

@@ -170,6 +170,7 @@ func NewFileManager(dep dependency.Dep, u *ent.User) FileManager {
 			ShareClient:         dep.ShareClient(),
 			AclClient:           dep.AclClient(),
 			VasClient:           dep.VasClient(),
+			ActivityClient:      dep.ActivityClient(),
 			UserClient:          dep.UserClient(),
 			StoragePolicyClient: dep.StoragePolicyClient(),
 			DirectLinkClient:    dep.DirectLinkClient(),

@@ -257,6 +257,12 @@ type (
 		// DownloadCDNRoutes returns the configured alternative download
 		// endpoints users can pick from (e.g. CDN mirrors of the site).
 		DownloadCDNRoutes(ctx context.Context) []CDNRoute
+		// AuditLogEnabled returns true if the given audit event type is
+		// recorded. An empty/unset list records everything.
+		AuditLogEnabled(ctx context.Context, eventType int) bool
+		// AuditLogRetentionDays returns the audit retention window in days;
+		// 0 keeps events forever.
+		AuditLogRetentionDays(ctx context.Context) int
 	}
 	UseFirstSiteUrlCtxKey = struct{}
 )
@@ -712,6 +718,28 @@ func (s *settingProvider) UploadSessionTTL(ctx context.Context) time.Duration {
 
 func (s *settingProvider) MaxBatchedFile(ctx context.Context) int {
 	return s.getInt(ctx, "max_batched_file", 3000)
+}
+
+func (s *settingProvider) AuditLogEnabled(ctx context.Context, eventType int) bool {
+	raw := s.getString(ctx, "audit_log_enabled", "")
+	if raw == "" {
+		return true
+	}
+
+	var enabled []int
+	if err := json.Unmarshal([]byte(raw), &enabled); err != nil {
+		return true
+	}
+	for _, t := range enabled {
+		if t == eventType {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *settingProvider) AuditLogRetentionDays(ctx context.Context) int {
+	return s.getInt(ctx, "audit_log_retention_days", 0)
 }
 
 func (s *settingProvider) DefaultShares(ctx context.Context) []int {
