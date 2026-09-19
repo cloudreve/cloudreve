@@ -708,8 +708,11 @@ func (f *DBFS) MoveOrCopy(ctx context.Context, path []*fs.URI, dst *fs.URI, isCo
 
 		for _, target := range targets {
 			if isCopy {
-				f.emitFileCreated(ctx, newFile(destination, copiedNewTargetsMap[target.ID()]))
-				f.record(ctx, types.EventCopyTo, activity.File(target.ID()), activity.Extra(map[string]any{"dst": destination.Uri(false).String()}))
+				copied := copiedNewTargetsMap[target.ID()]
+				f.emitFileCreated(ctx, newFile(destination, copied))
+				dst := destination.Uri(false).String()
+				f.record(ctx, types.EventCopyTo, activity.File(copied.ID), activity.Extra(map[string]any{"dst": dst}))
+				f.record(ctx, types.EventCopyFrom, activity.File(target.ID()), activity.Extra(map[string]any{"dst": dst}))
 			} else {
 				f.emitFileMoved(ctx, target, destination)
 				f.record(ctx, types.EventMoveTo, activity.File(target.ID()), activity.Extra(map[string]any{"dst": destination.Uri(false).String()}))

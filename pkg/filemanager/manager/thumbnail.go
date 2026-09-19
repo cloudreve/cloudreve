@@ -12,6 +12,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver/local"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs/dbfs"
@@ -220,6 +221,8 @@ func (m *manager) generateThumb(ctx context.Context, uri *fs.URI, ext string, es
 			return nil, fmt.Errorf("failed to find thumb entity")
 		}
 
+		activity.Record(ctx, m.settings, m.dep.ActivityClient(), types.EventThumbGenerated,
+			activity.File(file.ID()), activity.Extra(map[string]any{"uri": uri.String()}))
 	}
 
 	if m.settings.ThumbGCAfterGen(ctx) {

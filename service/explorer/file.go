@@ -784,6 +784,12 @@ func (s *PatchViewService) Patch(c *gin.Context) error {
 		return err
 	}
 
+	opts := []activity.Opt{activity.Extra(map[string]any{"view": s.View})}
+	if target, err := m.Get(c, uri); err == nil {
+		opts = append(opts, activity.File(target.ID()))
+	}
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventUpdateView, opts...)
+
 	return nil
 }
 

@@ -392,7 +392,11 @@ func (f *DBFS) CompleteUpload(ctx context.Context, session *fs.UploadSession) (f
 	}
 
 	f.emitFileModified(ctx, filePrivate)
-	f.record(ctx, types.EventEntityUploaded, activity.File(filePrivate.Model.ID), activity.Extra(map[string]any{"uri": session.Props.Uri.String(), "size": session.Props.Size}))
+	uploadEvent := types.EventEntityUploaded
+	if entityType == types.EntityTypeLivePhoto {
+		uploadEvent = types.EventLivePhotoUploaded
+	}
+	f.record(ctx, uploadEvent, activity.File(filePrivate.Model.ID), activity.Extra(map[string]any{"uri": session.Props.Uri.String(), "size": session.Props.Size}))
 
 	file, err = f.Get(ctx, session.Props.Uri, WithFileEntities(), WithNotRoot())
 	if err != nil {

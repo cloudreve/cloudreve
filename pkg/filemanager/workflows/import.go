@@ -13,6 +13,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
@@ -203,6 +204,9 @@ func (m *ImportTask) processBatch(ctx context.Context, dep dependency.Dep, user 
 				}
 				m.l.Error("Failed to import file %s: %s, skipping", physicalFile.RelativePath, err)
 				failed++
+			} else {
+				activity.Record(ctx, dep.SettingProvider(), dep.ActivityClient(), types.EventFileImported,
+					activity.Extra(map[string]any{"uri": dst.Join(physicalFile.RelativePath).String(), "src": physicalFile.Source}))
 			}
 		}
 	}

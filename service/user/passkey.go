@@ -9,6 +9,8 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
@@ -246,6 +248,8 @@ func (s *FinishPasskeyRegisterService) FinishPasskeyRegister(c *gin.Context) (*P
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to add passkey", err)
 	}
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventAddPasskey,
+		activity.Extra(map[string]any{"name": name}))
 
 	res := BuildPasskey(passkey)
 	return &res, nil
@@ -283,6 +287,8 @@ func (s *DeletePasskeyService) DeletePasskey(c *gin.Context) error {
 	if err := userClient.RemovePasskey(c, u.ID, s.ID); err != nil {
 		return serializer.NewError(serializer.CodeDBError, "Failed to delete passkey", err)
 	}
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventRemovePasskey,
+		activity.Extra(map[string]any{"credential_id": s.ID}))
 
 	return nil
 }

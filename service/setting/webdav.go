@@ -6,6 +6,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/boolset"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
@@ -114,6 +115,8 @@ func (service *CreateDavAccountService) Create(c *gin.Context) (*DavAccount, err
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to create dav account", err)
 	}
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventWebdavAccountCreate,
+		activity.Extra(map[string]any{"name": service.Name, "uri": service.Uri}))
 
 	accountRes := BuildDavAccount(account, dep.HashIDEncoder())
 	return &accountRes, nil
@@ -146,6 +149,8 @@ func (service *CreateDavAccountService) Update(c *gin.Context) (*DavAccount, err
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to update dav account", err)
 	}
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventWebdavAccountUpdate,
+		activity.Extra(map[string]any{"name": service.Name, "uri": service.Uri}))
 
 	accountRes := BuildDavAccount(account, dep.HashIDEncoder())
 	return &accountRes, nil
@@ -197,6 +202,8 @@ func DeleteDavAccount(c *gin.Context) error {
 	if err := davAccountClient.Delete(c, accountId); err != nil {
 		return serializer.NewError(serializer.CodeDBError, "Failed to delete dav account", err)
 	}
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventWebdavAccountDelete,
+		activity.Extra(map[string]any{"account_id": accountId}))
 
 	return nil
 }

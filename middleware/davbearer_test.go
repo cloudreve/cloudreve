@@ -13,10 +13,18 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/auth"
 	"github.com/cloudreve/Cloudreve/v4/pkg/boolset"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cache"
+	"github.com/cloudreve/Cloudreve/v4/pkg/conf"
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
+	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 	"github.com/gin-gonic/gin"
 )
+
+type stubSettingProvider struct {
+	setting.Provider
+}
+
+func (stubSettingProvider) AuditLogEnabled(context.Context, int) bool { return true }
 
 type stubTokenAuth struct {
 	uid    int
@@ -68,6 +76,8 @@ func newDavAuthDep(t *testing.T, groupPerms *boolset.BooleanSet, scopes []string
 		dependency.WithLogger(logging.NewConsoleLogger(logging.LevelDebug)),
 		dependency.WithUserClient(inventory.NewUserClient(client)),
 		dependency.WithTokenAuth(stubTokenAuth{uid: u.ID, scopes: scopes}),
+		dependency.WithSettingProvider(stubSettingProvider{}),
+		dependency.WithActivityClient(inventory.NewActivityClient(client, conf.SQLiteDB)),
 	)
 }
 

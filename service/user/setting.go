@@ -16,6 +16,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/auth"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 	"github.com/cloudreve/Cloudreve/v4/pkg/request"
@@ -177,6 +178,7 @@ func UpdateUserAvatar(c *gin.Context) error {
 		if _, err := dep.UserClient().UpdateAvatar(c, u, GravatarAvatar); err != nil {
 			return serializer.NewError(serializer.CodeDBError, "Failed to update user avatar", err)
 		}
+		activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventChangeAvatar)
 
 		return nil
 	}
@@ -218,6 +220,7 @@ func updateAvatarFile(ctx context.Context, u *ent.User, contentType string, file
 	if _, err := dep.UserClient().UpdateAvatar(ctx, u, FileAvatar); err != nil {
 		return serializer.NewError(serializer.CodeDBError, "Failed to update user avatar", err)
 	}
+	activity.Record(ctx, dep.SettingProvider(), dep.ActivityClient(), types.EventChangeAvatar)
 
 	return nil
 }
@@ -282,6 +285,7 @@ func (s *PatchUserSetting) Patch(c *gin.Context) error {
 		if _, err := userClient.UpdateNickname(c, u, *s.Nick); err != nil {
 			return serializer.NewError(serializer.CodeDBError, "Failed to update user nick", err)
 		}
+		activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventChangeNick)
 	}
 
 	if s.Language != nil {
@@ -382,6 +386,7 @@ func (s *PatchUserSetting) Patch(c *gin.Context) error {
 		if _, err := userClient.UpdatePassword(c, u, *s.NewPassword); err != nil {
 			return serializer.NewError(serializer.CodeDBError, "Failed to update user password", err)
 		}
+		activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventChangePassword)
 	}
 
 	if s.TwoFAEnabled != nil {
@@ -403,6 +408,7 @@ func (s *PatchUserSetting) Patch(c *gin.Context) error {
 			if _, err := userClient.UpdateTwoFASecret(c, u, secret.(string)); err != nil {
 				return serializer.NewError(serializer.CodeDBError, "Failed to update user 2FA", err)
 			}
+			activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventEnable2FA)
 
 		} else {
 			if !totp.Validate(*s.TwoFACode, u.TwoFactorSecret) {
@@ -412,6 +418,7 @@ func (s *PatchUserSetting) Patch(c *gin.Context) error {
 			if _, err := userClient.UpdateTwoFASecret(c, u, ""); err != nil {
 				return serializer.NewError(serializer.CodeDBError, "Failed to update user 2FA", err)
 			}
+			activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventDisable2FA)
 
 		}
 	}

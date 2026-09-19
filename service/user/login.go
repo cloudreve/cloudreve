@@ -124,6 +124,8 @@ func (service *UserResetEmailService) Reset(c *gin.Context) error {
 	if err := dep.EmailClient(c).Send(c, u.Email, title, body); err != nil {
 		return serializer.NewError(serializer.CodeFailedSendEmail, "Failed to send activation email", err)
 	}
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventEmailSent,
+		activity.Actor(u.ID), activity.Extra(map[string]any{"kind": "password_reset"}))
 
 	return nil
 }
@@ -206,10 +208,19 @@ type RefreshTokenService struct {
 
 func (s *RefreshTokenService) Refresh(c *gin.Context) (*auth.Token, error) {
 	dep := dependency.FromContext(c)
+	claims, _ := dep.TokenAuth().Claims(c, s.RefreshToken)
 	token, err := dep.TokenAuth().Refresh(c, s.RefreshToken)
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeCredentialInvalid, "Failed to issue token pair", err)
 	}
+
+	opts := []activity.Opt{}
+	if claims != nil {
+		if uid, err := dep.HashIDEncoder().Decode(claims.Subject, hashid.UserID); err == nil {
+			opts = append(opts, activity.Actor(uid))
+		}
+	}
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventUserTokenRefresh, opts...)
 
 	return token, nil
 }

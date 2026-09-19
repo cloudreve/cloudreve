@@ -10,6 +10,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/auth"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cluster/routes"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
@@ -102,6 +103,8 @@ func (s *GrantService) Issue(c *gin.Context) (*GrantResponse, error) {
 	if err := oAuthClient.UpsertGrant(c, user.ID, app.ID, requestedScopes); err != nil {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to create grant", err)
 	}
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventOAuthGrantCreate,
+		activity.Extra(map[string]any{"client_id": s.ClientID, "scopes": requestedScopes}))
 
 	// 4. Generate code and save required state into KV for future token exchange request.
 	code := util.RandStringRunesCrypto(128)
@@ -221,6 +224,8 @@ func (s *ExchangeTokenService) Exchange(c *gin.Context) (*TokenResponse, error) 
 	if err := oAuthClient.UpdateGrantLastUsedAt(c, user.ID, app.ID); err != nil {
 		dep.Logger().Warning("Failed to update grant last used at: %s", err)
 	}
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventOAuthTokenExchange,
+		activity.Actor(user.ID), activity.Extra(map[string]any{"client_id": s.ClientID}))
 
 	// 10.
 
@@ -318,6 +323,8 @@ func (s *DeleteOAuthGrantService) Delete(c *gin.Context) error {
 	if !deleted {
 		return serializer.NewError(serializer.CodeNotFound, "OAuth grant not found", nil)
 	}
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventOAuthGrantRevoke,
+		activity.Extra(map[string]any{"app_id": s.AppID}))
 
 	return nil
 }

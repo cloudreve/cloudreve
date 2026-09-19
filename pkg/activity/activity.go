@@ -20,6 +20,12 @@ func File(id int) Opt {
 	return func(p *inventory.RecordActivityParams) { p.FileID = id }
 }
 
+// Actor overrides the actor ID when ctx carries no user (e.g. token
+// refresh, activation) or the actor differs from the ctx user.
+func Actor(id int) Opt {
+	return func(p *inventory.RecordActivityParams) { p.ActorID = id }
+}
+
 // Share attaches the subject share ID.
 func Share(id int) Opt {
 	return func(p *inventory.RecordActivityParams) { p.ShareID = id }

@@ -145,6 +145,8 @@ func sendActivationEmail(ctx context.Context, dep dependency.Dep, newUser *ent.U
 	if err := dep.EmailClient(ctx).Send(ctx, newUser.Email, title, body); err != nil {
 		return serializer.NewError(serializer.CodeFailedSendEmail, "Failed to send activation email", err)
 	}
+	activity.Record(ctx, dep.SettingProvider(), dep.ActivityClient(), types.EventEmailSent,
+		activity.Actor(newUser.ID), activity.Extra(map[string]any{"kind": "activation"}))
 
 	return nil
 }
@@ -173,5 +175,7 @@ func ActivateUser(c *gin.Context) serializer.Response {
 	}
 
 	util.WithValue(c, inventory.UserCtx{}, activeUser)
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventUserActivated,
+		activity.Actor(activeUser.ID))
 	return serializer.Response{Data: BuildUser(activeUser, dep.HashIDEncoder())}
 }
