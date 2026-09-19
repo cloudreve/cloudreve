@@ -163,7 +163,9 @@
     "toDarkMode": "黑暗",
     "toLightMode": "浅色",
     "myProfile": "个人主页",
-    "dashboard": "管理面板"
+    "dashboard": "管理面板",
+    "addAccount": "添加账号",
+    "signedOut": "已退出登录"
   },
   "fileManager": {
     "continueInDesktop": "授权成功，请在桌面客户端中继续操作。",

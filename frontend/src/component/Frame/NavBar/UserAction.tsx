@@ -24,6 +24,7 @@ import SessionManager, { Session } from "../../../session";
 import { GroupBS } from "../../../session/utils.ts";
 import UserAvatar from "../../Common/User/UserAvatar.tsx";
 import { SquareMenuItem } from "../../FileManager/ContextMenu/ContextMenu.tsx";
+import Add from "../../Icons/Add.tsx";
 import HomeOutlined from "../../Icons/HomeOutlined.tsx";
 import Person from "../../Icons/Person.tsx";
 import SettingsOutlined from "../../Icons/SettingsOutlined.tsx";
@@ -58,6 +59,27 @@ const UserPopover = ({ open, onClose, ...rest }: PopoverProps) => {
     dispatch(signout());
     onClose && onClose({}, "backdropClick");
   }, []);
+
+  // Other stored sessions for the account switcher. Signed-out entries
+  // route back to the login page with their email prefilled instead of
+  // switching directly.
+  const otherSessions = SessionManager.listSessions().filter((s) => s.user.id !== user.id);
+
+  const switchAccount = (s: Session) => {
+    onClose?.({}, "backdropClick");
+    if (s.signedOut) {
+      signWithHint(s.user.email ?? "");
+      return;
+    }
+    if (SessionManager.switchTo(s.user.id)) {
+      window.location.reload();
+    }
+  };
+
+  const addAccount = () => {
+    navigate("/session");
+    onClose?.({}, "backdropClick");
+  };
 
   const openMyProfile = useCallback(() => {
     navigate(`/profile/${user?.id}`);
@@ -141,6 +163,26 @@ const UserPopover = ({ open, onClose, ...rest }: PopoverProps) => {
             <SignOut />
           </ListItemIcon>
           <ListItemText>{t("login.logout")}</ListItemText>
+        </SquareMenuItem>
+      </MenuList>
+      <Divider />
+      <MenuList dense sx={{ mx: 0.5 }}>
+        {otherSessions.map((s) => (
+          <SquareMenuItem key={s.user.id} onClick={() => switchAccount(s)}>
+            <ListItemIcon>
+              <UserAvatar sx={{ width: 24, height: 24 }} user={s.user} />
+            </ListItemIcon>
+            <ListItemText
+              primary={s.user.nickname}
+              secondary={s.signedOut ? t("navbar.signedOut") : s.user.email}
+            />
+          </SquareMenuItem>
+        ))}
+        <SquareMenuItem onClick={addAccount}>
+          <ListItemIcon>
+            <Add fontSize={"small"} />
+          </ListItemIcon>
+          <ListItemText>{t("navbar.addAccount")}</ListItemText>
         </SquareMenuItem>
       </MenuList>
     </Popover>

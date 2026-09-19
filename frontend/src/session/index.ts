@@ -271,6 +271,24 @@ export class Manager {
     this.syncToStore();
   }
 
+  // listSessions returns every stored session for the account switcher.
+  // Signed-out entries are kept so the UI can offer one-click re-login.
+  public listSessions = (): Session[] => {
+    return Object.values(this.state.sessions);
+  };
+
+  // switchTo makes another stored session current; callers reload the app
+  // so all state re-derives from the new session.
+  public switchTo = (uid: string) => {
+    const session = this.state.sessions[uid];
+    if (!session || session.signedOut) {
+      return false;
+    }
+    this.state.current = uid;
+    this.syncToStore();
+    return true;
+  };
+
   private syncToStore = () => {
     localStorage.setItem(SESSION_KEY, JSON.stringify(this.state));
   };

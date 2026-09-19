@@ -163,7 +163,9 @@
     "toDarkMode": "Dark",
     "toLightMode": "Light",
     "myProfile": "My profile",
-    "dashboard": "Dashboard"
+    "dashboard": "Dashboard",
+    "addAccount": "Add account",
+    "signedOut": "Signed out"
   },
   "fileManager": {
     "continueInDesktop": "Authorization successful, please continue in the desktop client.",
