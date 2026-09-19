@@ -183,6 +183,7 @@ export interface Node extends CommonMixin {
 export enum DownloaderProvider {
   qbittorrent = "qbittorrent",
   aria2 = "aria2",
+  ytdlp = "ytdlp",
 }
 
 export interface QBittorrentSetting {
@@ -200,6 +201,12 @@ export interface Aria2Setting {
   temp_path?: string;
 }
 
+export interface YtdlpSetting {
+  binary?: string;
+  options?: Record<string, string>;
+  temp_path?: string;
+}
+
 export interface URLValidationSetting {
   disabled?: boolean;
   allowed_hosts?: string[];
@@ -210,6 +217,7 @@ export interface NodeSetting {
   provider?: DownloaderProvider;
   qbittorrent?: QBittorrentSetting;
   aria2?: Aria2Setting;
+  ytdlp?: YtdlpSetting;
   interval?: number;
   wait_for_seeding?: boolean;
   url_validation?: URLValidationSetting;

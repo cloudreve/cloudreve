@@ -140,6 +140,7 @@ type (
 		Provider            DownloaderProvider `json:"provider,omitempty"`
 		*QBittorrentSetting `json:"qbittorrent,omitempty"`
 		*Aria2Setting       `json:"aria2,omitempty"`
+		*YtdlpSetting       `json:"ytdlp,omitempty"`
 		// 下载监控间隔
 		Interval       int  `json:"interval,omitempty"`
 		WaitForSeeding bool `json:"wait_for_seeding,omitempty"`
@@ -178,6 +179,14 @@ type (
 	Aria2Setting struct {
 		Server   string         `json:"server,omitempty"`
 		Token    string         `json:"token,omitempty"`
+		Options  map[string]any `json:"options,omitempty"`
+		TempPath string         `json:"temp_path,omitempty"`
+	}
+
+	// YtdlpSetting configures a yt-dlp CLI downloader. Options keys become
+	// "--<key> <value>" CLI flags verbatim (bool true -> flag only).
+	YtdlpSetting struct {
+		Binary   string         `json:"binary,omitempty"`
 		Options  map[string]any `json:"options,omitempty"`
 		TempPath string         `json:"temp_path,omitempty"`
 	}
@@ -391,6 +400,7 @@ const (
 const (
 	DownloaderProviderAria2       = DownloaderProvider("aria2")
 	DownloaderProviderQBittorrent = DownloaderProvider("qbittorrent")
+	DownloaderProviderYtDlp       = DownloaderProvider("ytdlp")
 )
 
 type (

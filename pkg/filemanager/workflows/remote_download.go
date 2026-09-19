@@ -299,6 +299,19 @@ func (m *RemoteDownloadTask) buildDownloadOptions(ctx context.Context, base map[
 				}
 			}
 		}
+	case types.DownloaderProviderYtDlp:
+		if isHttpSrc {
+			if m.state.FileName != "" {
+				options["output"] = m.state.FileName
+			}
+			if m.state.HTTPUsername != "" {
+				options["username"] = m.state.HTTPUsername
+				options["password"] = m.state.HTTPPassword
+			}
+			if len(m.state.HTTPHeaders) > 0 {
+				options["add_headers"] = m.state.HTTPHeaders
+			}
+		}
 	default:
 		if isHttpSrc {
 			if m.state.FileName != "" {
