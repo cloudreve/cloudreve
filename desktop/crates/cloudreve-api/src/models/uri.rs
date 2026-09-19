@@ -499,3 +499,29 @@ pub fn new_my_uri(uid: Option<&str>) -> Result<CrUri> {
         None => CrUri::new("cloudreve://my"),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn join_encodes_spaces_and_special_chars() {
+        let mut uri = CrUri::new("cloudreve://my").unwrap();
+        uri.join(&["dir with spaces", "file name.txt"]);
+
+        let s = uri.to_string();
+        assert!(
+            s.contains("dir%20with%20spaces/file%20name.txt"),
+            "uri: {s}"
+        );
+        assert!(!s.contains(' '));
+        assert_eq!(uri.elements(), vec!["dir with spaces", "file name.txt"]);
+    }
+
+    #[test]
+    fn encoded_uri_roundtrips_spaces() {
+        let uri = CrUri::new("cloudreve://my/a%20b/c%20d.txt").unwrap();
+        assert_eq!(uri.path(), "/a b/c d.txt");
+        assert!(uri.to_string().contains("a%20b/c%20d.txt"));
+    }
+}
