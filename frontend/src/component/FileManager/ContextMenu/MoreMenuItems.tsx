@@ -7,12 +7,15 @@ import {
   setCreateArchiveDialog,
   setDirectLinkManagementDialog,
   setManageShareDialog,
+  setStoragePolicyDialog,
   setVersionControlDialog,
 } from "../../../redux/globalStateSlice.ts";
 import { useAppDispatch } from "../../../redux/hooks.ts";
 import { resetThumbnails } from "../../../redux/thunks/file.ts";
 import Archive from "../../Icons/Archive.tsx";
+import BoxMultiple from "../../Icons/BoxMultiple.tsx";
 import BranchForkLink from "../../Icons/BranchForkLink.tsx";
+import CloudArrowIUp from "../../Icons/CloudArrowIUp.tsx";
 import HistoryOutlined from "../../Icons/HistoryOutlined.tsx";
 import ImageArrowCounterclockwise from "../../Icons/ImageAarowCounterclockwise.tsx";
 import LinkSetting from "../../Icons/LinkSetting.tsx";
@@ -25,7 +28,7 @@ const MoreMenuItems = ({ displayOpt, targets }: SubMenuItemsProps) => {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const onClick = useCallback(
-    (f: () => any) => () => {
+    (f: () => void) => () => {
       f();
       if (rootPopupState) {
         rootPopupState.close();
@@ -124,6 +127,42 @@ const MoreMenuItems = ({ displayOpt, targets }: SubMenuItemsProps) => {
             <Archive fontSize="small" />
           </ListItemIcon>
           <ListItemText>{t("application:fileManager.createArchive")}</ListItemText>
+        </CascadingMenuItem>
+      )}
+      {displayOpt.showDirPolicy && (
+        <CascadingMenuItem
+          onClick={onClick(() =>
+            dispatch(
+              setStoragePolicyDialog({
+                open: true,
+                mode: "dir",
+                file: targets[0],
+              }),
+            ),
+          )}
+        >
+          <ListItemIcon>
+            <CloudArrowIUp fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t("application:fileManager.dirPolicyTitle")}</ListItemText>
+        </CascadingMenuItem>
+      )}
+      {displayOpt.showRelocate && (
+        <CascadingMenuItem
+          onClick={onClick(() =>
+            dispatch(
+              setStoragePolicyDialog({
+                open: true,
+                mode: "relocate",
+                file: targets[0],
+              }),
+            ),
+          )}
+        >
+          <ListItemIcon>
+            <BoxMultiple fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t("application:fileManager.relocateTitle")}</ListItemText>
         </CascadingMenuItem>
       )}
       {displayOpt.showResetThumb && (

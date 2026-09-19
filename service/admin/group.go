@@ -124,6 +124,7 @@ func (s *SingleGroupService) Get(c *gin.Context) (*GetGroupResponse, error) {
 	groupClient := dep.GroupClient()
 
 	ctx := context.WithValue(c, inventory.LoadGroupPolicy{}, true)
+	ctx = context.WithValue(ctx, inventory.LoadGroupAllowedPolicies{}, true)
 	group, err := groupClient.GetByID(ctx, s.ID)
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get group", err)

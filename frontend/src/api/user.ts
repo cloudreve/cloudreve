@@ -146,6 +146,7 @@ export interface UserSettings {
   share_default_private?: boolean;
   preferred_viewers?: Record<string, string>;
   trash_retention?: number;
+  preferred_policy?: string;
   oauth_grants?: OAuthGrant[];
 }
 
@@ -175,6 +176,8 @@ export interface PatchUserSetting {
   preferred_viewers?: Record<string, string>;
   // Trash retention override in seconds; 0 inherits the group setting.
   trash_retention?: number;
+  // Preferred storage policy hash ID; "" inherits the group default.
+  preferred_policy?: string;
 }
 
 export interface PasskeyCredentialOption {

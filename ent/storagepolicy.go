@@ -66,11 +66,13 @@ type StoragePolicyEdges struct {
 	Files []*File `json:"files,omitempty"`
 	// Entities holds the value of the entities edge.
 	Entities []*Entity `json:"entities,omitempty"`
+	// AllowedGroups holds the value of the allowed_groups edge.
+	AllowedGroups []*Group `json:"allowed_groups,omitempty"`
 	// Node holds the value of the node edge.
 	Node *Node `json:"node,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 }
 
 // GroupsOrErr returns the Groups value or an error if the edge
@@ -100,10 +102,19 @@ func (e StoragePolicyEdges) EntitiesOrErr() ([]*Entity, error) {
 	return nil, &NotLoadedError{edge: "entities"}
 }
 
+// AllowedGroupsOrErr returns the AllowedGroups value or an error if the edge
+// was not loaded in eager-loading.
+func (e StoragePolicyEdges) AllowedGroupsOrErr() ([]*Group, error) {
+	if e.loadedTypes[3] {
+		return e.AllowedGroups, nil
+	}
+	return nil, &NotLoadedError{edge: "allowed_groups"}
+}
+
 // NodeOrErr returns the Node value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e StoragePolicyEdges) NodeOrErr() (*Node, error) {
-	if e.loadedTypes[3] {
+	if e.loadedTypes[4] {
 		if e.Node == nil {
 			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: node.Label}
@@ -276,6 +287,11 @@ func (sp *StoragePolicy) QueryEntities() *EntityQuery {
 	return NewStoragePolicyClient(sp.config).QueryEntities(sp)
 }
 
+// QueryAllowedGroups queries the "allowed_groups" edge of the StoragePolicy entity.
+func (sp *StoragePolicy) QueryAllowedGroups() *GroupQuery {
+	return NewStoragePolicyClient(sp.config).QueryAllowedGroups(sp)
+}
+
 // QueryNode queries the "node" edge of the StoragePolicy entity.
 func (sp *StoragePolicy) QueryNode() *NodeQuery {
 	return NewStoragePolicyClient(sp.config).QueryNode(sp)
@@ -375,10 +391,16 @@ func (e *StoragePolicy) SetEntities(v []*Entity) {
 	e.Edges.loadedTypes[2] = true
 }
 
+// SetAllowedGroups manually set the edge as loaded state.
+func (e *StoragePolicy) SetAllowedGroups(v []*Group) {
+	e.Edges.AllowedGroups = v
+	e.Edges.loadedTypes[3] = true
+}
+
 // SetNode manually set the edge as loaded state.
 func (e *StoragePolicy) SetNode(v *Node) {
 	e.Edges.Node = v
-	e.Edges.loadedTypes[3] = true
+	e.Edges.loadedTypes[4] = true
 }
 
 // StoragePolicies is a parsable slice of StoragePolicy.

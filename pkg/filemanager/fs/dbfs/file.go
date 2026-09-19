@@ -65,6 +65,9 @@ const (
 	MetadataRestoreUri          = MetadataSysPrefix + "restore_uri"
 	MetadataExpectedCollectTime = MetadataSysPrefix + "expected_collect_time"
 	MetadataSharedOwner         = MetadataSysPrefix + "shared_owner"
+	// MetadataPreferredPolicy stores the hashid-encoded storage policy a
+	// directory prefers for new uploads inside it.
+	MetadataPreferredPolicy = MetadataSysPrefix + "preferred_policy"
 
 	ThumbMetadataPrefix = "thumb:"
 	ThumbDisabledKey    = ThumbMetadataPrefix + "disabled"

@@ -1552,6 +1552,22 @@ func (c *GroupClient) QueryStoragePolicies(gr *Group) *StoragePolicyQuery {
 	return query
 }
 
+// QueryAllowedPolicies queries the allowed_policies edge of a Group.
+func (c *GroupClient) QueryAllowedPolicies(gr *Group) *StoragePolicyQuery {
+	query := (&StoragePolicyClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := gr.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(group.Table, group.FieldID, id),
+			sqlgraph.To(storagepolicy.Table, storagepolicy.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, group.AllowedPoliciesTable, group.AllowedPoliciesPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(gr.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *GroupClient) Hooks() []Hook {
 	hooks := c.hooks.Group
@@ -2936,6 +2952,22 @@ func (c *StoragePolicyClient) QueryEntities(sp *StoragePolicy) *EntityQuery {
 			sqlgraph.From(storagepolicy.Table, storagepolicy.FieldID, id),
 			sqlgraph.To(entity.Table, entity.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, storagepolicy.EntitiesTable, storagepolicy.EntitiesColumn),
+		)
+		fromV = sqlgraph.Neighbors(sp.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAllowedGroups queries the allowed_groups edge of a StoragePolicy.
+func (c *StoragePolicyClient) QueryAllowedGroups(sp *StoragePolicy) *GroupQuery {
+	query := (&GroupClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := sp.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(storagepolicy.Table, storagepolicy.FieldID, id),
+			sqlgraph.To(group.Table, group.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, storagepolicy.AllowedGroupsTable, storagepolicy.AllowedGroupsPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(sp.driver.Dialect(), step)
 		return fromV, nil

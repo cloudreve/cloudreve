@@ -54,6 +54,8 @@ func (StoragePolicy) Edges() []ent.Edge {
 		edge.To("groups", Group.Type),
 		edge.To("files", File.Type),
 		edge.To("entities", Entity.Type),
+		edge.From("allowed_groups", Group.Type).
+			Ref("allowed_policies"),
 		edge.From("node", Node.Type).
 			Ref("storage_policy").
 			Field("node_id").

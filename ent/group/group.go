@@ -38,6 +38,8 @@ const (
 	EdgeUsers = "users"
 	// EdgeStoragePolicies holds the string denoting the storage_policies edge name in mutations.
 	EdgeStoragePolicies = "storage_policies"
+	// EdgeAllowedPolicies holds the string denoting the allowed_policies edge name in mutations.
+	EdgeAllowedPolicies = "allowed_policies"
 	// Table holds the table name of the group in the database.
 	Table = "groups"
 	// UsersTable is the table that holds the users relation/edge.
@@ -54,6 +56,11 @@ const (
 	StoragePoliciesInverseTable = "storage_policies"
 	// StoragePoliciesColumn is the table column denoting the storage_policies relation/edge.
 	StoragePoliciesColumn = "storage_policy_id"
+	// AllowedPoliciesTable is the table that holds the allowed_policies relation/edge. The primary key declared below.
+	AllowedPoliciesTable = "group_allowed_policies"
+	// AllowedPoliciesInverseTable is the table name for the StoragePolicy entity.
+	// It exists in this package in order to avoid circular dependency with the "storagepolicy" package.
+	AllowedPoliciesInverseTable = "storage_policies"
 )
 
 // Columns holds all SQL columns for group fields.
@@ -69,6 +76,12 @@ var Columns = []string{
 	FieldSettings,
 	FieldStoragePolicyID,
 }
+
+var (
+	// AllowedPoliciesPrimaryKey and AllowedPoliciesColumn2 are the table columns denoting the
+	// primary key for the allowed_policies relation (M2M).
+	AllowedPoliciesPrimaryKey = []string{"group_id", "storage_policy_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -161,6 +174,20 @@ func ByStoragePoliciesField(field string, opts ...sql.OrderTermOption) OrderOpti
 		sqlgraph.OrderByNeighborTerms(s, newStoragePoliciesStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByAllowedPoliciesCount orders the results by allowed_policies count.
+func ByAllowedPoliciesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAllowedPoliciesStep(), opts...)
+	}
+}
+
+// ByAllowedPolicies orders the results by allowed_policies terms.
+func ByAllowedPolicies(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAllowedPoliciesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newUsersStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -173,5 +200,12 @@ func newStoragePoliciesStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(StoragePoliciesInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, StoragePoliciesTable, StoragePoliciesColumn),
+	)
+}
+func newAllowedPoliciesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AllowedPoliciesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, false, AllowedPoliciesTable, AllowedPoliciesPrimaryKey...),
 	)
 }

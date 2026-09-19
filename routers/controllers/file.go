@@ -480,3 +480,42 @@ func FulltextSearch(c *gin.Context) {
 		Data: resp,
 	})
 }
+
+// ListStoragePolicies lists storage policies available to the current user's group.
+func ListStoragePolicies(c *gin.Context) {
+	service := ParametersFromContext[*explorer.AllowedPolicyService](c, explorer.AllowedPolicyParamCtx{})
+	resp, err := service.Get(c)
+	if respondErr(c, err) {
+		return
+	}
+
+	c.JSON(200, serializer.Response{
+		Data: resp,
+	})
+}
+
+// UpdatePreferredPolicy sets the preferred storage policy for a directory.
+func UpdatePreferredPolicy(c *gin.Context) {
+	service := ParametersFromContext[*explorer.PreferredPolicyService](c, explorer.PreferredPolicyParamCtx{})
+	resp, err := service.Update(c)
+	if respondErr(c, err) {
+		return
+	}
+
+	c.JSON(200, serializer.Response{
+		Data: resp,
+	})
+}
+
+// RelocatePolicy queues a task to relocate files to a different storage policy.
+func RelocatePolicy(c *gin.Context) {
+	service := ParametersFromContext[*explorer.FileRelocateService](c, explorer.FileRelocateParamCtx{})
+	resp, err := service.Create(c)
+	if respondErr(c, err) {
+		return
+	}
+
+	c.JSON(200, serializer.Response{
+		Data: resp,
+	})
+}

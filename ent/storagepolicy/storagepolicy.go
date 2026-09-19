@@ -55,6 +55,8 @@ const (
 	EdgeFiles = "files"
 	// EdgeEntities holds the string denoting the entities edge name in mutations.
 	EdgeEntities = "entities"
+	// EdgeAllowedGroups holds the string denoting the allowed_groups edge name in mutations.
+	EdgeAllowedGroups = "allowed_groups"
 	// EdgeNode holds the string denoting the node edge name in mutations.
 	EdgeNode = "node"
 	// Table holds the table name of the storagepolicy in the database.
@@ -80,6 +82,11 @@ const (
 	EntitiesInverseTable = "entities"
 	// EntitiesColumn is the table column denoting the entities relation/edge.
 	EntitiesColumn = "storage_policy_entities"
+	// AllowedGroupsTable is the table that holds the allowed_groups relation/edge. The primary key declared below.
+	AllowedGroupsTable = "group_allowed_policies"
+	// AllowedGroupsInverseTable is the table name for the Group entity.
+	// It exists in this package in order to avoid circular dependency with the "group" package.
+	AllowedGroupsInverseTable = "groups"
 	// NodeTable is the table that holds the node relation/edge.
 	NodeTable = "storage_policies"
 	// NodeInverseTable is the table name for the Node entity.
@@ -109,6 +116,12 @@ var Columns = []string{
 	FieldSettings,
 	FieldNodeID,
 }
+
+var (
+	// AllowedGroupsPrimaryKey and AllowedGroupsColumn2 are the table columns denoting the
+	// primary key for the allowed_groups relation (M2M).
+	AllowedGroupsPrimaryKey = []string{"group_id", "storage_policy_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -289,6 +302,20 @@ func ByEntities(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByAllowedGroupsCount orders the results by allowed_groups count.
+func ByAllowedGroupsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAllowedGroupsStep(), opts...)
+	}
+}
+
+// ByAllowedGroups orders the results by allowed_groups terms.
+func ByAllowedGroups(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAllowedGroupsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByNodeField orders the results by node field.
 func ByNodeField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -314,6 +341,13 @@ func newEntitiesStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(EntitiesInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, EntitiesTable, EntitiesColumn),
+	)
+}
+func newAllowedGroupsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AllowedGroupsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, true, AllowedGroupsTable, AllowedGroupsPrimaryKey...),
 	)
 }
 func newNodeStep() *sqlgraph.Step {

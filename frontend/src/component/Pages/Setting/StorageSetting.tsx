@@ -1,12 +1,19 @@
-import { Box, Stack, styled, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { Box, FormControl, ListItemText, SelectChangeEvent, Stack, styled, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { useSnackbar } from "notistack";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { getAllowedPolicies, sendUpdateUserSetting } from "../../../api/api.ts";
+import { StoragePolicyBrief } from "../../../api/explorer.ts";
 import { Capacity, UserSettings } from "../../../api/user.ts";
 import { useAppDispatch, useAppSelector } from "../../../redux/hooks.ts";
 import { updateUserCapacity } from "../../../redux/thunks/filemanager.ts";
 import { loadSiteConfig } from "../../../redux/thunks/site.ts";
 import { sizeToString } from "../../../util";
+import { DefaultCloseAction } from "../../Common/Snackbar/snackbar.tsx";
+import { DenseSelect } from "../../Common/StyledComponents.tsx";
+import { SquareMenuItem } from "../../FileManager/ContextMenu/ContextMenu.tsx";
+import { NoMarginHelperText } from "../../Admin/Settings/Settings.tsx";
 import SettingForm from "./SettingForm.tsx";
 
 export const StorageBar = styled(Box)(({ theme }) => ({
@@ -108,11 +115,27 @@ const StorageSetting = ({ setting }: StorageSettingProps) => {
     used: 0,
     base: 0,
   });
+  const [policies, setPolicies] = useState<StoragePolicyBrief[]>([]);
+  const [preferred, setPreferred] = useState(setting.preferred_policy ?? "");
+  const [saving, setSaving] = useState(false);
+  const { enqueueSnackbar } = useSnackbar();
 
   useEffect(() => {
     dispatch(updateUserCapacity(0));
     dispatch(loadSiteConfig("vas"));
+    dispatch(getAllowedPolicies()).then((res) => setPolicies(res ?? []));
   }, []);
+
+  const onPolicyChange = (e: SelectChangeEvent<unknown>) => {
+    const v = e.target.value as string;
+    setPreferred(v);
+    setSaving(true);
+    dispatch(sendUpdateUserSetting({ preferred_policy: v }))
+      .then(() => {
+        enqueueSnackbar(t("setting.policySaved"), { variant: "success", action: DefaultCloseAction });
+      })
+      .finally(() => setSaving(false));
+  };
 
   return (
     <Stack spacing={3}>
@@ -121,6 +144,26 @@ const StorageSetting = ({ setting }: StorageSettingProps) => {
           <CapacityBar capacity={capacity} />
         </Box>
       </SettingForm>
+      {policies.length > 1 && (
+        <SettingForm title={t("setting.preferredPolicy")}>
+          <FormControl fullWidth sx={{ mt: 1 }}>
+            <DenseSelect value={preferred} onChange={onPolicyChange} disabled={saving}>
+              <SquareMenuItem value="">
+                <ListItemText primary={t("setting.policyInherit")} />
+              </SquareMenuItem>
+              {policies.map((p) => (
+                <SquareMenuItem key={p.id} value={p.id}>
+                  <ListItemText
+                    primary={p.name}
+                    secondary={p.is_default ? t("setting.policyGroupDefault") : undefined}
+                  />
+                </SquareMenuItem>
+              ))}
+            </DenseSelect>
+            <NoMarginHelperText>{t("setting.preferredPolicyDes")}</NoMarginHelperText>
+          </FormControl>
+        </SettingForm>
+      )}
     </Stack>
   );
 };

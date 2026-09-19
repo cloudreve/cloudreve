@@ -28,6 +28,16 @@ type (
 		// 0 means inherit the group setting. Applied when a file is moved to
 		// trash — already-trashed files keep their original expiry.
 		TrashRetention int `json:"trash_retention,omitempty"`
+		// PreferredPolicy is the user's default storage policy, chosen from
+		// the policies allowed for their group. 0 means the group default.
+		PreferredPolicy int `json:"preferred_policy,omitempty"`
+	}
+
+	// LBPolicyRef binds a child storage policy to a load_balance policy with
+	// a selection weight. Weight 0 counts as 1.
+	LBPolicyRef struct {
+		PolicyID int `json:"policy"`
+		Weight   int `json:"weight,omitempty"`
 	}
 
 	ShareLinksInProfileLevel string
@@ -48,9 +58,9 @@ type (
 		Aria2TaskLimit int `json:"aria2_task_limit,omitempty"`
 		// Aria2MaxFileSize caps the total byte size of a single download task.
 		Aria2MaxFileSize int64 `json:"aria2_max_file_size,omitempty"`
-		MaxWalkedFiles        int                    `json:"max_walked_files,omitempty"`
-		TrashRetention        int                    `json:"trash_retention,omitempty"`
-		RedirectedSource      bool                   `json:"redirected_source,omitempty"`
+		MaxWalkedFiles   int   `json:"max_walked_files,omitempty"`
+		TrashRetention   int   `json:"trash_retention,omitempty"`
+		RedirectedSource bool  `json:"redirected_source,omitempty"`
 		// LoginIPWhitelist restricts sign-in to the given IPs/CIDR ranges.
 		// Empty means no restriction.
 		LoginIPWhitelist []string `json:"login_ip_whitelist,omitempty"`
@@ -122,6 +132,9 @@ type (
 		StreamSaver bool `json:"stream_saver,omitempty"`
 		// UseCname whether to use CNAME for endpoint (OSS).
 		UseCname bool `json:"use_cname,omitempty"`
+		// LBPolicies binds weighted child policies to a load_balance policy.
+		// Children must be concrete (non-load_balance) policies.
+		LBPolicies []LBPolicyRef `json:"lb_policies,omitempty"`
 		// CDN domain does not need to be signed.
 		SourceAuth bool `json:"source_auth,omitempty"`
 		// QiniuUploadCdn whether to use CDN for Qiniu upload.
@@ -419,6 +432,10 @@ const (
 	PolicyTypeOd     = "onedrive"
 	PolicyTypeRemote = "remote"
 	PolicyTypeObs    = "obs"
+	// PolicyTypeLoadBalance distributes uploads across weighted child
+	// policies. It is resolved to a concrete child policy before use and
+	// never reaches a storage driver.
+	PolicyTypeLoadBalance = "load_balance"
 )
 
 const (

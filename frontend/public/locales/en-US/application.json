@@ -488,7 +488,16 @@
     "ftsIndexed": "Indexed",
     "ftsNotIndexed": "Not indexed",
     "lineEnding": "Line ending",
-    "downloadAll": "Download all"
+    "downloadAll": "Download all",
+    "dirPolicyTitle": "Storage Policy for Uploads",
+    "dirPolicyDes": "New files uploaded into \"{{name}}\" will use the selected storage policy.",
+    "relocateTitle": "Relocate Storage",
+    "relocateDes": "Move the physical content of \"{{name}}\" to the selected storage policy.",
+    "relocateSubmitted": "Relocation task submitted",
+    "relocateStart": "Relocate",
+    "policySaved": "Storage policy updated",
+    "policyInherit": "Inherit (use parent or group default)",
+    "policyGroupDefault": "Group default"
   },
   "modals": {
     "includePasswordInShareLink": "Include password in share link",
@@ -1056,7 +1065,12 @@
     "shareDefaultPrivate": "Default share privacy",
     "shareDefaultPrivateDes": "New shares default to private (password protected).",
     "sharePrivateOn": "Private",
-    "sharePrivateOff": "Public"
+    "sharePrivateOff": "Public",
+    "preferredPolicy": "Preferred storage policy",
+    "preferredPolicyDes": "New uploads in your own files use this storage policy unless a folder overrides it.",
+    "policySaved": "Storage policy updated",
+    "policyInherit": "Inherit (group default)",
+    "policyGroupDefault": "Group default"
   },
   "vas": {
     "points": "Points",

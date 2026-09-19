@@ -176,8 +176,8 @@ Order = user-visible value first; each ships with backend + UI + tests.
    - [ ] Paid shares — `share.price_points` + gate page + purchase/resume-ticket flow; needs B.4 credits first
 2. **Storage policy advanced** — multiple policies per group, per-directory binding, load-balancer policy, file migration (fixes #3518, #2961, #2262). See §1.3a.
    - [x] PR #175 — resumable admin relocation task (entities or whole-policy scope), encryption-aware re-wrap, admin UI + per-policy migrate action (#9, #125, #136)
-   - [ ] Group→policies M:N join + group-editor multi-select; per-directory policy picker in FM toolbar; `StoragePolicyTypeLB` weighted children
-   - [ ] User-facing relocate — extend #175 path to FM context menu, restricted to group-allowed policies
+   - [x] Group→policies M:N (`allowed_policies` edge, empty = legacy single) + group-editor multi-select; per-directory `sys:preferred_policy` metadata marker with nearest-ancestor precedence (invalid marker cuts inheritance); user `preferred_policy` setting applied in own tree only; `load_balance` policy type with weighted children resolved before drivers (#182, fixes #2961)
+   - [x] User-facing relocate — `POST /file/relocate` from FM More-actions dialog, entity expansion + same-policy skip + dedup, restricted to group-allowed policies (#182, fixes #2262)
 3. **SSO** — generic OIDC, Logto, multi-account switching, sign-up email filtering (fixes #3464, #3056, #3505). See §1.3a.
    - [x] PR #141 — inbound OIDC consumer (auth-code + nonce, JWKS-verified RS256 id_tokens, userinfo fallback, auto-provisioning, one-time ticket handoff, SSRF-validated endpoints, redacted secret); covers Keycloak/Authentik/Logto/generic IdPs; sign-up email domain filtering (whitelist/blacklist + sub-address block) enforced at registration and SSO provisioning; multi-account lands via existing session `upsert` (fixes #3464, #3056)
    - [ ] Multi-account switcher UI — N-token session store, avatar-menu switch + signed-out badges (frontend-only, backend already supports)

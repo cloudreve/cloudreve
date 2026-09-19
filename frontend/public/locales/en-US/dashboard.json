@@ -1190,7 +1190,14 @@
     "enableFileEncryptionDes": "When enabled, file blobs will be stored encrypted. Changing this setting only affects newly added files.",
     "encryptedFile": "Encrypted files",
     "status": "Status",
-    "statusDes": "Suspended policies keep serving existing files but reject new uploads."
+    "statusDes": "Suspended policies keep serving existing files but reject new uploads.",
+    "loadBalance": "Load Balance",
+    "lbChildren": "Child storage policies",
+    "lbChildPolicy": "Storage policy",
+    "lbWeight": "Weight",
+    "lbAddChild": "Add child policy",
+    "lbChildrenDes": "New uploads are distributed across child policies proportionally to their weight.",
+    "lbWizardDes": "A load-balance policy distributes uploads across weighted child policies. Children are configured after creation."
   },
   "node": {
     "slave": "slave",
@@ -1373,7 +1380,9 @@
     "notCopy": "Not copy",
     "confirmDelete": "Are you sure you want to delete group {{group}}?",
     "new": "New group",
-    "editGroup": "Edit {{group}}"
+    "editGroup": "Edit {{group}}",
+    "switchablePolicies": "Switchable storage policies",
+    "switchablePoliciesDes": "Policies members of this group can freely switch to. The default policy above is always available."
   },
   "user": {
     "createdAt": "Created at",
@@ -1446,8 +1455,7 @@
     "invitationCodeCopy": "Copy",
     "invitationCodeDefaultGroup": "Default",
     "noInvitationCodes": "No invitation codes yet.",
-    "loadMore": "Load more",
-    "createdAt": "Created at"
+    "loadMore": "Load more"
   },
   "file": {
     "deleteXFiles": "Delete {{num}} files",

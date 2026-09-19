@@ -582,6 +582,31 @@ var (
 			},
 		},
 	}
+	// GroupAllowedPoliciesColumns holds the columns for the "group_allowed_policies" table.
+	GroupAllowedPoliciesColumns = []*schema.Column{
+		{Name: "group_id", Type: field.TypeInt},
+		{Name: "storage_policy_id", Type: field.TypeInt},
+	}
+	// GroupAllowedPoliciesTable holds the schema information for the "group_allowed_policies" table.
+	GroupAllowedPoliciesTable = &schema.Table{
+		Name:       "group_allowed_policies",
+		Columns:    GroupAllowedPoliciesColumns,
+		PrimaryKey: []*schema.Column{GroupAllowedPoliciesColumns[0], GroupAllowedPoliciesColumns[1]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "group_allowed_policies_group_id",
+				Columns:    []*schema.Column{GroupAllowedPoliciesColumns[0]},
+				RefColumns: []*schema.Column{GroupsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "group_allowed_policies_storage_policy_id",
+				Columns:    []*schema.Column{GroupAllowedPoliciesColumns[1]},
+				RefColumns: []*schema.Column{StoragePoliciesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		ACLEntriesTable,
@@ -603,6 +628,7 @@ var (
 		TasksTable,
 		UsersTable,
 		FileEntitiesTable,
+		GroupAllowedPoliciesTable,
 	}
 )
 
@@ -628,4 +654,6 @@ func init() {
 	UsersTable.ForeignKeys[0].RefTable = GroupsTable
 	FileEntitiesTable.ForeignKeys[0].RefTable = FilesTable
 	FileEntitiesTable.ForeignKeys[1].RefTable = EntitiesTable
+	GroupAllowedPoliciesTable.ForeignKeys[0].RefTable = GroupsTable
+	GroupAllowedPoliciesTable.ForeignKeys[1].RefTable = StoragePoliciesTable
 }

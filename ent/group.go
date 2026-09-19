@@ -51,9 +51,11 @@ type GroupEdges struct {
 	Users []*User `json:"users,omitempty"`
 	// StoragePolicies holds the value of the storage_policies edge.
 	StoragePolicies *StoragePolicy `json:"storage_policies,omitempty"`
+	// AllowedPolicies holds the value of the allowed_policies edge.
+	AllowedPolicies []*StoragePolicy `json:"allowed_policies,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // UsersOrErr returns the Users value or an error if the edge
@@ -76,6 +78,15 @@ func (e GroupEdges) StoragePoliciesOrErr() (*StoragePolicy, error) {
 		return e.StoragePolicies, nil
 	}
 	return nil, &NotLoadedError{edge: "storage_policies"}
+}
+
+// AllowedPoliciesOrErr returns the AllowedPolicies value or an error if the edge
+// was not loaded in eager-loading.
+func (e GroupEdges) AllowedPoliciesOrErr() ([]*StoragePolicy, error) {
+	if e.loadedTypes[2] {
+		return e.AllowedPolicies, nil
+	}
+	return nil, &NotLoadedError{edge: "allowed_policies"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -194,6 +205,11 @@ func (gr *Group) QueryStoragePolicies() *StoragePolicyQuery {
 	return NewGroupClient(gr.config).QueryStoragePolicies(gr)
 }
 
+// QueryAllowedPolicies queries the "allowed_policies" edge of the Group entity.
+func (gr *Group) QueryAllowedPolicies() *StoragePolicyQuery {
+	return NewGroupClient(gr.config).QueryAllowedPolicies(gr)
+}
+
 // Update returns a builder for updating this Group.
 // Note that you need to call Group.Unwrap() before calling this method if this Group
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -259,6 +275,12 @@ func (e *Group) SetUsers(v []*User) {
 func (e *Group) SetStoragePolicies(v *StoragePolicy) {
 	e.Edges.StoragePolicies = v
 	e.Edges.loadedTypes[1] = true
+}
+
+// SetAllowedPolicies manually set the edge as loaded state.
+func (e *Group) SetAllowedPolicies(v []*StoragePolicy) {
+	e.Edges.AllowedPolicies = v
+	e.Edges.loadedTypes[2] = true
 }
 
 // Groups is a parsable slice of Group.

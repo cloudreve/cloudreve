@@ -750,6 +750,23 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				middleware.ValidateBatchFileCount(dep, explorer.PatchMetadataParameterCtx{}),
 				controllers.PatchMetadata,
 			)
+			// List storage policies available to the current group
+			file.GET("policy",
+				controllers.FromQuery[explorer.AllowedPolicyService](explorer.AllowedPolicyParamCtx{}),
+				controllers.ListStoragePolicies,
+			)
+			// Set preferred storage policy for a directory
+			file.PUT("policy",
+				middleware.RequiredScopes(types.ScopeFilesWrite),
+				controllers.FromJSON[explorer.PreferredPolicyService](explorer.PreferredPolicyParamCtx{}),
+				controllers.UpdatePreferredPolicy,
+			)
+			// Relocate files to a different storage policy
+			file.POST("relocate",
+				middleware.RequiredScopes(types.ScopeFilesWrite),
+				controllers.FromJSON[explorer.FileRelocateService](explorer.FileRelocateParamCtx{}),
+				controllers.RelocatePolicy,
+			)
 			// Upload related
 			upload := file.Group("upload", middleware.RequiredScopes(types.ScopeFilesWrite))
 			{

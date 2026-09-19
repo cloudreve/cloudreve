@@ -1,4 +1,5 @@
 export { default as BasicInfoSection } from "./BasicInfoSection";
+export { default as LoadBalanceSection } from "./LoadBalanceSection";
 export { default as DownloadSection } from "./DownloadSection";
 export { default as EncryptionSection } from "./EncryptionSection";
 export * from "./magicVars";

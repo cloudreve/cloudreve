@@ -176,6 +176,7 @@ export const Metadata = {
   restore_uri: "sys:restore_uri",
   expected_collect_time: "sys:expected_collect_time",
   full_text_index: "sys:fulltext_index",
+  preferred_policy: "sys:preferred_policy",
 
   // Exif
   gps_lng: "exif:longitude",
@@ -640,4 +641,27 @@ export interface FullTextSearchResults {
 export interface FullTextSearchResult {
   file: FileResponse;
   content: string;
+}
+
+// StoragePolicyBrief is the user-facing view of a storage policy the current
+// group is allowed to use.
+export interface StoragePolicyBrief {
+  id: string;
+  name: string;
+  type: string;
+  is_default?: boolean;
+}
+
+export interface PreferredPolicyService {
+  uri: string;
+  policy: string;
+}
+
+export interface FileRelocateService {
+  uri: string;
+  policy: string;
+}
+
+export interface FileRelocateResponse {
+  id: string;
 }

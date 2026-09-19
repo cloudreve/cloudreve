@@ -54,6 +54,8 @@ import {
   DeleteFileService,
   DeleteUploadSessionService,
   DirectLink,
+  FileRelocateResponse,
+  FileRelocateService,
   FileResponse,
   FileThumbResponse,
   FileUpdateService,
@@ -67,9 +69,11 @@ import {
   PatchMetadataService,
   PatchViewSyncService,
   PinFileService,
+  PreferredPolicyService,
   RenameFileService,
   Share,
   ShareCreateService,
+  StoragePolicyBrief,
   UnlockFileService,
   UploadCredential,
   UploadSessionRequest,
@@ -520,6 +524,56 @@ export function sendMetadataPatch(req: PatchMetadataService): ThunkResponse<void
         {
           ...defaultOpts,
           skipBatchError: req.uris.length == 1,
+        },
+      ),
+    );
+  };
+}
+
+export function getAllowedPolicies(): ThunkResponse<StoragePolicyBrief[]> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/file/policy",
+        {
+          method: "GET",
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function setPreferredPolicy(req: PreferredPolicyService): ThunkResponse<StoragePolicyBrief | undefined> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/file/policy",
+        {
+          data: req,
+          method: "PUT",
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function relocateToPolicy(req: FileRelocateService): ThunkResponse<FileRelocateResponse> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/file/relocate",
+        {
+          data: req,
+          method: "POST",
+        },
+        {
+          ...defaultOpts,
         },
       ),
     );
