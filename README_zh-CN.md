@@ -1,77 +1,104 @@
-[English Version](https://github.com/cloudreve/cloudreve/blob/master/README.md)
-
 <h1 align="center">
   <br>
-  <a href="https://cloudreve.org/" alt="logo" ><img src="https://raw.githubusercontent.com/cloudreve/frontend/master/public/static/img/logo192.png" width="150"/></a>
-  <br>
-  Cloudreve
+  Cloudreve — 社区维护分支
   <br>
 </h1>
+<h4 align="center">自托管文件管理与分享平台 — 完全开源，持续维护中。</h4>
 
-<h4 align="center">支持多家云存储驱动的公有云文件系统.</h4>
+> 本仓库是 [cloudreve/cloudreve](https://github.com/cloudreve/cloudreve) 的积极维护分支。
+> 所有原始工作归属 Cloudreve 原作者（cloudreve.org）。由于上游开发放缓，本分支将项目延续为
+> **完整、完全开源的发行版**：后端、Web 前端、Windows/macOS/Linux 桌面客户端以及原生 Android
+> 应用，并将所有 “Pro” 级功能以自由软件方式重新实现。署名说明见 [NOTICE](NOTICE)。
 
-<p align="center">
-  <a href="https://dev.azure.com/abslantliu/cloudreve/_build?definitionId=6">
-    <img src="https://img.shields.io/github/check-runs/cloudreve/cloudreve/master"
-         alt="Azure pipelines">
-  </a>
-  <a href="https://github.com/cloudreve/cloudreve/releases">
-    <img src="https://img.shields.io/github/v/release/cloudreve/cloudreve?include_prereleases" />
-  </a>
-  <a href="https://github.com/cloudreve/cloudreve/releases">
-     <img src="https://badgen.net/static/release%20size/34%20MB/blue"/>
-  </a>
-  <a href="https://hub.docker.com/r/cloudreve/cloudreve">
-  <img alt="Docker Pulls" src="https://img.shields.io/docker/pulls/cloudreve/cloudreve" />
-  </a>
-</p>
-<p align="center">
-  <a href="https://cloudreve.org">主页</a> •
-  <a href="https://demo.cloudreve.org">演示</a> •
-  <a href="https://github.com/cloudreve/cloudreve/discussions">讨论</a> •
-  <a href="https://docs.cloudreve.org">文档</a> •
-  <a href="https://github.com/cloudreve/cloudreve/releases">下载</a> •
-  <a href="https://t.me/cloudreve_official">Telegram</a> •
-  <a href="https://discord.com/invite/WTpMFpZT76">Discord</a>
-</p>
+## 与上游的差异
 
-![Screenshot](https://raw.githubusercontent.com/cloudreve/docs/master/images/homepage.png)
+- **无 Pro 分层。** 已移除付费引导 UI（`ProChip`/`ProDialog`）；Pro 级功能以开源方式重新实现：
+  分享协作（可上传/可编辑/仅预览/投递箱分享）、OIDC SSO、委派管理员已落地。
+- **上游 issue 积压已分类修复。** 137 个迁移 issue 全部在本仓库跟踪，约 70% 已关闭，包括
+  WebDAV 挂载/只读/冲突处理、上传卡死、回收站保护、SQLite WAL、MySQL `parseTime`、
+  unix socket 迁移等。
+- **在上游修复之上的安全加固。** OAuth 公共客户端不再内置硬编码密钥（仅 PKCE，符合 RFC 8252）；
+  离线下载 URL 做 SSRF 校验；委派管理员操作记入审计日志；认证端点限流。
+- **单仓 monorepo。** 后端、前端、桌面端、Android 端同仓管理，无 submodule。
+- **测试与 CI 真实运行。** 每个 PR 执行后端测试、前端类型检查/构建、桌面端三平台构建。
 
-## :sparkles: 特性
+## 仓库结构
 
-- :cloud: 支持本机、从机、七牛 Kodo、阿里云 OSS、腾讯云 COS、华为云 OBS、金山云 KS3、又拍云、OneDrive (包括世纪互联版) 、S3 兼容协议 作为存储端
-- :outbox_tray: 上传/下载 支持客户端直传，支持下载限速
-- 💾 可对接 Aria2/qBittorrent 离线下载，可使用多个从机节点分担下载任务
-- 📚 在线 压缩/解压缩/压缩包预览、多文件打包下载
-- 💻 覆盖全部存储策略的 WebDAV 协议支持
-- :zap: 拖拽上传、目录上传、并行分片上传
-- :card_file_box: 提取媒体元数据，通过元数据或标签搜索文件
-- :family_woman_girl_boy: 多用户、用户组、多存储策略
-- :link: 创建文件、目录的分享链接，可设定自动过期
-- :eye_speech_bubble: 视频、图像、音频、 ePub 在线预览，文本、Office 文档在线编辑
-- :art: 自定义配色、黑暗模式、PWA 应用、全站单页应用、国际化支持
-- :rocket: All-in-One 打包，开箱即用
-- 🌈 ... ...
+```
+.                    Go 后端 — Gin + ent ORM（SQLite/MySQL/PostgreSQL）
+frontend/            Web 前端 — React + TypeScript + Vite + MUI（已内嵌，无 submodule）
+desktop/             桌面客户端 — Tauri/Rust 同步引擎（当前为 Windows cfapi；
+                     macOS/Linux 待接入，见路线图）
+android/             原生 Android 客户端 — Kotlin + Jetpack Compose（脚手架阶段）
+.github/workflows/   CI（后端、前端、桌面端矩阵）+ 发布流水线
+```
 
-## :hammer_and_wrench: 部署
+## 功能
 
-你可以参考 [快速开始](https://docs.cloudreve.org/overview/quickstart) 启动一个本地实例进行体验、测试。
+- 存储端：本地、远程节点、S3 兼容、OneDrive、OSS、COS、Qiniu、Upyun、KS3、OBS。
+- 客户端与存储端直传；分块、断点续传、并行上传。
+- 离线下载：aria2、qBittorrent、**yt-dlp** 三种提供方，多节点、按节点配置，
+  用户组级并发/体积配额。
+- 分享链接：过期时间、仅上传投递箱、在线编辑、仅预览、匿名上传、IP 限制访问。
+- 压缩包解压/打包、媒体元数据提取、元数据/标签检索。
+- 全存储端 WebDAV（本分支修复了只读用户组的权限执行问题）。
+- SSO：通用 OIDC 接入（授权码 + nonce、JWKS 校验、自动开户）、OAuth 公共客户端 PKCE、
+  Passkey、TOTP 两步验证。
+- 多用户多用户组；管理员任务列表支持 CIDR 创建者 IP 过滤；按用户回收站保留期；
+  按用户组离线下载配额。
+- 预览：图片（缩略图渐进加载到原图）、视频、音频、ePub、Markdown、图表、Office 文档、3D 模型。
+- PWA、深色模式、多语言、主题自定义、自定义 HTML 注入。
 
-当你准备好将 Cloudreve 部署到生产环境时，可以参考 [部署](https://docs.cloudreve.org/overview/deploy/) 进行完整部署。
+## 从源码构建
 
-## :gear: 构建
+依赖：Go ≥ 1.24、Node ≥ 20 + Yarn、（桌面端）Rust + Tauri 平台依赖。
 
-你可以参考 [构建](https://docs.cloudreve.org/overview/build/) 从源代码构建 Cloudreve。
+```bash
+# 前端
+cd frontend && yarn install
+NODE_OPTIONS=--max-old-space-size=6144 yarn build   # 产物由 Go embed 打包
 
-## :rocket: 贡献
+# 后端（仓库根目录）— 二进制同时托管前端与 API，监听 :5212
+go build -o cloudreve .
+./cloudreve
+```
 
-如果你有兴趣为 Cloudreve 贡献代码，请参考 [贡献](https://docs.cloudreve.org/api/contributing/) 了解如何贡献。
+桌面客户端见 `desktop/CLAUDE.md`（`cargo tauri build`，Windows 优先）。
 
-## :alembic: 技术栈
+## 开发
 
-- [Go](https://golang.org/) + [Gin](https://github.com/gin-gonic/gin) + [ent](https://github.com/ent/ent)
-- [React](https://github.com/facebook/react) + [Redux](https://github.com/reduxjs/redux) + [Material-UI](https://github.com/mui-org/material-ui)
+```bash
+go build ./... && go vet ./... && go test ./...          # 后端门禁
+cd frontend && yarn tsc --noEmit && yarn build           # 前端门禁
+```
 
-## :scroll: 许可证
+`docker-compose.dev.yml` 可启动 postgres + redis + 源码构建的后端；`yarn dev` 提供前端热更新。
+PR 一律走功能分支，禁止直接推送 `master`，合并前必须通过全部 CI。
 
-GPL V3
+## 状态一览
+
+| 领域 | 状态 |
+|---|---|
+| 后端 / 前端 | 稳定 — 4.19.1 基线，CI 全绿 |
+| 上游 issue | 137 个迁移 issue 约 70% 已关闭；其余为大型功能、Pro 表面或依赖设备 |
+| 代码健康 | desloppify 严格分 77.1（原 18.9）；73 项评审全部处置 |
+| 桌面客户端 | Windows 可用（cfapi 同步 + 外壳集成）；macOS/Linux 计划中 |
+| Android 客户端 | 脚手架完成 — Kotlin/Compose 骨架，见 [ROADMAP.md](ROADMAP.md) Phase E |
+| Pro 免费化 | 分享协作 ✓、OIDC SSO ✓、委派管理员 ✓；存储策略迁移、VAS/计费、审计界面进行中 |
+
+完整计划与已知限制见 [ROADMAP.md](ROADMAP.md)；issue 跟踪器中每项均有真实状态说明。
+
+## 安全
+
+请通过本仓库 GitHub 的 “Report a vulnerability” 私下报告漏洞，勿开公开 issue。
+上游已公布的 16 个 GHSA 在本基线均已修复；新增改动合并前均经 SSRF、路径穿越、
+进程执行与会话熵审查。
+
+## 致谢
+
+Cloudreve 由 **Aaron Liu 及 Cloudreve 贡献者** 创建（cloudreve.org）。本分支是在同一
+GPL-3.0 许可下的独立延续 — 署名而非背书。完整声明见 [NOTICE](NOTICE)。
+
+## 许可证
+
+[GPL-3.0](LICENSE) — 与上游一致，贡献按同一许可提交。

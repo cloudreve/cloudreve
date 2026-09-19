@@ -1,26 +1,35 @@
-# Contributing to Cloudreve
+# Contributing
 
-Thank you for your interest in contributing to Cloudreve!
+This is an actively maintained community fork of Cloudreve. Contributions are welcome — the goal is
+a complete, fully open-source distribution, so Pro-class features land here as free software rather
+than behind a license key.
 
-The full contributing guide — including project structure, development environment
-setup, how to pick a task, how to submit a PR, and our AIGC (AI-generated code)
-policy — is maintained in our documentation site:
+## Before you start
 
-**👉 https://docs.cloudreve.org/api/contributing**
+- **Check the issue tracker first.** Migrated upstream issues are labeled by group
+  (`group:*`, `pro-free`, `security`, `revisit`, `epic`); each carries an honest status note.
+  [ROADMAP.md](ROADMAP.md) describes the phase plan (B.2 storage policies, B.4 VAS, B.5 system
+  extensions, Phase D desktop, Phase E Android).
+- **One change per PR.** Split large features into reviewable increments.
+- **No CLA.** Unlike upstream there is no contributor agreement — contributions are GPL-3.0 like
+  the project itself. Do not submit code copied from Cloudreve Pro sources.
 
-A few key points to keep in mind before you open a PR:
+## Workflow
 
-- Cloudreve is dual-licensed. We only accept contributions to the **community
-  edition**, and all contributors must sign the
-  [CLA](https://cla-assistant.io/cloudreve/cloudreve) before a PR can be merged.
-- **PRs must be linked to an issue labeled with `Backlog`.** We do not accept
-  new features proposed directly through a PR. If you have a new idea, please
-  open an issue first and wait for it to be triaged and labeled.
-- **Each PR should correspond to a single change.** Please split large features
-  or refactors into multiple smaller PRs whenever possible.
-- If you use AI tools to help write code, please read the
-  [AIGC Guidelines](https://docs.cloudreve.org/api/contributing#aigc-guidelines)
-  first. We are not against AI, but we do not accept pure "vibe-coded" PRs.
+1. Branch from `master` — never push to `master` directly.
+2. Keep changes idiomatic: Gin + ent on the backend, React + MUI + Redux conventions in `frontend/`,
+   existing provider/interface seams over new abstractions.
+3. Run the pre-push gate, all of it:
+   - `go build ./... && go vet ./... && go test ./...`
+   - `cd frontend && yarn tsc --noEmit && yarn build` (use `NODE_OPTIONS=--max-old-space-size=6144`
+     if Vite hits the default heap limit)
+   - Boot the binary and smoke the endpoints you touched.
+4. Open the PR against `Dvorinka/cloudreve` `master` and wait for all CI jobs (backend, frontend,
+   desktop matrix) to go green.
 
-For discussion and support, join the `development` channel on our
-[Discord community](https://discord.com/channels/1343585183047094367/1343585679585579018).
+## Style notes
+
+- Security-relevant changes (auth, SSRF, process execution, file paths, secrets) get extra scrutiny —
+  say so in the PR description.
+- Comments only where they carry information; Go doc conventions for exported symbols.
+- AI-assisted contributions are fine — you are responsible for what you submit.

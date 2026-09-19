@@ -132,13 +132,14 @@ Order = user-visible value first; each ships with backend + UI + tests.
    - [ ] QQ Connect (non-OIDC protocol, separate integration), account linking UI for existing local accounts, group/role claim mapping
 4. **VAS/monetization-free** — credits + redemption codes as *free* features (gift codes for admin use), storage/membership plan definitions; skip payment processor integration initially — YAGNI until a real user asks (fixes #3231)
 5. **System extensions** — activity/audit log surfaced in admin, site announcements, report-abuse queue (fixes #3480, #3479 IP whitelist)
+   - [x] PR #144 — task `creator_ip` capture with CIDR-capable admin filter (#115 OSS half), group remote-download quotas per count + per volume (#16), yt-dlp downloader provider (#88), progressive image preview (#113), v3 migrator `DatabaseURL` passthrough (#42)
 
 ## 5. Phase C — security + quality
 
 - Own security review on top of upstream fixes: session/token entropy audit, SSRF guard re-test (NAT64 class), rate limiting on auth endpoints
 - Fix upstream bug backlog by impact: ~~#3574 OOM~~ (done — paged tree walk + batched delete), ~~#3118/#3005 WebDAV large-file~~ (done — Content-Range assembly into one session; non-local policies get honest 501; single-PUT giant-file 500s are proxy/client timeouts, not fixable server-side), ~~#3375 SMTP auth discovery~~ (done — `smtp_auth` setting)
 - #3454 (PG FK on upload) is **Pro-only** — `audit_logs` doesn't exist in this codebase. When B.5 adds our own audit log: insert the audit row in the same tx *after* the file row, never before.
-- `desloppify` + `security-reviewer` passes; scorecard appended to README
+- [x] `desloppify` pass — 73 review items dispositioned (46 fixed, 27 honestly skipped), strict score 77.1 (was 18.9); scorecard lives in README. `security-reviewer` pass done incrementally per batch (OAuth secrets, SSRF, process exec, path safety)
 
 ## 6. Phase D — desktop, all platforms
 
