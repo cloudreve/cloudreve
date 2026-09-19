@@ -1,3 +1,5 @@
+import Boolset from "../util/boolset";
+
 /**
  * UserLoginService 管理用户登录的服务
  */
@@ -95,6 +97,39 @@ export const GroupPermission = {
   advance_delete: 12,
   unique_direct_link: 17,
   webdav_read_only: 18,
+  admin_users: 19,
+  admin_groups: 20,
+  admin_files: 21,
+  admin_shares: 22,
+  admin_storage: 23,
+  admin_queue: 24,
+  admin_settings: 25,
+  admin_payment: 26,
+  admin_events: 27,
+  admin_reports: 28,
+};
+
+// Delegated admin section bits — is_admin implies all of them.
+export const DelegatedAdminPermissions = [
+  GroupPermission.admin_users,
+  GroupPermission.admin_groups,
+  GroupPermission.admin_files,
+  GroupPermission.admin_shares,
+  GroupPermission.admin_storage,
+  GroupPermission.admin_queue,
+  GroupPermission.admin_settings,
+  GroupPermission.admin_payment,
+  GroupPermission.admin_events,
+  GroupPermission.admin_reports,
+];
+
+// isAnyAdmin reports whether the permission set grants full or delegated admin
+// access to at least one section.
+export const isAnyAdmin = (permission: Boolset): boolean => {
+  return (
+    permission.enabled(GroupPermission.is_admin) ||
+    DelegatedAdminPermissions.some((p) => permission.enabled(p))
+  );
 };
 
 export interface UserSettings {

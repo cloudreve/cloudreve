@@ -335,6 +335,58 @@ func IsAdmin() gin.HandlerFunc {
 	}
 }
 
+// IsAdminOrDelegated allows full admins and delegated administrators (groups
+// carrying at least one per-section admin permission bit).
+func IsAdminOrDelegated() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		user := inventory.UserFromContext(c)
+		permissions := user.Edges.Group.Permissions
+		if !permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+			delegated := false
+			for _, p := range types.DelegatedAdminPermissions() {
+				if permissions.Enabled(int(p)) {
+					delegated = true
+					break
+				}
+			}
+
+			if !delegated {
+				c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeNoPermissionErr, "", nil))
+				c.Abort()
+				return
+			}
+		}
+
+		c.Next()
+	}
+}
+
+// AdminSection requires the full admin permission or at least one of the
+// given delegated admin section permissions.
+func AdminSection(sections ...types.GroupPermission) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		user := inventory.UserFromContext(c)
+		permissions := user.Edges.Group.Permissions
+		if !permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+			allowed := false
+			for _, p := range sections {
+				if permissions.Enabled(int(p)) {
+					allowed = true
+					break
+				}
+			}
+
+			if !allowed {
+				c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeNoPermissionErr, "", nil))
+				c.Abort()
+				return
+			}
+		}
+
+		c.Next()
+	}
+}
+
 // RequiredScopes checks if the JWT token has the required scopes.
 // If the token has scopes (hasScopes is true), it verifies the token has all required scopes.
 // Write scopes implicitly include Read scopes for the same resource (e.g., "File.Write" includes "File.Read").

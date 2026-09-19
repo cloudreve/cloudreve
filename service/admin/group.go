@@ -8,6 +8,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/boolset"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
 	"github.com/gin-gonic/gin"
 )
@@ -165,6 +166,12 @@ func (s *UpsertGroupService) Update(c *gin.Context) (*GetGroupResponse, error) {
 		return nil, serializer.NewError(serializer.CodeParamErr, "Initial admin group have to be admin", nil)
 	}
 
+	// Delegated admins cannot modify admin-capable permission bits — the
+	// target group's existing admin bits are preserved.
+	if err := s.maskAdminPermissions(c, groupClient); err != nil {
+		return nil, err
+	}
+
 	group, err := groupClient.Upsert(c, s.Group)
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to update group", err)
@@ -182,6 +189,11 @@ func (s *UpsertGroupService) Create(c *gin.Context) (*GetGroupResponse, error) {
 		return nil, serializer.NewError(serializer.CodeParamErr, "ID must be 0", nil)
 	}
 
+	// Delegated admins cannot create groups carrying admin-capable bits.
+	if err := s.maskAdminPermissions(c, groupClient); err != nil {
+		return nil, err
+	}
+
 	group, err := groupClient.Upsert(c, s.Group)
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to create group", err)
@@ -189,4 +201,35 @@ func (s *UpsertGroupService) Create(c *gin.Context) (*GetGroupResponse, error) {
 
 	service := &SingleGroupService{ID: group.ID}
 	return service.Get(c)
+}
+
+// maskAdminPermissions strips admin-capable permission bits from the payload
+// when the acting user is not a full administrator, preventing delegated
+// admins from escalating privileges. For updates, the target group's existing
+// admin bits are preserved.
+func (s *UpsertGroupService) maskAdminPermissions(c *gin.Context, groupClient inventory.GroupClient) error {
+	actor := inventory.UserFromContext(c)
+	if actor.Edges.Group != nil && actor.Edges.Group.Permissions != nil &&
+		actor.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+		return nil
+	}
+
+	if s.Group.Permissions == nil {
+		s.Group.Permissions = &boolset.BooleanSet{}
+	}
+	if s.Group.ID > 0 {
+		existing, err := groupClient.GetByID(c, s.Group.ID)
+		if err != nil {
+			return serializer.NewError(serializer.CodeDBError, "Failed to get group", err)
+		}
+		for _, p := range types.AdminPermissionBits() {
+			boolset.Set(int(p), existing.Permissions != nil && existing.Permissions.Enabled(int(p)), s.Group.Permissions)
+		}
+	} else {
+		for _, p := range types.AdminPermissionBits() {
+			boolset.Set(int(p), false, s.Group.Permissions)
+		}
+	}
+
+	return nil
 }

@@ -4,7 +4,7 @@ import SvgIcon from "@mui/material/SvgIcon/SvgIcon";
 import { memo, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
-import { GroupPermission } from "../../../api/user.ts";
+import { GroupPermission, isAnyAdmin } from "../../../api/user.ts";
 import { useAppSelector } from "../../../redux/hooks.ts";
 import SessionManager from "../../../session";
 import { GroupBS } from "../../../session/utils.ts";
@@ -52,6 +52,9 @@ export interface NavigationItem {
   icon?: ((props: SvgIconProps) => JSX.Element)[] | (typeof SvgIcon)[];
   iconifyName?: string;
   path: string;
+  // Delegated admin section bit required to see this item. Full admins
+  // (is_admin) always pass; undefined means any admin.
+  permission?: number;
 }
 
 let NavigationItems: NavigationItem[];
@@ -137,80 +140,100 @@ AdminNavigationItems = [
     label: "dashboard:nav.settings",
     icon: [Setting, SettingsOutlined],
     path: "/admin/settings",
+    permission: GroupPermission.admin_settings,
   },
   {
     label: "dashboard:nav.fileSystem",
     icon: [CubeTreeFilled, CubeTree],
     path: "/admin/filesystem",
+    permission: GroupPermission.admin_settings,
   },
   {
     label: "dashboard:nav.storagePolicy",
     icon: [Storage, StorageOutlined],
     path: "/admin/policy",
+    permission: GroupPermission.admin_storage,
   },
   {
     label: "dashboard:nav.nodes",
     icon: [ServerFilled, Server],
     path: "/admin/node",
+    permission: GroupPermission.admin_storage,
   },
   {
     label: "dashboard:nav.groups",
     icon: [PeopleFilled, People],
     path: "/admin/group",
+    permission: GroupPermission.admin_groups,
   },
   {
     label: "dashboard:nav.users",
     icon: [Person, PersonOutlined],
     path: "/admin/user",
+    permission: GroupPermission.admin_users,
   },
   {
     label: "dashboard:nav.files",
     icon: [Folder, FolderOutlined],
     path: "/admin/file",
+    permission: GroupPermission.admin_files,
   },
   {
     label: "dashboard:nav.entities",
     icon: [BoxMultipleFilled, BoxMultiple],
     path: "/admin/blob",
+    permission: GroupPermission.admin_files,
   },
   {
     label: "dashboard:nav.shares",
     icon: [ShareAndroid, ShareOutlined],
     path: "/admin/share",
+    permission: GroupPermission.admin_shares,
   },
   {
     label: "dashboard:nav.tasks",
     icon: [CubeSyncFilled, CubeSync],
     path: "/admin/task",
+    permission: GroupPermission.admin_queue,
   },
   {
     label: "dashboard:vas.orders",
     icon: [PaymentFilled, Payment],
     path: "/admin/payment",
+    permission: GroupPermission.admin_payment,
   },
   {
     label: "dashboard:nav.events",
     icon: [SendLoggingFilled, SendLogging],
     path: "/admin/event",
+    permission: GroupPermission.admin_events,
   },
   {
     label: "dashboard:nav.abuseReport",
     icon: [Warning, WarningOutlined],
     path: "/admin/abuse",
+    permission: GroupPermission.admin_reports,
   },
   {
     label: "dashboard:nav.oauthClients",
     icon: [ShieldLockFilled, ShieldLock],
     path: "/admin/oauth",
+    permission: GroupPermission.admin_settings,
   },
 ];
 
 export const AdminPageNavigation = memo(() => {
+  const user = SessionManager.currentLoginOrNull();
+  const permission = useMemo(() => GroupBS(user?.user), [user?.user?.group?.permission]);
+  const isFullAdmin = permission.enabled(GroupPermission.is_admin);
+  const visibleItems = AdminNavigationItems.filter(
+    (item) => item.permission === undefined || isFullAdmin || permission.enabled(item.permission),
+  );
   return (
     <>
-      <SideNavItemComponent key={AdminNavigationItems[0].label} item={AdminNavigationItems[0]} />
+      <SideNavItemComponent key={visibleItems[0].label} item={visibleItems[0]} />
       <Box>
-        {AdminNavigationItems.slice(1).map((item) => (
+        {visibleItems.slice(1).map((item) => (
           <SideNavItemComponent key={item.label} item={item} />
         ))}
       </Box>
@@ -229,7 +252,7 @@ const PageNavigation = () => {
   const appPromotionEnabled = useAppSelector((state) => state.siteConfig.basic.config.app_promotion);
   const user = SessionManager.currentLoginOrNull();
   const isAdmin = useMemo(() => {
-    return GroupBS(user?.user).enabled(GroupPermission.is_admin);
+    return isAnyAdmin(GroupBS(user?.user));
   }, [user?.user?.group?.permission]);
   const remoteDownloadEnabled = useMemo(() => {
     return GroupBS(user?.user).enabled(GroupPermission.remote_download);

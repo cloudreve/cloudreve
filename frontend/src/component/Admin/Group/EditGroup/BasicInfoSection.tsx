@@ -57,6 +57,16 @@ const BasicInfoSection = () => {
     [setGroup],
   );
 
+  const onSectionChange = useCallback(
+    (bit: number) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      setGroup((p: GroupEnt) => ({
+        ...p,
+        permissions: new Boolset(p.permissions).set(bit, e.target.checked).toString(),
+      }));
+    },
+    [setGroup],
+  );
+
   const onWhitelistChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const list = e.target.value
@@ -119,6 +129,33 @@ const BasicInfoSection = () => {
                 <NoMarginHelperText>{t("group.isAdminDes")}</NoMarginHelperText>
               </FormControl>
             </SettingForm>
+            {!permission.enabled(GroupPermission.is_admin) && (
+              <SettingForm title={t("group.delegatedAdmin")} lgWidth={5}>
+                <FormControl fullWidth>
+                  <NoMarginHelperText>{t("group.delegatedAdminDes")}</NoMarginHelperText>
+                  {(
+                    [
+                      [GroupPermission.admin_users, "group.sectionUsers"],
+                      [GroupPermission.admin_groups, "group.sectionGroups"],
+                      [GroupPermission.admin_files, "group.sectionFiles"],
+                      [GroupPermission.admin_shares, "group.sectionShares"],
+                      [GroupPermission.admin_storage, "group.sectionStorage"],
+                      [GroupPermission.admin_queue, "group.sectionQueue"],
+                      [GroupPermission.admin_settings, "group.sectionSettings"],
+                      [GroupPermission.admin_payment, "group.sectionPayment"],
+                      [GroupPermission.admin_events, "group.sectionEvents"],
+                      [GroupPermission.admin_reports, "group.sectionReports"],
+                    ] as [number, string][]
+                  ).map(([bit, label]) => (
+                    <FormControlLabel
+                      key={bit}
+                      control={<Switch checked={permission.enabled(bit)} onChange={onSectionChange(bit)} />}
+                      label={t(label)}
+                    />
+                  ))}
+                </FormControl>
+              </SettingForm>
+            )}
             <SettingForm title={t("group.loginIPWhitelist")} lgWidth={5}>
               <FormControl fullWidth>
                 <DenseFilledTextField

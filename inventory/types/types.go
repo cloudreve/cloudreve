@@ -290,7 +290,43 @@ const (
 	// read operations — write methods (PUT, MKCOL, DELETE, COPY, MOVE, LOCK,
 	// PROPPATCH) are rejected even if the group's WebDAV access is enabled.
 	GroupPermissionWebDAVReadOnly
+	// Delegated admin section permissions. A group with any of these bits —
+	// but without GroupPermissionIsAdmin — is a delegated administrator that
+	// can only access the corresponding admin sections. GroupPermissionIsAdmin
+	// implies all sections.
+	GroupPermissionAdminUsers
+	GroupPermissionAdminGroups
+	GroupPermissionAdminFiles
+	GroupPermissionAdminShares
+	GroupPermissionAdminStorage
+	GroupPermissionAdminQueue
+	GroupPermissionAdminSettings
+	GroupPermissionAdminPayment
+	GroupPermissionAdminEvents
+	GroupPermissionAdminReports
 )
+
+// DelegatedAdminPermissions lists every per-section admin permission bit.
+// GroupPermissionIsAdmin implies all of them.
+func DelegatedAdminPermissions() []GroupPermission {
+	return []GroupPermission{
+		GroupPermissionAdminUsers,
+		GroupPermissionAdminGroups,
+		GroupPermissionAdminFiles,
+		GroupPermissionAdminShares,
+		GroupPermissionAdminStorage,
+		GroupPermissionAdminQueue,
+		GroupPermissionAdminSettings,
+		GroupPermissionAdminPayment,
+		GroupPermissionAdminEvents,
+		GroupPermissionAdminReports,
+	}
+}
+
+// AdminPermissionBits returns all admin-capable bits, including IsAdmin.
+func AdminPermissionBits() []GroupPermission {
+	return append([]GroupPermission{GroupPermissionIsAdmin}, DelegatedAdminPermissions()...)
+}
 
 const (
 	NodeCapabilityNone NodeCapability = iota

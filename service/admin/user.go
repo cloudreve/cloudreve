@@ -10,6 +10,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/boolset"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
@@ -168,6 +169,58 @@ type adminUserEmailValidation struct {
 	Email string `binding:"required,email"`
 }
 
+// groupIsAdminCapable reports whether a permission set grants full or
+// delegated admin access.
+func groupIsAdminCapable(permissions *boolset.BooleanSet) bool {
+	if permissions == nil {
+		return false
+	}
+	for _, p := range types.AdminPermissionBits() {
+		if permissions.Enabled(int(p)) {
+			return true
+		}
+	}
+	return false
+}
+
+// actorIsFullAdmin reports whether the acting user belongs to a group with the
+// full admin permission.
+func actorIsFullAdmin(c *gin.Context) bool {
+	actor := inventory.UserFromContext(c)
+	return actor.Edges.Group != nil && actor.Edges.Group.Permissions != nil &&
+		actor.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin))
+}
+
+// guardAdminGroupChange rejects delegated admins that try to move users into
+// or out of admin-capable groups. newGroupID == 0 keeps the current group.
+func guardAdminGroupChange(c *gin.Context, dep dependency.Dep, existing *ent.User, newGroupID int) error {
+	if actorIsFullAdmin(c) {
+		return nil
+	}
+
+	if existing != nil && existing.Edges.Group != nil && groupIsAdminCapable(existing.Edges.Group.Permissions) {
+		return serializer.NewError(serializer.CodeNoPermissionErr, "Cannot modify an administrator", nil)
+	}
+
+	targetGroupID := newGroupID
+	if targetGroupID == 0 && existing != nil {
+		targetGroupID = existing.GroupUsers
+	}
+	if targetGroupID == 0 {
+		return nil
+	}
+
+	target, err := dep.GroupClient().GetByID(c, targetGroupID)
+	if err != nil {
+		return serializer.NewError(serializer.CodeDBError, "Failed to get group", err)
+	}
+	if groupIsAdminCapable(target.Permissions) {
+		return serializer.NewError(serializer.CodeNoPermissionErr, "Cannot assign an administrator group", nil)
+	}
+
+	return nil
+}
+
 func (s *UpsertUserService) validateEmail() error {
 	if s.User == nil {
 		return serializer.NewError(serializer.CodeParamErr, "Email format error", nil)
@@ -203,6 +256,10 @@ func (s *UpsertUserService) Update(c *gin.Context) (*GetUserResponse, error) {
 
 	}
 
+	if err := guardAdminGroupChange(c, dep, existing, s.User.GroupUsers); err != nil {
+		return nil, err
+	}
+
 	newUser, err := userClient.Upsert(ctx, s.User, s.Password, s.TwoFA)
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to update user", err)
@@ -228,6 +285,10 @@ func (s *UpsertUserService) Create(c *gin.Context) (*GetUserResponse, error) {
 		return nil, serializer.NewError(serializer.CodeParamErr, "ID must be 0", nil)
 	}
 
+	if err := guardAdminGroupChange(c, dep, nil, s.User.GroupUsers); err != nil {
+		return nil, err
+	}
+
 	user, err := userClient.Upsert(c, s.User, s.Password, s.TwoFA)
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to create user", err)
@@ -251,11 +312,26 @@ func (s *BatchUserService) Delete(c *gin.Context) error {
 	fileClient := dep.FileClient()
 
 	current := inventory.UserFromContext(c)
+	fullAdmin := actorIsFullAdmin(c)
+	groupCtx := context.WithValue(c, inventory.LoadUserGroup{}, true)
 	ae := serializer.NewAggregateError()
 	for _, id := range s.IDs {
 		if current.ID == id || id == 1 {
 			ae.Add(strconv.Itoa(id), serializer.NewError(serializer.CodeInvalidActionOnDefaultUser, "Cannot delete current user", nil))
 			continue
+		}
+
+		// Delegated admins cannot delete members of admin-capable groups.
+		if !fullAdmin {
+			target, err := userClient.GetByID(groupCtx, id)
+			if err != nil {
+				ae.Add(strconv.Itoa(id), serializer.NewError(serializer.CodeDBError, "Failed to get user", err))
+				continue
+			}
+			if target.Edges.Group != nil && groupIsAdminCapable(target.Edges.Group.Permissions) {
+				ae.Add(strconv.Itoa(id), serializer.NewError(serializer.CodeNoPermissionErr, "Cannot delete an administrator", nil))
+				continue
+			}
 		}
 
 		fc, tx, ctx, err := inventory.WithTx(c, fileClient)
@@ -310,13 +386,38 @@ func (s *BatchUserUpdateService) Update(c *gin.Context) error {
 	dep := dependency.FromContext(c)
 	userClient := dep.UserClient()
 	current := inventory.UserFromContext(c)
+	fullAdmin := actorIsFullAdmin(c)
+
+	// Delegated admins cannot move users into an admin-capable group.
+	if !fullAdmin && s.GroupID > 0 {
+		target, err := dep.GroupClient().GetByID(c, s.GroupID)
+		if err != nil {
+			return serializer.NewError(serializer.CodeDBError, "Failed to get group", err)
+		}
+		if groupIsAdminCapable(target.Permissions) {
+			return serializer.NewError(serializer.CodeNoPermissionErr, "Cannot assign an administrator group", nil)
+		}
+	}
 
 	// The caller and the reserved initial admin cannot be modified in bulk.
 	ae := serializer.NewAggregateError()
+	groupCtx := context.WithValue(c, inventory.LoadUserGroup{}, true)
 	ids := lo.Filter(s.IDs, func(id int, _ int) bool {
 		if id == current.ID || id == 1 {
 			ae.Add(strconv.Itoa(id), serializer.NewError(serializer.CodeInvalidActionOnDefaultUser, "Cannot modify this user in bulk", nil))
 			return false
+		}
+		// Delegated admins cannot modify members of admin-capable groups.
+		if !fullAdmin {
+			target, err := userClient.GetByID(groupCtx, id)
+			if err != nil {
+				ae.Add(strconv.Itoa(id), serializer.NewError(serializer.CodeDBError, "Failed to get user", err))
+				return false
+			}
+			if target.Edges.Group != nil && groupIsAdminCapable(target.Edges.Group.Permissions) {
+				ae.Add(strconv.Itoa(id), serializer.NewError(serializer.CodeNoPermissionErr, "Cannot modify an administrator", nil))
+				return false
+			}
 		}
 		return true
 	})

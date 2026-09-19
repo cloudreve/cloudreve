@@ -924,7 +924,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 		auth.Use(middleware.LoginRequired())
 		{
 			// 管理
-			admin := auth.Group("admin", middleware.IsAdmin())
+			admin := auth.Group("admin", middleware.IsAdminOrDelegated())
 			admin.Use(middleware.RequiredScopes(types.ScopeAdminRead))
 			{
 				admin.GET("summary",
@@ -932,7 +932,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					controllers.AdminSummary,
 				)
 
-				settings := admin.Group("settings")
+				settings := admin.Group("settings", middleware.AdminSection(types.GroupPermissionAdminSettings))
 				{
 					// Get settings
 					settings.POST("",
@@ -948,7 +948,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				}
 
 				// 用户组管理
-				group := admin.Group("group")
+				group := admin.Group("group", middleware.AdminSection(types.GroupPermissionAdminGroups))
 				{
 					// 列出用户组
 					group.POST("",
@@ -980,7 +980,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 				}
 
-				tool := admin.Group("tool")
+				tool := admin.Group("tool", middleware.AdminSection(types.GroupPermissionAdminSettings))
 				{
 					tool.GET("wopi",
 						middleware.RequiredScopes(types.ScopeAdminWrite),
@@ -1002,7 +1002,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 				}
 
-				queue := admin.Group("queue")
+				queue := admin.Group("queue", middleware.AdminSection(types.GroupPermissionAdminQueue))
 				{
 					queue.GET("metrics", controllers.AdminGetQueueMetrics)
 					// List tasks
@@ -1034,7 +1034,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				}
 
 				// 存储策略管理
-				policy := admin.Group("policy")
+				policy := admin.Group("policy", middleware.AdminSection(types.GroupPermissionAdminStorage))
 				{
 					// 列出存储策略
 					policy.POST("",
@@ -1100,7 +1100,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 				}
 
-				node := admin.Group("node")
+				node := admin.Group("node", middleware.AdminSection(types.GroupPermissionAdminStorage))
 				{
 					node.POST("",
 						controllers.FromJSON[adminsvc.AdminListService](adminsvc.AdminListServiceParamsCtx{}),
@@ -1137,7 +1137,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 				}
 
-				oauthClient := admin.Group("oauthClient")
+				oauthClient := admin.Group("oauthClient", middleware.AdminSection(types.GroupPermissionAdminSettings))
 				{
 					// List OAuth clients
 					oauthClient.POST("",
@@ -1175,7 +1175,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 				}
 
-				user := admin.Group("user")
+				user := admin.Group("user", middleware.AdminSection(types.GroupPermissionAdminUsers))
 				{
 					// 列出用户
 					user.POST("",
@@ -1221,7 +1221,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 				}
 
-				file := admin.Group("file")
+				file := admin.Group("file", middleware.AdminSection(types.GroupPermissionAdminFiles))
 				{
 					// 列出文件
 					file.POST("",
@@ -1252,7 +1252,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 				}
 
-				entity := admin.Group("entity")
+				entity := admin.Group("entity", middleware.AdminSection(types.GroupPermissionAdminFiles))
 				{
 					// List blobs
 					entity.POST("",
@@ -1277,7 +1277,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 				}
 
-				share := admin.Group("share")
+				share := admin.Group("share", middleware.AdminSection(types.GroupPermissionAdminShares))
 				{
 					// List shares
 					share.POST("",
