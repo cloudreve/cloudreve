@@ -28,7 +28,7 @@ type VipsGenerator struct {
 }
 
 func (v *VipsGenerator) Generate(ctx context.Context, es entitysource.EntitySource, ext string, previous *Result) (*Result, error) {
-	if !util.IsInExtensionListExt(v.settings.VipsThumbExts(ctx), ext) {
+	if !util.IsExtInList(v.settings.VipsThumbExts(ctx), ext) {
 		return nil, fmt.Errorf("unsupported video format: %w", ErrPassThrough)
 	}
 

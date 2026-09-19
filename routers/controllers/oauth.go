@@ -37,7 +37,7 @@ func GetAppRegistration(c *gin.Context) {
 
 func GrantAppConsent(c *gin.Context) {
 	service := ParametersFromContext[*oauth.GrantService](c, oauth.GrantParamCtx{})
-	res, err := service.Get(c)
+	res, err := service.Issue(c)
 	if err != nil {
 		c.JSON(200, serializer.Err(c, err))
 		c.Abort()

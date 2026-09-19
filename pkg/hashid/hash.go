@@ -75,76 +75,69 @@ func (e *hashEncoder) Decode(raw string, t int) (int, error) {
 	return res[0], nil
 }
 
+func encodeID(encoder Encoder, id, t int) string {
+	res, _ := encoder.Encode([]int{id, t})
+	return res
+}
+
 // EncodeUserID encode user id to hash id
 func EncodeUserID(encoder Encoder, uid int) string {
-	res, _ := encoder.Encode([]int{uid, UserID})
-	return res
+	return encodeID(encoder, uid, UserID)
 }
 
 // EncodeGroupID encode group id to hash id
 func EncodeGroupID(encoder Encoder, uid int) string {
-	res, _ := encoder.Encode([]int{uid, GroupID})
-	return res
+	return encodeID(encoder, uid, GroupID)
 }
 
 // EncodePaymentID encode payment id to hash id
 func EncodePaymentID(encoder Encoder, uid int) string {
-	res, _ := encoder.Encode([]int{uid, PaymentID})
-	return res
+	return encodeID(encoder, uid, PaymentID)
 }
 
 // EncodeFileID encode file id to hash id
 func EncodeFileID(encoder Encoder, uid int) string {
-	res, _ := encoder.Encode([]int{uid, FileID})
-	return res
+	return encodeID(encoder, uid, FileID)
 }
 
 // EncodeAuditLogID encode audit log id to hash id
 func EncodeAuditLogID(encoder Encoder, uid int) string {
-	res, _ := encoder.Encode([]int{uid, AuditLogID})
-	return res
+	return encodeID(encoder, uid, AuditLogID)
 }
 
 // EncodeTaskID encode task id to hash id
 func EncodeTaskID(encoder Encoder, uid int) string {
-	res, _ := encoder.Encode([]int{uid, TaskID})
-	return res
+	return encodeID(encoder, uid, TaskID)
 }
 
 // EncodeEntityID encode entity id to hash id
 func EncodeEntityID(encoder Encoder, id int) string {
-	res, _ := encoder.Encode([]int{id, EntityID})
-	return res
+	return encodeID(encoder, id, EntityID)
 }
 
 // EncodeNodeID encode node id to hash id
 func EncodeNodeID(encoder Encoder, id int) string {
-	res, _ := encoder.Encode([]int{id, NodeID})
-	return res
+	return encodeID(encoder, id, NodeID)
 }
 
-// EncodeEntityID encode policy id to hash id
+// EncodePolicyID encode policy id to hash id
 func EncodePolicyID(encoder Encoder, id int) string {
-	res, _ := encoder.Encode([]int{id, PolicyID})
-	return res
+	return encodeID(encoder, id, PolicyID)
 }
 
-// EncodeEntityID encode share id to hash id
+// EncodeShareID encode share id to hash id
 func EncodeShareID(encoder Encoder, id int) string {
-	res, _ := encoder.Encode([]int{id, ShareID})
-	return res
+	return encodeID(encoder, id, ShareID)
 }
 
 // EncodeDavAccountID encode dav account id to hash id
 func EncodeDavAccountID(encoder Encoder, id int) string {
-	res, _ := encoder.Encode([]int{id, DavAccountID})
-	return res
+	return encodeID(encoder, id, DavAccountID)
 }
 
 // EncodeSourceLinkID encode source link id to hash id
 func EncodeSourceLinkID(encoder Encoder, id int) string {
-	res, _ := encoder.Encode([]int{id, SourceLinkID})
-	return res
+	return encodeID(encoder, id, SourceLinkID)
 }
 
 func FromContext(c context.Context) int {

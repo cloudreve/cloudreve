@@ -27,7 +27,7 @@ type LibreOfficeGenerator struct {
 }
 
 func (l *LibreOfficeGenerator) Generate(ctx context.Context, es entitysource.EntitySource, ext string, previous *Result) (*Result, error) {
-	if !util.IsInExtensionListExt(l.settings.LibreOfficeThumbExts(ctx), ext) {
+	if !util.IsExtInList(l.settings.LibreOfficeThumbExts(ctx), ext) {
 		return nil, fmt.Errorf("unsupported video format: %w", ErrPassThrough)
 	}
 

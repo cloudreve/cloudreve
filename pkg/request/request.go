@@ -21,9 +21,6 @@ import (
 	"github.com/samber/lo"
 )
 
-// GeneralClient 通用 HTTP Client
-var GeneralClient Client = NewClientDeprecated()
-
 const (
 	CorrelationHeader = constants.CrHeaderPrefix + "Correlation-Id"
 	SiteURLHeader     = constants.CrHeaderPrefix + "Site-Url"
@@ -63,20 +60,6 @@ func NewClient(config conf.ConfigProvider, opts ...Option) Client {
 		options:    newDefaultOption(),
 		tpsLimiter: globalTPSLimiter,
 		config:     config,
-	}
-
-	for _, o := range opts {
-		o.apply(client.options)
-	}
-
-	return client
-}
-
-// Deprecated
-func NewClientDeprecated(opts ...Option) Client {
-	client := &HTTPClient{
-		options:    newDefaultOption(),
-		tpsLimiter: globalTPSLimiter,
 	}
 
 	for _, o := range opts {

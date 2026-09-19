@@ -56,7 +56,7 @@ func TestWithContext(t *testing.T) {
 
 func TestHTTPClient_Request(t *testing.T) {
 	asserts := assert.New(t)
-	client := NewClientDeprecated(WithSlaveMeta(1))
+	client := NewClient(nil, WithSlaveMeta(1))
 
 	// 正常
 	{
@@ -239,7 +239,7 @@ func TestBlackHole(t *testing.T) {
 
 func TestHTTPClient_TPSLimit(t *testing.T) {
 	a := assert.New(t)
-	client := NewClientDeprecated()
+	client := NewClient(nil, )
 
 	finished := make(chan struct{})
 	go func() {
@@ -296,7 +296,7 @@ func TestSignBaseTimeShiftsExpiry(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := NewClientDeprecated(WithEndpoint(srv.URL))
+	client := NewClient(nil, WithEndpoint(srv.URL))
 	base := time.Now().Add(2 * time.Hour)
 	resp := client.Request(
 		"POST",

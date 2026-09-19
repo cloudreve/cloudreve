@@ -23,7 +23,7 @@ type MusicCoverGenerator struct {
 }
 
 func (v *MusicCoverGenerator) Generate(ctx context.Context, es entitysource.EntitySource, ext string, previous *Result) (*Result, error) {
-	if !util.IsInExtensionListExt(v.settings.MusicCoverThumbExts(ctx), ext) {
+	if !util.IsExtInList(v.settings.MusicCoverThumbExts(ctx), ext) {
 		return nil, fmt.Errorf("unsupported music format: %w", ErrPassThrough)
 	}
 

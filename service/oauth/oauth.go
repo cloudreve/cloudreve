@@ -58,7 +58,7 @@ type (
 	}
 )
 
-func (s *GrantService) Get(c *gin.Context) (*GrantResponse, error) {
+func (s *GrantService) Issue(c *gin.Context) (*GrantResponse, error) {
 	dep := dependency.FromContext(c)
 	user := inventory.UserFromContext(c)
 	kv := dep.KV()

@@ -30,7 +30,7 @@ type FfmpegGenerator struct {
 }
 
 func (f *FfmpegGenerator) Generate(ctx context.Context, es entitysource.EntitySource, ext string, previous *Result) (*Result, error) {
-	if !util.IsInExtensionListExt(f.settings.FFMpegThumbExts(ctx), ext) {
+	if !util.IsExtInList(f.settings.FFMpegThumbExts(ctx), ext) {
 		return nil, fmt.Errorf("unsupported video format: %w", ErrPassThrough)
 	}
 

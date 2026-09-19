@@ -31,8 +31,6 @@ func (handler *Driver) extractImageMeta(ctx context.Context, path string) ([]dri
 		return nil, err
 	}
 
-	fmt.Println(resp)
-
 	var imageInfo ImageInfo
 	if err := json.Unmarshal([]byte(resp), &imageInfo); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal image info: %w", err)

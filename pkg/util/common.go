@@ -3,7 +3,6 @@ package util
 import (
 	"context"
 	cryptoRand "crypto/rand"
-	"fmt"
 	"math/big"
 	"math/rand"
 	"path"
@@ -12,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gofrs/uuid"
@@ -85,7 +83,7 @@ func IsInExtensionList(extList []string, fileName string) bool {
 }
 
 // IsInExtensionList 返回文件的扩展名是否在给定的列表范围内
-func IsInExtensionListExt(extList []string, ext string) bool {
+func IsExtInList(extList []string, ext string) bool {
 	// 无扩展名时
 	if len(ext) == 0 {
 		return false
@@ -258,101 +256,6 @@ func BoolToString(b bool) string {
 		return "1"
 	}
 	return "0"
-}
-
-func EncodeTimeFlowString(str string, timeNow int64) string {
-	timeNow = timeNow / 1000
-	timeDigits := []int{}
-	timeDigitIndex := 0
-
-	if len(str) == 0 {
-		return ""
-	}
-
-	str = fmt.Sprintf("%d|%s", timeNow, str)
-
-	res := make([]int32, 0, utf8.RuneCountInString(str))
-	for timeNow > 0 {
-		timeDigits = append(timeDigits, int(timeNow%int64(10)))
-		timeNow = timeNow / 10
-	}
-
-	add := false
-	for pos, rune := range str {
-		// take single digit with index timeDigitIndex from timeNow
-		newIndex := pos
-		if add {
-			newIndex = pos + timeDigits[timeDigitIndex]*timeDigitIndex
-		} else {
-			newIndex = 2*timeDigitIndex*timeDigits[timeDigitIndex] - pos
-		}
-
-		if newIndex < 0 {
-			newIndex = newIndex * -1
-		}
-
-		res = append(res, rune)
-		newIndex = newIndex % len(res)
-
-		res[newIndex], res[len(res)-1] = res[len(res)-1], res[newIndex]
-
-		add = !add
-		// Add timeDigitIndex by 1, but does not exceed total digits in timeNow
-		timeDigitIndex++
-		timeDigitIndex = timeDigitIndex % len(timeDigits)
-	}
-
-	return string(res)
-}
-
-func DecodeTimeFlowStringTime(str string, timeNow int64) string {
-	timeNow = timeNow / 1000
-	timeDigits := []int{}
-
-	if len(str) == 0 {
-		return ""
-	}
-
-	for timeNow > 0 {
-		timeDigits = append(timeDigits, int(timeNow%int64(10)))
-		timeNow = timeNow / 10
-	}
-
-	res := make([]int32, utf8.RuneCountInString(str))
-	secret := []rune(str)
-	add := false
-	if len(secret)%2 == 0 {
-		add = true
-	}
-	timeDigitIndex := (len(secret) - 1) % len(timeDigits)
-	for pos := range secret {
-		// take single digit with index timeDigitIndex from timeNow
-		newIndex := len(res) - 1 - pos
-		if add {
-			newIndex = newIndex + timeDigits[timeDigitIndex]*timeDigitIndex
-		} else {
-			newIndex = 2*timeDigitIndex*timeDigits[timeDigitIndex] - newIndex
-		}
-
-		if newIndex < 0 {
-			newIndex = newIndex * -1
-		}
-
-		newIndex = newIndex % len(secret)
-
-		res[len(res)-1-pos] = secret[newIndex]
-		secret[newIndex], secret[len(res)-1-pos] = secret[len(res)-1-pos], secret[newIndex]
-		secret = secret[:len(secret)-1]
-
-		add = !add
-		// Add timeDigitIndex by 1, but does not exceed total digits in timeNow
-		timeDigitIndex--
-		if timeDigitIndex < 0 {
-			timeDigitIndex = len(timeDigits) - 1
-		}
-	}
-
-	return string(res)
 }
 
 func ToPtr[T any](v T) *T {
