@@ -27,6 +27,7 @@ export interface User {
   disable_view_sync?: boolean;
   share_links_in_profile?: ShareLinksInProfileLevel;
   share_default_private?: boolean;
+  preferred_viewers?: Record<string, string>;
 }
 export interface Group {
   id: string;
@@ -142,6 +143,7 @@ export interface UserSettings {
   disable_view_sync: boolean;
   share_links_in_profile: ShareLinksInProfileLevel;
   share_default_private?: boolean;
+  preferred_viewers?: Record<string, string>;
   oauth_grants?: OAuthGrant[];
 }
 
@@ -168,6 +170,7 @@ export interface PatchUserSetting {
   share_links_in_profile?: ShareLinksInProfileLevel;
   // Tri-state: "true" / "false" / "" (inherit the site default).
   share_default_private?: string;
+  preferred_viewers?: Record<string, string>;
 }
 
 export interface PasskeyCredentialOption {

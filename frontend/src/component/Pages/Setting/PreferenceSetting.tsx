@@ -23,6 +23,7 @@ import { UserSettings as UserSettingsType } from "../../../api/user.ts";
 import { languages } from "../../../i18n.ts";
 import { setPreferredTheme } from "../../../redux/globalStateSlice.ts";
 import { useAppDispatch, useAppSelector } from "../../../redux/hooks.ts";
+import { ViewersByID } from "../../../redux/siteConfigSlice.ts";
 import { clearLocalCustomView } from "../../../redux/thunks/filemanager.ts";
 import { selectLanguage } from "../../../redux/thunks/settings.ts";
 import SessionManager, { UserSettings } from "../../../session";
@@ -188,6 +189,27 @@ const PreferenceSetting = ({ setting, setSetting }: PreferenceSettingProps) => {
       setFolderClickAction(value);
       SessionManager.set(UserSettings.FolderClickAction, value);
     }
+  };
+
+  const preferredViewerEntries = useMemo(
+    () => Object.entries(setting.preferred_viewers ?? {}),
+    [setting.preferred_viewers],
+  );
+
+  const removePreferredViewer = (ext: string) => {
+    const next = { ...(setting.preferred_viewers ?? {}) };
+    delete next[ext];
+    setSetting({ ...setting, preferred_viewers: next });
+    setLoading(true);
+    dispatch(sendUpdateUserSetting({ preferred_viewers: next }))
+      .then(() => {
+        const session = SessionManager.currentLoginOrNull();
+        if (session?.user) {
+          SessionManager.updateUserIfExist({ ...session.user, preferred_viewers: next });
+        }
+        SessionManager.set(UserSettings.OpenWithPrefix + ext, undefined);
+      })
+      .finally(() => setLoading(false));
   };
 
   return (
@@ -374,6 +396,25 @@ const PreferenceSetting = ({ setting, setSetting }: PreferenceSettingProps) => {
           </ToggleButton>
         </ToggleButtonGroup>
         <FormHelperText>{t("setting.folderClickActionDes")}</FormHelperText>
+      </SettingForm>
+      <SettingForm title={t("setting.preferredViewers")} lgWidth={12}>
+        <Box>
+          {preferredViewerEntries.length == 0 && (
+            <FormHelperText>{t("setting.preferredViewersEmpty")}</FormHelperText>
+          )}
+          <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 1 }}>
+            {preferredViewerEntries.map(([ext, viewerId]) => (
+              <Chip
+                key={ext}
+                size="small"
+                label={`.${ext} → ${ViewersByID[viewerId] ? t(ViewersByID[viewerId].display_name) : viewerId}`}
+                onDelete={() => removePreferredViewer(ext)}
+                disabled={loading}
+              />
+            ))}
+          </Stack>
+          <FormHelperText>{t("setting.preferredViewersDes")}</FormHelperText>
+        </Box>
       </SettingForm>
     </Stack>
   );

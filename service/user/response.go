@@ -24,16 +24,17 @@ type PreparePasskeyLoginResponse struct {
 }
 
 type UserSettings struct {
-	VersionRetentionEnabled bool         `json:"version_retention_enabled"`
-	VersionRetentionExt     []string     `json:"version_retention_ext,omitempty"`
-	VersionRetentionMax     int          `json:"version_retention_max,omitempty"`
-	Paswordless             bool         `json:"passwordless"`
-	TwoFAEnabled            bool         `json:"two_fa_enabled"`
-	Passkeys                []Passkey    `json:"passkeys,omitempty"`
-	DisableViewSync         bool         `json:"disable_view_sync"`
-	ShareLinksInProfile     string       `json:"share_links_in_profile"`
-	ShareDefaultPrivate     *bool        `json:"share_default_private,omitempty"`
-	OAuthGrants             []OauthGrant `json:"oauth_grants,omitempty"`
+	VersionRetentionEnabled bool              `json:"version_retention_enabled"`
+	VersionRetentionExt     []string          `json:"version_retention_ext,omitempty"`
+	VersionRetentionMax     int               `json:"version_retention_max,omitempty"`
+	Paswordless             bool              `json:"passwordless"`
+	TwoFAEnabled            bool              `json:"two_fa_enabled"`
+	Passkeys                []Passkey         `json:"passkeys,omitempty"`
+	DisableViewSync         bool              `json:"disable_view_sync"`
+	ShareLinksInProfile     string            `json:"share_links_in_profile"`
+	ShareDefaultPrivate     *bool             `json:"share_default_private,omitempty"`
+	PreferredViewers        map[string]string `json:"preferred_viewers,omitempty"`
+	OAuthGrants             []OauthGrant      `json:"oauth_grants,omitempty"`
 }
 
 func BuildUserSettings(u *ent.User, passkeys []*ent.Passkey, parser *uaparser.Parser, grants []*ent.OAuthGrant) *UserSettings {
@@ -49,6 +50,7 @@ func BuildUserSettings(u *ent.User, passkeys []*ent.Passkey, parser *uaparser.Pa
 		DisableViewSync:     u.Settings.DisableViewSync,
 		ShareLinksInProfile: string(u.Settings.ShareLinksInProfile),
 		ShareDefaultPrivate: u.Settings.ShareDefaultPrivate,
+		PreferredViewers:    u.Settings.PreferredViewers,
 		OAuthGrants: lo.Map(grants, func(item *ent.OAuthGrant, index int) OauthGrant {
 			return BuildOauthGrant(item)
 		}),
@@ -124,6 +126,8 @@ type User struct {
 	// the site default applies. Never resolved here — the dialog computes the
 	// effective default from user ?? site.
 	ShareDefaultPrivate *bool `json:"share_default_private,omitempty"`
+	// PreferredViewers maps file extensions to viewer IDs ("always open with").
+	PreferredViewers map[string]string `json:"preferred_viewers,omitempty"`
 }
 
 type Group struct {
@@ -182,6 +186,7 @@ func BuildUser(user *ent.User, idEncoder hashid.Encoder) User {
 		DisableViewSync:     user.Settings.DisableViewSync,
 		ShareLinksInProfile: user.Settings.ShareLinksInProfile,
 		ShareDefaultPrivate: user.Settings.ShareDefaultPrivate,
+		PreferredViewers:    user.Settings.PreferredViewers,
 	}
 }
 

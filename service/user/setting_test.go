@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
@@ -80,4 +81,66 @@ func TestPatchUserSettingShareDefaults(t *testing.T) {
 
 	// Invalid profile visibility rejected.
 	require.Error(t, patch(&PatchUserSetting{ShareLinksInProfile: strPtr("friends_only")}))
+}
+
+// TestPatchUserSettingPreferredViewers verifies the extension → viewer-id map
+// is persisted and validated (upstream: persist "always open with" in DB).
+func TestPatchUserSettingPreferredViewers(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	client := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared")
+	t.Cleanup(func() { require.NoError(t, client.Close()) })
+	ctx := context.Background()
+
+	group := client.Group.Create().SetName("g").SetPermissions(&boolset.BooleanSet{}).SaveX(ctx)
+	u := client.User.Create().
+		SetEmail("viewers@example.com").
+		SetNick("viewers").
+		SetStatus("active").
+		SetGroup(group).
+		SetSettings(&types.UserSetting{}).
+		SaveX(ctx)
+
+	newCtx := func() *gin.Context {
+		engine := gin.New()
+		engine.ContextWithFallback = true
+		c := gin.CreateTestContextOnly(httptest.NewRecorder(), engine)
+		c.Request = httptest.NewRequest("PATCH", "/", nil)
+		util.WithValue(c, dependency.DepCtx{}, dependency.NewDependency(
+			dependency.WithUserClient(inventory.NewUserClient(client)),
+		))
+		util.WithValue(c, inventory.UserCtx{}, u)
+		return c
+	}
+
+	patch := func(s *PatchUserSetting) error {
+		return s.Patch(newCtx())
+	}
+
+	// Valid map persists.
+	valid := map[string]string{"md": "codemirror", "epub": "epub"}
+	require.NoError(t, patch(&PatchUserSetting{PreferredViewers: &valid}))
+	require.Equal(t, "codemirror", u.Settings.PreferredViewers["md"])
+
+	persisted := client.User.GetX(ctx, u.ID)
+	require.Equal(t, "epub", persisted.Settings.PreferredViewers["epub"])
+
+	// Empty map clears all preferences.
+	empty := map[string]string{}
+	require.NoError(t, patch(&PatchUserSetting{PreferredViewers: &empty}))
+	require.Empty(t, u.Settings.PreferredViewers)
+
+	// Invalid extension key rejected.
+	badExt := map[string]string{"../evil": "x"}
+	require.Error(t, patch(&PatchUserSetting{PreferredViewers: &badExt}))
+
+	// Invalid viewer id rejected.
+	badID := map[string]string{"md": "../../etc"}
+	require.Error(t, patch(&PatchUserSetting{PreferredViewers: &badID}))
+
+	// Oversized map rejected.
+	big := map[string]string{}
+	for i := 0; i < preferredViewersMaxEntries+1; i++ {
+		big[string(rune('a'+i%26))+strconv.Itoa(i)] = "v"
+	}
+	require.Error(t, patch(&PatchUserSetting{PreferredViewers: &big}))
 }

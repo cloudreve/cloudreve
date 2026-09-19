@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
@@ -233,9 +234,32 @@ type (
 		// ShareDefaultPrivate accepts "true", "false" or "" (clear the
 		// override and inherit the site default).
 		ShareDefaultPrivate *string `json:"share_default_private" binding:"omitempty"`
+		// PreferredViewers replaces the whole extension → viewer-id map.
+		PreferredViewers *map[string]string `json:"preferred_viewers" binding:"omitempty"`
 	}
 	PatchUserSettingParamsCtx struct{}
 )
+
+var (
+	preferredViewerExtPattern = regexp.MustCompile(`^[a-z0-9]{1,20}$`)
+	preferredViewerIDPattern  = regexp.MustCompile(`^[\w.\-:]{1,64}$`)
+)
+
+const preferredViewersMaxEntries = 200
+
+// validatePreferredViewers bounds the extension → viewer-id map to sane
+// shapes so it can't be abused as arbitrary JSON storage.
+func validatePreferredViewers(m map[string]string) error {
+	if len(m) > preferredViewersMaxEntries {
+		return serializer.NewError(serializer.CodeParamErr, "Too many preferred viewers", nil)
+	}
+	for ext, viewerID := range m {
+		if !preferredViewerExtPattern.MatchString(ext) || !preferredViewerIDPattern.MatchString(viewerID) {
+			return serializer.NewError(serializer.CodeParamErr, "Invalid preferred viewer entry", nil)
+		}
+	}
+	return nil
+}
 
 func (s *PatchUserSetting) Patch(c *gin.Context) error {
 	dep := dependency.FromContext(c)
@@ -299,6 +323,14 @@ func (s *PatchUserSetting) Patch(c *gin.Context) error {
 			v := *s.ShareDefaultPrivate == "true"
 			u.Settings.ShareDefaultPrivate = &v
 		}
+		saveSetting = true
+	}
+
+	if s.PreferredViewers != nil {
+		if err := validatePreferredViewers(*s.PreferredViewers); err != nil {
+			return err
+		}
+		u.Settings.PreferredViewers = *s.PreferredViewers
 		saveSetting = true
 	}
 

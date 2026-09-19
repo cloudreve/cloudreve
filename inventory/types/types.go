@@ -20,6 +20,10 @@ type (
 		// ShareDefaultPrivate overrides the site-wide private-share default
 		// for this user. nil means inherit the site default.
 		ShareDefaultPrivate *bool `json:"share_default_private,omitempty"`
+		// PreferredViewers maps file extensions (without dot, lowercase) to
+		// viewer IDs chosen via "always open with". Synced server-side so the
+		// preference follows the user across devices.
+		PreferredViewers map[string]string `json:"preferred_viewers,omitempty"`
 	}
 
 	ShareLinksInProfileLevel string
