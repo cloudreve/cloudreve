@@ -722,6 +722,11 @@ fn show_drive_window_internal(app: &AppHandle, title: &str, url_path: &str) {
     // avoid platform compositor artifacts while preserving Windows effects.
     let builder = builder.background_color(Color(255, 255, 255, 255));
 
+    // Windows Mica/Acrylic effects require the window to be created transparent
+    // (WebviewWindow has no post-build transparency switch in Tauri 2).
+    #[cfg(windows)]
+    let builder = builder.transparent(true);
+
     // Platform-specific: title_bar_style and hidden_title are macOS-only
     #[cfg(target_os = "macos")]
     let builder = builder
@@ -739,7 +744,6 @@ fn show_drive_window_internal(app: &AppHandle, title: &str, url_path: &str) {
 
             #[cfg(windows)]
             {
-                let _ = window.set_transparent(true);
                 let _ = window.set_effects(effects);
             }
 
@@ -803,6 +807,11 @@ pub fn show_settings_window_impl(app: &AppHandle) {
     // avoid platform compositor artifacts while preserving Windows effects.
     let builder = builder.background_color(Color(255, 255, 255, 255));
 
+    // Windows Mica/Acrylic effects require the window to be created transparent
+    // (WebviewWindow has no post-build transparency switch in Tauri 2).
+    #[cfg(windows)]
+    let builder = builder.transparent(true);
+
     // Platform-specific: title_bar_style and hidden_title are macOS-only
     #[cfg(target_os = "macos")]
     let builder = builder
@@ -820,7 +829,6 @@ pub fn show_settings_window_impl(app: &AppHandle) {
 
             #[cfg(windows)]
             {
-                let _ = window.set_transparent(true);
                 let _ = window.set_effects(effects);
             }
 
