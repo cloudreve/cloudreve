@@ -338,11 +338,19 @@ impl<'a> DownloadTask<'a> {
                 .clone();
         }
 
-        let entity_url_res = self
-            .cr_client
-            .get_file_url(&request)
-            .await
-            .context("failed to get file url")?;
+        let entity_url_res = match self.cr_client.get_file_url(&request).await {
+            Err(e) if e.is_entity_not_exist() && request.entity.is_some() => {
+                // Entity id cached from a previous file info response may be
+                // stale; retry letting the server pick the primary entity.
+                let mut retry = request.clone();
+                retry.entity = None;
+                self.cr_client
+                    .get_file_url(&retry)
+                    .await
+                    .context("failed to get file url")?
+            }
+            res => res.context("failed to get file url")?,
+        };
 
         let download_url = entity_url_res
             .urls

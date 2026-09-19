@@ -239,11 +239,21 @@ impl Mount {
                 request.entity = Some(meta.etag.clone());
             }
         }
-        let entity_url_res = self
-            .cr_client
-            .get_file_url(&request)
-            .await
-            .context("failed to get file url")?;
+        let entity_url_res = match self.cr_client.get_file_url(&request).await {
+            Err(e) if e.is_entity_not_exist() && request.entity.is_some() => {
+                // The entity id cached in local inventory can go stale when the
+                // remote file is re-uploaded or migrated; retry letting the
+                // server pick the primary entity.
+                tracing::info!(target: "drive::commands", path = %path.display(), "Preferred entity no longer exists, retrying without it");
+                let mut retry = request.clone();
+                retry.entity = None;
+                self.cr_client
+                    .get_file_url(&retry)
+                    .await
+                    .context("failed to get file url")?
+            }
+            res => res.context("failed to get file url")?,
+        };
 
         // Get the download URL from the response
         let download_url = entity_url_res

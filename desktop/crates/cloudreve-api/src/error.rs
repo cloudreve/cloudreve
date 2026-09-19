@@ -46,6 +46,7 @@ pub enum ErrorCode {
     IncorrectPassword = 40069,
     LockConflict = 40073,
     StaleVersion = 40076,
+    EntityNotExist = 40077,
     BatchOperationNotFullyCompleted = 40081,
     DomainNotLicensed = 40087,
     AnonymousAccessDenied = 40088,
@@ -65,6 +66,7 @@ impl ErrorCode {
             40069 => Some(Self::IncorrectPassword),
             40073 => Some(Self::LockConflict),
             40076 => Some(Self::StaleVersion),
+            40077 => Some(Self::EntityNotExist),
             40081 => Some(Self::BatchOperationNotFullyCompleted),
             40087 => Some(Self::DomainNotLicensed),
             40088 => Some(Self::AnonymousAccessDenied),
@@ -196,6 +198,11 @@ impl ApiError {
     /// Check if this error is recoverable by retrying with a refreshed token
     pub fn is_token_expired(&self) -> bool {
         matches!(self, ApiError::AccessTokenExpired)
+    }
+
+    /// Check if this error reports a missing entity (code 40077)
+    pub fn is_entity_not_exist(&self) -> bool {
+        matches!(self, ApiError::ApiError { code, .. } if *code == 40077)
     }
 
     /// Check if this error requires login
