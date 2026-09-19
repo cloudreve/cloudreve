@@ -38,12 +38,13 @@ var shareNavigatorCapability = &boolset.BooleanSet{}
 
 // NewShareNavigator creates a navigator for user's "shared" file system.
 func NewShareNavigator(u *ent.User, fileClient inventory.FileClient, shareClient inventory.ShareClient,
-	l logging.Logger, config *setting.DBFS, hasher hashid.Encoder) Navigator {
+	aclClient inventory.AclClient, l logging.Logger, config *setting.DBFS, hasher hashid.Encoder) Navigator {
 	n := &shareNavigator{
 		user:        u,
 		l:           l,
 		fileClient:  fileClient,
 		shareClient: shareClient,
+		aclClient:   aclClient,
 		config:      config,
 	}
 	n.baseNavigator = newBaseNavigator(fileClient, defaultFilter, u, hasher, config)
@@ -56,6 +57,7 @@ type (
 		user        *ent.User
 		fileClient  inventory.FileClient
 		shareClient inventory.ShareClient
+		aclClient   inventory.AclClient
 		config      *setting.DBFS
 
 		*baseNavigator
@@ -64,8 +66,12 @@ type (
 		ownerRoot       *File
 		share           *ent.Share
 		owner           *ent.User
-		disableRecycle  bool
-		persist         func()
+		// aclCaps carries the unioned permission bits of ACL entries on the
+		// shared file matching the acting user. nil means no entry matched —
+		// capabilities then fall back to share props.
+		aclCaps        *boolset.BooleanSet
+		disableRecycle bool
+		persist        func()
 	}
 
 	shareNavigatorState struct {
@@ -74,6 +80,7 @@ type (
 		SingleFileShare bool
 		Share           *ent.Share
 		Owner           *ent.User
+		AclCaps         *boolset.BooleanSet
 	}
 )
 
@@ -86,6 +93,7 @@ func (n *shareNavigator) PersistState(kv cache.Driver, key string) {
 			SingleFileShare: n.singleFileShare,
 			Share:           n.share,
 			Owner:           n.owner,
+			AclCaps:         n.aclCaps,
 		}, ContextHintTTL)
 	}
 }
@@ -97,6 +105,7 @@ func (n *shareNavigator) RestoreState(s State) error {
 		n.ownerRoot = state.OwnerRoot
 		n.singleFileShare = state.SingleFileShare
 		n.share = state.Share
+		n.aclCaps = state.AclCaps
 		n.owner = state.Owner
 		return nil
 	}
@@ -141,6 +150,14 @@ func (n *shareNavigator) Root(ctx context.Context, path *fs.URI) (*File, error) 
 
 	// Share must be assigned before capabilities are derived from its props.
 	n.share = share
+
+	// Resolve per-file ACL entries for non-owner visitors; matched rows
+	// replace the share-props capability set for this user.
+	if n.aclClient != nil && n.user.ID != n.owner.ID {
+		if caps, err := n.aclClient.EffectivePermissions(ctx, share.Edges.File.ID, n.user); err == nil {
+			n.aclCaps = caps
+		}
+	}
 
 	// Share permission setting should overwrite root folder's permission
 	n.shareRoot = newFile(nil, share.Edges.File)
@@ -296,6 +313,12 @@ func (n *shareNavigator) Capabilities(isSearching bool) *fs.NavigatorProps {
 
 // shareCapabilities derives the effective capability set from share props.
 func (n *shareNavigator) shareCapabilities() *boolset.BooleanSet {
+	// Matched ACL entries fully define a non-owner visitor's capabilities;
+	// when no entry matched (nil) share props apply as the link default.
+	if n.aclCaps != nil && n.owner != nil && n.user.ID != n.owner.ID {
+		return aclPermsToCapabilities(n.aclCaps)
+	}
+
 	bs := &boolset.BooleanSet{}
 	boolset.Sets(map[NavigatorCapability]bool{
 		NavigatorCapabilityListChildren:  true,
@@ -342,6 +365,45 @@ func (n *shareNavigator) shareCapabilities() *boolset.BooleanSet {
 		boolset.Set(int(NavigatorCapabilitySoftDelete), true, bs)
 	}
 
+	return bs
+}
+
+// aclPermsToCapabilities maps ACL permission bits (read/create/update/delete)
+// to the navigator capability set granted through a share link.
+func aclPermsToCapabilities(perms *boolset.BooleanSet) *boolset.BooleanSet {
+	bs := &boolset.BooleanSet{}
+	if perms.Enabled(int(types.AclPermRead)) {
+		boolset.Sets(map[NavigatorCapability]bool{
+			NavigatorCapabilityListChildren:  true,
+			NavigatorCapabilityDownloadFile:  true,
+			NavigatorCapabilityEnterFolder:   true,
+			NavigatorCapabilityInfo:          true,
+			NavigatorCapabilityGenerateThumb: true,
+		}, bs)
+	}
+	if perms.Enabled(int(types.AclPermCreate)) {
+		boolset.Sets(map[NavigatorCapability]bool{
+			NavigatorCapabilityUploadFile:  true,
+			NavigatorCapabilityCreateFile:  true,
+			NavigatorCapabilityLockFile:    true,
+			NavigatorCapabilityEnterFolder: true,
+		}, bs)
+	}
+	if perms.Enabled(int(types.AclPermUpdate)) {
+		boolset.Sets(map[NavigatorCapability]bool{
+			NavigatorCapabilityRenameFile:     true,
+			NavigatorCapabilityUpdateMetadata: true,
+			NavigatorCapabilityUploadFile:     true,
+			NavigatorCapabilityCreateFile:     true,
+			NavigatorCapabilityLockFile:       true,
+		}, bs)
+	}
+	if perms.Enabled(int(types.AclPermDelete)) {
+		boolset.Sets(map[NavigatorCapability]bool{
+			NavigatorCapabilityDeleteFile: true,
+			NavigatorCapabilitySoftDelete:  true,
+		}, bs)
+	}
 	return bs
 }
 

@@ -138,6 +138,7 @@ type (
 	FilePermission   int
 	DavAccountOption int
 	NodeCapability   int
+	AclPermission    int
 
 	NodeSetting struct {
 		Provider            DownloaderProvider `json:"provider,omitempty"`
@@ -307,7 +308,9 @@ const (
 	GroupPermissionAdvanceDelete
 	GroupPermission_CommunityPlaceholder3
 	GroupPermission_CommunityPlaceholder4
-	GroupPermissionSetExplicitUser_placeholder
+	// GroupPermissionSetExplicitUser allows members to manage per-file ACL
+	// entries (Permissions dialog) on files they own.
+	GroupPermissionSetExplicitUser
 	GroupPermissionIgnoreFileOwnership // not used
 	GroupPermissionUniqueRedirectDirectLink
 	// GroupPermissionWebDAVReadOnly restricts the group's WebDAV access to
@@ -329,6 +332,24 @@ const (
 	GroupPermissionAdminEvents
 	GroupPermissionAdminReports
 )
+
+// AclPermission is a bit position in an ACL entry's permission bitmask.
+// Read grants listing/download, Create grants uploads and new entries,
+// Update grants rename/metadata/content changes, Delete grants removal.
+const (
+	AclPermRead AclPermission = iota
+	AclPermCreate
+	AclPermUpdate
+	AclPermDelete
+)
+
+// AclPermissionList maps each ACL bit to its API-facing key.
+var AclPermissionList = map[AclPermission]string{
+	AclPermRead:   "read",
+	AclPermCreate: "create",
+	AclPermUpdate: "update",
+	AclPermDelete: "delete",
+}
 
 // DelegatedAdminPermissions lists every per-section admin permission bit.
 // GroupPermissionIsAdmin implies all of them.

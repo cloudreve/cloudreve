@@ -9,6 +9,18 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 )
 
+// The AclEntryFunc type is an adapter to allow the use of ordinary
+// function as AclEntry mutator.
+type AclEntryFunc func(context.Context, *ent.AclEntryMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AclEntryFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AclEntryMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AclEntryMutation", m)
+}
+
 // The DavAccountFunc type is an adapter to allow the use of ordinary
 // function as DavAccount mutator.
 type DavAccountFunc func(context.Context, *ent.DavAccountMutation) (ent.Value, error)

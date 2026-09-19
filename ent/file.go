@@ -65,11 +65,13 @@ type FileEdges struct {
 	Entities []*Entity `json:"entities,omitempty"`
 	// Shares holds the value of the shares edge.
 	Shares []*Share `json:"shares,omitempty"`
+	// ACLEntries holds the value of the acl_entries edge.
+	ACLEntries []*AclEntry `json:"acl_entries,omitempty"`
 	// DirectLinks holds the value of the direct_links edge.
 	DirectLinks []*DirectLink `json:"direct_links,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [8]bool
+	loadedTypes [9]bool
 }
 
 // OwnerOrErr returns the Owner value or an error if the edge
@@ -147,10 +149,19 @@ func (e FileEdges) SharesOrErr() ([]*Share, error) {
 	return nil, &NotLoadedError{edge: "shares"}
 }
 
+// ACLEntriesOrErr returns the ACLEntries value or an error if the edge
+// was not loaded in eager-loading.
+func (e FileEdges) ACLEntriesOrErr() ([]*AclEntry, error) {
+	if e.loadedTypes[7] {
+		return e.ACLEntries, nil
+	}
+	return nil, &NotLoadedError{edge: "acl_entries"}
+}
+
 // DirectLinksOrErr returns the DirectLinks value or an error if the edge
 // was not loaded in eager-loading.
 func (e FileEdges) DirectLinksOrErr() ([]*DirectLink, error) {
-	if e.loadedTypes[7] {
+	if e.loadedTypes[8] {
 		return e.DirectLinks, nil
 	}
 	return nil, &NotLoadedError{edge: "direct_links"}
@@ -308,6 +319,11 @@ func (f *File) QueryShares() *ShareQuery {
 	return NewFileClient(f.config).QueryShares(f)
 }
 
+// QueryACLEntries queries the "acl_entries" edge of the File entity.
+func (f *File) QueryACLEntries() *AclEntryQuery {
+	return NewFileClient(f.config).QueryACLEntries(f)
+}
+
 // QueryDirectLinks queries the "direct_links" edge of the File entity.
 func (f *File) QueryDirectLinks() *DirectLinkQuery {
 	return NewFileClient(f.config).QueryDirectLinks(f)
@@ -414,10 +430,16 @@ func (e *File) SetShares(v []*Share) {
 	e.Edges.loadedTypes[6] = true
 }
 
+// SetACLEntries manually set the edge as loaded state.
+func (e *File) SetACLEntries(v []*AclEntry) {
+	e.Edges.ACLEntries = v
+	e.Edges.loadedTypes[7] = true
+}
+
 // SetDirectLinks manually set the edge as loaded state.
 func (e *File) SetDirectLinks(v []*DirectLink) {
 	e.Edges.DirectLinks = v
-	e.Edges.loadedTypes[7] = true
+	e.Edges.loadedTypes[8] = true
 }
 
 // Files is a parsable slice of File.

@@ -100,6 +100,7 @@ export interface DisplayOption {
   showVersionControl?: boolean;
   showDirectLinkManagement?: boolean;
   showManageShares?: boolean;
+  showAcl?: boolean;
   showCreateArchive?: boolean;
   showResetThumb?: boolean;
 
@@ -340,9 +341,16 @@ export const getActionOpt = (
     display.orCapability &&
     display.orCapability.enabled(NavigatorCapability.update_metadata);
 
+  display.showAcl =
+    targets.length == 1 &&
+    !!targets[0].owned &&
+    !!currentUser &&
+    groupBs.enabled(GroupPermission.set_explicit_user);
+
   display.showMore =
     display.showVersionControl ||
     display.showManageShares ||
+    display.showAcl ||
     display.showCreateArchive ||
     display.showDirectLinkManagement ||
     display.showResetThumb;

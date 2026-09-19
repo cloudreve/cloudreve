@@ -192,3 +192,77 @@ func TestShareNavigatorExecuteHookPreviewOnly(t *testing.T) {
 		require.Equal(t, 1, sc.calls)
 	})
 }
+
+func TestShareCapabilitiesAcl(t *testing.T) {
+	owner := &ent.User{ID: 1}
+	visitor := &ent.User{ID: 2}
+
+	enabled := func(bs *boolset.BooleanSet, c NavigatorCapability) bool {
+		return bs.Enabled(int(c))
+	}
+	aclBs := func(perms ...types.AclPermission) *boolset.BooleanSet {
+		bs := &boolset.BooleanSet{}
+		for _, p := range perms {
+			boolset.Set(int(p), true, bs)
+		}
+		return bs
+	}
+
+	t.Run("matched acl overrides share props", func(t *testing.T) {
+		n := &shareNavigator{
+			user:    visitor,
+			owner:   owner,
+			share:   shareWithProps(&types.ShareProps{AllowEdit: true}),
+			aclCaps: aclBs(types.AclPermRead),
+		}
+		caps := n.shareCapabilities()
+		require.True(t, enabled(caps, NavigatorCapabilityDownloadFile))
+		require.False(t, enabled(caps, NavigatorCapabilityRenameFile))
+		require.False(t, enabled(caps, NavigatorCapabilityDeleteFile))
+	})
+
+	t.Run("explicit empty acl revokes fallback", func(t *testing.T) {
+		n := &shareNavigator{
+			user:    visitor,
+			owner:   owner,
+			share:   shareWithProps(nil),
+			aclCaps: aclBs(),
+		}
+		caps := n.shareCapabilities()
+		require.False(t, enabled(caps, NavigatorCapabilityDownloadFile))
+		require.False(t, enabled(caps, NavigatorCapabilityListChildren))
+	})
+
+	t.Run("no match falls back to share props", func(t *testing.T) {
+		n := &shareNavigator{
+			user:  visitor,
+			owner: owner,
+			share: shareWithProps(&types.ShareProps{AllowUpload: true}),
+		}
+		caps := n.shareCapabilities()
+		require.True(t, enabled(caps, NavigatorCapabilityUploadFile))
+		require.True(t, enabled(caps, NavigatorCapabilityDownloadFile))
+	})
+
+	t.Run("owner bypasses acl", func(t *testing.T) {
+		n := &shareNavigator{
+			user:    owner,
+			owner:   owner,
+			share:   shareWithProps(nil),
+			aclCaps: aclBs(),
+		}
+		caps := n.shareCapabilities()
+		require.True(t, enabled(caps, NavigatorCapabilityDownloadFile))
+	})
+
+	t.Run("create update delete bits map", func(t *testing.T) {
+		caps := aclPermsToCapabilities(aclBs(types.AclPermCreate, types.AclPermUpdate, types.AclPermDelete))
+		require.True(t, enabled(caps, NavigatorCapabilityUploadFile))
+		require.True(t, enabled(caps, NavigatorCapabilityCreateFile))
+		require.True(t, enabled(caps, NavigatorCapabilityRenameFile))
+		require.True(t, enabled(caps, NavigatorCapabilityUpdateMetadata))
+		require.True(t, enabled(caps, NavigatorCapabilityDeleteFile))
+		require.True(t, enabled(caps, NavigatorCapabilitySoftDelete))
+		require.False(t, enabled(caps, NavigatorCapabilityDownloadFile))
+	})
+}

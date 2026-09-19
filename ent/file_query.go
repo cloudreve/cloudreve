@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/cloudreve/Cloudreve/v4/ent/aclentry"
 	"github.com/cloudreve/Cloudreve/v4/ent/directlink"
 	"github.com/cloudreve/Cloudreve/v4/ent/entity"
 	"github.com/cloudreve/Cloudreve/v4/ent/file"
@@ -35,6 +36,7 @@ type FileQuery struct {
 	withMetadata        *MetadataQuery
 	withEntities        *EntityQuery
 	withShares          *ShareQuery
+	withACLEntries      *AclEntryQuery
 	withDirectLinks     *DirectLinkQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -219,6 +221,28 @@ func (fq *FileQuery) QueryShares() *ShareQuery {
 			sqlgraph.From(file.Table, file.FieldID, selector),
 			sqlgraph.To(share.Table, share.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, file.SharesTable, file.SharesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(fq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryACLEntries chains the current query on the "acl_entries" edge.
+func (fq *FileQuery) QueryACLEntries() *AclEntryQuery {
+	query := (&AclEntryClient{config: fq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := fq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := fq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(file.Table, file.FieldID, selector),
+			sqlgraph.To(aclentry.Table, aclentry.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, file.ACLEntriesTable, file.ACLEntriesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(fq.driver.Dialect(), step)
 		return fromU, nil
@@ -447,6 +471,7 @@ func (fq *FileQuery) Clone() *FileQuery {
 		withMetadata:        fq.withMetadata.Clone(),
 		withEntities:        fq.withEntities.Clone(),
 		withShares:          fq.withShares.Clone(),
+		withACLEntries:      fq.withACLEntries.Clone(),
 		withDirectLinks:     fq.withDirectLinks.Clone(),
 		// clone intermediate query.
 		sql:  fq.sql.Clone(),
@@ -528,6 +553,17 @@ func (fq *FileQuery) WithShares(opts ...func(*ShareQuery)) *FileQuery {
 		opt(query)
 	}
 	fq.withShares = query
+	return fq
+}
+
+// WithACLEntries tells the query-builder to eager-load the nodes that are connected to
+// the "acl_entries" edge. The optional arguments are used to configure the query builder of the edge.
+func (fq *FileQuery) WithACLEntries(opts ...func(*AclEntryQuery)) *FileQuery {
+	query := (&AclEntryClient{config: fq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	fq.withACLEntries = query
 	return fq
 }
 
@@ -620,7 +656,7 @@ func (fq *FileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*File, e
 	var (
 		nodes       = []*File{}
 		_spec       = fq.querySpec()
-		loadedTypes = [8]bool{
+		loadedTypes = [9]bool{
 			fq.withOwner != nil,
 			fq.withStoragePolicies != nil,
 			fq.withParent != nil,
@@ -628,6 +664,7 @@ func (fq *FileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*File, e
 			fq.withMetadata != nil,
 			fq.withEntities != nil,
 			fq.withShares != nil,
+			fq.withACLEntries != nil,
 			fq.withDirectLinks != nil,
 		}
 	)
@@ -692,6 +729,13 @@ func (fq *FileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*File, e
 		if err := fq.loadShares(ctx, query, nodes,
 			func(n *File) { n.Edges.Shares = []*Share{} },
 			func(n *File, e *Share) { n.Edges.Shares = append(n.Edges.Shares, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := fq.withACLEntries; query != nil {
+		if err := fq.loadACLEntries(ctx, query, nodes,
+			func(n *File) { n.Edges.ACLEntries = []*AclEntry{} },
+			func(n *File, e *AclEntry) { n.Edges.ACLEntries = append(n.Edges.ACLEntries, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -939,6 +983,36 @@ func (fq *FileQuery) loadShares(ctx context.Context, query *ShareQuery, nodes []
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "file_shares" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (fq *FileQuery) loadACLEntries(ctx context.Context, query *AclEntryQuery, nodes []*File, init func(*File), assign func(*File, *AclEntry)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*File)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(aclentry.FieldFileID)
+	}
+	query.Where(predicate.AclEntry(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(file.ACLEntriesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.FileID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "file_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}
