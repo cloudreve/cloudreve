@@ -310,11 +310,16 @@ func (f *DBFS) SoftDelete(ctx context.Context, path ...*fs.URI) error {
 			return serializer.NewError(serializer.CodeDBError, "failed to soft-delete file", err)
 		}
 
-		// Save restore uri into metadata
+		// Save restore uri into metadata. A user-level retention overrides
+		// the group default when set.
+		retention := target.Owner().Edges.Group.Settings.TrashRetention
+		if us := target.Owner().Settings; us != nil && us.TrashRetention > 0 {
+			retention = us.TrashRetention
+		}
 		if err := fc.UpsertMetadata(ctx, target.Model, map[string]string{
 			MetadataRestoreUri: target.Uri(true).String(),
 			MetadataExpectedCollectTime: strconv.FormatInt(
-				time.Now().Add(time.Duration(target.Owner().Edges.Group.Settings.TrashRetention)*time.Second).Unix(),
+				time.Now().Add(time.Duration(retention)*time.Second).Unix(),
 				10),
 		}, nil); err != nil {
 			_ = inventory.Rollback(tx)

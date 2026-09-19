@@ -24,6 +24,10 @@ type (
 		// viewer IDs chosen via "always open with". Synced server-side so the
 		// preference follows the user across devices.
 		PreferredViewers map[string]string `json:"preferred_viewers,omitempty"`
+		// TrashRetention overrides the group's trash retention in seconds.
+		// 0 means inherit the group setting. Applied when a file is moved to
+		// trash — already-trashed files keep their original expiry.
+		TrashRetention int `json:"trash_retention,omitempty"`
 	}
 
 	ShareLinksInProfileLevel string

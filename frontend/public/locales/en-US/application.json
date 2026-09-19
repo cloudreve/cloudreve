@@ -855,6 +855,8 @@
     "enableVersionRetention": "Enable version retention",
     "enableVersionRetentionDes": "If enabled, historical versions of files that meet the conditions will be retained.",
     "versionRetention": "Version retention",
+    "trashRetention": "Trash retention (days)",
+    "trashRetentionDes": "Days a file stays in the trash before automatic deletion. 0 inherits the group default. Applies to files moved to trash after the change.",
     "languageDes": "Select the display language and preferred email language.",
     "timezoneDes": "Set the display timezone, default is system timezone",
     "externalApps": "External Apps",

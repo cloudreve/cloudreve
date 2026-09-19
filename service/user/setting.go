@@ -236,6 +236,9 @@ type (
 		ShareDefaultPrivate *string `json:"share_default_private" binding:"omitempty"`
 		// PreferredViewers replaces the whole extension → viewer-id map.
 		PreferredViewers *map[string]string `json:"preferred_viewers" binding:"omitempty"`
+		// TrashRetention overrides group trash retention, in seconds.
+		// 0 clears the override. Capped at ~10 years.
+		TrashRetention *int `json:"trash_retention" binding:"omitempty,min=0,max=315360000"`
 	}
 	PatchUserSettingParamsCtx struct{}
 )
@@ -331,6 +334,11 @@ func (s *PatchUserSetting) Patch(c *gin.Context) error {
 			return err
 		}
 		u.Settings.PreferredViewers = *s.PreferredViewers
+		saveSetting = true
+	}
+
+	if s.TrashRetention != nil {
+		u.Settings.TrashRetention = *s.TrashRetention
 		saveSetting = true
 	}
 

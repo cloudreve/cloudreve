@@ -144,6 +144,7 @@ export interface UserSettings {
   share_links_in_profile: ShareLinksInProfileLevel;
   share_default_private?: boolean;
   preferred_viewers?: Record<string, string>;
+  trash_retention?: number;
   oauth_grants?: OAuthGrant[];
 }
 
@@ -171,6 +172,8 @@ export interface PatchUserSetting {
   // Tri-state: "true" / "false" / "" (inherit the site default).
   share_default_private?: string;
   preferred_viewers?: Record<string, string>;
+  // Trash retention override in seconds; 0 inherits the group setting.
+  trash_retention?: number;
 }
 
 export interface PasskeyCredentialOption {

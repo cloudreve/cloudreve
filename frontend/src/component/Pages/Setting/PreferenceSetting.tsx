@@ -86,6 +86,29 @@ const PreferenceSetting = ({ setting, setSetting }: PreferenceSettingProps) => {
   const [folderClickAction, setFolderClickAction] = useState(
     SessionManager.getWithFallback(UserSettings.FolderClickAction),
   );
+  const [trashRetentionDays, setTrashRetentionDays] = useState(
+    Math.round((setting.trash_retention ?? 0) / 86400),
+  );
+
+  const onTrashRetentionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const days = Math.max(0, parseInt(e.target.value) || 0);
+    setTrashRetentionDays(days);
+  };
+
+  const saveTrashRetention = () => {
+    const seconds = trashRetentionDays * 86400;
+    if (seconds == (setting.trash_retention ?? 0)) {
+      return;
+    }
+    setLoading(true);
+    dispatch(sendUpdateUserSetting({ trash_retention: seconds }))
+      .then(() => {
+        setSetting({ ...setting, trash_retention: seconds });
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
 
   const onRetentionCheckChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setVersionRetentionEnabled(e.target.checked);
@@ -107,6 +130,7 @@ const PreferenceSetting = ({ setting, setSetting }: PreferenceSettingProps) => {
     setVersionRetentionEnabled(setting.version_retention_enabled);
     setVersionRetentionMax(setting.version_retention_max);
     setVersionRetentionExts(setting.version_retention_ext);
+    setTrashRetentionDays(Math.round((setting.trash_retention ?? 0) / 86400));
   }, [setting]);
 
   const selectTimeZone = (value: string) => {
@@ -348,6 +372,16 @@ const PreferenceSetting = ({ setting, setSetting }: PreferenceSettingProps) => {
             </Collapse>
           </Stack>
         </OutlinedSettingBox>
+      </SettingForm>
+      <SettingForm title={t("setting.trashRetention")} lgWidth={12}>
+        <DenseFilledTextField
+          type="number"
+          value={trashRetentionDays}
+          onChange={onTrashRetentionChange}
+          onBlur={saveTrashRetention}
+          inputProps={{ min: 0, step: 1 }}
+          helperText={t("setting.trashRetentionDes")}
+        />
       </SettingForm>
       <SettingForm title={t("setting.syncView")} lgWidth={12}>
         <ToggleButtonGroup

@@ -855,6 +855,8 @@
     "enableVersionRetention": "启用版本保留",
     "enableVersionRetentionDes": "启用后，对于符合条件的文件，系统会保留其历史版本",
     "versionRetention": "版本保留",
+    "trashRetention": "回收站保留时间（天）",
+    "trashRetentionDes": "文件移入回收站后自动删除前保留的天数。0 表示继承用户组默认值，仅影响修改后移入回收站的文件。",
     "languageDes": "设置应用展示语言和首选邮件语言",
     "timezoneDes": "设置展示时区，默认跟随系统时区",
     "externalApps": "外部应用",

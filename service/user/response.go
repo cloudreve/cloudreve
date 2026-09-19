@@ -34,6 +34,7 @@ type UserSettings struct {
 	ShareLinksInProfile     string            `json:"share_links_in_profile"`
 	ShareDefaultPrivate     *bool             `json:"share_default_private,omitempty"`
 	PreferredViewers        map[string]string `json:"preferred_viewers,omitempty"`
+	TrashRetention          int               `json:"trash_retention,omitempty"`
 	OAuthGrants             []OauthGrant      `json:"oauth_grants,omitempty"`
 }
 
@@ -51,6 +52,7 @@ func BuildUserSettings(u *ent.User, passkeys []*ent.Passkey, parser *uaparser.Pa
 		ShareLinksInProfile: string(u.Settings.ShareLinksInProfile),
 		ShareDefaultPrivate: u.Settings.ShareDefaultPrivate,
 		PreferredViewers:    u.Settings.PreferredViewers,
+		TrashRetention:      u.Settings.TrashRetention,
 		OAuthGrants: lo.Map(grants, func(item *ent.OAuthGrant, index int) OauthGrant {
 			return BuildOauthGrant(item)
 		}),
