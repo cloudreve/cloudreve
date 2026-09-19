@@ -178,6 +178,8 @@ export interface PatchUserSetting {
   trash_retention?: number;
   // Preferred storage policy hash ID; "" inherits the group default.
   preferred_policy?: string;
+  // Marks the current site announcement as seen.
+  dismiss_announcement?: boolean;
 }
 
 export interface PasskeyCredentialOption {

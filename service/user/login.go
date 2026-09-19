@@ -10,6 +10,8 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/auth"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cluster/routes"
 	"github.com/cloudreve/Cloudreve/v4/pkg/email"
@@ -122,6 +124,8 @@ func (service *UserResetEmailService) Reset(c *gin.Context) error {
 	if err := dep.EmailClient(c).Send(c, u.Email, title, body); err != nil {
 		return serializer.NewError(serializer.CodeFailedSendEmail, "Failed to send activation email", err)
 	}
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventEmailSent,
+		activity.Actor(u.ID), activity.Extra(map[string]any{"kind": "password_reset"}))
 
 	return nil
 }
@@ -151,6 +155,8 @@ func (service *UserLoginService) Login(c *gin.Context) (*ent.User, string, error
 	}
 
 	if err != nil {
+		activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventUserLoginFailed,
+			activity.Extra(map[string]any{"email": service.UserName}))
 		return nil, "", err
 	}
 
@@ -184,6 +190,8 @@ func IssueToken(c *gin.Context) (*BuiltinLoginResponse, error) {
 		return nil, serializer.NewError(serializer.CodeEncryptError, "Failed to issue token pair", err)
 	}
 
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventUserLogin)
+
 	return &BuiltinLoginResponse{
 		User:  BuildUser(u, dep.HashIDEncoder()),
 		Token: *token,
@@ -200,10 +208,19 @@ type RefreshTokenService struct {
 
 func (s *RefreshTokenService) Refresh(c *gin.Context) (*auth.Token, error) {
 	dep := dependency.FromContext(c)
+	claims, _ := dep.TokenAuth().Claims(c, s.RefreshToken)
 	token, err := dep.TokenAuth().Refresh(c, s.RefreshToken)
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeCredentialInvalid, "Failed to issue token pair", err)
 	}
+
+	opts := []activity.Opt{}
+	if claims != nil {
+		if uid, err := dep.HashIDEncoder().Decode(claims.Subject, hashid.UserID); err == nil {
+			opts = append(opts, activity.Actor(uid))
+		}
+	}
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventUserTokenRefresh, opts...)
 
 	return token, nil
 }

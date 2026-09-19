@@ -707,6 +707,8 @@
     "emailEventsDes": "与邮件发送和通知相关的事件。",
     "toggleAll": "启用/禁用所有事件",
     "toggleAllDes": "启用或禁用此类别中的所有事件。",
+    "auditRetentionDays": "保留天数",
+    "auditRetentionDaysDes": "删除超过该天数的事件。0 表示永久保留。",
     "event": {
       "file_imported": "外部文件导入",
       "server_start": "服务器启动",
@@ -1588,6 +1590,7 @@
     "linkedEntity": "关联 Blob",
     "linkedShare": "关联分享",
     "rawContent": "原始记录",
+    "noEvents": "暂无事件记录",
     "confirmDelete": "确认要删除此事件？",
     "deleteXEvents": "删除 {{num}} 个事件",
     "confirmBatchDelete": "确认要删除 {{num}} 个事件？"

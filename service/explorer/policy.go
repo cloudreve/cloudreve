@@ -7,6 +7,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs/dbfs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager"
@@ -234,5 +235,8 @@ func (s *FileRelocateService) Create(c *gin.Context) (*FileRelocateResponse, err
 		return nil, fmt.Errorf("failed to submit task: %w", err)
 	}
 
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventRelocate,
+		activity.File(file.Model.ID),
+		activity.Extra(map[string]any{"policy_id": policy.ID, "entities": len(entityIDs)}))
 	return &FileRelocateResponse{ID: hashid.EncodeTaskID(dep.HashIDEncoder(), t.ID())}, nil
 }

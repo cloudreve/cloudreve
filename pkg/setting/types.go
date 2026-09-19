@@ -143,6 +143,7 @@ var (
 	CronTypeTrashBinCollect  = CronType("trash_bin_collect")
 	CronTypeOauthCredRefresh = CronType("oauth_cred_refresh")
 	CronTypeGrantExpire      = CronType("grant_expire")
+	CronTypeAuditCleanup     = CronType("audit_cleanup")
 )
 
 type Theme struct {

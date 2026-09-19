@@ -7,6 +7,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/auth"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cluster/routes"
 	"github.com/cloudreve/Cloudreve/v4/pkg/email"
@@ -82,6 +83,8 @@ func (s *RequestEmailChangeService) Request(c *gin.Context) error {
 	if err := dep.EmailClient(c).Send(c, s.NewEmail, title, body); err != nil {
 		return serializer.NewError(serializer.CodeFailedSendEmail, "Failed to send confirmation email", err)
 	}
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventEmailSent,
+		activity.Extra(map[string]any{"kind": "email_change"}))
 
 	return nil
 }

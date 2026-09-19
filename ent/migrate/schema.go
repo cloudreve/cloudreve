@@ -40,6 +40,53 @@ var (
 			},
 		},
 	}
+	// ActivityEventsColumns holds the columns for the "activity_events" table.
+	ActivityEventsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "type", Type: field.TypeInt},
+		{Name: "actor_id", Type: field.TypeInt, Nullable: true},
+		{Name: "ip", Type: field.TypeString, Nullable: true},
+		{Name: "cid", Type: field.TypeString, Nullable: true},
+		{Name: "file_id", Type: field.TypeInt, Nullable: true},
+		{Name: "share_id", Type: field.TypeInt, Nullable: true},
+		{Name: "extra", Type: field.TypeJSON, Nullable: true},
+	}
+	// ActivityEventsTable holds the schema information for the "activity_events" table.
+	ActivityEventsTable = &schema.Table{
+		Name:       "activity_events",
+		Columns:    ActivityEventsColumns,
+		PrimaryKey: []*schema.Column{ActivityEventsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "activityevent_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{ActivityEventsColumns[1]},
+			},
+			{
+				Name:    "activityevent_type_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{ActivityEventsColumns[4], ActivityEventsColumns[1]},
+			},
+			{
+				Name:    "activityevent_file_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{ActivityEventsColumns[8], ActivityEventsColumns[1]},
+			},
+			{
+				Name:    "activityevent_actor_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{ActivityEventsColumns[5], ActivityEventsColumns[1]},
+			},
+			{
+				Name:    "activityevent_share_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{ActivityEventsColumns[9], ActivityEventsColumns[1]},
+			},
+		},
+	}
 	// CreditTxnsColumns holds the columns for the "credit_txns" table.
 	CreditTxnsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -710,6 +757,7 @@ var (
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		ACLEntriesTable,
+		ActivityEventsTable,
 		CreditTxnsTable,
 		DavAccountsTable,
 		DirectLinksTable,

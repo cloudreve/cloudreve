@@ -3,6 +3,8 @@ package explorer
 import (
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
@@ -33,5 +35,21 @@ func (s *PatchMetadataService) Patch(c *gin.Context) error {
 		return serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
 	}
 
-	return m.PatchMedata(c, uris, s.Patches...)
+	if err := m.PatchMedata(c, uris, s.Patches...); err != nil {
+		return err
+	}
+
+	keys := make([]string, 0, len(s.Patches))
+	for _, p := range s.Patches {
+		keys = append(keys, p.Key)
+	}
+	for _, uri := range uris {
+		opts := []activity.Opt{activity.Extra(map[string]any{"keys": keys})}
+		if target, err := m.Get(c, uri); err == nil {
+			opts = append(opts, activity.File(target.ID()))
+		}
+		activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventUpdateMetadata, opts...)
+	}
+
+	return nil
 }

@@ -2,6 +2,7 @@ import { AxiosProgressEvent, CancelToken } from "axios";
 import { EncryptedBlob } from "../component/Uploader/core/uploader/encrypt/blob.ts";
 import i18n from "../i18n.ts";
 import {
+  ActivityEventListResponse,
   AdjustCreditService,
   AdminListGroupResponse,
   AdminListService,
@@ -1332,6 +1333,22 @@ export function sendUploadAvatar(avatar?: Blob, contentType?: string): ThunkResp
   };
 }
 
+export function getAnnouncement(): ThunkResponse<{ content?: string }> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/user/setting/announcement`,
+        {
+          method: "GET",
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
 export function sendUpdateUserSetting(settings: PatchUserSetting): ThunkResponse {
   return async (dispatch, _getState) => {
     return await dispatch(
@@ -2653,6 +2670,54 @@ export function adminDeleteGiftCode(id: number): ThunkResponse<void> {
       send(
         `/admin/vas/giftcode/${id}`,
         { method: "DELETE" },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function adminListEvents(args: {
+  page: number;
+  pageSize: number;
+  type?: number;
+  actor_id?: string;
+  file_id?: string;
+  share_id?: string;
+}): ThunkResponse<ActivityEventListResponse> {
+  return async (dispatch, _getState) => {
+    const params = new URLSearchParams({ page: String(args.page), page_size: String(args.pageSize) });
+    if (args.type !== undefined && args.type > 0) {
+      params.set("type", String(args.type));
+    }
+    if (args.actor_id) {
+      params.set("actor_id", args.actor_id);
+    }
+    if (args.file_id) {
+      params.set("file_id", args.file_id);
+    }
+    if (args.share_id) {
+      params.set("share_id", args.share_id);
+    }
+    return await dispatch(
+      send(
+        `/admin/event?${params.toString()}`,
+        { method: "GET" },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function getFileActivity(uri: string, page: number, pageSize: number): ThunkResponse<ActivityEventListResponse> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/file/activity?uri=${encodeURIComponent(uri)}&page=${page}&page_size=${pageSize}`,
+        { method: "GET" },
         {
           ...defaultOpts,
         },

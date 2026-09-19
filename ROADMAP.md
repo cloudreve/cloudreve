@@ -189,7 +189,11 @@ Order = user-visible value first; each ships with backend + UI + tests.
    - [ ] Paid-share `price_points` wired to the ledger + purchase/resume-ticket flow
 5. **System extensions** — activity/audit log, site announcements, node selection, report-abuse queue (fixes #3480, #3479 IP whitelist). See §1.3a.
    - [x] PR #144 — task `creator_ip` capture with CIDR-capable admin filter (#115 OSS half), group remote-download quotas per count + per volume (#16), yt-dlp downloader provider (#88), progressive image preview (#113), v3 migrator `DatabaseURL` passthrough (#42)
-   - [ ] `activity_event` entity + per-file Activity dialog + admin event feed/detail; site announcement modal + dismissal; group `allowed_nodes` + task `target_node`; `abuse_report` + admin queue + share context-menu Report entry
+   - [x] `activity_event` entity (immutable, tx-aware, actor+IP+CID) + per-file Activity dialog + admin `/admin/event` feed + per-type enablement + retention cron (#184)
+   - [x] Coverage wave 2: email/user-activated/token-refresh/share-viewed/version/metadata/view/thumb/live-photo/copy-from/webdav/profile+security/oauth/admin-ops/import (1bbaddf)
+   - [ ] Event coverage remainder (needs unbuilt features): payment_*, link/unlink_account, membership_unsubscribe, report_abuse, mount, quota-notify
+   - [x] site announcement: `announcement` setting (markdown) + post-login modal + per-user dismissal re-triggering on content change (#184)
+   - [ ] group `allowed_nodes` + task `target_node`; `abuse_report` + admin queue + share context-menu Report entry
 
 ## 5. Phase C — security + quality
 

@@ -25,6 +25,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 	"github.com/go-webauthn/webauthn/webauthn"
+	"github.com/samber/lo"
 )
 
 type (
@@ -57,6 +58,8 @@ type (
 		GetByEmail(ctx context.Context, email string) (*ent.User, error)
 		// GetByID get user by its ID, user status is ignored.
 		GetByID(ctx context.Context, id int) (*ent.User, error)
+		// ListByIDs returns users for the given IDs, keyed by user ID.
+		ListByIDs(ctx context.Context, ids []int) (map[int]*ent.User, error)
 		// GetActiveByID get user by its ID, only active user will be returned.
 		GetActiveByID(ctx context.Context, id int) (*ent.User, error)
 		// SetStatus Set user to given status
@@ -469,6 +472,17 @@ func (c *userClient) GetByEmail(ctx context.Context, email string) (*ent.User, e
 
 func (c *userClient) GetByID(ctx context.Context, id int) (*ent.User, error) {
 	return withUserEagerLoading(ctx, c.client.User.Query().Where(user.ID(id))).First(ctx)
+}
+
+func (c *userClient) ListByIDs(ctx context.Context, ids []int) (map[int]*ent.User, error) {
+	if len(ids) == 0 {
+		return map[int]*ent.User{}, nil
+	}
+	users, err := withUserEagerLoading(ctx, c.client.User.Query().Where(user.IDIn(ids...))).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return lo.SliceToMap(users, func(u *ent.User) (int, *ent.User) { return u.ID, u }), nil
 }
 
 func (c *userClient) GetActiveByID(ctx context.Context, id int) (*ent.User, error) {

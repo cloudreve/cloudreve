@@ -16,6 +16,8 @@ type Tx struct {
 	config
 	// AclEntry is the client for interacting with the AclEntry builders.
 	AclEntry *AclEntryClient
+	// ActivityEvent is the client for interacting with the ActivityEvent builders.
+	ActivityEvent *ActivityEventClient
 	// CreditTxn is the client for interacting with the CreditTxn builders.
 	CreditTxn *CreditTxnClient
 	// DavAccount is the client for interacting with the DavAccount builders.
@@ -188,6 +190,7 @@ func (tx *Tx) Client() *Client {
 
 func (tx *Tx) init() {
 	tx.AclEntry = NewAclEntryClient(tx.config)
+	tx.ActivityEvent = NewActivityEventClient(tx.config)
 	tx.CreditTxn = NewCreditTxnClient(tx.config)
 	tx.DavAccount = NewDavAccountClient(tx.config)
 	tx.DirectLink = NewDirectLinkClient(tx.config)

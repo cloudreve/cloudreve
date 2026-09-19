@@ -8,6 +8,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cluster/routes"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager"
@@ -78,6 +79,8 @@ func (s *ShareInfoService) Get(c *gin.Context) (*explorer.Share, error) {
 
 	if s.CountViews {
 		_ = shareClient.Viewed(c, share)
+		activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventShareLinkViewed,
+			activity.Share(share.ID), activity.File(share.Edges.File.ID))
 	}
 
 	unlocked := true

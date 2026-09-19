@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/cloudreve/Cloudreve/v4/ent/aclentry"
+	"github.com/cloudreve/Cloudreve/v4/ent/activityevent"
 	"github.com/cloudreve/Cloudreve/v4/ent/credittxn"
 	"github.com/cloudreve/Cloudreve/v4/ent/davaccount"
 	"github.com/cloudreve/Cloudreve/v4/ent/directlink"
@@ -49,6 +50,7 @@ const (
 
 	// Node types.
 	TypeAclEntry       = "AclEntry"
+	TypeActivityEvent  = "ActivityEvent"
 	TypeCreditTxn      = "CreditTxn"
 	TypeDavAccount     = "DavAccount"
 	TypeDirectLink     = "DirectLink"
@@ -851,6 +853,1092 @@ func (m *AclEntryMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown AclEntry edge %s", name)
+}
+
+// ActivityEventMutation represents an operation that mutates the ActivityEvent nodes in the graph.
+type ActivityEventMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *int
+	created_at    *time.Time
+	updated_at    *time.Time
+	deleted_at    *time.Time
+	_type         *int
+	add_type      *int
+	actor_id      *int
+	addactor_id   *int
+	ip            *string
+	cid           *string
+	file_id       *int
+	addfile_id    *int
+	share_id      *int
+	addshare_id   *int
+	extra         *map[string]interface{}
+	clearedFields map[string]struct{}
+	done          bool
+	oldValue      func(context.Context) (*ActivityEvent, error)
+	predicates    []predicate.ActivityEvent
+}
+
+var _ ent.Mutation = (*ActivityEventMutation)(nil)
+
+// activityeventOption allows management of the mutation configuration using functional options.
+type activityeventOption func(*ActivityEventMutation)
+
+// newActivityEventMutation creates new mutation for the ActivityEvent entity.
+func newActivityEventMutation(c config, op Op, opts ...activityeventOption) *ActivityEventMutation {
+	m := &ActivityEventMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeActivityEvent,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withActivityEventID sets the ID field of the mutation.
+func withActivityEventID(id int) activityeventOption {
+	return func(m *ActivityEventMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ActivityEvent
+		)
+		m.oldValue = func(ctx context.Context) (*ActivityEvent, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ActivityEvent.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withActivityEvent sets the old ActivityEvent of the mutation.
+func withActivityEvent(node *ActivityEvent) activityeventOption {
+	return func(m *ActivityEventMutation) {
+		m.oldValue = func(context.Context) (*ActivityEvent, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ActivityEventMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ActivityEventMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ActivityEventMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ActivityEventMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ActivityEvent.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *ActivityEventMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *ActivityEventMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the ActivityEvent entity.
+// If the ActivityEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ActivityEventMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *ActivityEventMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *ActivityEventMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *ActivityEventMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the ActivityEvent entity.
+// If the ActivityEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ActivityEventMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *ActivityEventMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (m *ActivityEventMutation) SetDeletedAt(t time.Time) {
+	m.deleted_at = &t
+}
+
+// DeletedAt returns the value of the "deleted_at" field in the mutation.
+func (m *ActivityEventMutation) DeletedAt() (r time.Time, exists bool) {
+	v := m.deleted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeletedAt returns the old "deleted_at" field's value of the ActivityEvent entity.
+// If the ActivityEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ActivityEventMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
+	}
+	return oldValue.DeletedAt, nil
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (m *ActivityEventMutation) ClearDeletedAt() {
+	m.deleted_at = nil
+	m.clearedFields[activityevent.FieldDeletedAt] = struct{}{}
+}
+
+// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
+func (m *ActivityEventMutation) DeletedAtCleared() bool {
+	_, ok := m.clearedFields[activityevent.FieldDeletedAt]
+	return ok
+}
+
+// ResetDeletedAt resets all changes to the "deleted_at" field.
+func (m *ActivityEventMutation) ResetDeletedAt() {
+	m.deleted_at = nil
+	delete(m.clearedFields, activityevent.FieldDeletedAt)
+}
+
+// SetType sets the "type" field.
+func (m *ActivityEventMutation) SetType(i int) {
+	m._type = &i
+	m.add_type = nil
+}
+
+// GetType returns the value of the "type" field in the mutation.
+func (m *ActivityEventMutation) GetType() (r int, exists bool) {
+	v := m._type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldType returns the old "type" field's value of the ActivityEvent entity.
+// If the ActivityEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ActivityEventMutation) OldType(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldType: %w", err)
+	}
+	return oldValue.Type, nil
+}
+
+// AddType adds i to the "type" field.
+func (m *ActivityEventMutation) AddType(i int) {
+	if m.add_type != nil {
+		*m.add_type += i
+	} else {
+		m.add_type = &i
+	}
+}
+
+// AddedType returns the value that was added to the "type" field in this mutation.
+func (m *ActivityEventMutation) AddedType() (r int, exists bool) {
+	v := m.add_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetType resets all changes to the "type" field.
+func (m *ActivityEventMutation) ResetType() {
+	m._type = nil
+	m.add_type = nil
+}
+
+// SetActorID sets the "actor_id" field.
+func (m *ActivityEventMutation) SetActorID(i int) {
+	m.actor_id = &i
+	m.addactor_id = nil
+}
+
+// ActorID returns the value of the "actor_id" field in the mutation.
+func (m *ActivityEventMutation) ActorID() (r int, exists bool) {
+	v := m.actor_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldActorID returns the old "actor_id" field's value of the ActivityEvent entity.
+// If the ActivityEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ActivityEventMutation) OldActorID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldActorID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldActorID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldActorID: %w", err)
+	}
+	return oldValue.ActorID, nil
+}
+
+// AddActorID adds i to the "actor_id" field.
+func (m *ActivityEventMutation) AddActorID(i int) {
+	if m.addactor_id != nil {
+		*m.addactor_id += i
+	} else {
+		m.addactor_id = &i
+	}
+}
+
+// AddedActorID returns the value that was added to the "actor_id" field in this mutation.
+func (m *ActivityEventMutation) AddedActorID() (r int, exists bool) {
+	v := m.addactor_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearActorID clears the value of the "actor_id" field.
+func (m *ActivityEventMutation) ClearActorID() {
+	m.actor_id = nil
+	m.addactor_id = nil
+	m.clearedFields[activityevent.FieldActorID] = struct{}{}
+}
+
+// ActorIDCleared returns if the "actor_id" field was cleared in this mutation.
+func (m *ActivityEventMutation) ActorIDCleared() bool {
+	_, ok := m.clearedFields[activityevent.FieldActorID]
+	return ok
+}
+
+// ResetActorID resets all changes to the "actor_id" field.
+func (m *ActivityEventMutation) ResetActorID() {
+	m.actor_id = nil
+	m.addactor_id = nil
+	delete(m.clearedFields, activityevent.FieldActorID)
+}
+
+// SetIP sets the "ip" field.
+func (m *ActivityEventMutation) SetIP(s string) {
+	m.ip = &s
+}
+
+// IP returns the value of the "ip" field in the mutation.
+func (m *ActivityEventMutation) IP() (r string, exists bool) {
+	v := m.ip
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIP returns the old "ip" field's value of the ActivityEvent entity.
+// If the ActivityEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ActivityEventMutation) OldIP(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIP is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIP requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIP: %w", err)
+	}
+	return oldValue.IP, nil
+}
+
+// ClearIP clears the value of the "ip" field.
+func (m *ActivityEventMutation) ClearIP() {
+	m.ip = nil
+	m.clearedFields[activityevent.FieldIP] = struct{}{}
+}
+
+// IPCleared returns if the "ip" field was cleared in this mutation.
+func (m *ActivityEventMutation) IPCleared() bool {
+	_, ok := m.clearedFields[activityevent.FieldIP]
+	return ok
+}
+
+// ResetIP resets all changes to the "ip" field.
+func (m *ActivityEventMutation) ResetIP() {
+	m.ip = nil
+	delete(m.clearedFields, activityevent.FieldIP)
+}
+
+// SetCid sets the "cid" field.
+func (m *ActivityEventMutation) SetCid(s string) {
+	m.cid = &s
+}
+
+// Cid returns the value of the "cid" field in the mutation.
+func (m *ActivityEventMutation) Cid() (r string, exists bool) {
+	v := m.cid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCid returns the old "cid" field's value of the ActivityEvent entity.
+// If the ActivityEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ActivityEventMutation) OldCid(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCid is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCid requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCid: %w", err)
+	}
+	return oldValue.Cid, nil
+}
+
+// ClearCid clears the value of the "cid" field.
+func (m *ActivityEventMutation) ClearCid() {
+	m.cid = nil
+	m.clearedFields[activityevent.FieldCid] = struct{}{}
+}
+
+// CidCleared returns if the "cid" field was cleared in this mutation.
+func (m *ActivityEventMutation) CidCleared() bool {
+	_, ok := m.clearedFields[activityevent.FieldCid]
+	return ok
+}
+
+// ResetCid resets all changes to the "cid" field.
+func (m *ActivityEventMutation) ResetCid() {
+	m.cid = nil
+	delete(m.clearedFields, activityevent.FieldCid)
+}
+
+// SetFileID sets the "file_id" field.
+func (m *ActivityEventMutation) SetFileID(i int) {
+	m.file_id = &i
+	m.addfile_id = nil
+}
+
+// FileID returns the value of the "file_id" field in the mutation.
+func (m *ActivityEventMutation) FileID() (r int, exists bool) {
+	v := m.file_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFileID returns the old "file_id" field's value of the ActivityEvent entity.
+// If the ActivityEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ActivityEventMutation) OldFileID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFileID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFileID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFileID: %w", err)
+	}
+	return oldValue.FileID, nil
+}
+
+// AddFileID adds i to the "file_id" field.
+func (m *ActivityEventMutation) AddFileID(i int) {
+	if m.addfile_id != nil {
+		*m.addfile_id += i
+	} else {
+		m.addfile_id = &i
+	}
+}
+
+// AddedFileID returns the value that was added to the "file_id" field in this mutation.
+func (m *ActivityEventMutation) AddedFileID() (r int, exists bool) {
+	v := m.addfile_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearFileID clears the value of the "file_id" field.
+func (m *ActivityEventMutation) ClearFileID() {
+	m.file_id = nil
+	m.addfile_id = nil
+	m.clearedFields[activityevent.FieldFileID] = struct{}{}
+}
+
+// FileIDCleared returns if the "file_id" field was cleared in this mutation.
+func (m *ActivityEventMutation) FileIDCleared() bool {
+	_, ok := m.clearedFields[activityevent.FieldFileID]
+	return ok
+}
+
+// ResetFileID resets all changes to the "file_id" field.
+func (m *ActivityEventMutation) ResetFileID() {
+	m.file_id = nil
+	m.addfile_id = nil
+	delete(m.clearedFields, activityevent.FieldFileID)
+}
+
+// SetShareID sets the "share_id" field.
+func (m *ActivityEventMutation) SetShareID(i int) {
+	m.share_id = &i
+	m.addshare_id = nil
+}
+
+// ShareID returns the value of the "share_id" field in the mutation.
+func (m *ActivityEventMutation) ShareID() (r int, exists bool) {
+	v := m.share_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldShareID returns the old "share_id" field's value of the ActivityEvent entity.
+// If the ActivityEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ActivityEventMutation) OldShareID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldShareID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldShareID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldShareID: %w", err)
+	}
+	return oldValue.ShareID, nil
+}
+
+// AddShareID adds i to the "share_id" field.
+func (m *ActivityEventMutation) AddShareID(i int) {
+	if m.addshare_id != nil {
+		*m.addshare_id += i
+	} else {
+		m.addshare_id = &i
+	}
+}
+
+// AddedShareID returns the value that was added to the "share_id" field in this mutation.
+func (m *ActivityEventMutation) AddedShareID() (r int, exists bool) {
+	v := m.addshare_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearShareID clears the value of the "share_id" field.
+func (m *ActivityEventMutation) ClearShareID() {
+	m.share_id = nil
+	m.addshare_id = nil
+	m.clearedFields[activityevent.FieldShareID] = struct{}{}
+}
+
+// ShareIDCleared returns if the "share_id" field was cleared in this mutation.
+func (m *ActivityEventMutation) ShareIDCleared() bool {
+	_, ok := m.clearedFields[activityevent.FieldShareID]
+	return ok
+}
+
+// ResetShareID resets all changes to the "share_id" field.
+func (m *ActivityEventMutation) ResetShareID() {
+	m.share_id = nil
+	m.addshare_id = nil
+	delete(m.clearedFields, activityevent.FieldShareID)
+}
+
+// SetExtra sets the "extra" field.
+func (m *ActivityEventMutation) SetExtra(value map[string]interface{}) {
+	m.extra = &value
+}
+
+// Extra returns the value of the "extra" field in the mutation.
+func (m *ActivityEventMutation) Extra() (r map[string]interface{}, exists bool) {
+	v := m.extra
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExtra returns the old "extra" field's value of the ActivityEvent entity.
+// If the ActivityEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ActivityEventMutation) OldExtra(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExtra is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExtra requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExtra: %w", err)
+	}
+	return oldValue.Extra, nil
+}
+
+// ClearExtra clears the value of the "extra" field.
+func (m *ActivityEventMutation) ClearExtra() {
+	m.extra = nil
+	m.clearedFields[activityevent.FieldExtra] = struct{}{}
+}
+
+// ExtraCleared returns if the "extra" field was cleared in this mutation.
+func (m *ActivityEventMutation) ExtraCleared() bool {
+	_, ok := m.clearedFields[activityevent.FieldExtra]
+	return ok
+}
+
+// ResetExtra resets all changes to the "extra" field.
+func (m *ActivityEventMutation) ResetExtra() {
+	m.extra = nil
+	delete(m.clearedFields, activityevent.FieldExtra)
+}
+
+// Where appends a list predicates to the ActivityEventMutation builder.
+func (m *ActivityEventMutation) Where(ps ...predicate.ActivityEvent) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ActivityEventMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ActivityEventMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ActivityEvent, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ActivityEventMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ActivityEventMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ActivityEvent).
+func (m *ActivityEventMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ActivityEventMutation) Fields() []string {
+	fields := make([]string, 0, 10)
+	if m.created_at != nil {
+		fields = append(fields, activityevent.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, activityevent.FieldUpdatedAt)
+	}
+	if m.deleted_at != nil {
+		fields = append(fields, activityevent.FieldDeletedAt)
+	}
+	if m._type != nil {
+		fields = append(fields, activityevent.FieldType)
+	}
+	if m.actor_id != nil {
+		fields = append(fields, activityevent.FieldActorID)
+	}
+	if m.ip != nil {
+		fields = append(fields, activityevent.FieldIP)
+	}
+	if m.cid != nil {
+		fields = append(fields, activityevent.FieldCid)
+	}
+	if m.file_id != nil {
+		fields = append(fields, activityevent.FieldFileID)
+	}
+	if m.share_id != nil {
+		fields = append(fields, activityevent.FieldShareID)
+	}
+	if m.extra != nil {
+		fields = append(fields, activityevent.FieldExtra)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ActivityEventMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case activityevent.FieldCreatedAt:
+		return m.CreatedAt()
+	case activityevent.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case activityevent.FieldDeletedAt:
+		return m.DeletedAt()
+	case activityevent.FieldType:
+		return m.GetType()
+	case activityevent.FieldActorID:
+		return m.ActorID()
+	case activityevent.FieldIP:
+		return m.IP()
+	case activityevent.FieldCid:
+		return m.Cid()
+	case activityevent.FieldFileID:
+		return m.FileID()
+	case activityevent.FieldShareID:
+		return m.ShareID()
+	case activityevent.FieldExtra:
+		return m.Extra()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ActivityEventMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case activityevent.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case activityevent.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case activityevent.FieldDeletedAt:
+		return m.OldDeletedAt(ctx)
+	case activityevent.FieldType:
+		return m.OldType(ctx)
+	case activityevent.FieldActorID:
+		return m.OldActorID(ctx)
+	case activityevent.FieldIP:
+		return m.OldIP(ctx)
+	case activityevent.FieldCid:
+		return m.OldCid(ctx)
+	case activityevent.FieldFileID:
+		return m.OldFileID(ctx)
+	case activityevent.FieldShareID:
+		return m.OldShareID(ctx)
+	case activityevent.FieldExtra:
+		return m.OldExtra(ctx)
+	}
+	return nil, fmt.Errorf("unknown ActivityEvent field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ActivityEventMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case activityevent.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case activityevent.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case activityevent.FieldDeletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeletedAt(v)
+		return nil
+	case activityevent.FieldType:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetType(v)
+		return nil
+	case activityevent.FieldActorID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetActorID(v)
+		return nil
+	case activityevent.FieldIP:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIP(v)
+		return nil
+	case activityevent.FieldCid:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCid(v)
+		return nil
+	case activityevent.FieldFileID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFileID(v)
+		return nil
+	case activityevent.FieldShareID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetShareID(v)
+		return nil
+	case activityevent.FieldExtra:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExtra(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ActivityEvent field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ActivityEventMutation) AddedFields() []string {
+	var fields []string
+	if m.add_type != nil {
+		fields = append(fields, activityevent.FieldType)
+	}
+	if m.addactor_id != nil {
+		fields = append(fields, activityevent.FieldActorID)
+	}
+	if m.addfile_id != nil {
+		fields = append(fields, activityevent.FieldFileID)
+	}
+	if m.addshare_id != nil {
+		fields = append(fields, activityevent.FieldShareID)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ActivityEventMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case activityevent.FieldType:
+		return m.AddedType()
+	case activityevent.FieldActorID:
+		return m.AddedActorID()
+	case activityevent.FieldFileID:
+		return m.AddedFileID()
+	case activityevent.FieldShareID:
+		return m.AddedShareID()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ActivityEventMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case activityevent.FieldType:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddType(v)
+		return nil
+	case activityevent.FieldActorID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddActorID(v)
+		return nil
+	case activityevent.FieldFileID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddFileID(v)
+		return nil
+	case activityevent.FieldShareID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddShareID(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ActivityEvent numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ActivityEventMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(activityevent.FieldDeletedAt) {
+		fields = append(fields, activityevent.FieldDeletedAt)
+	}
+	if m.FieldCleared(activityevent.FieldActorID) {
+		fields = append(fields, activityevent.FieldActorID)
+	}
+	if m.FieldCleared(activityevent.FieldIP) {
+		fields = append(fields, activityevent.FieldIP)
+	}
+	if m.FieldCleared(activityevent.FieldCid) {
+		fields = append(fields, activityevent.FieldCid)
+	}
+	if m.FieldCleared(activityevent.FieldFileID) {
+		fields = append(fields, activityevent.FieldFileID)
+	}
+	if m.FieldCleared(activityevent.FieldShareID) {
+		fields = append(fields, activityevent.FieldShareID)
+	}
+	if m.FieldCleared(activityevent.FieldExtra) {
+		fields = append(fields, activityevent.FieldExtra)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ActivityEventMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ActivityEventMutation) ClearField(name string) error {
+	switch name {
+	case activityevent.FieldDeletedAt:
+		m.ClearDeletedAt()
+		return nil
+	case activityevent.FieldActorID:
+		m.ClearActorID()
+		return nil
+	case activityevent.FieldIP:
+		m.ClearIP()
+		return nil
+	case activityevent.FieldCid:
+		m.ClearCid()
+		return nil
+	case activityevent.FieldFileID:
+		m.ClearFileID()
+		return nil
+	case activityevent.FieldShareID:
+		m.ClearShareID()
+		return nil
+	case activityevent.FieldExtra:
+		m.ClearExtra()
+		return nil
+	}
+	return fmt.Errorf("unknown ActivityEvent nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ActivityEventMutation) ResetField(name string) error {
+	switch name {
+	case activityevent.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case activityevent.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case activityevent.FieldDeletedAt:
+		m.ResetDeletedAt()
+		return nil
+	case activityevent.FieldType:
+		m.ResetType()
+		return nil
+	case activityevent.FieldActorID:
+		m.ResetActorID()
+		return nil
+	case activityevent.FieldIP:
+		m.ResetIP()
+		return nil
+	case activityevent.FieldCid:
+		m.ResetCid()
+		return nil
+	case activityevent.FieldFileID:
+		m.ResetFileID()
+		return nil
+	case activityevent.FieldShareID:
+		m.ResetShareID()
+		return nil
+	case activityevent.FieldExtra:
+		m.ResetExtra()
+		return nil
+	}
+	return fmt.Errorf("unknown ActivityEvent field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ActivityEventMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ActivityEventMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ActivityEventMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ActivityEventMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ActivityEventMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ActivityEventMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ActivityEventMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown ActivityEvent unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ActivityEventMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown ActivityEvent edge %s", name)
 }
 
 // CreditTxnMutation represents an operation that mutates the CreditTxn nodes in the graph.

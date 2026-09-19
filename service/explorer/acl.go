@@ -9,6 +9,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/aclentry"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/boolset"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager"
@@ -189,6 +190,10 @@ func (s *AclUpsertService) Update(c *gin.Context) (*AclEntryResponse, error) {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to save permission", err)
 	}
 
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventSetFilePermission,
+		activity.File(fileID),
+		activity.Extra(map[string]any{"subject_type": string(subjectType), "subject_id": s.SubjectID, "permissions": s.Permissions}))
+
 	return &AclEntryResponse{
 		ID:          e.ID,
 		SubjectType: string(e.SubjectType),
@@ -207,6 +212,8 @@ func (s *AclDeleteService) Delete(c *gin.Context) error {
 	if err := dep.AclClient().Delete(c, fileID, s.ID); err != nil {
 		return serializer.NewError(serializer.CodeDBError, "Failed to delete permission", err)
 	}
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventSetFilePermission,
+		activity.File(fileID), activity.Extra(map[string]any{"deleted_entry": s.ID}))
 	return nil
 }
 

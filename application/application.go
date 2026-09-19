@@ -13,6 +13,8 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/application/constants"
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/ent"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cache"
 	"github.com/cloudreve/Cloudreve/v4/pkg/conf"
 	"github.com/cloudreve/Cloudreve/v4/pkg/crontab"
@@ -120,6 +122,9 @@ func (s *server) Start() error {
 		if _, err := s.dep.NodePool(context.Background()); err != nil {
 			return err
 		}
+
+		activity.Record(context.Background(), s.dep.SettingProvider(), s.dep.ActivityClient(),
+			types.EventServerStart, activity.Extra(map[string]any{"version": constants.BackendVersion}))
 	} else {
 		s.dep.SlaveQueue(context.Background()).Start()
 	}

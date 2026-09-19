@@ -21,6 +21,18 @@ func (f AclEntryFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, er
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AclEntryMutation", m)
 }
 
+// The ActivityEventFunc type is an adapter to allow the use of ordinary
+// function as ActivityEvent mutator.
+type ActivityEventFunc func(context.Context, *ent.ActivityEventMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ActivityEventFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ActivityEventMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ActivityEventMutation", m)
+}
+
 // The CreditTxnFunc type is an adapter to allow the use of ordinary
 // function as CreditTxn mutator.
 type CreditTxnFunc func(context.Context, *ent.CreditTxnMutation) (ent.Value, error)

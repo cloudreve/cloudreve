@@ -16,6 +16,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/auth"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 	"github.com/cloudreve/Cloudreve/v4/pkg/request"
@@ -177,6 +178,7 @@ func UpdateUserAvatar(c *gin.Context) error {
 		if _, err := dep.UserClient().UpdateAvatar(c, u, GravatarAvatar); err != nil {
 			return serializer.NewError(serializer.CodeDBError, "Failed to update user avatar", err)
 		}
+		activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventChangeAvatar)
 
 		return nil
 	}
@@ -218,8 +220,32 @@ func updateAvatarFile(ctx context.Context, u *ent.User, contentType string, file
 	if _, err := dep.UserClient().UpdateAvatar(ctx, u, FileAvatar); err != nil {
 		return serializer.NewError(serializer.CodeDBError, "Failed to update user avatar", err)
 	}
+	activity.Record(ctx, dep.SettingProvider(), dep.ActivityClient(), types.EventChangeAvatar)
 
 	return nil
+}
+
+// AnnouncementService serves the current site announcement to logged-in
+// users, filtered by their dismissal record.
+type AnnouncementService struct{}
+
+type AnnouncementParamCtx struct{}
+
+// Get returns the announcement content, or "" when unset or dismissed.
+func (s *AnnouncementService) Get(c *gin.Context) (*AnnouncementResponse, error) {
+	dep := dependency.FromContext(c)
+	u := inventory.UserFromContext(c)
+
+	current := dep.SettingProvider().Announcement(c)
+	if current == "" || current == u.Settings.DismissedAnnouncement {
+		return &AnnouncementResponse{}, nil
+	}
+
+	return &AnnouncementResponse{Content: current}, nil
+}
+
+type AnnouncementResponse struct {
+	Content string `json:"content,omitempty"`
 }
 
 type (
@@ -247,6 +273,9 @@ type (
 		// PreferredPolicy selects the user's default storage policy from the
 		// group's allowed set, hashid-encoded. "" clears the preference.
 		PreferredPolicy *string `json:"preferred_policy" binding:"omitempty"`
+		// DismissAnnouncement records the current site announcement as seen
+		// so the modal does not show again until the content changes.
+		DismissAnnouncement *bool `json:"dismiss_announcement" binding:"omitempty"`
 	}
 	PatchUserSettingParamsCtx struct{}
 )
@@ -282,6 +311,7 @@ func (s *PatchUserSetting) Patch(c *gin.Context) error {
 		if _, err := userClient.UpdateNickname(c, u, *s.Nick); err != nil {
 			return serializer.NewError(serializer.CodeDBError, "Failed to update user nick", err)
 		}
+		activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventChangeNick)
 	}
 
 	if s.Language != nil {
@@ -370,6 +400,11 @@ func (s *PatchUserSetting) Patch(c *gin.Context) error {
 		saveSetting = true
 	}
 
+	if s.DismissAnnouncement != nil && *s.DismissAnnouncement {
+		u.Settings.DismissedAnnouncement = dep.SettingProvider().Announcement(c)
+		saveSetting = true
+	}
+
 	if s.CurrentPassword != nil && s.NewPassword != nil {
 		if err := auth.CheckScope(c, types.ScopeUserSecurityInfoWrite); err != nil {
 			return err
@@ -382,6 +417,7 @@ func (s *PatchUserSetting) Patch(c *gin.Context) error {
 		if _, err := userClient.UpdatePassword(c, u, *s.NewPassword); err != nil {
 			return serializer.NewError(serializer.CodeDBError, "Failed to update user password", err)
 		}
+		activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventChangePassword)
 	}
 
 	if s.TwoFAEnabled != nil {
@@ -403,6 +439,7 @@ func (s *PatchUserSetting) Patch(c *gin.Context) error {
 			if _, err := userClient.UpdateTwoFASecret(c, u, secret.(string)); err != nil {
 				return serializer.NewError(serializer.CodeDBError, "Failed to update user 2FA", err)
 			}
+			activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventEnable2FA)
 
 		} else {
 			if !totp.Validate(*s.TwoFACode, u.TwoFactorSecret) {
@@ -412,6 +449,7 @@ func (s *PatchUserSetting) Patch(c *gin.Context) error {
 			if _, err := userClient.UpdateTwoFASecret(c, u, ""); err != nil {
 				return serializer.NewError(serializer.CodeDBError, "Failed to update user 2FA", err)
 			}
+			activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventDisable2FA)
 
 		}
 	}

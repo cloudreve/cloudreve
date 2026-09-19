@@ -31,6 +31,10 @@ type (
 		// PreferredPolicy is the user's default storage policy, chosen from
 		// the policies allowed for their group. 0 means the group default.
 		PreferredPolicy int `json:"preferred_policy,omitempty"`
+		// DismissedAnnouncement stores the announcement content the user last
+		// dismissed. When the admin edits the announcement it differs from
+		// this value and the modal is shown again.
+		DismissedAnnouncement string `json:"dismissed_announcement,omitempty"`
 	}
 
 	// LBPolicyRef binds a child storage policy to a load_balance policy with

@@ -160,6 +160,13 @@ func WithShareClient(s inventory.ShareClient) Option {
 	})
 }
 
+// WithActivityClient Set the default activity client
+func WithActivityClient(s inventory.ActivityClient) Option {
+	return optionFunc(func(o *dependency) {
+		o.activityClient = s
+	})
+}
+
 // WithSearchIndexer Set the default search indexer
 func WithSearchIndexer(s searcher.SearchIndexer) Option {
 	return optionFunc(func(o *dependency) {

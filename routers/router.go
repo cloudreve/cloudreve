@@ -826,6 +826,11 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					controllers.DeleteAcl,
 				)
 			}
+			// Per-file audit activity (Activity dialog)
+			file.GET("activity",
+				controllers.FromQuery[explorer.FileActivityService](explorer.FileActivityParamCtx{}),
+				controllers.GetFileActivity,
+			)
 			// Version management
 			version := file.Group("version", middleware.RequiredScopes(types.ScopeFilesWrite))
 			{
@@ -1310,6 +1315,15 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 				}
 
+				event := admin.Group("event", middleware.AdminSection(types.GroupPermissionAdminEvents))
+				{
+					// 列出审计事件
+					event.GET("",
+						controllers.FromQuery[adminsvc.EventListService](adminsvc.EventListParamCtx{}),
+						controllers.AdminListEvents,
+					)
+				}
+
 				file := admin.Group("file", middleware.AdminSection(types.GroupPermissionAdminFiles))
 				{
 					// 列出文件
@@ -1431,6 +1445,11 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				{
 					// 获取当前用户设定
 					setting.GET("", controllers.UserSetting)
+					// 当前公告（已忽略时为空）
+					setting.GET("announcement",
+						controllers.FromQuery[usersvc.AnnouncementService](usersvc.AnnouncementParamCtx{}),
+						controllers.UserAnnouncement,
+					)
 					// 从文件上传头像
 					setting.PUT("avatar", middleware.RequiredScopes(types.ScopeUserInfoWrite), controllers.UploadAvatar)
 					// 更改用户设定

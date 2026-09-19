@@ -10,6 +10,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/boolset"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
@@ -263,6 +264,17 @@ func (s *UpsertUserService) Update(c *gin.Context) (*GetUserResponse, error) {
 	newUser, err := userClient.Upsert(ctx, s.User, s.Password, s.TwoFA)
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to update user", err)
+	}
+
+	subject := activity.Extra(map[string]any{"user_id": newUser.ID})
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventUserChanged, subject)
+	if existing.GroupUsers != newUser.GroupUsers {
+		activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventGroupChanged,
+			subject, activity.Extra(map[string]any{"from": existing.GroupUsers, "to": newUser.GroupUsers}))
+	}
+	if existing.Storage != newUser.Storage {
+		activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventStorageAdded,
+			subject, activity.Extra(map[string]any{"from": existing.Storage, "to": newUser.Storage}))
 	}
 
 	service := &SingleUserService{ID: newUser.ID}

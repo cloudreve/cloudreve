@@ -215,6 +215,13 @@ export const router = createBrowserRouter([
                 },
               },
               {
+                path: "event",
+                async lazy() {
+                  let { EventList } = await import("../component/Admin/AdminBundle.tsx");
+                  return { Component: EventList };
+                },
+              },
+              {
                 path: "filesystem",
                 async lazy() {
                   let { FileSystem } = await import("../component/Admin/AdminBundle.tsx");

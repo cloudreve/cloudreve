@@ -160,6 +160,10 @@ export interface GlobalStateSlice {
   aclDialogOpen?: boolean;
   aclDialogFile?: FileResponse;
 
+  // Per-file activity (audit) dialog
+  activityDialogOpen?: boolean;
+  activityDialogFile?: FileResponse;
+
   // Stale version action dialog
   staleVersionDialogOpen?: boolean;
   staleVersionUri?: string;
@@ -813,6 +817,13 @@ export const globalStateSlice = createSlice({
     closeAclDialog: (state) => {
       state.aclDialogOpen = false;
     },
+    setActivityDialog: (state, action: PayloadAction<{ open: boolean; file: FileResponse }>) => {
+      state.activityDialogOpen = action.payload.open;
+      state.activityDialogFile = action.payload.file;
+    },
+    closeActivityDialog: (state) => {
+      state.activityDialogOpen = false;
+    },
     setImageViewer: (state, action: PayloadAction<ImageViewerState>) => {
       state.imageViewer = action.payload;
     },
@@ -944,6 +955,8 @@ export const {
   closeManageShareDialog,
   setAclDialog,
   closeAclDialog,
+  setActivityDialog,
+  closeActivityDialog,
   setVersionControlDialog,
   closeVersionControlDialog,
   closeSidebar,

@@ -16,6 +16,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/cloudreve/Cloudreve/v4/ent/aclentry"
+	"github.com/cloudreve/Cloudreve/v4/ent/activityevent"
 	"github.com/cloudreve/Cloudreve/v4/ent/credittxn"
 	"github.com/cloudreve/Cloudreve/v4/ent/davaccount"
 	"github.com/cloudreve/Cloudreve/v4/ent/directlink"
@@ -47,6 +48,8 @@ type Client struct {
 	Schema *migrate.Schema
 	// AclEntry is the client for interacting with the AclEntry builders.
 	AclEntry *AclEntryClient
+	// ActivityEvent is the client for interacting with the ActivityEvent builders.
+	ActivityEvent *ActivityEventClient
 	// CreditTxn is the client for interacting with the CreditTxn builders.
 	CreditTxn *CreditTxnClient
 	// DavAccount is the client for interacting with the DavAccount builders.
@@ -99,6 +102,7 @@ func NewClient(opts ...Option) *Client {
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.AclEntry = NewAclEntryClient(c.config)
+	c.ActivityEvent = NewActivityEventClient(c.config)
 	c.CreditTxn = NewCreditTxnClient(c.config)
 	c.DavAccount = NewDavAccountClient(c.config)
 	c.DirectLink = NewDirectLinkClient(c.config)
@@ -212,6 +216,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ctx:            ctx,
 		config:         cfg,
 		AclEntry:       NewAclEntryClient(cfg),
+		ActivityEvent:  NewActivityEventClient(cfg),
 		CreditTxn:      NewCreditTxnClient(cfg),
 		DavAccount:     NewDavAccountClient(cfg),
 		DirectLink:     NewDirectLinkClient(cfg),
@@ -252,6 +257,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ctx:            ctx,
 		config:         cfg,
 		AclEntry:       NewAclEntryClient(cfg),
+		ActivityEvent:  NewActivityEventClient(cfg),
 		CreditTxn:      NewCreditTxnClient(cfg),
 		DavAccount:     NewDavAccountClient(cfg),
 		DirectLink:     NewDirectLinkClient(cfg),
@@ -301,8 +307,8 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.AclEntry, c.CreditTxn, c.DavAccount, c.DirectLink, c.Entity, c.File,
-		c.FsEvent, c.GiftCode, c.Group, c.InvitationCode, c.Metadata, c.Node,
+		c.AclEntry, c.ActivityEvent, c.CreditTxn, c.DavAccount, c.DirectLink, c.Entity,
+		c.File, c.FsEvent, c.GiftCode, c.Group, c.InvitationCode, c.Metadata, c.Node,
 		c.OAuthClient, c.OAuthGrant, c.Passkey, c.Setting, c.Share, c.StoragePolicy,
 		c.Task, c.User, c.UserGrant,
 	} {
@@ -314,8 +320,8 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.AclEntry, c.CreditTxn, c.DavAccount, c.DirectLink, c.Entity, c.File,
-		c.FsEvent, c.GiftCode, c.Group, c.InvitationCode, c.Metadata, c.Node,
+		c.AclEntry, c.ActivityEvent, c.CreditTxn, c.DavAccount, c.DirectLink, c.Entity,
+		c.File, c.FsEvent, c.GiftCode, c.Group, c.InvitationCode, c.Metadata, c.Node,
 		c.OAuthClient, c.OAuthGrant, c.Passkey, c.Setting, c.Share, c.StoragePolicy,
 		c.Task, c.User, c.UserGrant,
 	} {
@@ -328,6 +334,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
 	case *AclEntryMutation:
 		return c.AclEntry.mutate(ctx, m)
+	case *ActivityEventMutation:
+		return c.ActivityEvent.mutate(ctx, m)
 	case *CreditTxnMutation:
 		return c.CreditTxn.mutate(ctx, m)
 	case *DavAccountMutation:
@@ -521,6 +529,141 @@ func (c *AclEntryClient) mutate(ctx context.Context, m *AclEntryMutation) (Value
 		return (&AclEntryDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown AclEntry mutation op: %q", m.Op())
+	}
+}
+
+// ActivityEventClient is a client for the ActivityEvent schema.
+type ActivityEventClient struct {
+	config
+}
+
+// NewActivityEventClient returns a client for the ActivityEvent from the given config.
+func NewActivityEventClient(c config) *ActivityEventClient {
+	return &ActivityEventClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `activityevent.Hooks(f(g(h())))`.
+func (c *ActivityEventClient) Use(hooks ...Hook) {
+	c.hooks.ActivityEvent = append(c.hooks.ActivityEvent, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `activityevent.Intercept(f(g(h())))`.
+func (c *ActivityEventClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ActivityEvent = append(c.inters.ActivityEvent, interceptors...)
+}
+
+// Create returns a builder for creating a ActivityEvent entity.
+func (c *ActivityEventClient) Create() *ActivityEventCreate {
+	mutation := newActivityEventMutation(c.config, OpCreate)
+	return &ActivityEventCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ActivityEvent entities.
+func (c *ActivityEventClient) CreateBulk(builders ...*ActivityEventCreate) *ActivityEventCreateBulk {
+	return &ActivityEventCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ActivityEventClient) MapCreateBulk(slice any, setFunc func(*ActivityEventCreate, int)) *ActivityEventCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ActivityEventCreateBulk{err: fmt.Errorf("calling to ActivityEventClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ActivityEventCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ActivityEventCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ActivityEvent.
+func (c *ActivityEventClient) Update() *ActivityEventUpdate {
+	mutation := newActivityEventMutation(c.config, OpUpdate)
+	return &ActivityEventUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ActivityEventClient) UpdateOne(ae *ActivityEvent) *ActivityEventUpdateOne {
+	mutation := newActivityEventMutation(c.config, OpUpdateOne, withActivityEvent(ae))
+	return &ActivityEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ActivityEventClient) UpdateOneID(id int) *ActivityEventUpdateOne {
+	mutation := newActivityEventMutation(c.config, OpUpdateOne, withActivityEventID(id))
+	return &ActivityEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ActivityEvent.
+func (c *ActivityEventClient) Delete() *ActivityEventDelete {
+	mutation := newActivityEventMutation(c.config, OpDelete)
+	return &ActivityEventDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ActivityEventClient) DeleteOne(ae *ActivityEvent) *ActivityEventDeleteOne {
+	return c.DeleteOneID(ae.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ActivityEventClient) DeleteOneID(id int) *ActivityEventDeleteOne {
+	builder := c.Delete().Where(activityevent.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ActivityEventDeleteOne{builder}
+}
+
+// Query returns a query builder for ActivityEvent.
+func (c *ActivityEventClient) Query() *ActivityEventQuery {
+	return &ActivityEventQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeActivityEvent},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ActivityEvent entity by its id.
+func (c *ActivityEventClient) Get(ctx context.Context, id int) (*ActivityEvent, error) {
+	return c.Query().Where(activityevent.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ActivityEventClient) GetX(ctx context.Context, id int) *ActivityEvent {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ActivityEventClient) Hooks() []Hook {
+	hooks := c.hooks.ActivityEvent
+	return append(hooks[:len(hooks):len(hooks)], activityevent.Hooks[:]...)
+}
+
+// Interceptors returns the client interceptors.
+func (c *ActivityEventClient) Interceptors() []Interceptor {
+	inters := c.inters.ActivityEvent
+	return append(inters[:len(inters):len(inters)], activityevent.Interceptors[:]...)
+}
+
+func (c *ActivityEventClient) mutate(ctx context.Context, m *ActivityEventMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ActivityEventCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ActivityEventUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ActivityEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ActivityEventDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ActivityEvent mutation op: %q", m.Op())
 	}
 }
 
@@ -3978,14 +4121,16 @@ func (c *UserGrantClient) mutate(ctx context.Context, m *UserGrantMutation) (Val
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		AclEntry, CreditTxn, DavAccount, DirectLink, Entity, File, FsEvent, GiftCode,
-		Group, InvitationCode, Metadata, Node, OAuthClient, OAuthGrant, Passkey,
-		Setting, Share, StoragePolicy, Task, User, UserGrant []ent.Hook
+		AclEntry, ActivityEvent, CreditTxn, DavAccount, DirectLink, Entity, File,
+		FsEvent, GiftCode, Group, InvitationCode, Metadata, Node, OAuthClient,
+		OAuthGrant, Passkey, Setting, Share, StoragePolicy, Task, User,
+		UserGrant []ent.Hook
 	}
 	inters struct {
-		AclEntry, CreditTxn, DavAccount, DirectLink, Entity, File, FsEvent, GiftCode,
-		Group, InvitationCode, Metadata, Node, OAuthClient, OAuthGrant, Passkey,
-		Setting, Share, StoragePolicy, Task, User, UserGrant []ent.Interceptor
+		AclEntry, ActivityEvent, CreditTxn, DavAccount, DirectLink, Entity, File,
+		FsEvent, GiftCode, Group, InvitationCode, Metadata, Node, OAuthClient,
+		OAuthGrant, Passkey, Setting, Share, StoragePolicy, Task, User,
+		UserGrant []ent.Interceptor
 	}
 )
 

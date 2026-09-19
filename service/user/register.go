@@ -10,6 +10,8 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/auth"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cluster/routes"
 	"github.com/cloudreve/Cloudreve/v4/pkg/email"
@@ -103,6 +105,8 @@ func (service *UserRegisterService) Register(c *gin.Context) serializer.Response
 		return serializer.DBErr(c, "Failed to commit user row", err)
 	}
 
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventUserSignup)
+
 	if isEmailRequired {
 		if err := sendActivationEmail(c, dep, expectedUser); err != nil {
 			return serializer.ErrWithDetails(c, serializer.CodeNotSet, "", err)
@@ -141,6 +145,8 @@ func sendActivationEmail(ctx context.Context, dep dependency.Dep, newUser *ent.U
 	if err := dep.EmailClient(ctx).Send(ctx, newUser.Email, title, body); err != nil {
 		return serializer.NewError(serializer.CodeFailedSendEmail, "Failed to send activation email", err)
 	}
+	activity.Record(ctx, dep.SettingProvider(), dep.ActivityClient(), types.EventEmailSent,
+		activity.Actor(newUser.ID), activity.Extra(map[string]any{"kind": "activation"}))
 
 	return nil
 }
@@ -169,5 +175,7 @@ func ActivateUser(c *gin.Context) serializer.Response {
 	}
 
 	util.WithValue(c, inventory.UserCtx{}, activeUser)
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventUserActivated,
+		activity.Actor(activeUser.ID))
 	return serializer.Response{Data: BuildUser(activeUser, dep.HashIDEncoder())}
 }

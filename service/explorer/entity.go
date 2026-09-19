@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cluster/routes"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager"
@@ -82,6 +84,12 @@ func (s *SetCurrentVersionService) Set(c *gin.Context) error {
 		return fmt.Errorf("failed to set current version: %w", err)
 	}
 
+	opts := []activity.Opt{activity.Extra(map[string]any{"version": versionId})}
+	if target, err := m.Get(c, uri); err == nil {
+		opts = append(opts, activity.File(target.ID()))
+	}
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventSetCurrentVersion, opts...)
+
 	return nil
 }
 
@@ -113,6 +121,12 @@ func (s *DeleteVersionService) Delete(c *gin.Context) error {
 	if err := m.DeleteVersion(c, uri, versionId); err != nil {
 		return fmt.Errorf("failed to delete version: %w", err)
 	}
+
+	opts := []activity.Opt{activity.Extra(map[string]any{"version": versionId})}
+	if target, err := m.Get(c, uri); err == nil {
+		opts = append(opts, activity.File(target.ID()))
+	}
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventDeleteVersion, opts...)
 
 	return nil
 }

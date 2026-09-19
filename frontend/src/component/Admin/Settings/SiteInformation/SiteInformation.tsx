@@ -79,7 +79,13 @@ const SiteInformation = () => {
             </SettingForm>
             <SettingForm title={t("settings.announcement")} lgWidth={5}>
               <FormControl fullWidth>
-                <DenseFilledTextField inputProps={{ readOnly: true }} fullWidth multiline rows={4} />
+                <DenseFilledTextField
+                  fullWidth
+                  multiline
+                  rows={4}
+                  onChange={(e) => setSettings({ announcement: e.target.value })}
+                  value={values.announcement}
+                />
                 <NoMarginHelperText>{t("settings.announcementDes")}</NoMarginHelperText>
               </FormControl>
             </SettingForm>
