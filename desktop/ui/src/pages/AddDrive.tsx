@@ -129,7 +129,9 @@ export default function AddDrive({ mode = "add" }: AddDriveProps) {
       pkceSessionRef.current.callbackData = callbackData;
 
       // Transition to final setup page
-      callbackData.name && setDriveName(callbackData.name);
+      if (callbackData.name) {
+        setDriveName(callbackData.name);
+      }
       setPageState("final_setup");
     }).then((fn) => {
       unlisten = fn;
