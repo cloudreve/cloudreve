@@ -72,9 +72,9 @@ type Dep interface {
 	SettingClient() inventory.SettingClient
 	// SettingProvider Get a singleton setting.Provider instance for access setting store in strong type.
 	SettingProvider() setting.Provider
-	// UserClient Creates a new inventory.UserClient instance for access DB user store.
+	// UserClient Get a singleton inventory.UserClient instance for access DB user store.
 	UserClient() inventory.UserClient
-	// GroupClient Creates a new inventory.GroupClient instance for access DB group store.
+	// GroupClient Get a singleton inventory.GroupClient instance for access DB group store.
 	GroupClient() inventory.GroupClient
 	// EmailClient Get a singleton email.Driver instance for sending emails.
 	EmailClient(ctx context.Context) email.Driver
@@ -82,15 +82,15 @@ type Dep interface {
 	GeneralAuth() auth.Auth
 	// Shutdown the dependencies gracefully.
 	Shutdown(ctx context.Context) error
-	// FileClient Creates a new inventory.FileClient instance for access DB file store.
+	// FileClient Get a singleton inventory.FileClient instance for access DB file store.
 	FileClient() inventory.FileClient
-	// NodeClient Creates a new inventory.NodeClient instance for access DB node store.
+	// NodeClient Get a singleton inventory.NodeClient instance for access DB node store.
 	NodeClient() inventory.NodeClient
-	// DavAccountClient Creates a new inventory.DavAccountClient instance for access DB dav account store.
+	// DavAccountClient Get a singleton inventory.DavAccountClient instance for access DB dav account store.
 	DavAccountClient() inventory.DavAccountClient
-	// DirectLinkClient Creates a new inventory.DirectLinkClient instance for access DB direct link store.
+	// DirectLinkClient Get a singleton inventory.DirectLinkClient instance for access DB direct link store.
 	DirectLinkClient() inventory.DirectLinkClient
-	// OAuthClientClient Creates a new inventory.OAuthClientClient instance for access DB OAuth client store.
+	// OAuthClientClient Get a singleton inventory.OAuthClientClient instance for access DB OAuth client store.
 	OAuthClientClient() inventory.OAuthClientClient
 	// HashIDEncoder Get a singleton hashid.Encoder instance for encoding/decoding hashids.
 	HashIDEncoder() hashid.Encoder
@@ -98,13 +98,13 @@ type Dep interface {
 	TokenAuth() auth.TokenAuth
 	// LockSystem Get a singleton lock.LockSystem instance for file lock management.
 	LockSystem() lock.LockSystem
-	// ShareClient Creates a new inventory.ShareClient instance for access DB share store.
+	// StoragePolicyClient Get a singleton inventory.StoragePolicyClient instance for access DB storage policy store.
 	StoragePolicyClient() inventory.StoragePolicyClient
 	// RequestClient Creates a new request.Client instance for HTTP requests.
 	RequestClient(opts ...request.Option) request.Client
-	// ShareClient Creates a new inventory.ShareClient instance for access DB share store.
+	// ShareClient Get a singleton inventory.ShareClient instance for access DB share store.
 	ShareClient() inventory.ShareClient
-	// TaskClient Creates a new inventory.TaskClient instance for access DB task store.
+	// TaskClient Get a singleton inventory.TaskClient instance for access DB task store.
 	TaskClient() inventory.TaskClient
 	// ForkWithLogger create a shallow copy of dependency with a new correlated logger, used as per-request dep.
 	ForkWithLogger(ctx context.Context, l logging.Logger) context.Context
@@ -450,7 +450,8 @@ func (d *dependency) FsEventClient() inventory.FsEventClient {
 	if d.fsEventClient != nil {
 		return d.fsEventClient
 	}
-	return inventory.NewFsEventClient(d.DBClient(), d.ConfigProvider().Database().Type)
+	d.fsEventClient = inventory.NewFsEventClient(d.DBClient(), d.ConfigProvider().Database().Type)
+	return d.fsEventClient
 }
 
 func (d *dependency) SettingClient() inventory.SettingClient {
@@ -499,7 +500,8 @@ func (d *dependency) UserClient() inventory.UserClient {
 		return d.userClient
 	}
 
-	return inventory.NewUserClient(d.DBClient())
+	d.userClient = inventory.NewUserClient(d.DBClient())
+	return d.userClient
 }
 
 func (d *dependency) GroupClient() inventory.GroupClient {
@@ -507,7 +509,8 @@ func (d *dependency) GroupClient() inventory.GroupClient {
 		return d.groupClient
 	}
 
-	return inventory.NewGroupClient(d.DBClient(), d.ConfigProvider().Database().Type, d.KV())
+	d.groupClient = inventory.NewGroupClient(d.DBClient(), d.ConfigProvider().Database().Type, d.KV())
+	return d.groupClient
 }
 
 func (d *dependency) NodeClient() inventory.NodeClient {
@@ -515,7 +518,8 @@ func (d *dependency) NodeClient() inventory.NodeClient {
 		return d.nodeClient
 	}
 
-	return inventory.NewNodeClient(d.DBClient())
+	d.nodeClient = inventory.NewNodeClient(d.DBClient())
+	return d.nodeClient
 }
 
 func (d *dependency) NodePool(ctx context.Context) (cluster.NodePool, error) {
@@ -557,7 +561,8 @@ func (d *dependency) OAuthClientClient() inventory.OAuthClientClient {
 		return d.oAuthClient
 	}
 
-	return inventory.NewOAuthClientClient(d.DBClient(), d.ConfigProvider().Database().Type)
+	d.oAuthClient = inventory.NewOAuthClientClient(d.DBClient(), d.ConfigProvider().Database().Type)
+	return d.oAuthClient
 }
 
 func (d *dependency) MimeDetector(ctx context.Context) mime.MimeDetector {
@@ -801,7 +806,8 @@ func (d *dependency) FileClient() inventory.FileClient {
 		return d.fileClient
 	}
 
-	return inventory.NewFileClient(d.DBClient(), d.ConfigProvider().Database().Type, d.HashIDEncoder())
+	d.fileClient = inventory.NewFileClient(d.DBClient(), d.ConfigProvider().Database().Type, d.HashIDEncoder())
+	return d.fileClient
 }
 
 func (d *dependency) ShareClient() inventory.ShareClient {
@@ -809,7 +815,8 @@ func (d *dependency) ShareClient() inventory.ShareClient {
 		return d.shareClient
 	}
 
-	return inventory.NewShareClient(d.DBClient(), d.ConfigProvider().Database().Type, d.HashIDEncoder())
+	d.shareClient = inventory.NewShareClient(d.DBClient(), d.ConfigProvider().Database().Type, d.HashIDEncoder())
+	return d.shareClient
 }
 
 func (d *dependency) TaskClient() inventory.TaskClient {
@@ -817,7 +824,8 @@ func (d *dependency) TaskClient() inventory.TaskClient {
 		return d.taskClient
 	}
 
-	return inventory.NewTaskClient(d.DBClient(), d.ConfigProvider().Database().Type, d.HashIDEncoder())
+	d.taskClient = inventory.NewTaskClient(d.DBClient(), d.ConfigProvider().Database().Type, d.HashIDEncoder())
+	return d.taskClient
 }
 
 func (d *dependency) DavAccountClient() inventory.DavAccountClient {
@@ -825,7 +833,8 @@ func (d *dependency) DavAccountClient() inventory.DavAccountClient {
 		return d.davAccountClient
 	}
 
-	return inventory.NewDavAccountClient(d.DBClient(), d.ConfigProvider().Database().Type, d.HashIDEncoder())
+	d.davAccountClient = inventory.NewDavAccountClient(d.DBClient(), d.ConfigProvider().Database().Type, d.HashIDEncoder())
+	return d.davAccountClient
 }
 
 func (d *dependency) DirectLinkClient() inventory.DirectLinkClient {
@@ -833,7 +842,8 @@ func (d *dependency) DirectLinkClient() inventory.DirectLinkClient {
 		return d.directLinkClient
 	}
 
-	return inventory.NewDirectLinkClient(d.DBClient(), d.ConfigProvider().Database().Type, d.HashIDEncoder())
+	d.directLinkClient = inventory.NewDirectLinkClient(d.DBClient(), d.ConfigProvider().Database().Type, d.HashIDEncoder())
+	return d.directLinkClient
 }
 
 func (d *dependency) HashIDEncoder() hashid.Encoder {
@@ -887,7 +897,8 @@ func (d *dependency) StoragePolicyClient() inventory.StoragePolicyClient {
 		return d.storagePolicyClient
 	}
 
-	return inventory.NewStoragePolicyClient(d.DBClient(), d.KV())
+	d.storagePolicyClient = inventory.NewStoragePolicyClient(d.DBClient(), d.KV())
+	return d.storagePolicyClient
 }
 
 func (d *dependency) ThumbPipeline() thumb.Generator {
