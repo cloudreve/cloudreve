@@ -14,7 +14,9 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager/entitysource"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/workflows"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
+	"github.com/cloudreve/Cloudreve/v4/pkg/queue"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
 	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
 	"github.com/gin-gonic/gin"
@@ -536,6 +538,62 @@ func (s *BatchEntityService) Delete(c *gin.Context) error {
 	}
 
 	return nil
+}
+
+type (
+	// RelocateEntityService moves blobs between storage policies. Exactly one
+	// scope is required: explicit entity IDs, or a source policy whose entities
+	// are all migrated.
+	RelocateEntityService struct {
+		EntityIDs   []int `json:"entity_ids"`
+		SrcPolicyID int   `json:"src_policy_id"`
+		DstPolicyID int   `json:"dst_policy_id" binding:"required"`
+	}
+	RelocateEntityParamCtx struct{}
+)
+
+func (s *RelocateEntityService) Relocate(c *gin.Context) (*RelocateTaskResponse, error) {
+	dep := dependency.FromContext(c)
+	hasher := dep.HashIDEncoder()
+
+	if len(s.EntityIDs) == 0 && s.SrcPolicyID == 0 {
+		return nil, serializer.NewError(serializer.CodeParamErr, "either entity_ids or src_policy_id is required", nil)
+	}
+	if len(s.EntityIDs) > 0 && s.SrcPolicyID != 0 {
+		return nil, serializer.NewError(serializer.CodeParamErr, "entity_ids and src_policy_id are mutually exclusive", nil)
+	}
+	if s.SrcPolicyID == s.DstPolicyID && s.SrcPolicyID != 0 {
+		return nil, serializer.NewError(serializer.CodeParamErr, "source and destination policies are identical", nil)
+	}
+
+	dstPolicy, err := dep.StoragePolicyClient().GetPolicyByID(c, s.DstPolicyID)
+	if err != nil || dstPolicy == nil {
+		return nil, serializer.NewError(serializer.CodeParamErr, "destination policy does not exist", err)
+	}
+
+	var t queue.Task
+	if s.SrcPolicyID != 0 {
+		srcPolicy, err := dep.StoragePolicyClient().GetPolicyByID(c, s.SrcPolicyID)
+		if err != nil || srcPolicy == nil {
+			return nil, serializer.NewError(serializer.CodeParamErr, "source policy does not exist", err)
+		}
+		t, err = workflows.NewRelocatePolicyTask(c, s.SrcPolicyID, s.DstPolicyID)
+	} else {
+		t, err = workflows.NewRelocateTask(c, s.EntityIDs, s.DstPolicyID)
+	}
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeCreateTaskError, "Failed to create task", err)
+	}
+
+	if err := dep.IoIntenseQueue(c).QueueTask(c, t); err != nil {
+		return nil, serializer.NewError(serializer.CodeCreateTaskError, "Failed to queue task", err)
+	}
+
+	return &RelocateTaskResponse{ID: hashid.EncodeTaskID(hasher, t.ID())}, nil
+}
+
+type RelocateTaskResponse struct {
+	ID string `json:"id"`
 }
 
 func (s *SingleEntityService) Url(c *gin.Context) (string, error) {

@@ -1276,6 +1276,12 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 						controllers.FromJSON[adminsvc.BatchEntityService](adminsvc.BatchEntityParamCtx{}),
 						controllers.AdminBatchDeleteEntity,
 					)
+					// Relocate entities to another storage policy
+					entity.POST("relocate",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
+						controllers.FromJSON[adminsvc.RelocateEntityService](adminsvc.RelocateEntityParamCtx{}),
+						controllers.AdminRelocateEntity,
+					)
 					// Get entity url
 					entity.GET("url/:id",
 						controllers.FromUri[adminsvc.SingleEntityService](adminsvc.SingleEntityParamCtx{}),

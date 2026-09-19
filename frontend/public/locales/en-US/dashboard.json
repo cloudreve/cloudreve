@@ -1518,7 +1518,14 @@
     "confirmBatchDelete": "Are you sure you want to delete {{num}} Blobs?",
     "deleteXEntities": "Delete {{num}} Blobs",
     "forceDelete": "Force delete",
-    "forceDeleteDes": "Whether to delete the Blob record regardless of whether the physical file is deleted."
+    "forceDeleteDes": "Whether to delete the Blob record regardless of whether the physical file is deleted.",
+    "relocateXEntities": "Relocate {{num}} Blobs",
+    "relocateTitle": "Relocate Blobs",
+    "relocateEntitiesDes": "Move the data of {{num}} selected Blobs to another storage policy. The task runs in the background and can be resumed.",
+    "relocatePolicyDes": "Move all Blobs stored on \"{{name}}\" to another storage policy. The task runs in the background and can be resumed.",
+    "relocatePolicy": "Migrate all Blobs on {{name}} to another policy",
+    "relocateStart": "Start relocation",
+    "relocateSubmitted": "Relocation task submitted"
   },
   "event": {
     "cleanup": "Cleanup",

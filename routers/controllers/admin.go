@@ -485,6 +485,15 @@ func AdminBatchDeleteEntity(c *gin.Context) {
 	}
 }
 
+func AdminRelocateEntity(c *gin.Context) {
+	service := ParametersFromContext[*admin.RelocateEntityService](c, admin.RelocateEntityParamCtx{})
+	res, err := service.Relocate(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
+
 func AdminCleanupTask(c *gin.Context) {
 	service := ParametersFromContext[*admin.CleanupTaskService](c, admin.CleanupTaskParameterCtx{})
 	err := service.CleanupTask(c)

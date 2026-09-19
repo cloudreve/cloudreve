@@ -204,6 +204,9 @@ type FileClient interface {
 	RemoveEntitiesByID(ctx context.Context, ids ...int) (map[int]int64, error)
 	// UpdateEntityProps persists mutated EntityProps back to the given entities.
 	UpdateEntityProps(ctx context.Context, entities ...*ent.Entity) error
+	// RelocateEntity moves an entity's blob record to a different storage policy:
+	// updates the blob path, the owning policy, and props (e.g. encryption metadata).
+	RelocateEntity(ctx context.Context, entity *ent.Entity, newSource string, dstPolicyID int) error
 	// CapEntities caps the number of entities of a given file. The oldest entities will be unlinked
 	// if entity count exceed limit.
 	CapEntities(ctx context.Context, file *ent.File, owner *ent.User, max int, entityType types.EntityType) (StorageDiff, error)
@@ -473,6 +476,18 @@ func (f *fileClient) RemoveEntitiesByID(ctx context.Context, ids ...int) (map[in
 	}
 
 	return storageReduced, nil
+}
+
+func (f *fileClient) RelocateEntity(ctx context.Context, entity *ent.Entity, newSource string, dstPolicyID int) error {
+	err := f.client.Entity.UpdateOne(entity).
+		SetSource(newSource).
+		SetStoragePolicyEntities(dstPolicyID).
+		SetProps(entity.Props).
+		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to relocate entity %d to policy %d: %w", entity.ID, dstPolicyID, err)
+	}
+	return nil
 }
 
 func (f *fileClient) UpdateEntityProps(ctx context.Context, entities ...*ent.Entity) error {
