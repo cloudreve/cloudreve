@@ -299,6 +299,23 @@ func (m *RemoteDownloadTask) buildDownloadOptions(ctx context.Context, base map[
 				}
 			}
 		}
+	case types.DownloaderProviderYtDlp:
+		if isHttpSrc {
+			// "output" becomes a yt-dlp -o template: reject path separators
+			// and "%(" template fields so a user-chosen name cannot escape
+			// the task temp dir or expand yt-dlp metadata.
+			if m.state.FileName != "" && !strings.ContainsAny(m.state.FileName, `/\`) &&
+				!strings.Contains(m.state.FileName, "%(") && m.state.FileName != ".." {
+				options["output"] = m.state.FileName
+			}
+			if m.state.HTTPUsername != "" {
+				options["username"] = m.state.HTTPUsername
+				options["password"] = m.state.HTTPPassword
+			}
+			if len(m.state.HTTPHeaders) > 0 {
+				options["add_headers"] = m.state.HTTPHeaders
+			}
+		}
 	default:
 		if isHttpSrc {
 			if m.state.FileName != "" {
@@ -366,6 +383,15 @@ func (m *RemoteDownloadTask) monitor(ctx context.Context, dep dependency.Dep) (t
 
 	if m.state.Status == nil || m.state.Status.Total != status.Total {
 		m.l.Info("download size changed, re-validate files.")
+		// Group per-task volume cap: abort once the resolved size exceeds it.
+		var maxSize int64
+		if u := inventory.UserFromContext(ctx); u != nil && u.Edges.Group != nil {
+			maxSize = u.Edges.Group.Settings.Aria2MaxFileSize
+		}
+		if maxSize > 0 && status.Total > maxSize {
+			m.state.Status = status
+			return task.StatusError, fmt.Errorf("download size %d exceeds group limit %d (%w)", status.Total, maxSize, queue.CriticalErr)
+		}
 		// First time to get status / total size changed, check user capacity
 		if err := m.validateFiles(ctx, dep, status); err != nil {
 			m.state.Status = status

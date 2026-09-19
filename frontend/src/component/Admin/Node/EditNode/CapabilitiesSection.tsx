@@ -41,6 +41,7 @@ const CapabilitiesSection = () => {
 
   const [editedConfigAria2, setEditedConfigAria2] = useState("");
   const [editedConfigQbittorrent, setEditedConfigQbittorrent] = useState("");
+  const [editedConfigYtdlp, setEditedConfigYtdlp] = useState("");
   const [testDownloaderLoading, setTestDownloaderLoading] = useState(false);
   const [storeFilesHintDialogOpen, setStoreFilesHintDialogOpen] = useState(false);
 
@@ -63,6 +64,12 @@ const CapabilitiesSection = () => {
       values.settings?.qbittorrent?.options ? JSON.stringify(values.settings?.qbittorrent?.options, null, 2) : "",
     );
   }, [values.settings?.qbittorrent?.options]);
+
+  useEffect(() => {
+    setEditedConfigYtdlp(
+      values.settings?.ytdlp?.options ? JSON.stringify(values.settings?.ytdlp?.options, null, 2) : "",
+    );
+  }, [values.settings?.ytdlp?.options]);
 
   const onCapabilityChange = useCallback(
     (capability: number) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -134,6 +141,56 @@ const CapabilitiesSection = () => {
       }));
     },
     [setNode],
+  );
+
+  const onYtdlpBinaryChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setNode((p: Node) => ({
+        ...p,
+        settings: {
+          ...p.settings,
+          ytdlp: {
+            ...p.settings?.ytdlp,
+            binary: e.target.value ? e.target.value : undefined,
+          },
+        },
+      }));
+    },
+    [setNode],
+  );
+
+  const onYtdlpTempPathChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setNode((p: Node) => ({
+        ...p,
+        settings: {
+          ...p.settings,
+          ytdlp: {
+            ...p.settings?.ytdlp,
+            temp_path: e.target.value ? e.target.value : undefined,
+          },
+        },
+      }));
+    },
+    [setNode],
+  );
+
+  const onEditedConfigYtdlpBlur = useCallback(
+    (value: string) => {
+      var res: Record<string, any> | undefined = undefined;
+      if (value) {
+        try {
+          res = JSON.parse(value);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      setNode((p: Node) => ({
+        ...p,
+        settings: { ...p.settings, ytdlp: { ...p.settings?.ytdlp, options: res } },
+      }));
+    },
+    [editedConfigYtdlp, setNode],
   );
 
   const onQBittorrentServerChange = useCallback(
@@ -445,11 +502,16 @@ const CapabilitiesSection = () => {
                   <SquareMenuItem value={DownloaderProvider.qbittorrent}>
                     <ListItemText primary="qBittorrent" slotProps={{ primary: { variant: "body2" } }} />
                   </SquareMenuItem>
+                  <SquareMenuItem value={DownloaderProvider.ytdlp}>
+                    <ListItemText primary="yt-dlp" slotProps={{ primary: { variant: "body2" } }} />
+                  </SquareMenuItem>
                 </DenseSelect>
                 <NoMarginHelperText>
                   {values.settings?.provider === DownloaderProvider.qbittorrent
                     ? t("node.qbittorrentDes")
-                    : t("node.aria2Des")}
+                    : values.settings?.provider === DownloaderProvider.ytdlp
+                      ? t("node.ytdlpDes")
+                      : t("node.aria2Des")}
                 </NoMarginHelperText>
               </FormControl>
             </SettingForm>
@@ -589,6 +651,62 @@ const CapabilitiesSection = () => {
                     <DenseFilledTextField
                       value={values.settings?.qbittorrent?.temp_path || ""}
                       onChange={onQBittorrentTempPathChange}
+                    />
+                    <NoMarginHelperText>{t("node.tempPathDes")}</NoMarginHelperText>
+                  </FormControl>
+                </SettingForm>
+              </>
+            )}
+
+            {values.settings?.provider === DownloaderProvider.ytdlp && (
+              <>
+                <SettingForm title={t("node.ytdlpBinary")} lgWidth={5}>
+                  <FormControl fullWidth>
+                    <DenseFilledTextField
+                      placeholder="yt-dlp"
+                      value={values.settings?.ytdlp?.binary || ""}
+                      onChange={onYtdlpBinaryChange}
+                    />
+                    <NoMarginHelperText>{t("node.ytdlpBinaryDes")}</NoMarginHelperText>
+                  </FormControl>
+                </SettingForm>
+                <SettingForm title={t("group.aria2Options")} lgWidth={5}>
+                  <FormControl fullWidth>
+                    <Suspense fallback={<CircularProgress />}>
+                      <MonacoEditor
+                        theme={theme.palette.mode === "dark" ? "vs-dark" : "vs"}
+                        language="json"
+                        value={editedConfigYtdlp}
+                        onChange={(value) => setEditedConfigYtdlp(value || "")}
+                        onBlur={onEditedConfigYtdlpBlur}
+                        height="200px"
+                        minHeight="200px"
+                        options={{
+                          wordWrap: "on",
+                          minimap: { enabled: false },
+                          scrollBeyondLastLine: false,
+                        }}
+                      />
+                    </Suspense>
+                    <NoMarginHelperText>
+                      <Trans
+                        i18nKey="node.ytdlpOptionDes"
+                        ns="dashboard"
+                        components={[
+                          <Link
+                            href="https://github.com/yt-dlp/yt-dlp#options"
+                            target="_blank"
+                          />,
+                        ]}
+                      />
+                    </NoMarginHelperText>
+                  </FormControl>
+                </SettingForm>
+                <SettingForm title={t("node.tempPath")} lgWidth={5}>
+                  <FormControl fullWidth>
+                    <DenseFilledTextField
+                      value={values.settings?.ytdlp?.temp_path || ""}
+                      onChange={onYtdlpTempPathChange}
                     />
                     <NoMarginHelperText>{t("node.tempPathDes")}</NoMarginHelperText>
                   </FormControl>

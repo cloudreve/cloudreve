@@ -135,6 +135,20 @@ func (tc *TaskCreate) SetNillableUserTasks(i *int) *TaskCreate {
 	return tc
 }
 
+// SetCreatorIP sets the "creator_ip" field.
+func (tc *TaskCreate) SetCreatorIP(s string) *TaskCreate {
+	tc.mutation.SetCreatorIP(s)
+	return tc
+}
+
+// SetNillableCreatorIP sets the "creator_ip" field if the given value is not nil.
+func (tc *TaskCreate) SetNillableCreatorIP(s *string) *TaskCreate {
+	if s != nil {
+		tc.SetCreatorIP(*s)
+	}
+	return tc
+}
+
 // SetHidden sets the "hidden" field.
 func (tc *TaskCreate) SetHidden(b bool) *TaskCreate {
 	tc.mutation.SetHidden(b)
@@ -252,6 +266,11 @@ func (tc *TaskCreate) check() error {
 	if _, ok := tc.mutation.PublicState(); !ok {
 		return &ValidationError{Name: "public_state", err: errors.New(`ent: missing required field "Task.public_state"`)}
 	}
+	if v, ok := tc.mutation.CreatorIP(); ok {
+		if err := task.CreatorIPValidator(v); err != nil {
+			return &ValidationError{Name: "creator_ip", err: fmt.Errorf(`ent: validator failed for field "Task.creator_ip": %w`, err)}
+		}
+	}
 	if _, ok := tc.mutation.Hidden(); !ok {
 		return &ValidationError{Name: "hidden", err: errors.New(`ent: missing required field "Task.hidden"`)}
 	}
@@ -320,6 +339,10 @@ func (tc *TaskCreate) createSpec() (*Task, *sqlgraph.CreateSpec) {
 	if value, ok := tc.mutation.CorrelationID(); ok {
 		_spec.SetField(task.FieldCorrelationID, field.TypeUUID, value)
 		_node.CorrelationID = value
+	}
+	if value, ok := tc.mutation.CreatorIP(); ok {
+		_spec.SetField(task.FieldCreatorIP, field.TypeString, value)
+		_node.CreatorIP = value
 	}
 	if value, ok := tc.mutation.Hidden(); ok {
 		_spec.SetField(task.FieldHidden, field.TypeBool, value)
@@ -493,6 +516,24 @@ func (u *TaskUpsert) UpdateUserTasks() *TaskUpsert {
 // ClearUserTasks clears the value of the "user_tasks" field.
 func (u *TaskUpsert) ClearUserTasks() *TaskUpsert {
 	u.SetNull(task.FieldUserTasks)
+	return u
+}
+
+// SetCreatorIP sets the "creator_ip" field.
+func (u *TaskUpsert) SetCreatorIP(v string) *TaskUpsert {
+	u.Set(task.FieldCreatorIP, v)
+	return u
+}
+
+// UpdateCreatorIP sets the "creator_ip" field to the value that was provided on create.
+func (u *TaskUpsert) UpdateCreatorIP() *TaskUpsert {
+	u.SetExcluded(task.FieldCreatorIP)
+	return u
+}
+
+// ClearCreatorIP clears the value of the "creator_ip" field.
+func (u *TaskUpsert) ClearCreatorIP() *TaskUpsert {
+	u.SetNull(task.FieldCreatorIP)
 	return u
 }
 
@@ -672,6 +713,27 @@ func (u *TaskUpsertOne) UpdateUserTasks() *TaskUpsertOne {
 func (u *TaskUpsertOne) ClearUserTasks() *TaskUpsertOne {
 	return u.Update(func(s *TaskUpsert) {
 		s.ClearUserTasks()
+	})
+}
+
+// SetCreatorIP sets the "creator_ip" field.
+func (u *TaskUpsertOne) SetCreatorIP(v string) *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetCreatorIP(v)
+	})
+}
+
+// UpdateCreatorIP sets the "creator_ip" field to the value that was provided on create.
+func (u *TaskUpsertOne) UpdateCreatorIP() *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateCreatorIP()
+	})
+}
+
+// ClearCreatorIP clears the value of the "creator_ip" field.
+func (u *TaskUpsertOne) ClearCreatorIP() *TaskUpsertOne {
+	return u.Update(func(s *TaskUpsert) {
+		s.ClearCreatorIP()
 	})
 }
 
@@ -1024,6 +1086,27 @@ func (u *TaskUpsertBulk) UpdateUserTasks() *TaskUpsertBulk {
 func (u *TaskUpsertBulk) ClearUserTasks() *TaskUpsertBulk {
 	return u.Update(func(s *TaskUpsert) {
 		s.ClearUserTasks()
+	})
+}
+
+// SetCreatorIP sets the "creator_ip" field.
+func (u *TaskUpsertBulk) SetCreatorIP(v string) *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.SetCreatorIP(v)
+	})
+}
+
+// UpdateCreatorIP sets the "creator_ip" field to the value that was provided on create.
+func (u *TaskUpsertBulk) UpdateCreatorIP() *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.UpdateCreatorIP()
+	})
+}
+
+// ClearCreatorIP clears the value of the "creator_ip" field.
+func (u *TaskUpsertBulk) ClearCreatorIP() *TaskUpsertBulk {
+	return u.Update(func(s *TaskUpsert) {
+		s.ClearCreatorIP()
 	})
 }
 

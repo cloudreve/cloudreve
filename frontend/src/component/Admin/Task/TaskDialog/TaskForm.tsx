@@ -157,6 +157,12 @@ const TaskForm = ({ values }: { values: Task }) => {
             </Typography>
           </SettingForm>
 
+          <SettingForm title={t("event.ip")} noContainer lgWidth={4}>
+            <Typography variant={"body2"} color={"textSecondary"}>
+              {values?.creator_ip || "-"}
+            </Typography>
+          </SettingForm>
+
           <SettingForm title={t("application:setting.executeDuration")} noContainer lgWidth={2}>
             <Typography variant={"body2"} color={"textSecondary"}>
               {formatDuration(dayjs.duration((values?.public_state?.executed_duration ?? 0) / 1e6))}

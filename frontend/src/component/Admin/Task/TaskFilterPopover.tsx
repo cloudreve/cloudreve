@@ -14,6 +14,8 @@ export interface TaskFilterPopoverProps extends PopoverProps {
   setUser: (user: string) => void;
   correlationID: string;
   setCorrelationID: (correlationID: string) => void;
+  creatorIP: string;
+  setCreatorIP: (creatorIP: string) => void;
   type: string;
   setType: (type: string) => void;
   clearFilters: () => void;
@@ -26,6 +28,8 @@ const TaskFilterPopover = ({
   setUser,
   correlationID,
   setCorrelationID,
+  creatorIP,
+  setCreatorIP,
   type,
   setType,
   clearFilters,
@@ -39,6 +43,7 @@ const TaskFilterPopover = ({
   const [localStatus, setLocalStatus] = useState(status);
   const [localUser, setLocalUser] = useState(user);
   const [localCorrelationID, setLocalCorrelationID] = useState(correlationID);
+  const [localCreatorIP, setLocalCreatorIP] = useState(creatorIP);
   const [localType, setLocalType] = useState(type);
 
   // Initialize local state when popup opens
@@ -47,6 +52,7 @@ const TaskFilterPopover = ({
       setLocalStatus(status);
       setLocalUser(user);
       setLocalCorrelationID(correlationID);
+      setLocalCreatorIP(creatorIP);
       setLocalType(type);
     }
   }, [open]);
@@ -56,6 +62,7 @@ const TaskFilterPopover = ({
     setStatus(localStatus);
     setUser(localUser);
     setCorrelationID(localCorrelationID);
+    setCreatorIP(localCreatorIP);
     setType(localType);
     onClose?.({}, "backdropClick");
   };
@@ -65,6 +72,7 @@ const TaskFilterPopover = ({
     setLocalStatus("");
     setLocalUser("");
     setLocalCorrelationID("");
+    setLocalCreatorIP("");
     setLocalType("");
     clearFilters();
     onClose?.({}, "backdropClick");
@@ -109,6 +117,16 @@ const TaskFilterPopover = ({
             fullWidth
             value={localCorrelationID}
             onChange={(e) => setLocalCorrelationID(e.target.value)}
+            placeholder={t("user.emptyNoFilter")}
+            size="small"
+          />
+        </SettingForm>
+
+        <SettingForm title={t("event.ip")} noContainer lgWidth={12}>
+          <DenseFilledTextField
+            fullWidth
+            value={localCreatorIP}
+            onChange={(e) => setLocalCreatorIP(e.target.value)}
             placeholder={t("user.emptyNoFilter")}
             size="small"
           />

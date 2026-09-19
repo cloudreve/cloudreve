@@ -132,6 +132,27 @@ const FileManagementSection = () => {
     [setGroup],
   );
 
+  const onAria2TaskLimitChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setGroup((p: GroupEnt) => ({
+        ...p,
+        settings: { ...p.settings, aria2_task_limit: parseInt(e.target.value) ? parseInt(e.target.value) : undefined },
+      }));
+    },
+    [setGroup],
+  );
+
+  const onAria2MaxFileSizeChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const bytes = parseInt(e.target.value);
+      setGroup((p: GroupEnt) => ({
+        ...p,
+        settings: { ...p.settings, aria2_max_file_size: bytes > 0 ? bytes : undefined },
+      }));
+    },
+    [setGroup],
+  );
+
   const onAllowAdvanceDeleteChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setGroup((p: GroupEnt) => ({
@@ -320,6 +341,36 @@ const FileManagementSection = () => {
                       onChange={onAria2BatchSizeChange}
                     />
                     <NoMarginHelperText>{t("group.aria2BatchSizeDes")}</NoMarginHelperText>
+                  </FormControl>
+                </SettingForm>
+                <SettingForm title={t("group.aria2TaskLimit")} lgWidth={5}>
+                  <FormControl fullWidth>
+                    <DenseFilledTextField
+                      slotProps={{
+                        htmlInput: {
+                          type: "number",
+                          min: 0,
+                        },
+                      }}
+                      value={values.settings?.aria2_task_limit ?? 0}
+                      onChange={onAria2TaskLimitChange}
+                    />
+                    <NoMarginHelperText>{t("group.aria2TaskLimitDes")}</NoMarginHelperText>
+                  </FormControl>
+                </SettingForm>
+                <SettingForm title={t("group.aria2MaxFileSize")} lgWidth={5}>
+                  <FormControl fullWidth>
+                    <DenseFilledTextField
+                      slotProps={{
+                        htmlInput: {
+                          type: "number",
+                          min: 0,
+                        },
+                      }}
+                      value={values.settings?.aria2_max_file_size ?? 0}
+                      onChange={onAria2MaxFileSizeChange}
+                    />
+                    <NoMarginHelperText>{t("group.aria2MaxFileSizeDes")}</NoMarginHelperText>
                   </FormControl>
                 </SettingForm>
               </Stack>

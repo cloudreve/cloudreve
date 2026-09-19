@@ -44,6 +44,10 @@ type (
 		RemoteDownloadOptions map[string]interface{} `json:"remote_download_options,omitempty"` // 离线下载用户组配置
 		SourceBatchSize       int                    `json:"source_batch,omitempty"`
 		Aria2BatchSize        int                    `json:"aria2_batch,omitempty"`
+		// Aria2TaskLimit caps concurrent active remote-download tasks per user.
+		Aria2TaskLimit int `json:"aria2_task_limit,omitempty"`
+		// Aria2MaxFileSize caps the total byte size of a single download task.
+		Aria2MaxFileSize int64 `json:"aria2_max_file_size,omitempty"`
 		MaxWalkedFiles        int                    `json:"max_walked_files,omitempty"`
 		TrashRetention        int                    `json:"trash_retention,omitempty"`
 		RedirectedSource      bool                   `json:"redirected_source,omitempty"`
@@ -136,6 +140,7 @@ type (
 		Provider            DownloaderProvider `json:"provider,omitempty"`
 		*QBittorrentSetting `json:"qbittorrent,omitempty"`
 		*Aria2Setting       `json:"aria2,omitempty"`
+		*YtdlpSetting       `json:"ytdlp,omitempty"`
 		// 下载监控间隔
 		Interval       int  `json:"interval,omitempty"`
 		WaitForSeeding bool `json:"wait_for_seeding,omitempty"`
@@ -174,6 +179,14 @@ type (
 	Aria2Setting struct {
 		Server   string         `json:"server,omitempty"`
 		Token    string         `json:"token,omitempty"`
+		Options  map[string]any `json:"options,omitempty"`
+		TempPath string         `json:"temp_path,omitempty"`
+	}
+
+	// YtdlpSetting configures a yt-dlp CLI downloader. Options keys become
+	// "--<key> <value>" CLI flags verbatim (bool true -> flag only).
+	YtdlpSetting struct {
+		Binary   string         `json:"binary,omitempty"`
 		Options  map[string]any `json:"options,omitempty"`
 		TempPath string         `json:"temp_path,omitempty"`
 	}
@@ -387,6 +400,7 @@ const (
 const (
 	DownloaderProviderAria2       = DownloaderProvider("aria2")
 	DownloaderProviderQBittorrent = DownloaderProvider("qbittorrent")
+	DownloaderProviderYtDlp       = DownloaderProvider("ytdlp")
 )
 
 type (

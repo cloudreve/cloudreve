@@ -39,6 +39,8 @@ type Task struct {
 	CorrelationID uuid.UUID `json:"correlation_id,omitempty"`
 	// UserTasks holds the value of the "user_tasks" field.
 	UserTasks int `json:"user_tasks,omitempty"`
+	// CreatorIP holds the value of the "creator_ip" field.
+	CreatorIP string `json:"creator_ip,omitempty"`
 	// Hidden holds the value of the "hidden" field.
 	Hidden bool `json:"hidden,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -80,7 +82,7 @@ func (*Task) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case task.FieldID, task.FieldUserTasks:
 			values[i] = new(sql.NullInt64)
-		case task.FieldType, task.FieldStatus, task.FieldPrivateState:
+		case task.FieldType, task.FieldStatus, task.FieldPrivateState, task.FieldCreatorIP:
 			values[i] = new(sql.NullString)
 		case task.FieldCreatedAt, task.FieldUpdatedAt, task.FieldDeletedAt:
 			values[i] = new(sql.NullTime)
@@ -164,6 +166,12 @@ func (t *Task) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				t.UserTasks = int(value.Int64)
 			}
+		case task.FieldCreatorIP:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field creator_ip", values[i])
+			} else if value.Valid {
+				t.CreatorIP = value.String
+			}
 		case task.FieldHidden:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field hidden", values[i])
@@ -239,6 +247,9 @@ func (t *Task) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("user_tasks=")
 	builder.WriteString(fmt.Sprintf("%v", t.UserTasks))
+	builder.WriteString(", ")
+	builder.WriteString("creator_ip=")
+	builder.WriteString(t.CreatorIP)
 	builder.WriteString(", ")
 	builder.WriteString("hidden=")
 	builder.WriteString(fmt.Sprintf("%v", t.Hidden))

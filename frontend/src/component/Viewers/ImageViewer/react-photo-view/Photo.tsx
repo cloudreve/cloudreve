@@ -5,7 +5,9 @@ import React, { useEffect } from "react";
 import { getFileEntityUrl, getFileInfo } from "../../../../api/api.ts";
 import { EntityType, FileResponse, Metadata } from "../../../../api/explorer.ts";
 import { useAppDispatch } from "../../../../redux/hooks.ts";
+import { loadFileThumb } from "../../../../redux/thunks/file.ts";
 import { getFileLinkedUri } from "../../../../util";
+import { FileManagerIndex } from "../../../FileManager/FileManager.tsx";
 import { LRUCache } from "../../../../util/lru.ts";
 import FacebookCircularProgress from "../../../Common/CircularProgress.tsx";
 import useMountedRef from "./hooks/useMountedRef";
@@ -100,6 +102,18 @@ export default function Photo({
   };
 
   useEffect(() => {
+    // Progressive preview: show the (usually already-cached) low-res
+    // thumbnail immediately while the full entity URL resolves. (#113)
+    dispatch(loadFileThumb(FileManagerIndex.main, file))
+      .then((thumbUrl) => {
+        if (thumbUrl && mountedRef.current) {
+          setImageSrc(thumbUrl);
+        }
+      })
+      .catch(() => {
+        // No thumbnail available - the full entity load below still applies.
+      });
+
     dispatch(
       getFileEntityUrl({
         uris: [getFileLinkedUri(file)],

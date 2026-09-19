@@ -18,6 +18,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/downloader/aria2"
 	"github.com/cloudreve/Cloudreve/v4/pkg/downloader/qbittorrent"
 	"github.com/cloudreve/Cloudreve/v4/pkg/downloader/slave"
+	"github.com/cloudreve/Cloudreve/v4/pkg/downloader/ytdlp"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 	"github.com/cloudreve/Cloudreve/v4/pkg/queue"
@@ -219,6 +220,8 @@ func (b *masterNode) CreateDownloader(ctx context.Context, c request.Client, set
 func NewDownloader(ctx context.Context, c request.Client, settings setting.Provider, options *types.NodeSetting) (downloader.Downloader, error) {
 	if options.Provider == types.DownloaderProviderQBittorrent {
 		return qbittorrent.NewClient(logging.FromContext(ctx), c, settings, options.QBittorrentSetting)
+	} else if options.Provider == types.DownloaderProviderYtDlp {
+		return ytdlp.New(logging.FromContext(ctx), settings, options.YtdlpSetting), nil
 	} else if options.Provider == types.DownloaderProviderAria2 {
 		return aria2.New(logging.FromContext(ctx), settings, options.Aria2Setting), nil
 	} else if options.Provider == "" {

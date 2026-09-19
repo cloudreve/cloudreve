@@ -124,6 +124,23 @@ func (service *DownloadWorkflowService) CreateDownloadTask(c *gin.Context) ([]*T
 		return nil, serializer.NewError(serializer.CodeBatchAria2Size, "", nil)
 	}
 
+	// Concurrent active-task quota for this user's group.
+	if taskLimit := user.Edges.Group.Settings.Aria2TaskLimit; taskLimit > 0 {
+		active, err := dep.TaskClient().List(c, &inventory.ListTaskArgs{
+			PaginationArgs: &inventory.PaginationArgs{PageSize: 1},
+			UserID:         user.ID,
+			Types:          []string{queue.RemoteDownloadTaskType},
+			Status:         []task.Status{task.StatusQueued, task.StatusProcessing, task.StatusSuspending},
+		})
+		if err != nil {
+			return nil, serializer.NewError(serializer.CodeDBError, "Failed to count download tasks", err)
+		}
+		if active.PaginationResults.TotalItems >= taskLimit {
+			return nil, serializer.NewError(serializer.CodeBatchAria2Size,
+				fmt.Sprintf("Concurrent download task limit reached (%d)", taskLimit), nil)
+		}
+	}
+
 	// Validate src file
 	if service.SrcFile != "" {
 		src, err := fs.NewUriFromString(service.SrcFile)

@@ -58,6 +58,8 @@ export interface GroupSetting {
   remote_download_options?: Record<string, any>;
   source_batch?: number;
   aria2_batch?: number;
+  aria2_task_limit?: number;
+  aria2_max_file_size?: number;
   max_walked_files?: number;
   trash_retention?: number;
   redirected_source?: boolean;
@@ -181,6 +183,7 @@ export interface Node extends CommonMixin {
 export enum DownloaderProvider {
   qbittorrent = "qbittorrent",
   aria2 = "aria2",
+  ytdlp = "ytdlp",
 }
 
 export interface QBittorrentSetting {
@@ -198,6 +201,12 @@ export interface Aria2Setting {
   temp_path?: string;
 }
 
+export interface YtdlpSetting {
+  binary?: string;
+  options?: Record<string, string>;
+  temp_path?: string;
+}
+
 export interface URLValidationSetting {
   disabled?: boolean;
   allowed_hosts?: string[];
@@ -208,6 +217,7 @@ export interface NodeSetting {
   provider?: DownloaderProvider;
   qbittorrent?: QBittorrentSetting;
   aria2?: Aria2Setting;
+  ytdlp?: YtdlpSetting;
   interval?: number;
   wait_for_seeding?: boolean;
   url_validation?: URLValidationSetting;
@@ -539,6 +549,7 @@ export interface Task extends CommonMixin {
   public_state?: TaskPublicState;
   private_state?: string;
   correlation_id?: string;
+  creator_ip?: string;
   user_tasks?: number;
   edges: {
     user?: User;

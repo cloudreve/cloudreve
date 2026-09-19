@@ -34,36 +34,47 @@ func Init() error {
 		confDBType = "mysql"
 	}
 
-	switch confDBType {
-	case "UNSET", "sqlite":
-		// 未指定数据库或者明确指定为 sqlite 时，使用 SQLite 数据库
-		db, err = gorm.Open("sqlite3", util.RelativePath(conf.DatabaseConfig.DBFile))
-	case "postgres":
-		db, err = gorm.Open(confDBType, fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable",
-			conf.DatabaseConfig.Host,
-			conf.DatabaseConfig.User,
-			conf.DatabaseConfig.Password,
-			conf.DatabaseConfig.Name,
-			conf.DatabaseConfig.Port))
-	case "mysql", "mssql":
-		var host string
-		if conf.DatabaseConfig.UnixSocket {
-			host = fmt.Sprintf("unix(%s)",
-				conf.DatabaseConfig.Host)
-		} else {
-			host = fmt.Sprintf("(%s:%d)",
-				conf.DatabaseConfig.Host,
-				conf.DatabaseConfig.Port)
+	// A full connection string overrides component fields - required for
+	// postgres unix sockets ("host=/var/run/postgresql dbname=..."), which
+	// the component fields cannot express.
+	if conf.DatabaseConfig.DatabaseURL != "" {
+		dialect := confDBType
+		if dialect == "UNSET" || dialect == "sqlite" {
+			dialect = "sqlite3"
 		}
+		db, err = gorm.Open(dialect, conf.DatabaseConfig.DatabaseURL)
+	} else {
+		switch confDBType {
+		case "UNSET", "sqlite":
+			// 未指定数据库或者明确指定为 sqlite 时，使用 SQLite 数据库
+			db, err = gorm.Open("sqlite3", util.RelativePath(conf.DatabaseConfig.DBFile))
+		case "postgres":
+			db, err = gorm.Open(confDBType, fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable",
+				conf.DatabaseConfig.Host,
+				conf.DatabaseConfig.User,
+				conf.DatabaseConfig.Password,
+				conf.DatabaseConfig.Name,
+				conf.DatabaseConfig.Port))
+		case "mysql", "mssql":
+			var host string
+			if conf.DatabaseConfig.UnixSocket {
+				host = fmt.Sprintf("unix(%s)",
+					conf.DatabaseConfig.Host)
+			} else {
+				host = fmt.Sprintf("(%s:%d)",
+					conf.DatabaseConfig.Host,
+					conf.DatabaseConfig.Port)
+			}
 
-		db, err = gorm.Open(confDBType, fmt.Sprintf("%s:%s@%s/%s?charset=%s&parseTime=True&loc=Local",
-			conf.DatabaseConfig.User,
-			conf.DatabaseConfig.Password,
-			host,
-			conf.DatabaseConfig.Name,
-			conf.DatabaseConfig.Charset))
-	default:
-		return fmt.Errorf("unsupported database type %q", confDBType)
+			db, err = gorm.Open(confDBType, fmt.Sprintf("%s:%s@%s/%s?charset=%s&parseTime=True&loc=Local",
+				conf.DatabaseConfig.User,
+				conf.DatabaseConfig.Password,
+				host,
+				conf.DatabaseConfig.Name,
+				conf.DatabaseConfig.Charset))
+		default:
+			return fmt.Errorf("unsupported database type %q", confDBType)
+		}
 	}
 
 	//db.SetLogger(util.Log())
