@@ -42,6 +42,17 @@ func GetShare(c *gin.Context) {
 	c.JSON(200, serializer.Response{Data: info})
 }
 
+// PurchaseShare purchases a paid share with the caller's credit balance.
+func PurchaseShare(c *gin.Context) {
+	service := ParametersFromContext[*share.SharePurchaseService](c, share.SharePurchaseParamCtx{})
+	res, err := service.Purchase(c)
+	if respondErr(c, err) {
+		return
+	}
+
+	c.JSON(200, serializer.Response{Data: res})
+}
+
 // ListShare 列出分享
 func ListShare(c *gin.Context) {
 	service := ParametersFromContext[*share.ListShareService](c, share.ListShareParamCtx{})

@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/cloudreve/Cloudreve/v4/ent/file"
 	"github.com/cloudreve/Cloudreve/v4/ent/share"
+	"github.com/cloudreve/Cloudreve/v4/ent/sharepurchase"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 )
@@ -137,6 +138,20 @@ func (sc *ShareCreate) SetNillableRemainDownloads(i *int) *ShareCreate {
 	return sc
 }
 
+// SetPricePoints sets the "price_points" field.
+func (sc *ShareCreate) SetPricePoints(i int) *ShareCreate {
+	sc.mutation.SetPricePoints(i)
+	return sc
+}
+
+// SetNillablePricePoints sets the "price_points" field if the given value is not nil.
+func (sc *ShareCreate) SetNillablePricePoints(i *int) *ShareCreate {
+	if i != nil {
+		sc.SetPricePoints(*i)
+	}
+	return sc
+}
+
 // SetProps sets the "props" field.
 func (sc *ShareCreate) SetProps(tp *types.ShareProps) *ShareCreate {
 	sc.mutation.SetProps(tp)
@@ -179,6 +194,21 @@ func (sc *ShareCreate) SetNillableFileID(id *int) *ShareCreate {
 // SetFile sets the "file" edge to the File entity.
 func (sc *ShareCreate) SetFile(f *File) *ShareCreate {
 	return sc.SetFileID(f.ID)
+}
+
+// AddPurchaseIDs adds the "purchases" edge to the SharePurchase entity by IDs.
+func (sc *ShareCreate) AddPurchaseIDs(ids ...int) *ShareCreate {
+	sc.mutation.AddPurchaseIDs(ids...)
+	return sc
+}
+
+// AddPurchases adds the "purchases" edges to the SharePurchase entity.
+func (sc *ShareCreate) AddPurchases(s ...*SharePurchase) *ShareCreate {
+	ids := make([]int, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return sc.AddPurchaseIDs(ids...)
 }
 
 // Mutation returns the ShareMutation object of the builder.
@@ -240,6 +270,10 @@ func (sc *ShareCreate) defaults() error {
 		v := share.DefaultDownloads
 		sc.mutation.SetDownloads(v)
 	}
+	if _, ok := sc.mutation.PricePoints(); !ok {
+		v := share.DefaultPricePoints
+		sc.mutation.SetPricePoints(v)
+	}
 	return nil
 }
 
@@ -256,6 +290,14 @@ func (sc *ShareCreate) check() error {
 	}
 	if _, ok := sc.mutation.Downloads(); !ok {
 		return &ValidationError{Name: "downloads", err: errors.New(`ent: missing required field "Share.downloads"`)}
+	}
+	if _, ok := sc.mutation.PricePoints(); !ok {
+		return &ValidationError{Name: "price_points", err: errors.New(`ent: missing required field "Share.price_points"`)}
+	}
+	if v, ok := sc.mutation.PricePoints(); ok {
+		if err := share.PricePointsValidator(v); err != nil {
+			return &ValidationError{Name: "price_points", err: fmt.Errorf(`ent: validator failed for field "Share.price_points": %w`, err)}
+		}
 	}
 	return nil
 }
@@ -323,6 +365,10 @@ func (sc *ShareCreate) createSpec() (*Share, *sqlgraph.CreateSpec) {
 		_spec.SetField(share.FieldRemainDownloads, field.TypeInt, value)
 		_node.RemainDownloads = &value
 	}
+	if value, ok := sc.mutation.PricePoints(); ok {
+		_spec.SetField(share.FieldPricePoints, field.TypeInt, value)
+		_node.PricePoints = value
+	}
 	if value, ok := sc.mutation.Props(); ok {
 		_spec.SetField(share.FieldProps, field.TypeJSON, value)
 		_node.Props = value
@@ -359,6 +405,22 @@ func (sc *ShareCreate) createSpec() (*Share, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.file_shares = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := sc.mutation.PurchasesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   share.PurchasesTable,
+			Columns: []string{share.PurchasesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(sharepurchase.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
@@ -536,6 +598,24 @@ func (u *ShareUpsert) AddRemainDownloads(v int) *ShareUpsert {
 // ClearRemainDownloads clears the value of the "remain_downloads" field.
 func (u *ShareUpsert) ClearRemainDownloads() *ShareUpsert {
 	u.SetNull(share.FieldRemainDownloads)
+	return u
+}
+
+// SetPricePoints sets the "price_points" field.
+func (u *ShareUpsert) SetPricePoints(v int) *ShareUpsert {
+	u.Set(share.FieldPricePoints, v)
+	return u
+}
+
+// UpdatePricePoints sets the "price_points" field to the value that was provided on create.
+func (u *ShareUpsert) UpdatePricePoints() *ShareUpsert {
+	u.SetExcluded(share.FieldPricePoints)
+	return u
+}
+
+// AddPricePoints adds v to the "price_points" field.
+func (u *ShareUpsert) AddPricePoints(v int) *ShareUpsert {
+	u.Add(share.FieldPricePoints, v)
 	return u
 }
 
@@ -746,6 +826,27 @@ func (u *ShareUpsertOne) UpdateRemainDownloads() *ShareUpsertOne {
 func (u *ShareUpsertOne) ClearRemainDownloads() *ShareUpsertOne {
 	return u.Update(func(s *ShareUpsert) {
 		s.ClearRemainDownloads()
+	})
+}
+
+// SetPricePoints sets the "price_points" field.
+func (u *ShareUpsertOne) SetPricePoints(v int) *ShareUpsertOne {
+	return u.Update(func(s *ShareUpsert) {
+		s.SetPricePoints(v)
+	})
+}
+
+// AddPricePoints adds v to the "price_points" field.
+func (u *ShareUpsertOne) AddPricePoints(v int) *ShareUpsertOne {
+	return u.Update(func(s *ShareUpsert) {
+		s.AddPricePoints(v)
+	})
+}
+
+// UpdatePricePoints sets the "price_points" field to the value that was provided on create.
+func (u *ShareUpsertOne) UpdatePricePoints() *ShareUpsertOne {
+	return u.Update(func(s *ShareUpsert) {
+		s.UpdatePricePoints()
 	})
 }
 
@@ -1130,6 +1231,27 @@ func (u *ShareUpsertBulk) UpdateRemainDownloads() *ShareUpsertBulk {
 func (u *ShareUpsertBulk) ClearRemainDownloads() *ShareUpsertBulk {
 	return u.Update(func(s *ShareUpsert) {
 		s.ClearRemainDownloads()
+	})
+}
+
+// SetPricePoints sets the "price_points" field.
+func (u *ShareUpsertBulk) SetPricePoints(v int) *ShareUpsertBulk {
+	return u.Update(func(s *ShareUpsert) {
+		s.SetPricePoints(v)
+	})
+}
+
+// AddPricePoints adds v to the "price_points" field.
+func (u *ShareUpsertBulk) AddPricePoints(v int) *ShareUpsertBulk {
+	return u.Update(func(s *ShareUpsert) {
+		s.AddPricePoints(v)
+	})
+}
+
+// UpdatePricePoints sets the "price_points" field to the value that was provided on create.
+func (u *ShareUpsertBulk) UpdatePricePoints() *ShareUpsertBulk {
+	return u.Update(func(s *ShareUpsert) {
+		s.UpdatePricePoints()
 	})
 }
 

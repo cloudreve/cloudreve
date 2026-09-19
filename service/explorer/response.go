@@ -346,6 +346,16 @@ type Share struct {
 
 	// Only viewable if explicitly unlocked by owner
 	SourceUri string `json:"source_uri,omitempty"`
+
+	// Points price for paid shares. Always visible so visitors can render
+	// the purchase gate.
+	Price int `json:"price,omitempty"`
+	// Paid is true when the requester is the owner, has purchased the
+	// share, or presented a valid resume ticket. Omitted for free shares.
+	Paid *bool `json:"paid,omitempty"`
+	// PurchaseTicket is the requester's resume credential; only set for
+	// the purchasing user, never for the owner or other visitors.
+	PurchaseTicket string `json:"purchase_ticket,omitempty"`
 }
 
 func BuildShare(ctx context.Context, s *ent.Share, base *url.URL, hasher hashid.Encoder, requester *ent.User, owner *ent.User,
@@ -365,6 +375,7 @@ func BuildShare(ctx context.Context, s *ent.Share, base *url.URL, hasher hashid.
 		Visited:           s.Views,
 		SourceType:        util.ToPtr(t),
 		PasswordProtected: s.Password != "",
+		Price:             s.PricePoints,
 	}
 
 	if unlocked {

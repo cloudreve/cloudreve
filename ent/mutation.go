@@ -31,6 +31,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/predicate"
 	"github.com/cloudreve/Cloudreve/v4/ent/setting"
 	"github.com/cloudreve/Cloudreve/v4/ent/share"
+	"github.com/cloudreve/Cloudreve/v4/ent/sharepurchase"
 	"github.com/cloudreve/Cloudreve/v4/ent/sku"
 	"github.com/cloudreve/Cloudreve/v4/ent/storagepolicy"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
@@ -70,6 +71,7 @@ const (
 	TypePasskey        = "Passkey"
 	TypeSetting        = "Setting"
 	TypeShare          = "Share"
+	TypeSharePurchase  = "SharePurchase"
 	TypeSku            = "Sku"
 	TypeStoragePolicy  = "StoragePolicy"
 	TypeTask           = "Task"
@@ -17305,12 +17307,17 @@ type ShareMutation struct {
 	expires             *time.Time
 	remain_downloads    *int
 	addremain_downloads *int
+	price_points        *int
+	addprice_points     *int
 	props               **types.ShareProps
 	clearedFields       map[string]struct{}
 	user                *int
 	cleareduser         bool
 	file                *int
 	clearedfile         bool
+	purchases           map[int]struct{}
+	removedpurchases    map[int]struct{}
+	clearedpurchases    bool
 	done                bool
 	oldValue            func(context.Context) (*Share, error)
 	predicates          []predicate.Share
@@ -17815,6 +17822,62 @@ func (m *ShareMutation) ResetRemainDownloads() {
 	delete(m.clearedFields, share.FieldRemainDownloads)
 }
 
+// SetPricePoints sets the "price_points" field.
+func (m *ShareMutation) SetPricePoints(i int) {
+	m.price_points = &i
+	m.addprice_points = nil
+}
+
+// PricePoints returns the value of the "price_points" field in the mutation.
+func (m *ShareMutation) PricePoints() (r int, exists bool) {
+	v := m.price_points
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPricePoints returns the old "price_points" field's value of the Share entity.
+// If the Share object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ShareMutation) OldPricePoints(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPricePoints is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPricePoints requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPricePoints: %w", err)
+	}
+	return oldValue.PricePoints, nil
+}
+
+// AddPricePoints adds i to the "price_points" field.
+func (m *ShareMutation) AddPricePoints(i int) {
+	if m.addprice_points != nil {
+		*m.addprice_points += i
+	} else {
+		m.addprice_points = &i
+	}
+}
+
+// AddedPricePoints returns the value that was added to the "price_points" field in this mutation.
+func (m *ShareMutation) AddedPricePoints() (r int, exists bool) {
+	v := m.addprice_points
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetPricePoints resets all changes to the "price_points" field.
+func (m *ShareMutation) ResetPricePoints() {
+	m.price_points = nil
+	m.addprice_points = nil
+}
+
 // SetProps sets the "props" field.
 func (m *ShareMutation) SetProps(tp *types.ShareProps) {
 	m.props = &tp
@@ -17942,6 +18005,60 @@ func (m *ShareMutation) ResetFile() {
 	m.clearedfile = false
 }
 
+// AddPurchaseIDs adds the "purchases" edge to the SharePurchase entity by ids.
+func (m *ShareMutation) AddPurchaseIDs(ids ...int) {
+	if m.purchases == nil {
+		m.purchases = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.purchases[ids[i]] = struct{}{}
+	}
+}
+
+// ClearPurchases clears the "purchases" edge to the SharePurchase entity.
+func (m *ShareMutation) ClearPurchases() {
+	m.clearedpurchases = true
+}
+
+// PurchasesCleared reports if the "purchases" edge to the SharePurchase entity was cleared.
+func (m *ShareMutation) PurchasesCleared() bool {
+	return m.clearedpurchases
+}
+
+// RemovePurchaseIDs removes the "purchases" edge to the SharePurchase entity by IDs.
+func (m *ShareMutation) RemovePurchaseIDs(ids ...int) {
+	if m.removedpurchases == nil {
+		m.removedpurchases = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.purchases, ids[i])
+		m.removedpurchases[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedPurchases returns the removed IDs of the "purchases" edge to the SharePurchase entity.
+func (m *ShareMutation) RemovedPurchasesIDs() (ids []int) {
+	for id := range m.removedpurchases {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// PurchasesIDs returns the "purchases" edge IDs in the mutation.
+func (m *ShareMutation) PurchasesIDs() (ids []int) {
+	for id := range m.purchases {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetPurchases resets all changes to the "purchases" edge.
+func (m *ShareMutation) ResetPurchases() {
+	m.purchases = nil
+	m.clearedpurchases = false
+	m.removedpurchases = nil
+}
+
 // Where appends a list predicates to the ShareMutation builder.
 func (m *ShareMutation) Where(ps ...predicate.Share) {
 	m.predicates = append(m.predicates, ps...)
@@ -17976,7 +18093,7 @@ func (m *ShareMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ShareMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 10)
 	if m.created_at != nil {
 		fields = append(fields, share.FieldCreatedAt)
 	}
@@ -18000,6 +18117,9 @@ func (m *ShareMutation) Fields() []string {
 	}
 	if m.remain_downloads != nil {
 		fields = append(fields, share.FieldRemainDownloads)
+	}
+	if m.price_points != nil {
+		fields = append(fields, share.FieldPricePoints)
 	}
 	if m.props != nil {
 		fields = append(fields, share.FieldProps)
@@ -18028,6 +18148,8 @@ func (m *ShareMutation) Field(name string) (ent.Value, bool) {
 		return m.Expires()
 	case share.FieldRemainDownloads:
 		return m.RemainDownloads()
+	case share.FieldPricePoints:
+		return m.PricePoints()
 	case share.FieldProps:
 		return m.Props()
 	}
@@ -18055,6 +18177,8 @@ func (m *ShareMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldExpires(ctx)
 	case share.FieldRemainDownloads:
 		return m.OldRemainDownloads(ctx)
+	case share.FieldPricePoints:
+		return m.OldPricePoints(ctx)
 	case share.FieldProps:
 		return m.OldProps(ctx)
 	}
@@ -18122,6 +18246,13 @@ func (m *ShareMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetRemainDownloads(v)
 		return nil
+	case share.FieldPricePoints:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPricePoints(v)
+		return nil
 	case share.FieldProps:
 		v, ok := value.(*types.ShareProps)
 		if !ok {
@@ -18146,6 +18277,9 @@ func (m *ShareMutation) AddedFields() []string {
 	if m.addremain_downloads != nil {
 		fields = append(fields, share.FieldRemainDownloads)
 	}
+	if m.addprice_points != nil {
+		fields = append(fields, share.FieldPricePoints)
+	}
 	return fields
 }
 
@@ -18160,6 +18294,8 @@ func (m *ShareMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedDownloads()
 	case share.FieldRemainDownloads:
 		return m.AddedRemainDownloads()
+	case share.FieldPricePoints:
+		return m.AddedPricePoints()
 	}
 	return nil, false
 }
@@ -18189,6 +18325,13 @@ func (m *ShareMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddRemainDownloads(v)
+		return nil
+	case share.FieldPricePoints:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPricePoints(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Share numeric field %s", name)
@@ -18274,6 +18417,9 @@ func (m *ShareMutation) ResetField(name string) error {
 	case share.FieldRemainDownloads:
 		m.ResetRemainDownloads()
 		return nil
+	case share.FieldPricePoints:
+		m.ResetPricePoints()
+		return nil
 	case share.FieldProps:
 		m.ResetProps()
 		return nil
@@ -18283,12 +18429,15 @@ func (m *ShareMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ShareMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.user != nil {
 		edges = append(edges, share.EdgeUser)
 	}
 	if m.file != nil {
 		edges = append(edges, share.EdgeFile)
+	}
+	if m.purchases != nil {
+		edges = append(edges, share.EdgePurchases)
 	}
 	return edges
 }
@@ -18305,30 +18454,50 @@ func (m *ShareMutation) AddedIDs(name string) []ent.Value {
 		if id := m.file; id != nil {
 			return []ent.Value{*id}
 		}
+	case share.EdgePurchases:
+		ids := make([]ent.Value, 0, len(m.purchases))
+		for id := range m.purchases {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ShareMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
+	if m.removedpurchases != nil {
+		edges = append(edges, share.EdgePurchases)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *ShareMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case share.EdgePurchases:
+		ids := make([]ent.Value, 0, len(m.removedpurchases))
+		for id := range m.removedpurchases {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ShareMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.cleareduser {
 		edges = append(edges, share.EdgeUser)
 	}
 	if m.clearedfile {
 		edges = append(edges, share.EdgeFile)
+	}
+	if m.clearedpurchases {
+		edges = append(edges, share.EdgePurchases)
 	}
 	return edges
 }
@@ -18341,6 +18510,8 @@ func (m *ShareMutation) EdgeCleared(name string) bool {
 		return m.cleareduser
 	case share.EdgeFile:
 		return m.clearedfile
+	case share.EdgePurchases:
+		return m.clearedpurchases
 	}
 	return false
 }
@@ -18369,8 +18540,819 @@ func (m *ShareMutation) ResetEdge(name string) error {
 	case share.EdgeFile:
 		m.ResetFile()
 		return nil
+	case share.EdgePurchases:
+		m.ResetPurchases()
+		return nil
 	}
 	return fmt.Errorf("unknown Share edge %s", name)
+}
+
+// SharePurchaseMutation represents an operation that mutates the SharePurchase nodes in the graph.
+type SharePurchaseMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *int
+	created_at    *time.Time
+	updated_at    *time.Time
+	deleted_at    *time.Time
+	points        *int
+	addpoints     *int
+	ticket        *string
+	clearedFields map[string]struct{}
+	share         *int
+	clearedshare  bool
+	buyer         *int
+	clearedbuyer  bool
+	done          bool
+	oldValue      func(context.Context) (*SharePurchase, error)
+	predicates    []predicate.SharePurchase
+}
+
+var _ ent.Mutation = (*SharePurchaseMutation)(nil)
+
+// sharepurchaseOption allows management of the mutation configuration using functional options.
+type sharepurchaseOption func(*SharePurchaseMutation)
+
+// newSharePurchaseMutation creates new mutation for the SharePurchase entity.
+func newSharePurchaseMutation(c config, op Op, opts ...sharepurchaseOption) *SharePurchaseMutation {
+	m := &SharePurchaseMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeSharePurchase,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withSharePurchaseID sets the ID field of the mutation.
+func withSharePurchaseID(id int) sharepurchaseOption {
+	return func(m *SharePurchaseMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *SharePurchase
+		)
+		m.oldValue = func(ctx context.Context) (*SharePurchase, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().SharePurchase.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withSharePurchase sets the old SharePurchase of the mutation.
+func withSharePurchase(node *SharePurchase) sharepurchaseOption {
+	return func(m *SharePurchaseMutation) {
+		m.oldValue = func(context.Context) (*SharePurchase, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m SharePurchaseMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m SharePurchaseMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *SharePurchaseMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *SharePurchaseMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().SharePurchase.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *SharePurchaseMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *SharePurchaseMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the SharePurchase entity.
+// If the SharePurchase object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SharePurchaseMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *SharePurchaseMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *SharePurchaseMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *SharePurchaseMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the SharePurchase entity.
+// If the SharePurchase object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SharePurchaseMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *SharePurchaseMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (m *SharePurchaseMutation) SetDeletedAt(t time.Time) {
+	m.deleted_at = &t
+}
+
+// DeletedAt returns the value of the "deleted_at" field in the mutation.
+func (m *SharePurchaseMutation) DeletedAt() (r time.Time, exists bool) {
+	v := m.deleted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeletedAt returns the old "deleted_at" field's value of the SharePurchase entity.
+// If the SharePurchase object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SharePurchaseMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
+	}
+	return oldValue.DeletedAt, nil
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (m *SharePurchaseMutation) ClearDeletedAt() {
+	m.deleted_at = nil
+	m.clearedFields[sharepurchase.FieldDeletedAt] = struct{}{}
+}
+
+// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
+func (m *SharePurchaseMutation) DeletedAtCleared() bool {
+	_, ok := m.clearedFields[sharepurchase.FieldDeletedAt]
+	return ok
+}
+
+// ResetDeletedAt resets all changes to the "deleted_at" field.
+func (m *SharePurchaseMutation) ResetDeletedAt() {
+	m.deleted_at = nil
+	delete(m.clearedFields, sharepurchase.FieldDeletedAt)
+}
+
+// SetShareID sets the "share_id" field.
+func (m *SharePurchaseMutation) SetShareID(i int) {
+	m.share = &i
+}
+
+// ShareID returns the value of the "share_id" field in the mutation.
+func (m *SharePurchaseMutation) ShareID() (r int, exists bool) {
+	v := m.share
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldShareID returns the old "share_id" field's value of the SharePurchase entity.
+// If the SharePurchase object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SharePurchaseMutation) OldShareID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldShareID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldShareID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldShareID: %w", err)
+	}
+	return oldValue.ShareID, nil
+}
+
+// ResetShareID resets all changes to the "share_id" field.
+func (m *SharePurchaseMutation) ResetShareID() {
+	m.share = nil
+}
+
+// SetBuyerID sets the "buyer_id" field.
+func (m *SharePurchaseMutation) SetBuyerID(i int) {
+	m.buyer = &i
+}
+
+// BuyerID returns the value of the "buyer_id" field in the mutation.
+func (m *SharePurchaseMutation) BuyerID() (r int, exists bool) {
+	v := m.buyer
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBuyerID returns the old "buyer_id" field's value of the SharePurchase entity.
+// If the SharePurchase object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SharePurchaseMutation) OldBuyerID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBuyerID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBuyerID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBuyerID: %w", err)
+	}
+	return oldValue.BuyerID, nil
+}
+
+// ResetBuyerID resets all changes to the "buyer_id" field.
+func (m *SharePurchaseMutation) ResetBuyerID() {
+	m.buyer = nil
+}
+
+// SetPoints sets the "points" field.
+func (m *SharePurchaseMutation) SetPoints(i int) {
+	m.points = &i
+	m.addpoints = nil
+}
+
+// Points returns the value of the "points" field in the mutation.
+func (m *SharePurchaseMutation) Points() (r int, exists bool) {
+	v := m.points
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPoints returns the old "points" field's value of the SharePurchase entity.
+// If the SharePurchase object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SharePurchaseMutation) OldPoints(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPoints is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPoints requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPoints: %w", err)
+	}
+	return oldValue.Points, nil
+}
+
+// AddPoints adds i to the "points" field.
+func (m *SharePurchaseMutation) AddPoints(i int) {
+	if m.addpoints != nil {
+		*m.addpoints += i
+	} else {
+		m.addpoints = &i
+	}
+}
+
+// AddedPoints returns the value that was added to the "points" field in this mutation.
+func (m *SharePurchaseMutation) AddedPoints() (r int, exists bool) {
+	v := m.addpoints
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetPoints resets all changes to the "points" field.
+func (m *SharePurchaseMutation) ResetPoints() {
+	m.points = nil
+	m.addpoints = nil
+}
+
+// SetTicket sets the "ticket" field.
+func (m *SharePurchaseMutation) SetTicket(s string) {
+	m.ticket = &s
+}
+
+// Ticket returns the value of the "ticket" field in the mutation.
+func (m *SharePurchaseMutation) Ticket() (r string, exists bool) {
+	v := m.ticket
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTicket returns the old "ticket" field's value of the SharePurchase entity.
+// If the SharePurchase object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SharePurchaseMutation) OldTicket(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTicket is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTicket requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTicket: %w", err)
+	}
+	return oldValue.Ticket, nil
+}
+
+// ResetTicket resets all changes to the "ticket" field.
+func (m *SharePurchaseMutation) ResetTicket() {
+	m.ticket = nil
+}
+
+// ClearShare clears the "share" edge to the Share entity.
+func (m *SharePurchaseMutation) ClearShare() {
+	m.clearedshare = true
+	m.clearedFields[sharepurchase.FieldShareID] = struct{}{}
+}
+
+// ShareCleared reports if the "share" edge to the Share entity was cleared.
+func (m *SharePurchaseMutation) ShareCleared() bool {
+	return m.clearedshare
+}
+
+// ShareIDs returns the "share" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ShareID instead. It exists only for internal usage by the builders.
+func (m *SharePurchaseMutation) ShareIDs() (ids []int) {
+	if id := m.share; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetShare resets all changes to the "share" edge.
+func (m *SharePurchaseMutation) ResetShare() {
+	m.share = nil
+	m.clearedshare = false
+}
+
+// ClearBuyer clears the "buyer" edge to the User entity.
+func (m *SharePurchaseMutation) ClearBuyer() {
+	m.clearedbuyer = true
+	m.clearedFields[sharepurchase.FieldBuyerID] = struct{}{}
+}
+
+// BuyerCleared reports if the "buyer" edge to the User entity was cleared.
+func (m *SharePurchaseMutation) BuyerCleared() bool {
+	return m.clearedbuyer
+}
+
+// BuyerIDs returns the "buyer" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// BuyerID instead. It exists only for internal usage by the builders.
+func (m *SharePurchaseMutation) BuyerIDs() (ids []int) {
+	if id := m.buyer; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetBuyer resets all changes to the "buyer" edge.
+func (m *SharePurchaseMutation) ResetBuyer() {
+	m.buyer = nil
+	m.clearedbuyer = false
+}
+
+// Where appends a list predicates to the SharePurchaseMutation builder.
+func (m *SharePurchaseMutation) Where(ps ...predicate.SharePurchase) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the SharePurchaseMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *SharePurchaseMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.SharePurchase, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *SharePurchaseMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *SharePurchaseMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (SharePurchase).
+func (m *SharePurchaseMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *SharePurchaseMutation) Fields() []string {
+	fields := make([]string, 0, 7)
+	if m.created_at != nil {
+		fields = append(fields, sharepurchase.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, sharepurchase.FieldUpdatedAt)
+	}
+	if m.deleted_at != nil {
+		fields = append(fields, sharepurchase.FieldDeletedAt)
+	}
+	if m.share != nil {
+		fields = append(fields, sharepurchase.FieldShareID)
+	}
+	if m.buyer != nil {
+		fields = append(fields, sharepurchase.FieldBuyerID)
+	}
+	if m.points != nil {
+		fields = append(fields, sharepurchase.FieldPoints)
+	}
+	if m.ticket != nil {
+		fields = append(fields, sharepurchase.FieldTicket)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *SharePurchaseMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case sharepurchase.FieldCreatedAt:
+		return m.CreatedAt()
+	case sharepurchase.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case sharepurchase.FieldDeletedAt:
+		return m.DeletedAt()
+	case sharepurchase.FieldShareID:
+		return m.ShareID()
+	case sharepurchase.FieldBuyerID:
+		return m.BuyerID()
+	case sharepurchase.FieldPoints:
+		return m.Points()
+	case sharepurchase.FieldTicket:
+		return m.Ticket()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *SharePurchaseMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case sharepurchase.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case sharepurchase.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case sharepurchase.FieldDeletedAt:
+		return m.OldDeletedAt(ctx)
+	case sharepurchase.FieldShareID:
+		return m.OldShareID(ctx)
+	case sharepurchase.FieldBuyerID:
+		return m.OldBuyerID(ctx)
+	case sharepurchase.FieldPoints:
+		return m.OldPoints(ctx)
+	case sharepurchase.FieldTicket:
+		return m.OldTicket(ctx)
+	}
+	return nil, fmt.Errorf("unknown SharePurchase field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *SharePurchaseMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case sharepurchase.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case sharepurchase.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case sharepurchase.FieldDeletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeletedAt(v)
+		return nil
+	case sharepurchase.FieldShareID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetShareID(v)
+		return nil
+	case sharepurchase.FieldBuyerID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBuyerID(v)
+		return nil
+	case sharepurchase.FieldPoints:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPoints(v)
+		return nil
+	case sharepurchase.FieldTicket:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTicket(v)
+		return nil
+	}
+	return fmt.Errorf("unknown SharePurchase field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *SharePurchaseMutation) AddedFields() []string {
+	var fields []string
+	if m.addpoints != nil {
+		fields = append(fields, sharepurchase.FieldPoints)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *SharePurchaseMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case sharepurchase.FieldPoints:
+		return m.AddedPoints()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *SharePurchaseMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case sharepurchase.FieldPoints:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPoints(v)
+		return nil
+	}
+	return fmt.Errorf("unknown SharePurchase numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *SharePurchaseMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(sharepurchase.FieldDeletedAt) {
+		fields = append(fields, sharepurchase.FieldDeletedAt)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *SharePurchaseMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *SharePurchaseMutation) ClearField(name string) error {
+	switch name {
+	case sharepurchase.FieldDeletedAt:
+		m.ClearDeletedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown SharePurchase nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *SharePurchaseMutation) ResetField(name string) error {
+	switch name {
+	case sharepurchase.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case sharepurchase.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case sharepurchase.FieldDeletedAt:
+		m.ResetDeletedAt()
+		return nil
+	case sharepurchase.FieldShareID:
+		m.ResetShareID()
+		return nil
+	case sharepurchase.FieldBuyerID:
+		m.ResetBuyerID()
+		return nil
+	case sharepurchase.FieldPoints:
+		m.ResetPoints()
+		return nil
+	case sharepurchase.FieldTicket:
+		m.ResetTicket()
+		return nil
+	}
+	return fmt.Errorf("unknown SharePurchase field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *SharePurchaseMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.share != nil {
+		edges = append(edges, sharepurchase.EdgeShare)
+	}
+	if m.buyer != nil {
+		edges = append(edges, sharepurchase.EdgeBuyer)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *SharePurchaseMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case sharepurchase.EdgeShare:
+		if id := m.share; id != nil {
+			return []ent.Value{*id}
+		}
+	case sharepurchase.EdgeBuyer:
+		if id := m.buyer; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *SharePurchaseMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *SharePurchaseMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *SharePurchaseMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedshare {
+		edges = append(edges, sharepurchase.EdgeShare)
+	}
+	if m.clearedbuyer {
+		edges = append(edges, sharepurchase.EdgeBuyer)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *SharePurchaseMutation) EdgeCleared(name string) bool {
+	switch name {
+	case sharepurchase.EdgeShare:
+		return m.clearedshare
+	case sharepurchase.EdgeBuyer:
+		return m.clearedbuyer
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *SharePurchaseMutation) ClearEdge(name string) error {
+	switch name {
+	case sharepurchase.EdgeShare:
+		m.ClearShare()
+		return nil
+	case sharepurchase.EdgeBuyer:
+		m.ClearBuyer()
+		return nil
+	}
+	return fmt.Errorf("unknown SharePurchase unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *SharePurchaseMutation) ResetEdge(name string) error {
+	switch name {
+	case sharepurchase.EdgeShare:
+		m.ResetShare()
+		return nil
+	case sharepurchase.EdgeBuyer:
+		m.ResetBuyer()
+		return nil
+	}
+	return fmt.Errorf("unknown SharePurchase edge %s", name)
 }
 
 // SkuMutation represents an operation that mutates the Sku nodes in the graph.
@@ -22445,65 +23427,68 @@ func (m *TaskMutation) ResetEdge(name string) error {
 // UserMutation represents an operation that mutates the User nodes in the graph.
 type UserMutation struct {
 	config
-	op                    Op
-	typ                   string
-	id                    *int
-	created_at            *time.Time
-	updated_at            *time.Time
-	deleted_at            *time.Time
-	email                 *string
-	nick                  *string
-	password              *string
-	status                *user.Status
-	ban_expires           *time.Time
-	ban_reason            *string
-	last_login            *time.Time
-	storage               *int64
-	addstorage            *int64
-	credits               *int64
-	addcredits            *int64
-	two_factor_secret     *string
-	avatar                *string
-	settings              **types.UserSetting
-	clearedFields         map[string]struct{}
-	group                 *int
-	clearedgroup          bool
-	files                 map[int]struct{}
-	removedfiles          map[int]struct{}
-	clearedfiles          bool
-	dav_accounts          map[int]struct{}
-	removeddav_accounts   map[int]struct{}
-	cleareddav_accounts   bool
-	shares                map[int]struct{}
-	removedshares         map[int]struct{}
-	clearedshares         bool
-	passkey               map[int]struct{}
-	removedpasskey        map[int]struct{}
-	clearedpasskey        bool
-	tasks                 map[int]struct{}
-	removedtasks          map[int]struct{}
-	clearedtasks          bool
-	fsevents              map[int]struct{}
-	removedfsevents       map[int]struct{}
-	clearedfsevents       bool
-	entities              map[int]struct{}
-	removedentities       map[int]struct{}
-	clearedentities       bool
-	oauth_grants          map[int]struct{}
-	removedoauth_grants   map[int]struct{}
-	clearedoauth_grants   bool
-	credit_txns           map[int]struct{}
-	removedcredit_txns    map[int]struct{}
-	clearedcredit_txns    bool
-	redeemed_codes        map[int]struct{}
-	removedredeemed_codes map[int]struct{}
-	clearedredeemed_codes bool
-	grants                map[int]struct{}
-	removedgrants         map[int]struct{}
-	clearedgrants         bool
-	done                  bool
-	oldValue              func(context.Context) (*User, error)
-	predicates            []predicate.User
+	op                     Op
+	typ                    string
+	id                     *int
+	created_at             *time.Time
+	updated_at             *time.Time
+	deleted_at             *time.Time
+	email                  *string
+	nick                   *string
+	password               *string
+	status                 *user.Status
+	ban_expires            *time.Time
+	ban_reason             *string
+	last_login             *time.Time
+	storage                *int64
+	addstorage             *int64
+	credits                *int64
+	addcredits             *int64
+	two_factor_secret      *string
+	avatar                 *string
+	settings               **types.UserSetting
+	clearedFields          map[string]struct{}
+	group                  *int
+	clearedgroup           bool
+	files                  map[int]struct{}
+	removedfiles           map[int]struct{}
+	clearedfiles           bool
+	dav_accounts           map[int]struct{}
+	removeddav_accounts    map[int]struct{}
+	cleareddav_accounts    bool
+	shares                 map[int]struct{}
+	removedshares          map[int]struct{}
+	clearedshares          bool
+	passkey                map[int]struct{}
+	removedpasskey         map[int]struct{}
+	clearedpasskey         bool
+	tasks                  map[int]struct{}
+	removedtasks           map[int]struct{}
+	clearedtasks           bool
+	fsevents               map[int]struct{}
+	removedfsevents        map[int]struct{}
+	clearedfsevents        bool
+	entities               map[int]struct{}
+	removedentities        map[int]struct{}
+	clearedentities        bool
+	oauth_grants           map[int]struct{}
+	removedoauth_grants    map[int]struct{}
+	clearedoauth_grants    bool
+	credit_txns            map[int]struct{}
+	removedcredit_txns     map[int]struct{}
+	clearedcredit_txns     bool
+	redeemed_codes         map[int]struct{}
+	removedredeemed_codes  map[int]struct{}
+	clearedredeemed_codes  bool
+	grants                 map[int]struct{}
+	removedgrants          map[int]struct{}
+	clearedgrants          bool
+	share_purchases        map[int]struct{}
+	removedshare_purchases map[int]struct{}
+	clearedshare_purchases bool
+	done                   bool
+	oldValue               func(context.Context) (*User, error)
+	predicates             []predicate.User
 }
 
 var _ ent.Mutation = (*UserMutation)(nil)
@@ -23958,6 +24943,60 @@ func (m *UserMutation) ResetGrants() {
 	m.removedgrants = nil
 }
 
+// AddSharePurchaseIDs adds the "share_purchases" edge to the SharePurchase entity by ids.
+func (m *UserMutation) AddSharePurchaseIDs(ids ...int) {
+	if m.share_purchases == nil {
+		m.share_purchases = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.share_purchases[ids[i]] = struct{}{}
+	}
+}
+
+// ClearSharePurchases clears the "share_purchases" edge to the SharePurchase entity.
+func (m *UserMutation) ClearSharePurchases() {
+	m.clearedshare_purchases = true
+}
+
+// SharePurchasesCleared reports if the "share_purchases" edge to the SharePurchase entity was cleared.
+func (m *UserMutation) SharePurchasesCleared() bool {
+	return m.clearedshare_purchases
+}
+
+// RemoveSharePurchaseIDs removes the "share_purchases" edge to the SharePurchase entity by IDs.
+func (m *UserMutation) RemoveSharePurchaseIDs(ids ...int) {
+	if m.removedshare_purchases == nil {
+		m.removedshare_purchases = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.share_purchases, ids[i])
+		m.removedshare_purchases[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedSharePurchases returns the removed IDs of the "share_purchases" edge to the SharePurchase entity.
+func (m *UserMutation) RemovedSharePurchasesIDs() (ids []int) {
+	for id := range m.removedshare_purchases {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// SharePurchasesIDs returns the "share_purchases" edge IDs in the mutation.
+func (m *UserMutation) SharePurchasesIDs() (ids []int) {
+	for id := range m.share_purchases {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetSharePurchases resets all changes to the "share_purchases" edge.
+func (m *UserMutation) ResetSharePurchases() {
+	m.share_purchases = nil
+	m.clearedshare_purchases = false
+	m.removedshare_purchases = nil
+}
+
 // Where appends a list predicates to the UserMutation builder.
 func (m *UserMutation) Where(ps ...predicate.User) {
 	m.predicates = append(m.predicates, ps...)
@@ -24424,7 +25463,7 @@ func (m *UserMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
-	edges := make([]string, 0, 12)
+	edges := make([]string, 0, 13)
 	if m.group != nil {
 		edges = append(edges, user.EdgeGroup)
 	}
@@ -24460,6 +25499,9 @@ func (m *UserMutation) AddedEdges() []string {
 	}
 	if m.grants != nil {
 		edges = append(edges, user.EdgeGrants)
+	}
+	if m.share_purchases != nil {
+		edges = append(edges, user.EdgeSharePurchases)
 	}
 	return edges
 }
@@ -24538,13 +25580,19 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case user.EdgeSharePurchases:
+		ids := make([]ent.Value, 0, len(m.share_purchases))
+		for id := range m.share_purchases {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 12)
+	edges := make([]string, 0, 13)
 	if m.removedfiles != nil {
 		edges = append(edges, user.EdgeFiles)
 	}
@@ -24577,6 +25625,9 @@ func (m *UserMutation) RemovedEdges() []string {
 	}
 	if m.removedgrants != nil {
 		edges = append(edges, user.EdgeGrants)
+	}
+	if m.removedshare_purchases != nil {
+		edges = append(edges, user.EdgeSharePurchases)
 	}
 	return edges
 }
@@ -24651,13 +25702,19 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case user.EdgeSharePurchases:
+		ids := make([]ent.Value, 0, len(m.removedshare_purchases))
+		for id := range m.removedshare_purchases {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 12)
+	edges := make([]string, 0, 13)
 	if m.clearedgroup {
 		edges = append(edges, user.EdgeGroup)
 	}
@@ -24694,6 +25751,9 @@ func (m *UserMutation) ClearedEdges() []string {
 	if m.clearedgrants {
 		edges = append(edges, user.EdgeGrants)
 	}
+	if m.clearedshare_purchases {
+		edges = append(edges, user.EdgeSharePurchases)
+	}
 	return edges
 }
 
@@ -24725,6 +25785,8 @@ func (m *UserMutation) EdgeCleared(name string) bool {
 		return m.clearedredeemed_codes
 	case user.EdgeGrants:
 		return m.clearedgrants
+	case user.EdgeSharePurchases:
+		return m.clearedshare_purchases
 	}
 	return false
 }
@@ -24779,6 +25841,9 @@ func (m *UserMutation) ResetEdge(name string) error {
 		return nil
 	case user.EdgeGrants:
 		m.ResetGrants()
+		return nil
+	case user.EdgeSharePurchases:
+		m.ResetSharePurchases()
 		return nil
 	}
 	return fmt.Errorf("unknown User edge %s", name)

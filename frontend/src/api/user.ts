@@ -93,6 +93,7 @@ export const GroupPermission = {
   archive_task: 5,
   webdav_proxy: 6,
   share_download: 7,
+  share_free: 8,
   remote_download: 9,
   redirected_source: 11,
   advance_delete: 12,
@@ -109,6 +110,7 @@ export const GroupPermission = {
   admin_payment: 26,
   admin_events: 27,
   admin_reports: 28,
+  share_sell: 29,
 };
 
 // Delegated admin section bits — is_admin implies all of them.

@@ -51,9 +51,10 @@ func (s *ShortLinkRedirectService) RedirectTo(c *gin.Context) string {
 
 type (
 	ShareInfoService struct {
-		Password      string `form:"password"`
-		CountViews    bool   `form:"count_views"`
-		OwnerExtended bool   `form:"owner_extended"`
+		Password       string `form:"password"`
+		CountViews     bool   `form:"count_views"`
+		OwnerExtended  bool   `form:"owner_extended"`
+		PurchaseTicket string `form:"purchase_ticket"`
 	}
 	ShareInfoParamCtx struct{}
 )
@@ -92,6 +93,31 @@ func (s *ShareInfoService) Get(c *gin.Context) (*explorer.Share, error) {
 	base := dep.SettingProvider().SiteURL(c)
 	res := explorer.BuildShare(c, share, base, dep.HashIDEncoder(), u, share.Edges.User, share.Edges.File.Name,
 		types.FileType(share.Edges.File.Type), unlocked, false)
+
+	// Priced shares resolve the requester's payment state: owner, existing
+	// buyer, or bearer of a valid resume ticket.
+	if share.PricePoints > 0 {
+		paid := share.Edges.User.ID == u.ID ||
+			(u.Edges.Group != nil && u.Edges.Group.Permissions.Enabled(int(types.GroupPermissionShareFree)))
+		purchaseTicket := ""
+		if !paid {
+			vasClient := dep.VasClient()
+			if s.PurchaseTicket != "" {
+				if p, err := vasClient.SharePurchaseByTicket(ctx, share.ID, s.PurchaseTicket); err == nil {
+					paid = true
+					purchaseTicket = p.Ticket
+				}
+			}
+			if !paid && !inventory.IsAnonymousUser(u) {
+				if p, err := vasClient.SharePurchase(ctx, share.ID, u.ID); err == nil {
+					paid = true
+					purchaseTicket = p.Ticket
+				}
+			}
+		}
+		res.Paid = &paid
+		res.PurchaseTicket = purchaseTicket
+	}
 
 	if s.OwnerExtended && share.Edges.User.ID == u.ID {
 		// Add more information about the shared file

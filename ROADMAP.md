@@ -173,7 +173,7 @@ Order = user-visible value first; each ships with backend + UI + tests.
    - [x] PR #140 — `allow_upload`/`allow_edit`/`preview_only`/`upload_only` props, props-derived capability sets enforced server-side (`writePermitted`), same-share move/copy, anonymous upload, drop-box listing suppression, download denial via `IsDownloadCtxKey` hooks (fixes #3555 preview-only, #3340 drop-box)
    - [x] File/dir ACL entity — `(subject_type ∈ user|group|anonymous|everyone, subject_id)` → R/C/U/D bitmask; Permissions dialog under More actions; enforced in share-navigator capability checks; group bit 15 gate (#181, fixes #3517)
    - [x] Default shares — `setting.default_symbolics` + group `default_pinned` chip-input of share IDs; materialize as share-shortcut entries on fs init (#180)
-   - [ ] Paid shares — `share.price_points` + gate page + purchase/resume-ticket flow; needs B.4 credits first
+   - [x] Paid shares — `share.price_points` + `share_purchase` (buyer debit → owner income at `share_score_rate`) + resume ticket; download/thumb gated in share navigator, listing stays visible; `share_sell` (bit 29) gates price-setting, `share_free` (bit 8) bypasses paywall; `PaidShareGate` UI + restore via `purchase_ticket`
 2. **Storage policy advanced** — multiple policies per group, per-directory binding, load-balancer policy, file migration (fixes #3518, #2961, #2262). See §1.3a.
    - [x] PR #175 — resumable admin relocation task (entities or whole-policy scope), encryption-aware re-wrap, admin UI + per-policy migrate action (#9, #125, #136)
    - [x] Group→policies M:N (`allowed_policies` edge, empty = legacy single) + group-editor multi-select; per-directory `sys:preferred_policy` metadata marker with nearest-ancestor precedence (invalid marker cuts inheritance); user `preferred_policy` setting applied in own tree only; `load_balance` policy type with weighted children resolved before drivers (#182, fixes #2961)
@@ -186,7 +186,7 @@ Order = user-visible value first; each ships with backend + UI + tests.
    - [x] `sku` entity (storage-capacity + group-upgrade types, duration, cash+points price, label, bullets); points purchase → atomic debit+grant; admin SKU tables; `/shop` page (Memberships/Storage/Redeem tabs) + nav entry
    - [x] `user.credits` + `credit_txn` ledger (guarded atomic adjust); Finance settings tab (balance + grants + redeem + ledger); admin manual adjust (#183)
    - [x] `gift_code` entity (points/storage/group × amount × duration) + `user_grant` expiring grants + `grant_expire` cron; admin generate/list/revoke + user redeem (#183)
-   - [ ] Paid-share `price_points` wired to the ledger + purchase/resume-ticket flow
+   - [x] Paid-share `price_points` wired to the ledger + purchase/resume-ticket flow
 5. **System extensions** — activity/audit log, site announcements, node selection, report-abuse queue (fixes #3480, #3479 IP whitelist). See §1.3a.
    - [x] PR #144 — task `creator_ip` capture with CIDR-capable admin filter (#115 OSS half), group remote-download quotas per count + per volume (#16), yt-dlp downloader provider (#88), progressive image preview (#113), v3 migrator `DatabaseURL` passthrough (#42)
    - [x] `activity_event` entity (immutable, tx-aware, actor+IP+CID) + per-file Activity dialog + admin `/admin/event` feed + per-type enablement + retention cron (#184)

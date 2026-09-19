@@ -1191,6 +1191,29 @@ func HasGrantsWith(preds ...predicate.UserGrant) predicate.User {
 	})
 }
 
+// HasSharePurchases applies the HasEdge predicate on the "share_purchases" edge.
+func HasSharePurchases() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, SharePurchasesTable, SharePurchasesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasSharePurchasesWith applies the HasEdge predicate on the "share_purchases" edge with a given conditions (other predicates).
+func HasSharePurchasesWith(preds ...predicate.SharePurchase) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newSharePurchasesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.User) predicate.User {
 	return predicate.User(sql.AndPredicates(predicates...))

@@ -2,6 +2,7 @@ package inventory
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/giftcode"
 	"github.com/cloudreve/Cloudreve/v4/ent/sku"
 	"github.com/cloudreve/Cloudreve/v4/ent/usergrant"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/boolset"
 	"github.com/stretchr/testify/require"
 )
@@ -238,4 +240,86 @@ func TestPurchaseSku(t *testing.T) {
 	bonus, err = c.StorageBonus(ctx, u.ID)
 	require.NoError(t, err)
 	require.Equal(t, int64(1024), bonus)
+}
+
+func paidShareFixture(t *testing.T, client *ent.Client, price int) (*ent.User, *ent.User, *ent.Share) {
+	return paidShareFixtureN(t, client, price, 0)
+}
+
+func paidShareFixtureN(t *testing.T, client *ent.Client, price, n int) (*ent.User, *ent.User, *ent.Share) {
+	ctx := context.Background()
+	suffix := fmt.Sprintf("%s-%d", t.Name(), n)
+	group := client.Group.Create().SetName("g" + suffix).SetPermissions(&boolset.BooleanSet{}).SaveX(ctx)
+	owner := client.User.Create().SetEmail("owner-" + suffix + "@example.com").SetNick("o" + suffix).SetGroup(group).SaveX(ctx)
+	buyer := client.User.Create().SetEmail("buyer-" + suffix + "@example.com").SetNick("b" + suffix).SetGroup(group).SaveX(ctx)
+	root := client.File.Create().SetName(RootFolderName).SetType(int(types.FileTypeFolder)).SetOwner(owner).SaveX(ctx)
+	file := client.File.Create().SetName("paid" + suffix + ".txt").SetType(int(types.FileTypeFile)).SetOwner(owner).SetParent(root).SaveX(ctx)
+	share := client.Share.Create().SetUser(owner).SetFile(file).SetPricePoints(price).SaveX(ctx)
+	share.Edges.User = owner
+	return owner, buyer, share
+}
+
+func TestPurchaseShare(t *testing.T) {
+	ctx := context.Background()
+	client, c := newVasClient(t)
+	owner, buyer, share := paidShareFixture(t, client, 100)
+	require.NoError(t, c.CreditAdjust(ctx, buyer.ID, 250, credittxn.TypeAdjust, "", "grant"))
+
+	// 80% commission: buyer pays 100, owner earns 80.
+	purchase, err := c.PurchaseShare(ctx, share, buyer.ID, 0.8)
+	require.NoError(t, err)
+	require.NotEmpty(t, purchase.Ticket)
+	require.Equal(t, 100, purchase.Points)
+	require.Equal(t, int64(150), client.User.GetX(ctx, buyer.ID).Credits)
+	require.Equal(t, int64(80), client.User.GetX(ctx, owner.ID).Credits)
+
+	// Idempotent: second purchase returns the same row without re-debiting.
+	again, err := c.PurchaseShare(ctx, share, buyer.ID, 0.8)
+	require.NoError(t, err)
+	require.Equal(t, purchase.ID, again.ID)
+	require.Equal(t, purchase.Ticket, again.Ticket)
+	require.Equal(t, int64(150), client.User.GetX(ctx, buyer.ID).Credits)
+
+	// Ticket is scoped to its own share.
+	_, err = c.SharePurchaseByTicket(ctx, share.ID, purchase.Ticket)
+	require.NoError(t, err)
+	_, _, otherShare := paidShareFixtureN(t, client, 100, 1)
+	_, err = c.SharePurchaseByTicket(ctx, otherShare.ID, purchase.Ticket)
+	require.Error(t, err)
+	_, err = c.SharePurchaseByTicket(ctx, share.ID, "bogus-ticket")
+	require.Error(t, err)
+}
+
+func TestPurchaseShareInsufficient(t *testing.T) {
+	ctx := context.Background()
+	client, c := newVasClient(t)
+	owner, buyer, share := paidShareFixture(t, client, 100)
+	require.NoError(t, c.CreditAdjust(ctx, buyer.ID, 50, credittxn.TypeAdjust, "", "grant"))
+
+	_, err := c.PurchaseShare(ctx, share, buyer.ID, 1)
+	require.ErrorIs(t, err, ErrInsufficientPoints)
+	require.Equal(t, int64(50), client.User.GetX(ctx, buyer.ID).Credits)
+	require.Equal(t, int64(0), client.User.GetX(ctx, owner.ID).Credits)
+	_, err = c.SharePurchase(ctx, share.ID, buyer.ID)
+	require.Error(t, err)
+}
+
+func TestPurchaseShareIncomeRates(t *testing.T) {
+	ctx := context.Background()
+	client, c := newVasClient(t)
+
+	// Zero commission: owner earns nothing, purchase still recorded.
+	owner, buyer, share := paidShareFixture(t, client, 40)
+	require.NoError(t, c.CreditAdjust(ctx, buyer.ID, 100, credittxn.TypeAdjust, "", "grant"))
+	p, err := c.PurchaseShare(ctx, share, buyer.ID, 0)
+	require.NoError(t, err)
+	require.NotNil(t, p)
+	require.Equal(t, int64(0), client.User.GetX(ctx, owner.ID).Credits)
+
+	// Rate above 1 clamps to full price.
+	owner2, buyer2, share2 := paidShareFixtureN(t, client, 30, 1)
+	require.NoError(t, c.CreditAdjust(ctx, buyer2.ID, 100, credittxn.TypeAdjust, "", "grant"))
+	_, err = c.PurchaseShare(ctx, share2, buyer2.ID, 1.5)
+	require.NoError(t, err)
+	require.Equal(t, int64(30), client.User.GetX(ctx, owner2.ID).Credits)
 }

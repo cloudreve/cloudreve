@@ -324,7 +324,9 @@ const (
 	GroupPermissionArchiveTask
 	GroupPermissionWebDAVProxy
 	GroupPermissionShareDownload
-	GroupPermission_CommunityPlaceholder1
+	// GroupPermissionShareFree lets members access paid shares without
+	// purchasing (e.g. staff or VIP groups).
+	GroupPermissionShareFree
 	GroupPermissionRemoteDownload
 	GroupPermission_CommunityPlaceholder2
 	GroupPermissionRedirectedSource // not used
@@ -354,6 +356,9 @@ const (
 	GroupPermissionAdminPayment
 	GroupPermissionAdminEvents
 	GroupPermissionAdminReports
+	// GroupPermissionShareSell allows members to set a points price on
+	// shares they create (paid shares).
+	GroupPermissionShareSell
 )
 
 // AclPermission is a bit position in an ACL entry's permission bitmask.

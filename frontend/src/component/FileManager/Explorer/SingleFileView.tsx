@@ -37,6 +37,7 @@ import Timer from "../../Icons/Timer.tsx";
 import useActionDisplayOpt from "../ContextMenu/useActionDisplayOpt.ts";
 import { FmIndexContext } from "../FmIndexContext.tsx";
 import { PropTypography, ShareExpires, ShareStatistics } from "../TopBar/ShareInfoPopover.tsx";
+import PaidShareGate from "../PaidShareGate.tsx";
 import FileIcon from "./FileIcon.tsx";
 import FileTagSummary from "./FileTagSummary.tsx";
 import { useFileBlockState } from "./GridView/GridFile.tsx";
@@ -228,6 +229,7 @@ const SingleFileView = forwardRef((_props, ref: React.Ref<any>) => {
                 <ShareExpires expires={shareInfo.expires} remain_downloads={shareInfo.remain_downloads} />
               </Alert>
             )}
+            <PaidShareGate shareInfo={shareInfo} onPurchased={() => window.location.reload()} />
             <Box
               sx={{
                 display: "flex",
@@ -251,7 +253,7 @@ const SingleFileView = forwardRef((_props, ref: React.Ref<any>) => {
                     {t("application:fileManager.save")}
                   </SecondaryButton>
                 )}
-                {displayOpt.showOpen && file && (
+                {displayOpt.showOpen && file && !(shareInfo.price && !shareInfo.paid) && (
                   <SecondaryButton
                     variant="contained"
                     onClick={() => dispatch(openViewers(0, file))}
@@ -262,7 +264,7 @@ const SingleFileView = forwardRef((_props, ref: React.Ref<any>) => {
                   </SecondaryButton>
                 )}
                 <ButtonGroup disableElevation variant="contained">
-                  {!shareInfo.preview_only && (
+                  {!shareInfo.preview_only && !(shareInfo.price && !shareInfo.paid) && (
                     <Button onClick={download} disabled={loading} startIcon={<Download />}>
                       {t("application:fileManager.download")}
                     </Button>

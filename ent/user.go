@@ -84,9 +84,11 @@ type UserEdges struct {
 	RedeemedCodes []*GiftCode `json:"redeemed_codes,omitempty"`
 	// Grants holds the value of the grants edge.
 	Grants []*UserGrant `json:"grants,omitempty"`
+	// SharePurchases holds the value of the share_purchases edge.
+	SharePurchases []*SharePurchase `json:"share_purchases,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [12]bool
+	loadedTypes [13]bool
 }
 
 // GroupOrErr returns the Group value or an error if the edge
@@ -199,6 +201,15 @@ func (e UserEdges) GrantsOrErr() ([]*UserGrant, error) {
 		return e.Grants, nil
 	}
 	return nil, &NotLoadedError{edge: "grants"}
+}
+
+// SharePurchasesOrErr returns the SharePurchases value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) SharePurchasesOrErr() ([]*SharePurchase, error) {
+	if e.loadedTypes[12] {
+		return e.SharePurchases, nil
+	}
+	return nil, &NotLoadedError{edge: "share_purchases"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -409,6 +420,11 @@ func (u *User) QueryGrants() *UserGrantQuery {
 	return NewUserClient(u.config).QueryGrants(u)
 }
 
+// QuerySharePurchases queries the "share_purchases" edge of the User entity.
+func (u *User) QuerySharePurchases() *SharePurchaseQuery {
+	return NewUserClient(u.config).QuerySharePurchases(u)
+}
+
 // Update returns a builder for updating this User.
 // Note that you need to call User.Unwrap() before calling this method if this User
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -557,6 +573,12 @@ func (e *User) SetRedeemedCodes(v []*GiftCode) {
 func (e *User) SetGrants(v []*UserGrant) {
 	e.Edges.Grants = v
 	e.Edges.loadedTypes[11] = true
+}
+
+// SetSharePurchases manually set the edge as loaded state.
+func (e *User) SetSharePurchases(v []*SharePurchase) {
+	e.Edges.SharePurchases = v
+	e.Edges.loadedTypes[12] = true
 }
 
 // Users is a parsable slice of User.

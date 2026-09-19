@@ -415,6 +415,8 @@ type (
 		SkipError         bool     `json:"skip_error"`
 		Archive           bool     `json:"archive"`
 		NoCache           bool     `json:"no_cache"`
+		// PurchaseTicket restores paid-share access after session loss.
+		PurchaseTicket string `json:"purchase_ticket"`
 	}
 	FileURLResponse struct {
 		Urls    []manager.EntityUrl `json:"urls"`
@@ -503,6 +505,9 @@ func (s *FileURLService) Get(c *gin.Context) (*FileURLResponse, error) {
 	if s.UsePrimarySiteURL {
 		ctx = setting.UseFirstSiteUrl(ctx)
 	}
+	if s.PurchaseTicket != "" {
+		ctx = context.WithValue(ctx, dbfs.PurchaseTicketCtxKey{}, s.PurchaseTicket)
+	}
 
 	res, earliestExpire, err := m.GetEntityUrls(ctx, urlReq,
 		fs.WithDownloadSpeed(int64(user.Edges.Group.SpeedLimit)),
@@ -541,7 +546,8 @@ func (s *FileURLService) Get(c *gin.Context) (*FileURLResponse, error) {
 type (
 	FileThumbParameterCtx struct{}
 	FileThumbService      struct {
-		Uri string `form:"uri" binding:"required"`
+		Uri            string `form:"uri" binding:"required"`
+		PurchaseTicket string `form:"purchase_ticket"`
 	}
 	FileThumbResponse struct {
 		Url     string     `json:"url"`
@@ -562,7 +568,11 @@ func (s *FileThumbService) Get(c *gin.Context) (*FileThumbResponse, error) {
 	}
 
 	// Get thumbnail
-	thumb, err := m.Thumbnail(c, uri)
+	var ctx context.Context = c
+	if s.PurchaseTicket != "" {
+		ctx = context.WithValue(c, dbfs.PurchaseTicketCtxKey{}, s.PurchaseTicket)
+	}
+	thumb, err := m.Thumbnail(ctx, uri)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get thumbnail: %w", err)
 	}

@@ -28,6 +28,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/predicate"
 	"github.com/cloudreve/Cloudreve/v4/ent/setting"
 	"github.com/cloudreve/Cloudreve/v4/ent/share"
+	"github.com/cloudreve/Cloudreve/v4/ent/sharepurchase"
 	"github.com/cloudreve/Cloudreve/v4/ent/sku"
 	"github.com/cloudreve/Cloudreve/v4/ent/storagepolicy"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
@@ -604,6 +605,33 @@ func (f TraverseShare) Traverse(ctx context.Context, q ent.Query) error {
 	return fmt.Errorf("unexpected query type %T. expect *ent.ShareQuery", q)
 }
 
+// The SharePurchaseFunc type is an adapter to allow the use of ordinary function as a Querier.
+type SharePurchaseFunc func(context.Context, *ent.SharePurchaseQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f SharePurchaseFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.SharePurchaseQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.SharePurchaseQuery", q)
+}
+
+// The TraverseSharePurchase type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseSharePurchase func(context.Context, *ent.SharePurchaseQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseSharePurchase) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseSharePurchase) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.SharePurchaseQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.SharePurchaseQuery", q)
+}
+
 // The SkuFunc type is an adapter to allow the use of ordinary function as a Querier.
 type SkuFunc func(context.Context, *ent.SkuQuery) (ent.Value, error)
 
@@ -780,6 +808,8 @@ func NewQuery(q ent.Query) (Query, error) {
 		return &query[*ent.SettingQuery, predicate.Setting, setting.OrderOption]{typ: ent.TypeSetting, tq: q}, nil
 	case *ent.ShareQuery:
 		return &query[*ent.ShareQuery, predicate.Share, share.OrderOption]{typ: ent.TypeShare, tq: q}, nil
+	case *ent.SharePurchaseQuery:
+		return &query[*ent.SharePurchaseQuery, predicate.SharePurchase, sharepurchase.OrderOption]{typ: ent.TypeSharePurchase, tq: q}, nil
 	case *ent.SkuQuery:
 		return &query[*ent.SkuQuery, predicate.Sku, sku.OrderOption]{typ: ent.TypeSku, tq: q}, nil
 	case *ent.StoragePolicyQuery:

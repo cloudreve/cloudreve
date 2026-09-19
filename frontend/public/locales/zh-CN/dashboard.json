@@ -1316,6 +1316,8 @@
     "allowCreateShareLinkDes": "关闭后，用户无法创建分享链接。",
     "shareFree": "无需购买分享链接",
     "shareFreeDes": "开启后，用户无需购买即可访问所有付费分享链接。",
+    "shareSell": "出售分享链接",
+    "shareSellDes": "开启后，用户可以为其创建的分享链接设置积分价格。",
     "fileManagement": "文件管理",
     "allowWabDAV": "WebDAV",
     "allowWabDAVDes": "关闭后，用户无法通过 WebDAV 协议连接至网盘。",

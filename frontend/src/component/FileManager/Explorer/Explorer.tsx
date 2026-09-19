@@ -1,19 +1,22 @@
 import { Box, useMediaQuery, useTheme } from "@mui/material";
-import React, { RefCallback, useCallback, useContext, useEffect, useMemo } from "react";
+import React, { RefCallback, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { CSSTransition, SwitchTransition } from "react-transition-group";
 import { useAreaSelection } from "../../../hooks/areaSelection.ts";
 import { useAppDispatch, useAppSelector } from "../../../redux/hooks.ts";
 import { ConfigLoadState } from "../../../redux/siteConfigSlice.ts";
 import { openEmptyContextMenu } from "../../../redux/thunks/filemanager.ts";
 import { loadSiteConfig } from "../../../redux/thunks/site.ts";
+import { queueLoadShareInfo } from "../../../redux/thunks/share.ts";
+import { Share } from "../../../api/explorer.ts";
 import CircularProgress from "../../Common/CircularProgress.tsx";
 import "../../Common/FadeTransition.css";
 import { RadiusFrame } from "../../Frame/RadiusFrame.tsx";
+import PaidShareGate from "../PaidShareGate.tsx";
 import ExplorerError from "./ExplorerError.tsx";
 import GridView, { FmFile } from "./GridView/GridView.tsx";
 
 import { Layouts } from "../../../redux/fileManagerSlice.ts";
-import { SearchParam } from "../../../util/uri.ts";
+import CrUri, { Filesystem, SearchParam } from "../../../util/uri.ts";
 import { FileManagerIndex } from "../FileManager.tsx";
 import { FmIndexContext } from "../FmIndexContext.tsx";
 import EmptyFileList, { SearchLimitReached } from "./EmptyFileList.tsx";
@@ -58,6 +61,22 @@ const Explorer = () => {
   const files = useAppSelector((state) => state.fileManager[fmIndex].list?.files);
   const recursion_limit_reached = useAppSelector((state) => state.fileManager[fmIndex].list?.recursion_limit_reached);
   const layout = useAppSelector((state) => state.fileManager[fmIndex].layout);
+  const currentFs = useAppSelector((state) => state.fileManager[fmIndex].current_fs);
+  const purePath = useAppSelector((state) => state.fileManager[fmIndex].pure_path);
+  const [shareInfo, setShareInfo] = useState<Share | null>(null);
+
+  useEffect(() => {
+    setShareInfo(null);
+    if (currentFs == Filesystem.share && purePath) {
+      try {
+        dispatch(queueLoadShareInfo(new CrUri(purePath)))
+          .then(setShareInfo)
+          .catch(() => setShareInfo(null));
+      } catch {
+        setShareInfo(null);
+      }
+    }
+  }, [currentFs, purePath, dispatch]);
 
   const selectContainerRef = React.useRef<HTMLElement | null>(null);
 
@@ -119,6 +138,11 @@ const Explorer = () => {
       onMouseUp={isMobile || isTouch ? undefined : handleMouseUp}
       onMouseMove={isMobile || isTouch ? undefined : handleMouseMove}
     >
+      {fmIndex == FileManagerIndex.main && shareInfo && (shareInfo.price ?? 0) > 0 && !shareInfo.paid && (
+        <Box sx={{ px: 2, pt: 1 }}>
+          <PaidShareGate shareInfo={shareInfo} onPurchased={() => window.location.reload()} />
+        </Box>
+      )}
       <SwitchTransition>
         <CSSTransition
           timeout={500}

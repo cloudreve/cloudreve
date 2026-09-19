@@ -22,6 +22,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/passkey"
 	"github.com/cloudreve/Cloudreve/v4/ent/predicate"
 	"github.com/cloudreve/Cloudreve/v4/ent/share"
+	"github.com/cloudreve/Cloudreve/v4/ent/sharepurchase"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
 	"github.com/cloudreve/Cloudreve/v4/ent/usergrant"
@@ -473,6 +474,21 @@ func (uu *UserUpdate) AddGrants(u ...*UserGrant) *UserUpdate {
 	return uu.AddGrantIDs(ids...)
 }
 
+// AddSharePurchaseIDs adds the "share_purchases" edge to the SharePurchase entity by IDs.
+func (uu *UserUpdate) AddSharePurchaseIDs(ids ...int) *UserUpdate {
+	uu.mutation.AddSharePurchaseIDs(ids...)
+	return uu
+}
+
+// AddSharePurchases adds the "share_purchases" edges to the SharePurchase entity.
+func (uu *UserUpdate) AddSharePurchases(s ...*SharePurchase) *UserUpdate {
+	ids := make([]int, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return uu.AddSharePurchaseIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uu *UserUpdate) Mutation() *UserMutation {
 	return uu.mutation
@@ -713,6 +729,27 @@ func (uu *UserUpdate) RemoveGrants(u ...*UserGrant) *UserUpdate {
 		ids[i] = u[i].ID
 	}
 	return uu.RemoveGrantIDs(ids...)
+}
+
+// ClearSharePurchases clears all "share_purchases" edges to the SharePurchase entity.
+func (uu *UserUpdate) ClearSharePurchases() *UserUpdate {
+	uu.mutation.ClearSharePurchases()
+	return uu
+}
+
+// RemoveSharePurchaseIDs removes the "share_purchases" edge to SharePurchase entities by IDs.
+func (uu *UserUpdate) RemoveSharePurchaseIDs(ids ...int) *UserUpdate {
+	uu.mutation.RemoveSharePurchaseIDs(ids...)
+	return uu
+}
+
+// RemoveSharePurchases removes "share_purchases" edges to SharePurchase entities.
+func (uu *UserUpdate) RemoveSharePurchases(s ...*SharePurchase) *UserUpdate {
+	ids := make([]int, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return uu.RemoveSharePurchaseIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -1388,6 +1425,51 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if uu.mutation.SharePurchasesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SharePurchasesTable,
+			Columns: []string{user.SharePurchasesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(sharepurchase.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.RemovedSharePurchasesIDs(); len(nodes) > 0 && !uu.mutation.SharePurchasesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SharePurchasesTable,
+			Columns: []string{user.SharePurchasesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(sharepurchase.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.SharePurchasesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SharePurchasesTable,
+			Columns: []string{user.SharePurchasesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(sharepurchase.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, uu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{user.Label}
@@ -1840,6 +1922,21 @@ func (uuo *UserUpdateOne) AddGrants(u ...*UserGrant) *UserUpdateOne {
 	return uuo.AddGrantIDs(ids...)
 }
 
+// AddSharePurchaseIDs adds the "share_purchases" edge to the SharePurchase entity by IDs.
+func (uuo *UserUpdateOne) AddSharePurchaseIDs(ids ...int) *UserUpdateOne {
+	uuo.mutation.AddSharePurchaseIDs(ids...)
+	return uuo
+}
+
+// AddSharePurchases adds the "share_purchases" edges to the SharePurchase entity.
+func (uuo *UserUpdateOne) AddSharePurchases(s ...*SharePurchase) *UserUpdateOne {
+	ids := make([]int, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return uuo.AddSharePurchaseIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uuo *UserUpdateOne) Mutation() *UserMutation {
 	return uuo.mutation
@@ -2080,6 +2177,27 @@ func (uuo *UserUpdateOne) RemoveGrants(u ...*UserGrant) *UserUpdateOne {
 		ids[i] = u[i].ID
 	}
 	return uuo.RemoveGrantIDs(ids...)
+}
+
+// ClearSharePurchases clears all "share_purchases" edges to the SharePurchase entity.
+func (uuo *UserUpdateOne) ClearSharePurchases() *UserUpdateOne {
+	uuo.mutation.ClearSharePurchases()
+	return uuo
+}
+
+// RemoveSharePurchaseIDs removes the "share_purchases" edge to SharePurchase entities by IDs.
+func (uuo *UserUpdateOne) RemoveSharePurchaseIDs(ids ...int) *UserUpdateOne {
+	uuo.mutation.RemoveSharePurchaseIDs(ids...)
+	return uuo
+}
+
+// RemoveSharePurchases removes "share_purchases" edges to SharePurchase entities.
+func (uuo *UserUpdateOne) RemoveSharePurchases(s ...*SharePurchase) *UserUpdateOne {
+	ids := make([]int, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return uuo.RemoveSharePurchaseIDs(ids...)
 }
 
 // Where appends a list predicates to the UserUpdate builder.
@@ -2778,6 +2896,51 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(usergrant.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uuo.mutation.SharePurchasesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SharePurchasesTable,
+			Columns: []string{user.SharePurchasesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(sharepurchase.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.RemovedSharePurchasesIDs(); len(nodes) > 0 && !uuo.mutation.SharePurchasesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SharePurchasesTable,
+			Columns: []string{user.SharePurchasesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(sharepurchase.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.SharePurchasesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SharePurchasesTable,
+			Columns: []string{user.SharePurchasesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(sharepurchase.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

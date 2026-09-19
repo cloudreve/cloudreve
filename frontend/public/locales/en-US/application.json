@@ -502,6 +502,10 @@
     "policyGroupDefault": "Group default"
   },
   "modals": {
+    "paidShare": "Paid share",
+    "paidSharePrice": "{{price}} points",
+    "paidShareDes": "Visitors must purchase this share with credit points before downloading. Set 0 for a free share.",
+    "paidSharePriceLabel": "Price (points)",
     "includePasswordInShareLink": "Include password in share link",
     "includePasswordInShareLinkDes": "If selected, password will be included in the share link, and no password is required when accessing the share link.",
     "showFileName": "Show file name",
@@ -806,7 +810,11 @@
     "preview": "Preview",
     "incorrectPassword": "Password incorrect.",
     "shareNotExist": "Share link is invalid or expired.",
-    "copyLinkToClipboard": "Copy link to clipboard"
+    "copyLinkToClipboard": "Copy link to clipboard",
+    "paidShareDes": "This is a paid share. Purchasing costs {{price}} points and unlocks downloads.",
+    "purchaseForPoints": "Purchase for {{price}} pts",
+    "signInToPurchase": "Sign in to purchase",
+    "yourBalance": "Balance: {{credits}} points"
   },
   "download": {
     "noFilesFound": "No files found",

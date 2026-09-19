@@ -118,6 +118,12 @@ func (m *ShareMutation) SetRawID(t int) {
 
 // SetUpdatedAt sets the "updated_at" field.
 
+func (m *SharePurchaseMutation) SetRawID(t int) {
+	m.id = &t
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+
 func (m *SkuMutation) SetRawID(t int) {
 	m.id = &t
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/file"
 	"github.com/cloudreve/Cloudreve/v4/ent/predicate"
 	"github.com/cloudreve/Cloudreve/v4/ent/share"
+	"github.com/cloudreve/Cloudreve/v4/ent/sharepurchase"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 )
@@ -166,6 +167,27 @@ func (su *ShareUpdate) ClearRemainDownloads() *ShareUpdate {
 	return su
 }
 
+// SetPricePoints sets the "price_points" field.
+func (su *ShareUpdate) SetPricePoints(i int) *ShareUpdate {
+	su.mutation.ResetPricePoints()
+	su.mutation.SetPricePoints(i)
+	return su
+}
+
+// SetNillablePricePoints sets the "price_points" field if the given value is not nil.
+func (su *ShareUpdate) SetNillablePricePoints(i *int) *ShareUpdate {
+	if i != nil {
+		su.SetPricePoints(*i)
+	}
+	return su
+}
+
+// AddPricePoints adds i to the "price_points" field.
+func (su *ShareUpdate) AddPricePoints(i int) *ShareUpdate {
+	su.mutation.AddPricePoints(i)
+	return su
+}
+
 // SetProps sets the "props" field.
 func (su *ShareUpdate) SetProps(tp *types.ShareProps) *ShareUpdate {
 	su.mutation.SetProps(tp)
@@ -216,6 +238,21 @@ func (su *ShareUpdate) SetFile(f *File) *ShareUpdate {
 	return su.SetFileID(f.ID)
 }
 
+// AddPurchaseIDs adds the "purchases" edge to the SharePurchase entity by IDs.
+func (su *ShareUpdate) AddPurchaseIDs(ids ...int) *ShareUpdate {
+	su.mutation.AddPurchaseIDs(ids...)
+	return su
+}
+
+// AddPurchases adds the "purchases" edges to the SharePurchase entity.
+func (su *ShareUpdate) AddPurchases(s ...*SharePurchase) *ShareUpdate {
+	ids := make([]int, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return su.AddPurchaseIDs(ids...)
+}
+
 // Mutation returns the ShareMutation object of the builder.
 func (su *ShareUpdate) Mutation() *ShareMutation {
 	return su.mutation
@@ -231,6 +268,27 @@ func (su *ShareUpdate) ClearUser() *ShareUpdate {
 func (su *ShareUpdate) ClearFile() *ShareUpdate {
 	su.mutation.ClearFile()
 	return su
+}
+
+// ClearPurchases clears all "purchases" edges to the SharePurchase entity.
+func (su *ShareUpdate) ClearPurchases() *ShareUpdate {
+	su.mutation.ClearPurchases()
+	return su
+}
+
+// RemovePurchaseIDs removes the "purchases" edge to SharePurchase entities by IDs.
+func (su *ShareUpdate) RemovePurchaseIDs(ids ...int) *ShareUpdate {
+	su.mutation.RemovePurchaseIDs(ids...)
+	return su
+}
+
+// RemovePurchases removes "purchases" edges to SharePurchase entities.
+func (su *ShareUpdate) RemovePurchases(s ...*SharePurchase) *ShareUpdate {
+	ids := make([]int, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return su.RemovePurchaseIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -275,7 +333,20 @@ func (su *ShareUpdate) defaults() error {
 	return nil
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (su *ShareUpdate) check() error {
+	if v, ok := su.mutation.PricePoints(); ok {
+		if err := share.PricePointsValidator(v); err != nil {
+			return &ValidationError{Name: "price_points", err: fmt.Errorf(`ent: validator failed for field "Share.price_points": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (su *ShareUpdate) sqlSave(ctx context.Context) (n int, err error) {
+	if err := su.check(); err != nil {
+		return n, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(share.Table, share.Columns, sqlgraph.NewFieldSpec(share.FieldID, field.TypeInt))
 	if ps := su.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -325,6 +396,12 @@ func (su *ShareUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if su.mutation.RemainDownloadsCleared() {
 		_spec.ClearField(share.FieldRemainDownloads, field.TypeInt)
+	}
+	if value, ok := su.mutation.PricePoints(); ok {
+		_spec.SetField(share.FieldPricePoints, field.TypeInt, value)
+	}
+	if value, ok := su.mutation.AddedPricePoints(); ok {
+		_spec.AddField(share.FieldPricePoints, field.TypeInt, value)
 	}
 	if value, ok := su.mutation.Props(); ok {
 		_spec.SetField(share.FieldProps, field.TypeJSON, value)
@@ -383,6 +460,51 @@ func (su *ShareUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if su.mutation.PurchasesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   share.PurchasesTable,
+			Columns: []string{share.PurchasesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(sharepurchase.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := su.mutation.RemovedPurchasesIDs(); len(nodes) > 0 && !su.mutation.PurchasesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   share.PurchasesTable,
+			Columns: []string{share.PurchasesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(sharepurchase.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := su.mutation.PurchasesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   share.PurchasesTable,
+			Columns: []string{share.PurchasesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(sharepurchase.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -545,6 +667,27 @@ func (suo *ShareUpdateOne) ClearRemainDownloads() *ShareUpdateOne {
 	return suo
 }
 
+// SetPricePoints sets the "price_points" field.
+func (suo *ShareUpdateOne) SetPricePoints(i int) *ShareUpdateOne {
+	suo.mutation.ResetPricePoints()
+	suo.mutation.SetPricePoints(i)
+	return suo
+}
+
+// SetNillablePricePoints sets the "price_points" field if the given value is not nil.
+func (suo *ShareUpdateOne) SetNillablePricePoints(i *int) *ShareUpdateOne {
+	if i != nil {
+		suo.SetPricePoints(*i)
+	}
+	return suo
+}
+
+// AddPricePoints adds i to the "price_points" field.
+func (suo *ShareUpdateOne) AddPricePoints(i int) *ShareUpdateOne {
+	suo.mutation.AddPricePoints(i)
+	return suo
+}
+
 // SetProps sets the "props" field.
 func (suo *ShareUpdateOne) SetProps(tp *types.ShareProps) *ShareUpdateOne {
 	suo.mutation.SetProps(tp)
@@ -595,6 +738,21 @@ func (suo *ShareUpdateOne) SetFile(f *File) *ShareUpdateOne {
 	return suo.SetFileID(f.ID)
 }
 
+// AddPurchaseIDs adds the "purchases" edge to the SharePurchase entity by IDs.
+func (suo *ShareUpdateOne) AddPurchaseIDs(ids ...int) *ShareUpdateOne {
+	suo.mutation.AddPurchaseIDs(ids...)
+	return suo
+}
+
+// AddPurchases adds the "purchases" edges to the SharePurchase entity.
+func (suo *ShareUpdateOne) AddPurchases(s ...*SharePurchase) *ShareUpdateOne {
+	ids := make([]int, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return suo.AddPurchaseIDs(ids...)
+}
+
 // Mutation returns the ShareMutation object of the builder.
 func (suo *ShareUpdateOne) Mutation() *ShareMutation {
 	return suo.mutation
@@ -610,6 +768,27 @@ func (suo *ShareUpdateOne) ClearUser() *ShareUpdateOne {
 func (suo *ShareUpdateOne) ClearFile() *ShareUpdateOne {
 	suo.mutation.ClearFile()
 	return suo
+}
+
+// ClearPurchases clears all "purchases" edges to the SharePurchase entity.
+func (suo *ShareUpdateOne) ClearPurchases() *ShareUpdateOne {
+	suo.mutation.ClearPurchases()
+	return suo
+}
+
+// RemovePurchaseIDs removes the "purchases" edge to SharePurchase entities by IDs.
+func (suo *ShareUpdateOne) RemovePurchaseIDs(ids ...int) *ShareUpdateOne {
+	suo.mutation.RemovePurchaseIDs(ids...)
+	return suo
+}
+
+// RemovePurchases removes "purchases" edges to SharePurchase entities.
+func (suo *ShareUpdateOne) RemovePurchases(s ...*SharePurchase) *ShareUpdateOne {
+	ids := make([]int, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return suo.RemovePurchaseIDs(ids...)
 }
 
 // Where appends a list predicates to the ShareUpdate builder.
@@ -667,7 +846,20 @@ func (suo *ShareUpdateOne) defaults() error {
 	return nil
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (suo *ShareUpdateOne) check() error {
+	if v, ok := suo.mutation.PricePoints(); ok {
+		if err := share.PricePointsValidator(v); err != nil {
+			return &ValidationError{Name: "price_points", err: fmt.Errorf(`ent: validator failed for field "Share.price_points": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (suo *ShareUpdateOne) sqlSave(ctx context.Context) (_node *Share, err error) {
+	if err := suo.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(share.Table, share.Columns, sqlgraph.NewFieldSpec(share.FieldID, field.TypeInt))
 	id, ok := suo.mutation.ID()
 	if !ok {
@@ -735,6 +927,12 @@ func (suo *ShareUpdateOne) sqlSave(ctx context.Context) (_node *Share, err error
 	if suo.mutation.RemainDownloadsCleared() {
 		_spec.ClearField(share.FieldRemainDownloads, field.TypeInt)
 	}
+	if value, ok := suo.mutation.PricePoints(); ok {
+		_spec.SetField(share.FieldPricePoints, field.TypeInt, value)
+	}
+	if value, ok := suo.mutation.AddedPricePoints(); ok {
+		_spec.AddField(share.FieldPricePoints, field.TypeInt, value)
+	}
 	if value, ok := suo.mutation.Props(); ok {
 		_spec.SetField(share.FieldProps, field.TypeJSON, value)
 	}
@@ -792,6 +990,51 @@ func (suo *ShareUpdateOne) sqlSave(ctx context.Context) (_node *Share, err error
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if suo.mutation.PurchasesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   share.PurchasesTable,
+			Columns: []string{share.PurchasesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(sharepurchase.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := suo.mutation.RemovedPurchasesIDs(); len(nodes) > 0 && !suo.mutation.PurchasesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   share.PurchasesTable,
+			Columns: []string{share.PurchasesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(sharepurchase.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := suo.mutation.PurchasesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   share.PurchasesTable,
+			Columns: []string{share.PurchasesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(sharepurchase.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

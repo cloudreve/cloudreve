@@ -120,6 +120,7 @@ import {
   User,
   UserSettings,
 } from "./user.ts";
+import CrUri, { Filesystem } from "../util/uri.ts";
 import {
   ArchiveWorkflowService,
   DownloadWorkflowService,
@@ -319,11 +320,23 @@ export function getFileList(req: ListFileService, skipSnackbar = true): ThunkRes
 
 export function getFileThumb(path: string, contextHint?: string): ThunkResponse<FileThumbResponse> {
   return async (dispatch, _getState) => {
+    const params: Record<string, string> = { uri: path };
+    try {
+      const uri = new CrUri(path);
+      if (uri.fs() == Filesystem.share) {
+        const ticket = getSharePurchaseTicket(uri.id());
+        if (ticket) {
+          params.purchase_ticket = ticket;
+        }
+      }
+    } catch {
+      // non-CrUri inputs fall through unchanged
+    }
     return await dispatch(
       send(
         "/file/thumb",
         {
-          params: { uri: path },
+          params,
           method: "GET",
           headers: contextHint
             ? {
@@ -675,6 +688,48 @@ export function sendDeleteShares(ids: string[]): ThunkResponse<void> {
   };
 }
 
+const shareTicketKey = (shareId: string) => `cloudreve.share_ticket.${shareId}`;
+
+export const getSharePurchaseTicket = (shareId: string): string | undefined => {
+  try {
+    return localStorage.getItem(shareTicketKey(shareId)) ?? undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+export const setSharePurchaseTicket = (shareId: string, ticket: string) => {
+  try {
+    localStorage.setItem(shareTicketKey(shareId), ticket);
+  } catch {
+    // storage unavailable; resume simply won't survive a reload
+  }
+};
+
+export interface SharePurchaseResponse {
+  ticket: string;
+}
+
+export function purchaseShare(id: string): ThunkResponse<SharePurchaseResponse> {
+  return async (dispatch, _getState) => {
+    const res = await dispatch(
+      send(
+        "/share/purchase/" + id,
+        {
+          method: "POST",
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+    if (res?.ticket) {
+      setSharePurchaseTicket(id, res.ticket);
+    }
+    return res;
+  };
+}
+
 export function getShareInfo(
   id: string,
   password?: string,
@@ -687,6 +742,10 @@ export function getShareInfo(
     if (password && password != "") {
       query.set("password", password);
     }
+    const purchaseTicket = getSharePurchaseTicket(id);
+    if (purchaseTicket) {
+      query.set("purchase_ticket", purchaseTicket);
+    }
     if (count_views) {
       query.set("count_views", "true");
     }
@@ -696,7 +755,7 @@ export function getShareInfo(
     if (query.toString() != "") {
       uri += "?" + query.toString();
     }
-    return await dispatch(
+    const res = await dispatch(
       send(
         uri,
         {
@@ -708,6 +767,12 @@ export function getShareInfo(
         },
       ),
     );
+    // Persist the server-issued resume ticket so entity/thumb downloads keep
+    // working for buyers who purchased on another device or browser.
+    if (res?.purchase_ticket) {
+      setSharePurchaseTicket(id, res.purchase_ticket);
+    }
+    return res;
   };
 }
 
@@ -730,6 +795,21 @@ export function sendCreateFile(req: CreateFileService): ThunkResponse<FileRespon
 
 export function getFileEntityUrl(req: FileURLService): ThunkResponse<FileURLResponse> {
   return async (dispatch, _getState) => {
+    // Attach the stored purchase ticket for share URIs so paid-share
+    // downloads resume without a session.
+    if (!req.purchase_ticket && req.uris.length > 0) {
+      try {
+        const uri = new CrUri(req.uris[0]);
+        if (uri.fs() == Filesystem.share) {
+          const ticket = getSharePurchaseTicket(uri.id());
+          if (ticket) {
+            req = { ...req, purchase_ticket: ticket };
+          }
+        }
+      } catch {
+        // non-CrUri inputs fall through unchanged
+      }
+    }
     return await dispatch(
       send(
         "/file/url",

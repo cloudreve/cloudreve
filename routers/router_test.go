@@ -51,6 +51,7 @@ func TestMasterRouteWiring(t *testing.T) {
 		"GET /api/v4/user/info/:id",
 		"PUT /api/v4/file/upload",
 		"POST /api/v4/file/upload/:sessionId/:index",
+		"POST /api/v4/share/purchase/:id",
 		"GET /f/:id/:name",
 	}
 	for _, e := range expected {

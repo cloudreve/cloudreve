@@ -22,6 +22,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/passkey"
 	"github.com/cloudreve/Cloudreve/v4/ent/predicate"
 	"github.com/cloudreve/Cloudreve/v4/ent/share"
+	"github.com/cloudreve/Cloudreve/v4/ent/sharepurchase"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
 	"github.com/cloudreve/Cloudreve/v4/ent/usergrant"
@@ -30,22 +31,23 @@ import (
 // UserQuery is the builder for querying User entities.
 type UserQuery struct {
 	config
-	ctx               *QueryContext
-	order             []user.OrderOption
-	inters            []Interceptor
-	predicates        []predicate.User
-	withGroup         *GroupQuery
-	withFiles         *FileQuery
-	withDavAccounts   *DavAccountQuery
-	withShares        *ShareQuery
-	withPasskey       *PasskeyQuery
-	withTasks         *TaskQuery
-	withFsevents      *FsEventQuery
-	withEntities      *EntityQuery
-	withOauthGrants   *OAuthGrantQuery
-	withCreditTxns    *CreditTxnQuery
-	withRedeemedCodes *GiftCodeQuery
-	withGrants        *UserGrantQuery
+	ctx                *QueryContext
+	order              []user.OrderOption
+	inters             []Interceptor
+	predicates         []predicate.User
+	withGroup          *GroupQuery
+	withFiles          *FileQuery
+	withDavAccounts    *DavAccountQuery
+	withShares         *ShareQuery
+	withPasskey        *PasskeyQuery
+	withTasks          *TaskQuery
+	withFsevents       *FsEventQuery
+	withEntities       *EntityQuery
+	withOauthGrants    *OAuthGrantQuery
+	withCreditTxns     *CreditTxnQuery
+	withRedeemedCodes  *GiftCodeQuery
+	withGrants         *UserGrantQuery
+	withSharePurchases *SharePurchaseQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -346,6 +348,28 @@ func (uq *UserQuery) QueryGrants() *UserGrantQuery {
 	return query
 }
 
+// QuerySharePurchases chains the current query on the "share_purchases" edge.
+func (uq *UserQuery) QuerySharePurchases() *SharePurchaseQuery {
+	query := (&SharePurchaseClient{config: uq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := uq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := uq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(sharepurchase.Table, sharepurchase.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.SharePurchasesTable, user.SharePurchasesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // First returns the first User entity from the query.
 // Returns a *NotFoundError when no User was found.
 func (uq *UserQuery) First(ctx context.Context) (*User, error) {
@@ -533,23 +557,24 @@ func (uq *UserQuery) Clone() *UserQuery {
 		return nil
 	}
 	return &UserQuery{
-		config:            uq.config,
-		ctx:               uq.ctx.Clone(),
-		order:             append([]user.OrderOption{}, uq.order...),
-		inters:            append([]Interceptor{}, uq.inters...),
-		predicates:        append([]predicate.User{}, uq.predicates...),
-		withGroup:         uq.withGroup.Clone(),
-		withFiles:         uq.withFiles.Clone(),
-		withDavAccounts:   uq.withDavAccounts.Clone(),
-		withShares:        uq.withShares.Clone(),
-		withPasskey:       uq.withPasskey.Clone(),
-		withTasks:         uq.withTasks.Clone(),
-		withFsevents:      uq.withFsevents.Clone(),
-		withEntities:      uq.withEntities.Clone(),
-		withOauthGrants:   uq.withOauthGrants.Clone(),
-		withCreditTxns:    uq.withCreditTxns.Clone(),
-		withRedeemedCodes: uq.withRedeemedCodes.Clone(),
-		withGrants:        uq.withGrants.Clone(),
+		config:             uq.config,
+		ctx:                uq.ctx.Clone(),
+		order:              append([]user.OrderOption{}, uq.order...),
+		inters:             append([]Interceptor{}, uq.inters...),
+		predicates:         append([]predicate.User{}, uq.predicates...),
+		withGroup:          uq.withGroup.Clone(),
+		withFiles:          uq.withFiles.Clone(),
+		withDavAccounts:    uq.withDavAccounts.Clone(),
+		withShares:         uq.withShares.Clone(),
+		withPasskey:        uq.withPasskey.Clone(),
+		withTasks:          uq.withTasks.Clone(),
+		withFsevents:       uq.withFsevents.Clone(),
+		withEntities:       uq.withEntities.Clone(),
+		withOauthGrants:    uq.withOauthGrants.Clone(),
+		withCreditTxns:     uq.withCreditTxns.Clone(),
+		withRedeemedCodes:  uq.withRedeemedCodes.Clone(),
+		withGrants:         uq.withGrants.Clone(),
+		withSharePurchases: uq.withSharePurchases.Clone(),
 		// clone intermediate query.
 		sql:  uq.sql.Clone(),
 		path: uq.path,
@@ -688,6 +713,17 @@ func (uq *UserQuery) WithGrants(opts ...func(*UserGrantQuery)) *UserQuery {
 	return uq
 }
 
+// WithSharePurchases tells the query-builder to eager-load the nodes that are connected to
+// the "share_purchases" edge. The optional arguments are used to configure the query builder of the edge.
+func (uq *UserQuery) WithSharePurchases(opts ...func(*SharePurchaseQuery)) *UserQuery {
+	query := (&SharePurchaseClient{config: uq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	uq.withSharePurchases = query
+	return uq
+}
+
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 //
@@ -766,7 +802,7 @@ func (uq *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	var (
 		nodes       = []*User{}
 		_spec       = uq.querySpec()
-		loadedTypes = [12]bool{
+		loadedTypes = [13]bool{
 			uq.withGroup != nil,
 			uq.withFiles != nil,
 			uq.withDavAccounts != nil,
@@ -779,6 +815,7 @@ func (uq *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 			uq.withCreditTxns != nil,
 			uq.withRedeemedCodes != nil,
 			uq.withGrants != nil,
+			uq.withSharePurchases != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -879,6 +916,13 @@ func (uq *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 		if err := uq.loadGrants(ctx, query, nodes,
 			func(n *User) { n.Edges.Grants = []*UserGrant{} },
 			func(n *User, e *UserGrant) { n.Edges.Grants = append(n.Edges.Grants, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := uq.withSharePurchases; query != nil {
+		if err := uq.loadSharePurchases(ctx, query, nodes,
+			func(n *User) { n.Edges.SharePurchases = []*SharePurchase{} },
+			func(n *User, e *SharePurchase) { n.Edges.SharePurchases = append(n.Edges.SharePurchases, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -1240,6 +1284,36 @@ func (uq *UserQuery) loadGrants(ctx context.Context, query *UserGrantQuery, node
 		node, ok := nodeids[fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (uq *UserQuery) loadSharePurchases(ctx context.Context, query *SharePurchaseQuery, nodes []*User, init func(*User), assign func(*User, *SharePurchase)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(sharepurchase.FieldBuyerID)
+	}
+	query.Where(predicate.SharePurchase(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.SharePurchasesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.BuyerID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "buyer_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}

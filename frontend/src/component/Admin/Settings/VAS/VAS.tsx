@@ -22,7 +22,7 @@ import PaymentProviders from "./PaymentProviders.tsx";
 import SkuTable from "./SkuTable.tsx";
 const VAS = () => {
   const { t } = useTranslation("dashboard");
-  const { formRef } = useContext(SettingContext);
+  const { formRef, setSettings, values } = useContext(SettingContext);
   const currencyPopupState = usePopupState({
     variant: "popover",
     popupId: "currencySelector",
@@ -52,7 +52,15 @@ const VAS = () => {
 
               <SettingForm title={t("settings.shareScoreRate")} lgWidth={5}>
                 <FormControl fullWidth>
-                  <DenseFilledTextField type="number" value={80} slotProps={{ input: { readOnly: true } }} />
+                  <DenseFilledTextField
+                    type="number"
+                    value={values.share_score_rate ?? "100"}
+                    slotProps={{ htmlInput: { min: 0, max: 100 } }}
+                    onChange={(e) => {
+                      const v = Math.max(0, Math.min(100, Math.floor(Number(e.target.value) || 0)));
+                      setSettings({ share_score_rate: v.toString() });
+                    }}
+                  />
                   <NoMarginHelperText>{t("settings.shareScoreRateDes")}</NoMarginHelperText>
                 </FormControl>
               </SettingForm>

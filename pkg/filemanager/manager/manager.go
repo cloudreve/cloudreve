@@ -128,6 +128,7 @@ type (
 		PreviewOnly     bool
 		UploadOnly      bool
 		Note            string
+		PricePoints     int
 	}
 
 	FullTextSearchResults struct {
