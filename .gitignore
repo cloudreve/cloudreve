@@ -36,7 +36,7 @@ dist/
 data/
 tmp/
 .devcontainer/
-cloudreve
+/cloudreve
 .DS_Store
 # Playwright MCP snapshots
 .playwright-mcp/

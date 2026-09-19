@@ -2,8 +2,9 @@
 
 Native Android client for Cloudreve. Kotlin + Jetpack Compose, Material 3.
 
-Status: **Phase E — v0 implemented.** Sign in, browse, download, upload,
-rename, mkdir, delete. See `../ROADMAP.md` for the remaining scope.
+Status: **Phase E — v0.1 implemented.** Sign in, browse, download, upload,
+rename, mkdir, delete, thumbnails, share-link creation. See `../ROADMAP.md`
+for the remaining scope.
 
 ## Build
 
@@ -24,9 +25,11 @@ CI runs `assembleDebug` on every PR.
 - Uploads: SAF document picker or share-sheet target, WorkManager
   background worker with progress notification, chunked through the
   upload-session flow (local + presigned remote policies)
+- Thumbnails via `/file/thumb` (Coil, lazily resolved per row)
+- Share-link creation (`PUT /share`), link copied to clipboard
 
 ## Planned next
 
 - Camera auto-upload, offline-favorite files, DocumentsProvider
-- Thumbnails via `/file/thumb`, share-link creation, search
+- Search
 - No iOS. Ever.
