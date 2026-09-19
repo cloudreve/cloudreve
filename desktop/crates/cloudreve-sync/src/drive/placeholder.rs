@@ -298,14 +298,12 @@ impl CrPlaceholder {
     ///
     /// # Example
     ///
-    /// ```no_run
-    /// use std::path::Path;
-    ///
+    /// ```ignore
     /// // Set error state on a file
-    /// update_sync_error_state(Path::new("C:\\MyFolder\\file.txt"), true)?;
+    /// placeholder.update_sync_error_state(true)?;
     ///
     /// // Clear error state
-    /// update_sync_error_state(Path::new("C:\\MyFolder\\file.txt"), false)?;
+    /// placeholder.update_sync_error_state(false)?;
     /// ```
     pub fn update_sync_error_state(&self, set_error: bool) -> Result<()> {
         if !self.local_file_info.is_placeholder() {
