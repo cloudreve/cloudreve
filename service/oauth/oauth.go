@@ -129,7 +129,7 @@ type (
 	ExchangeTokenParamCtx struct{}
 	ExchangeTokenService  struct {
 		ClientID     string `form:"client_id" binding:"required"`
-		ClientSecret string `form:"client_secret" binding:"required"`
+		ClientSecret string `form:"client_secret"`
 		GrantType    string `form:"grant_type" binding:"required,eq=authorization_code"`
 		Code         string `form:"code" binding:"required"`
 		RedirectURI  string `form:"redirect_uri"`
@@ -178,14 +178,15 @@ func (s *ExchangeTokenService) Exchange(c *gin.Context) (*TokenResponse, error) 
 		}
 	}
 
-	// 4. Validate client secret
+	// 4. Validate client secret. Public clients (empty stored secret) cannot
+	// hold a credential — they must have authorized with PKCE instead.
 	app, err := oAuthClient.GetByGUID(c, s.ClientID)
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeNotFound, "App not found", err)
 	}
 
-	if app.Secret != s.ClientSecret {
-		return nil, serializer.NewError(serializer.CodeCredentialInvalid, "Invalid client secret", nil)
+	if err := validateClientAuth(app, s.ClientSecret, authCode.CodeChallenge); err != nil {
+		return nil, err
 	}
 
 	// 5. Validate scopes are still valid for this app
@@ -248,6 +249,22 @@ func (s *ExchangeTokenService) Exchange(c *gin.Context) (*TokenResponse, error) 
 	}
 
 	return resp, nil
+}
+
+// validateClientAuth enforces client authentication at token exchange:
+// confidential clients must present their secret; public clients (empty
+// stored secret) must have authorized with PKCE per RFC 8252.
+func validateClientAuth(app *ent.OAuthClient, clientSecret, codeChallenge string) error {
+	if app.Secret == "" {
+		if codeChallenge == "" {
+			return serializer.NewError(serializer.CodeCredentialInvalid, "Public clients must authorize with PKCE", nil)
+		}
+		return nil
+	}
+	if app.Secret != clientSecret {
+		return serializer.NewError(serializer.CodeCredentialInvalid, "Invalid client secret", nil)
+	}
+	return nil
 }
 
 func buildIDToken(c *gin.Context, dep dependency.Dep, user *ent.User, clientID string, scopes []string, expires time.Time, nonce string) (string, error) {

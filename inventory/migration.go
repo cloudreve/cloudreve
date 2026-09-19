@@ -438,11 +438,9 @@ func migrateMasterNode(l logging.Logger, client *ent.Client, ctx context.Context
 
 const (
 	OAuthClientDesktopGUID        = "393a1839-f52e-498e-9972-e77cc2241eee"
-	OAuthClientDesktopSecret      = "8GaQIu3lOSdqYoDHi9cR8IZ4pvuMH8ya"
 	OAuthClientDesktopName        = "application:oauth.desktop"
 	OAuthClientDesktopRedirectURI = "/callback/desktop"
 	OAuthClientiOSGUID            = "220db97a-44a3-44f7-99b6-d767262b4daa"
-	OAuthClientiOSSecret          = "1kxOW4IyVOkPlsKCnTwzfHyP8XrbpfaF"
 	OAuthClientiOSName            = "application:setting.iOSApp"
 	OAuthClientiOSRedirectURI     = "/callback/ios"
 )
@@ -466,7 +464,7 @@ func migrateOAuthClientiOS(l logging.Logger, client *ent.Client, ctx context.Con
 	}
 	if _, err := client.OAuthClient.Create().
 		SetGUID(OAuthClientiOSGUID).
-		SetSecret(OAuthClientiOSSecret).
+		SetSecret("").
 		SetName(OAuthClientiOSName).
 		SetRedirectUris([]string{OAuthClientiOSRedirectURI}).
 		SetScopes([]string{"profile", "email", "openid", "offline_access", "UserInfo.Write", "UserSecurityInfo.Write", "Workflow.Write", "Files.Write", "Shares.Write", "Finance.Write", "DavAccount.Write"}).
@@ -487,7 +485,7 @@ func migrateOAuthClientDesktop(l logging.Logger, client *ent.Client, ctx context
 
 	if _, err := client.OAuthClient.Create().
 		SetGUID(OAuthClientDesktopGUID).
-		SetSecret(OAuthClientDesktopSecret).
+		SetSecret("").
 		SetName(OAuthClientDesktopName).
 		SetRedirectUris([]string{OAuthClientDesktopRedirectURI}).
 		SetScopes([]string{"profile", "email", "openid", "offline_access", "UserInfo.Write", "Workflow.Write", "Files.Write", "Shares.Write"}).
@@ -730,7 +728,7 @@ var patches = []Patch{
 	},
 	{
 		Name:       "apply_default_model3d_viewer",
-		EndVersion: "4.15.0",
+		EndVersion: "4.20.0",
 		Func: func(l logging.Logger, client *ent.Client, ctx context.Context) error {
 			fileViewersSetting, err := client.Setting.Query().Where(setting.Name("file_viewers")).First(ctx)
 			if err != nil {
@@ -777,6 +775,23 @@ var patches = []Patch{
 			ctx = context.WithValue(ctx, debug.SkipDbLogging{}, true)
 			if err := client.Setting.Update().Where(setting.Name("secret_key")).SetValue(newSecretKey).Exec(ctx); err != nil {
 				return fmt.Errorf("failed to update secret_key setting: %w", err)
+			}
+
+			return nil
+		},
+	},
+	{
+		// Built-in desktop/iOS clients are public clients shipped in binaries —
+		// a shared hardcoded secret authenticates nothing. Blank it so token
+		// exchange relies on PKCE (RFC 8252) instead.
+		Name:       "oauth_builtin_public_clients",
+		EndVersion: "4.20.0",
+		Func: func(l logging.Logger, client *ent.Client, ctx context.Context) error {
+			if _, err := client.OAuthClient.Update().
+				Where(oauthclient.GUIDIn(OAuthClientDesktopGUID, OAuthClientiOSGUID)).
+				SetSecret("").
+				Save(ctx); err != nil {
+				return fmt.Errorf("failed to clear built-in OAuth client secrets: %w", err)
 			}
 
 			return nil
