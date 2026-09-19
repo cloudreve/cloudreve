@@ -149,7 +149,14 @@ const UserSession = () => {
             </SettingForm>
             <SettingForm title={t("settings.defaultSymbolics")} lgWidth={5}>
               <FormControl>
-                <SharesInput />
+                <SharesInput
+                  value={defaultSymbolics}
+                  onChange={(ids) =>
+                    setSettings({
+                      default_symbolics: JSON.stringify(ids),
+                    })
+                  }
+                />
                 <NoMarginHelperText>
                   <Trans
                     i18nKey="settings.defaultSymbolicsDes"

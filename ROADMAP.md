@@ -172,7 +172,7 @@ Order = user-visible value first; each ships with backend + UI + tests.
 1. **Share collaboration** — write/upload/delete via share link, anonymous upload, share ACL (users/groups), preview-only mode (fixes #3555, #3390, #3340, #3517, #3578; uses `NavigatorCapability` placeholder slots + `ShareProps` extension + `share` entity fields). See §1.3a for the extracted UI spec.
    - [x] PR #140 — `allow_upload`/`allow_edit`/`preview_only`/`upload_only` props, props-derived capability sets enforced server-side (`writePermitted`), same-share move/copy, anonymous upload, drop-box listing suppression, download denial via `IsDownloadCtxKey` hooks (fixes #3555 preview-only, #3340 drop-box)
    - [ ] File/dir ACL entity — `(subject_type ∈ user|group, subject_id)` → R/C/U/D bitmask + anonymous/everyone tiers; Permissions dialog under More actions; enforced in navigator capability checks (#3517)
-   - [ ] Default shares — `setting.default_shares` chip-input of share IDs; materialize as share-shortcut entries on user create (#3390)
+   - [x] Default shares — `setting.default_symbolics` + group `default_pinned` chip-input of share IDs; materialize as share-shortcut entries on fs init (#180)
    - [ ] Paid shares — `share.price_points` + gate page + purchase/resume-ticket flow; needs B.4 credits first
 2. **Storage policy advanced** — multiple policies per group, per-directory binding, load-balancer policy, file migration (fixes #3518, #2961, #2262). See §1.3a.
    - [x] PR #175 — resumable admin relocation task (entities or whole-policy scope), encryption-aware re-wrap, admin UI + per-policy migrate action (#9, #125, #136)

@@ -768,7 +768,7 @@ func (f *DBFS) getFileByPath(ctx context.Context, navigator Navigator, path *fs.
 // initFs initializes the file system for the user.
 func (f *DBFS) initFs(ctx context.Context, uid int) error {
 	f.l.Info("Initialize database file system for user %q", f.user.Email)
-	_, err := f.fileClient.CreateFolder(ctx, nil,
+	root, err := f.fileClient.CreateFolder(ctx, nil,
 		&inventory.CreateFolderParameters{
 			Owner: uid,
 			Name:  inventory.RootFolderName,
@@ -777,7 +777,76 @@ func (f *DBFS) initFs(ctx context.Context, uid int) error {
 		return fmt.Errorf("failed to create root folder: %w", err)
 	}
 
+	f.seedDefaultShares(ctx, uid, root)
+
 	return nil
+}
+
+// seedDefaultShares materializes share shortcuts configured in the
+// `default_shares` setting into the root of a newly created file system.
+// Invalid or expired shares are skipped without failing initialization.
+func (f *DBFS) seedDefaultShares(ctx context.Context, uid int, root *ent.File) {
+	shareIDs := f.settingClient.DefaultShares(ctx)
+	if len(shareIDs) == 0 {
+		return
+	}
+
+	shareCtx := context.WithValue(ctx, inventory.LoadShareFile{}, true)
+	shareCtx = context.WithValue(shareCtx, inventory.LoadShareUser{}, true)
+
+	// Symbolic entries carry no entities, but the storage_policy_files
+	// column is non-nullable; bind to the new user's group policy.
+	policyID := 0
+	userCtx := context.WithValue(ctx, inventory.LoadUserGroup{}, true)
+	if owner, err := f.userClient.GetByID(userCtx, uid); err == nil {
+		if group, err := owner.Edges.GroupOrErr(); err == nil {
+			if policy, err := f.storagePolicyClient.GetByGroup(ctx, group); err == nil && policy != nil {
+				policyID = policy.ID
+			}
+			if group.Settings != nil && len(group.Settings.DefaultPinned) > 0 {
+				shareIDs = lo.Union(shareIDs, group.Settings.DefaultPinned)
+			}
+		}
+	}
+
+	for _, sid := range shareIDs {
+		s, err := f.shareClient.GetByID(shareCtx, sid)
+		if err != nil || s == nil || s.Edges.File == nil {
+			f.l.Warning("[DBFS] Skip invalid default share %d: %v", sid, err)
+			continue
+		}
+		if err := inventory.IsValidShare(s); err != nil {
+			f.l.Warning("[DBFS] Skip default share %d: %v", sid, err)
+			continue
+		}
+
+		metadata := map[string]string{
+			MetadataSharedRedirect: fs.NewShareUri(hashid.EncodeShareID(f.hasher, s.ID), ""),
+		}
+		if s.Edges.User != nil {
+			metadata[MetadataSharedOwner] = hashid.EncodeUserID(f.hasher, s.Edges.User.ID)
+		}
+
+		if s.Edges.File.Type == int(types.FileTypeFolder) {
+			_, err = f.fileClient.CreateFolder(ctx, root, &inventory.CreateFolderParameters{
+				Owner:      uid,
+				Name:       s.Edges.File.Name,
+				IsSymbolic: true,
+				Metadata:   metadata,
+			})
+		} else {
+			_, _, _, err = f.fileClient.CreateFile(ctx, root, &inventory.CreateFileParameters{
+				FileType:        types.FileTypeFile,
+				Name:            s.Edges.File.Name,
+				IsSymbolic:      true,
+				StoragePolicyID: policyID,
+				Metadata:        metadata,
+			})
+		}
+		if err != nil {
+			f.l.Warning("[DBFS] Failed to seed default share %d: %v", sid, err)
+		}
+	}
 }
 
 func (f *DBFS) getNavigator(ctx context.Context, path *fs.URI, requiredCapabilities ...NavigatorCapability) (Navigator, error) {

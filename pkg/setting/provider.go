@@ -67,6 +67,9 @@ type (
 		HashIDSalt(ctx context.Context) string
 		// DBFS returns the DBFS related settings.
 		DBFS(ctx context.Context) *DBFS
+		// DefaultShares returns the share entity IDs seeded as share-shortcut
+		// entries in every newly initialized file system.
+		DefaultShares(ctx context.Context) []int
 		// MaxBatchedFile returns the maximum number of files in a batch operation.
 		MaxBatchedFile(ctx context.Context) int
 		// UploadSessionTTL returns the TTL of upload session.
@@ -709,6 +712,19 @@ func (s *settingProvider) UploadSessionTTL(ctx context.Context) time.Duration {
 
 func (s *settingProvider) MaxBatchedFile(ctx context.Context) int {
 	return s.getInt(ctx, "max_batched_file", 3000)
+}
+
+func (s *settingProvider) DefaultShares(ctx context.Context) []int {
+	raw := s.getString(ctx, "default_symbolics", "")
+	if raw == "" {
+		return nil
+	}
+
+	var ids []int
+	if err := json.Unmarshal([]byte(raw), &ids); err != nil {
+		return nil
+	}
+	return ids
 }
 
 func (s *settingProvider) DBFS(ctx context.Context) *DBFS {

@@ -54,6 +54,9 @@ type (
 		// LoginIPWhitelist restricts sign-in to the given IPs/CIDR ranges.
 		// Empty means no restriction.
 		LoginIPWhitelist []string `json:"login_ip_whitelist,omitempty"`
+		// DefaultPinned is a list of share entity IDs seeded as share
+		// shortcuts for members of this group on file-system init.
+		DefaultPinned []int `json:"default_pinned,omitempty"`
 	}
 
 	// PolicySetting 非公有的存储策略属性
