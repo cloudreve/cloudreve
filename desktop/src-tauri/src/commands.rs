@@ -205,6 +205,28 @@ pub async fn remove_drive(
     Ok(result)
 }
 
+/// Manually reconnect a drive: restart its remote event listener with a
+/// fresh retry backoff and trigger a full sync. Recovers drives stuck in
+/// the long-retry wait after repeated connection failures.
+#[tauri::command]
+pub async fn reconnect_drive(
+    state: State<'_, AppStateHandle>,
+    drive_id: String,
+) -> CommandResult<()> {
+    let app_state = state
+        .get()
+        .ok_or_else(|| "App not yet initialized".to_string())?;
+    let mount = app_state
+        .drive_manager
+        .get_drive(&drive_id)
+        .await
+        .ok_or_else(|| "Drive not found".to_string())?;
+    mount
+        .command_tx
+        .send(cloudreve_sync::drive::commands::MountCommand::Reconnect)
+        .map_err(|e| e.to_string())
+}
+
 /// Get ignore patterns for a drive
 #[tauri::command]
 pub async fn get_ignore_patterns(

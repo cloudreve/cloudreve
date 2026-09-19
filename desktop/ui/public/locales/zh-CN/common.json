@@ -93,6 +93,7 @@
     "delaySyncDescription": "同步任务等待文件停止更改后再上传",
     "hideTrayIcon": "隐藏托盘图标",
     "hideTrayIconDescription": "在后台运行而不显示系统托盘图标",
+    "reconnect": "重新连接",
     "storage": "存储空间",
     "openFolder": "打开文件夹",
     "openSite": "打开站点",

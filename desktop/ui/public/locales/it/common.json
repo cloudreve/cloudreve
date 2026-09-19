@@ -93,6 +93,7 @@
     "delaySyncDescription": "L'attività di sincronizzazione attende che il file smetta di cambiare",
     "hideTrayIcon": "Nascondi icona nella barra delle applicazioni",
     "hideTrayIconDescription": "Esegui in background senza icona nell'area di notifica",
+    "reconnect": "Riconnetti",
     "storage": "Archiviazione",
     "openFolder": "Apri cartella",
     "openSite": "Apri sito",

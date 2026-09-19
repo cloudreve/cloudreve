@@ -93,6 +93,7 @@
     "delaySyncDescription": "同步任務會等待檔案停止變更",
     "hideTrayIcon": "隱藏系統匣圖示",
     "hideTrayIconDescription": "在背景執行而不顯示系統匣圖示",
+    "reconnect": "重新連線",
     "storage": "儲存空間",
     "openFolder": "開啟資料夾",
     "openSite": "開啟網站",

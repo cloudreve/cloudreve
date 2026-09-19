@@ -9,7 +9,7 @@ use crate::drive::commands::ManagerCommand;
 use crate::drive::commands::MountCommand;
 use crate::drive::event_blocker::EventBlocker;
 use crate::drive::ignore::IgnoreMatcher;
-use crate::drive::sync::group_fs_events;
+use crate::drive::sync::{SyncMode, group_fs_events};
 #[cfg(windows)]
 use crate::drive::utils::recycle_bin_url;
 use crate::inventory::{DrivePropsUpdate, InventoryDb, TaskRecord};
@@ -651,6 +651,32 @@ impl Mount {
                                 "Failed to process filesystem events"
                             );
                         }
+                    });
+                }
+                MountCommand::Reconnect => {
+                    let s_clone = s.clone();
+                    let mount_id_clone = mount_id.clone();
+                    spawn(async move {
+                        // Restart the event listener so it retries immediately
+                        // instead of sitting in the long-retry sleep.
+                        if let Some(handle) =
+                            s_clone.remote_event_handle.lock().await.take()
+                        {
+                            handle.abort();
+                            let _ = handle.await;
+                        }
+                        s_clone.spawn_remote_event_processor(s_clone.clone()).await;
+
+                        let sync_path = {
+                            let config = s_clone.config.read().await;
+                            config.sync_path.clone()
+                        };
+                        let _ = s_clone.command_tx.send(MountCommand::Sync {
+                            local_paths: vec![sync_path],
+                            mode: SyncMode::FullHierarchy,
+                            user_initiated: true,
+                        });
+                        tracing::info!(target: "drive::mounts", id = %mount_id_clone, "Reconnect requested");
                     });
                 }
                 MountCommand::Renamed {

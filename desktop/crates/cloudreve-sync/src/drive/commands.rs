@@ -132,6 +132,9 @@ pub enum MountCommand {
         source: PathBuf,
         destination: PathBuf,
     },
+    /// Restart the remote event listener with a fresh backoff and kick a
+    /// full-hierarchy sync. User-triggered recovery for a lost connection.
+    Reconnect,
 }
 
 // SAFETY: Windows CFAPI is designed to allow callbacks from arbitrary threads.

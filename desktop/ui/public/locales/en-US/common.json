@@ -93,6 +93,7 @@
     "delaySyncDescription": "Sync task wait until file stop changing",
     "hideTrayIcon": "Hide tray icon",
     "hideTrayIconDescription": "Run in the background without a system tray icon",
+    "reconnect": "Reconnect",
     "storage": "Storage",
     "openFolder": "Open folder",
     "openSite": "Open site",

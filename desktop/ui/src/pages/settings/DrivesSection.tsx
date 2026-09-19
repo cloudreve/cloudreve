@@ -23,6 +23,7 @@ import {
   Add as AddIcon,
   DeleteOutlineRounded,
   RefreshRounded,
+  SyncRounded,
   FilterListRounded,
 } from "@mui/icons-material";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -111,6 +112,15 @@ export default function DrivesSection() {
       });
     } catch (error) {
       console.error("Failed to open reauthorize window:", error);
+    }
+  };
+
+  const handleReconnect = async (drive: DriveInfo) => {
+    try {
+      await invoke("reconnect_drive", { driveId: drive.id });
+      fetchDrives();
+    } catch (error) {
+      console.error("Failed to reconnect drive:", error);
     }
   };
 
@@ -408,6 +418,16 @@ export default function DrivesSection() {
                       onClick={() => handleReauthorize(drive)}
                     >
                       {t("settings.reauthorize")}
+                    </SecondaryButton>
+                  )}
+
+                  {drive.status === "event_push_lost" && (
+                    <SecondaryButton
+                      size="small"
+                      startIcon={<SyncRounded />}
+                      onClick={() => handleReconnect(drive)}
+                    >
+                      {t("settings.reconnect")}
                     </SecondaryButton>
                   )}
 

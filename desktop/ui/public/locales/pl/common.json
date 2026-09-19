@@ -93,6 +93,7 @@
     "delaySyncDescription": "Zadanie synchronizacji czeka, aż plik przestanie się zmieniać",
     "hideTrayIcon": "Ukryj ikonę w zasobniku",
     "hideTrayIconDescription": "Działaj w tle bez ikony w zasobniku systemowym",
+    "reconnect": "Połącz ponownie",
     "storage": "Pamięć",
     "openFolder": "Otwórz folder",
     "openSite": "Otwórz witrynę",

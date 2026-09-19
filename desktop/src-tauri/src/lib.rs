@@ -459,6 +459,7 @@ pub fn run() {
             commands::list_drives,
             commands::add_drive,
             commands::remove_drive,
+            commands::reconnect_drive,
             commands::get_ignore_patterns,
             commands::set_ignore_patterns,
             commands::get_sync_status,

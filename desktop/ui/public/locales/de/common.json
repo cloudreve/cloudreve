@@ -93,6 +93,7 @@
     "delaySyncDescription": "Die Synchronisierungsaufgabe wartet, bis die Datei nicht mehr geändert wird",
     "hideTrayIcon": "Infobereichssymbol ausblenden",
     "hideTrayIconDescription": "Im Hintergrund ohne Infobereichssymbol ausführen",
+    "reconnect": "Neu verbinden",
     "storage": "Speicher",
     "openFolder": "Ordner öffnen",
     "openSite": "Website öffnen",

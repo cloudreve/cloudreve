@@ -93,6 +93,7 @@
     "delaySyncDescription": "동기화 작업은 파일 변경이 멈출 때까지 기다립니다",
     "hideTrayIcon": "트레이 아이콘 숨기기",
     "hideTrayIconDescription": "시스템 트레이 아이콘 없이 백그라운드에서 실행",
+    "reconnect": "다시 연결",
     "storage": "저장소",
     "openFolder": "폴더 열기",
     "openSite": "사이트 열기",

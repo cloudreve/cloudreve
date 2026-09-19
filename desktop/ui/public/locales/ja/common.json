@@ -93,6 +93,7 @@
     "delaySyncDescription": "同期タスクはファイルの変更が止まるまで待機します",
     "hideTrayIcon": "トレイアイコンを非表示",
     "hideTrayIconDescription": "システムトレイアイコンなしでバックグラウンド実行",
+    "reconnect": "再接続",
     "storage": "ストレージ",
     "openFolder": "フォルダを開く",
     "openSite": "サイトを開く",
