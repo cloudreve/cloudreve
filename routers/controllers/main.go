@@ -40,11 +40,12 @@ func ParamErrorMsg(filed string, tag string) string {
 }
 
 // ErrorResponse 返回错误消息
-func ErrorResponse(err error) serializer.Response {
+func ErrorResponse(c *gin.Context, err error) serializer.Response {
 	// 处理 Validator 产生的错误
 	if ve, ok := err.(validator.ValidationErrors); ok {
 		for _, e := range ve {
-			return serializer.ParamErrDeprecated(
+			return serializer.ParamErr(
+				c,
 				ParamErrorMsg(e.Field(), e.Tag()),
 				err,
 			)
@@ -52,10 +53,10 @@ func ErrorResponse(err error) serializer.Response {
 	}
 
 	if _, ok := err.(*json.UnmarshalTypeError); ok {
-		return serializer.ParamErrDeprecated("JSON marshall error", err)
+		return serializer.ParamErr(c, "JSON marshall error", err)
 	}
 
-	return serializer.ParamErrDeprecated("Parameter error", err)
+	return serializer.ParamErr(c, "Parameter error", err)
 }
 
 // FromJSON Parse and validate JSON from request body
@@ -66,7 +67,7 @@ func FromJSON[T any](ctxKey any) gin.HandlerFunc {
 			c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), ctxKey, &service))
 			c.Next()
 		} else {
-			c.JSON(200, ErrorResponse(err))
+			c.JSON(200, ErrorResponse(c, err))
 			c.Abort()
 		}
 	}
@@ -80,7 +81,7 @@ func FromQuery[T any](ctxKey any) gin.HandlerFunc {
 			c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), ctxKey, &service))
 			c.Next()
 		} else {
-			c.JSON(200, ErrorResponse(err))
+			c.JSON(200, ErrorResponse(c, err))
 			c.Abort()
 		}
 	}
@@ -93,7 +94,7 @@ func FromForm[T any](ctxKey any) gin.HandlerFunc {
 			c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), ctxKey, &service))
 			c.Next()
 		} else {
-			c.JSON(200, ErrorResponse(err))
+			c.JSON(200, ErrorResponse(c, err))
 			c.Abort()
 		}
 	}
@@ -107,7 +108,7 @@ func FromUri[T any](ctxKey any) gin.HandlerFunc {
 			c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), ctxKey, &service))
 			c.Next()
 		} else {
-			c.JSON(200, ErrorResponse(err))
+			c.JSON(200, ErrorResponse(c, err))
 			c.Abort()
 		}
 	}

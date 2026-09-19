@@ -27,7 +27,6 @@ type GroupService struct {
 func (service *GroupService) Get() serializer.Response {
 	//group, err := model.GetGroupByID(service.ID)
 	//if err != nil {
-	//	return serializer.ErrDeprecated(serializer.CodeGroupNotFound, "", err)
 	//}
 	//
 	//return serializer.Response{Data: group}
@@ -40,12 +39,10 @@ func (service *GroupService) Delete() serializer.Response {
 	//// 查找用户组
 	//group, err := model.GetGroupByID(service.ID)
 	//if err != nil {
-	//	return serializer.ErrDeprecated(serializer.CodeGroupNotFound, "", err)
 	//}
 	//
 	//// 是否为系统用户组
 	//if group.ID <= 3 {
-	//	return serializer.ErrDeprecated(serializer.CodeInvalidActionOnSystemGroup, "", err)
 	//}
 	//
 	//// 检查是否有用户使用
@@ -54,7 +51,6 @@ func (service *GroupService) Delete() serializer.Response {
 	//	Select("count(id)").Row()
 	//row.Scan(&total)
 	//if total > 0 {
-	//	return serializer.ErrDeprecated(serializer.CodeGroupUsedByUser, strconv.Itoa(total), nil)
 	//}
 	//
 	//model.DB.Delete(&group)

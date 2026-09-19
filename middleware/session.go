@@ -61,7 +61,7 @@ func CSRFCheck() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(200, serializer.ErrDeprecated(serializer.CodeNoPermissionErr, "Invalid origin", nil))
+		c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeNoPermissionErr, "Invalid origin", nil))
 		c.Abort()
 	}
 }

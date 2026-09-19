@@ -64,7 +64,6 @@ func ProcessCallback(c *gin.Context) error {
 //	// 创建文件系统
 //	fs, err := filesystem.NewFileSystemFromCallback(c)
 //	if err != nil {
-//		return serializer.ErrDeprecated(serializer.CodeCreateFSError, "", err)
 //	}
 //	defer fs.Recycle()
 //
@@ -74,7 +73,6 @@ func ProcessCallback(c *gin.Context) error {
 //	// 获取文件信息
 //	info, err := fs.Handler.(onedrive.Driver).Client.Meta(context.Background(), "", uploadSession.SavePath)
 //	if err != nil {
-//		return serializer.ErrDeprecated(serializer.CodeQueryMetaFailed, "", err)
 //	}
 //
 //	// 验证与回调会话中是否一致
@@ -89,7 +87,6 @@ func ProcessCallback(c *gin.Context) error {
 //
 //	if isSizeCheckFailed || !strings.EqualFold(info.GetSourcePath(), actualPath) {
 //		fs.Handler.(onedrive.Driver).Client.Delete(context.Background(), []string{info.GetSourcePath()})
-//		return serializer.ErrDeprecated(serializer.CodeMetaMismatch, "", err)
 //	}
 //	service.Meta = info
 //	return ProcessCallback(c)
@@ -102,7 +99,6 @@ func ProcessCallback(c *gin.Context) error {
 //	// 创建文件系统
 //	fs, err := filesystem.NewFileSystemFromCallback(c)
 //	if err != nil {
-//		return serializer.ErrDeprecated(serializer.CodeCreateFSError, "", err)
 //	}
 //	defer fs.Recycle()
 //
@@ -112,12 +108,10 @@ func ProcessCallback(c *gin.Context) error {
 //	// 获取文件信息
 //	info, err := fs.Handler.(*s3.Driver).Meta(context.Background(), uploadSession.SavePath)
 //	if err != nil {
-//		return serializer.ErrDeprecated(serializer.CodeMetaMismatch, "", err)
 //	}
 //
 //	// 验证实际文件信息与回调会话中是否一致
 //	if uploadSession.Size != info.Size {
-//		return serializer.ErrDeprecated(serializer.CodeMetaMismatch, "", err)
 //	}
 //
 //	return ProcessCallback(service, c)
@@ -128,7 +122,6 @@ func ProcessCallback(c *gin.Context) error {
 //	// 创建文件系统
 //	fs, err := filesystem.NewFileSystemFromCallback(c)
 //	if err != nil {
-//		return serializer.ErrDeprecated(serializer.CodeCreateFSError, "", err)
 //	}
 //	defer fs.Recycle()
 //
@@ -138,7 +131,6 @@ func ProcessCallback(c *gin.Context) error {
 //	// 验证文件大小
 //	if uploadSession.Size != service.Size {
 //		fs.Handler.Delete(context.Background(), []string{uploadSession.SavePath})
-//		return serializer.ErrDeprecated(serializer.CodeMetaMismatch, "", err)
 //	}
 //
 //	return ProcessCallback(service, c)

@@ -46,13 +46,11 @@ func (service *ListFolderService) List(c *gin.Context) serializer.Response {
 	//	// 列取存储策略中的目录
 	//	policy, err := model.GetPolicyByID(service.ID)
 	//	if err != nil {
-	//		return serializer.ErrDeprecated(serializer.CodePolicyNotExist, "", err)
 	//	}
 	//
 	//	// 创建文件系统
 	//	fs, err := filesystem.NewAnonymousFileSystem()
 	//	if err != nil {
-	//		return serializer.ErrDeprecated(serializer.CodeCreateFSError, "", err)
 	//	}
 	//	defer fs.Recycle()
 	//
@@ -60,7 +58,6 @@ func (service *ListFolderService) List(c *gin.Context) serializer.Response {
 	//	fs.Policy = &policy
 	//	res, err := fs.ListPhysical(c.Request.Context(), service.Path)
 	//	if err != nil {
-	//		return serializer.ErrDeprecated(serializer.CodeListFilesError, "", err)
 	//	}
 	//
 	//	return serializer.Response{
@@ -73,20 +70,17 @@ func (service *ListFolderService) List(c *gin.Context) serializer.Response {
 	//// 查找用户
 	//user, err := model.GetUserByID(service.ID)
 	//if err != nil {
-	//	return serializer.ErrDeprecated(serializer.CodeUserNotFound, "", err)
 	//}
 	//
 	//// 创建文件系统
 	//fs, err := filesystem.NewFileSystem(&user)
 	//if err != nil {
-	//	return serializer.ErrDeprecated(serializer.CodeCreateFSError, "", err)
 	//}
 	//defer fs.Recycle()
 	//
 	//// 列取目录
 	//res, err := fs.List(c.Request.Context(), service.Path, nil)
 	//if err != nil {
-	//	return serializer.ErrDeprecated(serializer.CodeListFilesError, "", err)
 	//}
 
 	//return serializer.Response{
@@ -100,7 +94,6 @@ func (service *ListFolderService) List(c *gin.Context) serializer.Response {
 func (service *FileBatchService) Delete(c *gin.Context) serializer.Response {
 	//files, err := model.GetFilesByIDs(service.ID, 0)
 	//if err != nil {
-	//	return serializer.DBErrDeprecated("Failed to list files for deleting", err)
 	//}
 	//
 	//// 根据用户分组
