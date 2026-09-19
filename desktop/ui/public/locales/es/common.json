@@ -91,6 +91,8 @@
     "experimentalFeatures": "Funciones experimentales",
     "delaySync": "Retrasar sincronización",
     "delaySyncDescription": "La tarea de sincronización espera hasta que el archivo deje de cambiar",
+    "hideTrayIcon": "Ocultar icono de bandeja",
+    "hideTrayIconDescription": "Ejecutar en segundo plano sin icono en la bandeja del sistema",
     "storage": "Almacenamiento",
     "openFolder": "Abrir carpeta",
     "openSite": "Abrir sitio",

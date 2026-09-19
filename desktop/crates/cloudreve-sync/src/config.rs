@@ -62,6 +62,8 @@ pub struct AppConfig {
     pub log_max_files: usize,
     /// Delay before starting upload after file stops changing (seconds). 0 disables the delay.
     pub sync_delay_seconds: u64,
+    /// Whether to hide the system tray icon (popup stays reachable via shortcuts/relaunch)
+    pub hide_tray_icon: bool,
     /// Language/locale setting (e.g., "en-US", "zh-CN"). None means use system default.
     pub language: Option<String>,
 }
@@ -77,6 +79,7 @@ impl Default for AppConfig {
             log_level: LogLevel::Debug,
             log_max_files: 5,
             sync_delay_seconds: 0,
+            hide_tray_icon: false,
             language: None,
         }
     }
@@ -296,6 +299,21 @@ impl ConfigManager {
     pub fn set_sync_delay_seconds(&self, seconds: u64) -> Result<()> {
         self.update(|config| {
             config.sync_delay_seconds = seconds;
+        })
+    }
+
+    /// Whether the system tray icon is hidden
+    pub fn hide_tray_icon(&self) -> bool {
+        self.config
+            .read()
+            .map(|c| c.hide_tray_icon)
+            .unwrap_or(false)
+    }
+
+    /// Set whether the system tray icon is hidden
+    pub fn set_hide_tray_icon(&self, hide: bool) -> Result<()> {
+        self.update(|config| {
+            config.hide_tray_icon = hide;
         })
     }
 

@@ -211,6 +211,7 @@ interface GeneralSettings {
   log_level: string;
   log_max_files: number;
   sync_delay_seconds: number;
+  hide_tray_icon: boolean;
   log_dir: string;
   language: string | null;
 }
@@ -249,6 +250,7 @@ export default function GeneralSection() {
   const [logLevel, setLogLevel] = useState("info");
   const [logMaxFiles, setLogMaxFiles] = useState(5);
   const [syncDelaySeconds, setSyncDelaySeconds] = useState(0);
+  const [hideTrayIcon, setHideTrayIcon] = useState(false);
   const [logDir, setLogDir] = useState("");
   const [language, setLanguage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -268,6 +270,7 @@ export default function GeneralSection() {
         setLogLevel(settings.log_level);
         setLogMaxFiles(settings.log_max_files);
         setSyncDelaySeconds(settings.sync_delay_seconds);
+        setHideTrayIcon(settings.hide_tray_icon);
         setLogDir(settings.log_dir);
         setLanguage(settings.language);
       } catch (error) {
@@ -290,6 +293,17 @@ export default function GeneralSection() {
     } catch (error) {
       console.error("Failed to change autostart setting:", error);
       setAutoStart(previousValue);
+    }
+  };
+
+  const handleHideTrayIconChange = async (checked: boolean) => {
+    const previousValue = hideTrayIcon;
+    setHideTrayIcon(checked);
+    try {
+      await invoke("set_hide_tray_icon", { hide: checked });
+    } catch (error) {
+      console.error("Failed to change tray icon setting:", error);
+      setHideTrayIcon(previousValue);
     }
   };
 
@@ -416,6 +430,14 @@ export default function GeneralSection() {
           description={t("settings.fastPopupLaunchDescription")}
           checked={fastPopupLaunch}
           onChange={handleFastPopupLaunchChange}
+          disabled={loading}
+          isLast={false}
+        />
+        <SettingItem
+          title={t("settings.hideTrayIcon")}
+          description={t("settings.hideTrayIconDescription")}
+          checked={hideTrayIcon}
+          onChange={handleHideTrayIconChange}
           disabled={loading}
           isLast={true}
         />

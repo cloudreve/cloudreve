@@ -10,6 +10,7 @@ use tauri::utils::{config::WindowEffectsConfig, WindowEffect};
 #[cfg(target_os = "macos")]
 use tauri::TitleBarStyle;
 use tauri::{
+    tray::TrayIcon,
     utils::config::Color,
     webview::{WebviewWindow, WebviewWindowBuilder},
     AppHandle, Manager, State, WebviewUrl,
@@ -1200,6 +1201,7 @@ pub async fn get_general_settings() -> CommandResult<GeneralSettings> {
         log_level: config.log_level.as_str().to_string(),
         log_max_files: config.log_max_files,
         sync_delay_seconds: config.sync_delay_seconds,
+        hide_tray_icon: config.hide_tray_icon,
         log_dir: ConfigManager::get_log_dir().display().to_string(),
         language: config.language,
     })
@@ -1214,6 +1216,7 @@ pub struct GeneralSettings {
     pub log_level: String,
     pub log_max_files: usize,
     pub sync_delay_seconds: u64,
+    pub hide_tray_icon: bool,
     pub log_dir: String,
     pub language: Option<String>,
 }
@@ -1251,6 +1254,18 @@ pub async fn set_sync_delay_seconds(seconds: u64) -> CommandResult<()> {
     ConfigManager::get()
         .set_sync_delay_seconds(seconds)
         .map_err(|e| e.to_string())
+}
+
+/// Set whether the system tray icon is hidden and apply it live
+#[tauri::command]
+pub async fn set_hide_tray_icon(app: AppHandle, hide: bool) -> CommandResult<()> {
+    ConfigManager::get()
+        .set_hide_tray_icon(hide)
+        .map_err(|e| e.to_string())?;
+    if let Some(tray) = app.try_state::<TrayIcon>() {
+        tray.set_visible(!hide).map_err(|e| e.to_string())?;
+    }
+    Ok(())
 }
 
 /// Set language setting and update rust_i18n locale

@@ -366,6 +366,12 @@ fn setup_tray(app: &tauri::App) -> anyhow::Result<()> {
         })
         .build(app)?;
 
+    // Honour the hide-tray-icon setting (TrayIconBuilder has no visibility
+    // option, so it is applied right after construction).
+    if ConfigManager::get().hide_tray_icon() {
+        let _ = tray.set_visible(false);
+    }
+
     // Keep the tray icon in Tauri's managed state so we can update its menu
     // when the language changes.
     app.manage(tray);
@@ -475,6 +481,7 @@ pub fn run() {
             commands::set_log_level,
             commands::set_log_max_files,
             commands::set_sync_delay_seconds,
+            commands::set_hide_tray_icon,
             commands::set_language,
             commands::open_log_folder,
         ])

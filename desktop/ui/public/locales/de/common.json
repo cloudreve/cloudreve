@@ -91,6 +91,8 @@
     "experimentalFeatures": "Experimentelle Funktionen",
     "delaySync": "Synchronisierung verzögern",
     "delaySyncDescription": "Die Synchronisierungsaufgabe wartet, bis die Datei nicht mehr geändert wird",
+    "hideTrayIcon": "Infobereichssymbol ausblenden",
+    "hideTrayIconDescription": "Im Hintergrund ohne Infobereichssymbol ausführen",
     "storage": "Speicher",
     "openFolder": "Ordner öffnen",
     "openSite": "Website öffnen",

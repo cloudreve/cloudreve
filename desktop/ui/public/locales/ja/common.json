@@ -91,6 +91,8 @@
     "experimentalFeatures": "実験的な機能",
     "delaySync": "同期を遅延",
     "delaySyncDescription": "同期タスクはファイルの変更が止まるまで待機します",
+    "hideTrayIcon": "トレイアイコンを非表示",
+    "hideTrayIconDescription": "システムトレイアイコンなしでバックグラウンド実行",
     "storage": "ストレージ",
     "openFolder": "フォルダを開く",
     "openSite": "サイトを開く",

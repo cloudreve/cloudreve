@@ -91,6 +91,8 @@
     "experimentalFeatures": "Экспериментальные функции",
     "delaySync": "Задержка синхронизации",
     "delaySyncDescription": "Задача синхронизации ждёт, пока файл перестанет изменяться",
+    "hideTrayIcon": "Скрыть значок в трее",
+    "hideTrayIconDescription": "Работать в фоне без значка в системном трее",
     "storage": "Хранилище",
     "openFolder": "Открыть папку",
     "openSite": "Открыть сайт",

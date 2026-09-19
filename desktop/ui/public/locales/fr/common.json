@@ -91,6 +91,8 @@
     "experimentalFeatures": "Fonctionnalités expérimentales",
     "delaySync": "Retarder la synchronisation",
     "delaySyncDescription": "La tâche de synchronisation attend que le fichier cesse d'être modifié",
+    "hideTrayIcon": "Masquer l'icône de la zone de notification",
+    "hideTrayIconDescription": "S'exécuter en arrière-plan sans icône dans la zone de notification",
     "storage": "Stockage",
     "openFolder": "Ouvrir le dossier",
     "openSite": "Ouvrir le site",
