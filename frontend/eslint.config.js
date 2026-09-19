@@ -5,6 +5,9 @@ import tseslint from "typescript-eslint";
 
 export default defineConfig([
   {
+    ignores: ["build/**", "dist/**", "node_modules/**"],
+  },
+  {
     files: ["**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
     languageOptions: { globals: globals.browser },
     settings: {
@@ -15,4 +18,17 @@ export default defineConfig([
   },
   tseslint.configs.recommended,
   pluginReact.configs.flat.recommended,
+  pluginReact.configs.flat["jsx-runtime"],
+  {
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
 ]);
