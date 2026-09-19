@@ -3,6 +3,7 @@ import { Outlet, useNavigation } from "react-router-dom";
 import { useAppSelector } from "../../redux/hooks.ts";
 import AutoHeight from "../Common/AutoHeight.tsx";
 import CircularProgress from "../Common/CircularProgress.tsx";
+import CustomHTMLContent from "../Common/CustomHTMLContent.tsx";
 import LanguageSwitcher from "../Common/LanguageSwitcher.tsx";
 import PoweredBy from "./PoweredBy.tsx";
 import Logo from "../Common/Logo.tsx";
@@ -93,7 +94,7 @@ const HeadlessFrame = () => {
                     <Outlet />
                     {headless_bottom && (
                       <Box sx={{ width: "100%" }}>
-                        <div dangerouslySetInnerHTML={{ __html: headless_bottom }} />
+                        <CustomHTMLContent html={headless_bottom} />
                       </Box>
                     )}
                   </Box>
@@ -105,7 +106,7 @@ const HeadlessFrame = () => {
           <PoweredBy />
           {headless_footer && (
             <Box sx={{ width: "100%", mb: 2 }}>
-              <div dangerouslySetInnerHTML={{ __html: headless_footer }} />
+              <CustomHTMLContent html={headless_footer} />
             </Box>
           )}
         </Grid>

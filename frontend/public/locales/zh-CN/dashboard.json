@@ -165,7 +165,7 @@
     "customHTML": "自定义 HTML",
     "customHTMLDes": "在站点的预设位置插入展示自定义的 HTML 内容。",
     "sidebarBottom": "侧边栏底部",
-    "sidebarBottomDes": "在侧边栏底部展示的自定义 HTML 内容。",
+    "sidebarBottomDes": "在侧边栏底部展示的自定义 HTML 内容，支持执行 <script> 脚本。",
     "addNavItem": "添加导航条目",
     "customNavItems": "自定义侧边导航栏",
     "customNavItemsDes": "你可以在左侧导航栏中添加自定义的条目，用户点击后会跳转到对应的链接。",
