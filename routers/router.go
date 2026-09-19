@@ -1225,6 +1225,23 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 						controllers.FromUri[adminsvc.SingleUserService](adminsvc.SingleUserParamCtx{}),
 						controllers.AdminCalibrateStorage,
 					)
+					// 列出邀请码
+					user.POST("invitation/list",
+						controllers.FromJSON[adminsvc.InvitationCodeListService](adminsvc.InvitationCodeListParamCtx{}),
+						controllers.AdminListInvitationCodes,
+					)
+					// 创建邀请码
+					user.PUT("invitation",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
+						controllers.FromJSON[adminsvc.UpsertInvitationCodeService](adminsvc.UpsertInvitationCodeParamCtx{}),
+						controllers.AdminCreateInvitationCode,
+					)
+					// 删除邀请码
+					user.DELETE("invitation/:id",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
+						controllers.FromUri[adminsvc.SingleInvitationCodeService](adminsvc.SingleInvitationCodeParamCtx{}),
+						controllers.AdminDeleteInvitationCode,
+					)
 				}
 
 				file := admin.Group("file", middleware.AdminSection(types.GroupPermissionAdminFiles))

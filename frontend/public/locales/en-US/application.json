@@ -33,6 +33,7 @@
     "newPassword": "New password",
     "repeatNewPassword": "Repeat the new password",
     "repeatPassword": "Repeat the password",
+    "invitationCode": "Invitation code",
     "resetPassword": "Reset my password",
     "backToSingIn": "Back to sign in",
     "sendMeAnEmail": "Send me an email",

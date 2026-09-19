@@ -34,6 +34,7 @@ import PageHeader from "../../Pages/PageHeader";
 import TablePagination from "../Common/TablePagination";
 import { OrderByQuery, OrderDirectionQuery, PageQuery, PageSizeQuery } from "../StoragePolicy/StoragePolicySetting";
 import BatchUserDialog from "./BatchUserDialog";
+import InvitationCodeDialog from "./InvitationCodeDialog";
 import NewUserDialog from "./NewUserDialog";
 import UserDialog from "./UserDialog/UserDialog";
 import UserFilterPopover from "./UserFilterPopover";
@@ -68,6 +69,7 @@ const UserSetting = () => {
   const [selected, setSelected] = useState<readonly number[]>([]);
   const [createNewOpen, setCreateNewOpen] = useState(false);
   const [batchEditOpen, setBatchEditOpen] = useState(false);
+  const [invitationOpen, setInvitationOpen] = useState(false);
   const filterPopupState = usePopupState({
     variant: "popover",
     popupId: "userFilterPopover",
@@ -205,12 +207,17 @@ const UserSetting = () => {
         ids={Array.from(selected)}
         onUpdated={() => fetchUsers()}
       />
+      <InvitationCodeDialog open={invitationOpen} onClose={() => setInvitationOpen(false)} />
       <Container maxWidth="xl">
         <PageHeader title={t("dashboard:nav.users")} />
         <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
           <Button onClick={() => setCreateNewOpen(true)} variant={"contained"} startIcon={<Add />}>
             {t("group.create")}
           </Button>
+
+          <SecondaryButton variant={"contained"} onClick={() => setInvitationOpen(true)}>
+            {t("user.invitationCodes")}
+          </SecondaryButton>
 
           <UserFilterPopover
             {...bindPopover(filterPopupState)}

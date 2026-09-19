@@ -25,6 +25,8 @@ type (
 		PWA(ctx context.Context) *PWASetting
 		// RegisterEnabled returns true if public sign-up is enabled.
 		RegisterEnabled(ctx context.Context) bool
+		// InvitationCodeRequired returns true if registration requires an invitation code.
+		InvitationCodeRequired(ctx context.Context) bool
 		// AuthnEnabled returns true if Webauthn is enabled.
 		AuthnEnabled(ctx context.Context) bool
 		// RegCaptchaEnabled returns true if registration captcha is enabled.
@@ -879,6 +881,10 @@ func (s *settingProvider) AuthnEnabled(ctx context.Context) bool {
 
 func (s *settingProvider) RegisterEnabled(ctx context.Context) bool {
 	return s.getBoolean(ctx, "register_enabled", false)
+}
+
+func (s *settingProvider) InvitationCodeRequired(ctx context.Context) bool {
+	return s.getBoolean(ctx, "invitation_code_required", false)
 }
 
 func (s *settingProvider) SSO(ctx context.Context) *SSO {

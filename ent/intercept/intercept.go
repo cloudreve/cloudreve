@@ -14,6 +14,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/file"
 	"github.com/cloudreve/Cloudreve/v4/ent/fsevent"
 	"github.com/cloudreve/Cloudreve/v4/ent/group"
+	"github.com/cloudreve/Cloudreve/v4/ent/invitationcode"
 	"github.com/cloudreve/Cloudreve/v4/ent/metadata"
 	"github.com/cloudreve/Cloudreve/v4/ent/node"
 	"github.com/cloudreve/Cloudreve/v4/ent/oauthclient"
@@ -243,6 +244,33 @@ func (f TraverseGroup) Traverse(ctx context.Context, q ent.Query) error {
 		return f(ctx, q)
 	}
 	return fmt.Errorf("unexpected query type %T. expect *ent.GroupQuery", q)
+}
+
+// The InvitationCodeFunc type is an adapter to allow the use of ordinary function as a Querier.
+type InvitationCodeFunc func(context.Context, *ent.InvitationCodeQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f InvitationCodeFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.InvitationCodeQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.InvitationCodeQuery", q)
+}
+
+// The TraverseInvitationCode type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseInvitationCode func(context.Context, *ent.InvitationCodeQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseInvitationCode) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseInvitationCode) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.InvitationCodeQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.InvitationCodeQuery", q)
 }
 
 // The MetadataFunc type is an adapter to allow the use of ordinary function as a Querier.
@@ -530,6 +558,8 @@ func NewQuery(q ent.Query) (Query, error) {
 		return &query[*ent.FsEventQuery, predicate.FsEvent, fsevent.OrderOption]{typ: ent.TypeFsEvent, tq: q}, nil
 	case *ent.GroupQuery:
 		return &query[*ent.GroupQuery, predicate.Group, group.OrderOption]{typ: ent.TypeGroup, tq: q}, nil
+	case *ent.InvitationCodeQuery:
+		return &query[*ent.InvitationCodeQuery, predicate.InvitationCode, invitationcode.OrderOption]{typ: ent.TypeInvitationCode, tq: q}, nil
 	case *ent.MetadataQuery:
 		return &query[*ent.MetadataQuery, predicate.Metadata, metadata.OrderOption]{typ: ent.TypeMetadata, tq: q}, nil
 	case *ent.NodeQuery:

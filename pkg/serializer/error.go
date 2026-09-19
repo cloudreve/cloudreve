@@ -259,6 +259,10 @@ const (
 	CodeInsufficientScope = 40089
 	// CodeRateLimited 请求频率超限
 	CodeRateLimited = 40090
+	// CodeInvitationCodeRequired 注册需要邀请码
+	CodeInvitationCodeRequired = 40091
+	// CodeInvitationCodeInvalid 邀请码无效、过期或已用完
+	CodeInvitationCodeInvalid = 40092
 	// CodeDBError 数据库操作失败
 	CodeDBError = 50001
 	// CodeEncryptError 加密失败

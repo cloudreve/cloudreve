@@ -239,6 +239,7 @@ export interface SignUpService extends CaptchaRequest {
   email: string;
   password: string;
   language: string;
+  invite_code?: string;
 }
 
 export interface SendResetEmailService extends CaptchaRequest {

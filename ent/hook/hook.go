@@ -81,6 +81,18 @@ func (f GroupFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.GroupMutation", m)
 }
 
+// The InvitationCodeFunc type is an adapter to allow the use of ordinary
+// function as InvitationCode mutator.
+type InvitationCodeFunc func(context.Context, *ent.InvitationCodeMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f InvitationCodeFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.InvitationCodeMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.InvitationCodeMutation", m)
+}
+
 // The MetadataFunc type is an adapter to allow the use of ordinary
 // function as Metadata mutator.
 type MetadataFunc func(context.Context, *ent.MetadataMutation) (ent.Value, error)

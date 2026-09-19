@@ -24,6 +24,9 @@ type FsEvent func(*sql.Selector)
 // Group is the predicate function for group builders.
 type Group func(*sql.Selector)
 
+// InvitationCode is the predicate function for invitationcode builders.
+type InvitationCode func(*sql.Selector)
+
 // Metadata is the predicate function for metadata builders.
 type Metadata func(*sql.Selector)
 

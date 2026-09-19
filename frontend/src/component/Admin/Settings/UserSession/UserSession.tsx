@@ -54,6 +54,26 @@ const UserSession = () => {
                 <NoMarginHelperText>{t("settings.allowNewRegistrationsDes")}</NoMarginHelperText>
               </FormControl>
             </SettingForm>
+            {isTrueVal(values.register_enabled) && (
+              <SettingForm lgWidth={5}>
+                <FormControl fullWidth>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={isTrueVal(values.invitation_code_required)}
+                        onChange={(e) =>
+                          setSettings({
+                            invitation_code_required: e.target.checked ? "1" : "0",
+                          })
+                        }
+                      />
+                    }
+                    label={t("settings.invitationCodeRequired")}
+                  />
+                  <NoMarginHelperText>{t("settings.invitationCodeRequiredDes")}</NoMarginHelperText>
+                </FormControl>
+              </SettingForm>
+            )}
             <SettingForm lgWidth={5}>
               <FormControl fullWidth>
                 <FormControlLabel

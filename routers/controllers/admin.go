@@ -270,6 +270,33 @@ func AdminCreateUser(c *gin.Context) {
 	c.JSON(200, serializer.Response{Data: res})
 }
 
+func AdminListInvitationCodes(c *gin.Context) {
+	service := ParametersFromContext[*admin.InvitationCodeListService](c, admin.InvitationCodeListParamCtx{})
+	res, err := service.List(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
+
+func AdminCreateInvitationCode(c *gin.Context) {
+	service := ParametersFromContext[*admin.UpsertInvitationCodeService](c, admin.UpsertInvitationCodeParamCtx{})
+	res, err := service.Create(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
+
+func AdminDeleteInvitationCode(c *gin.Context) {
+	service := ParametersFromContext[*admin.SingleInvitationCodeService](c, admin.SingleInvitationCodeParamCtx{})
+	err := service.Delete(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{})
+}
+
 //	func AdminHashIDEncode(c *gin.Context) {
 //		service := ParametersFromContext[*admin.HashIDService](c, admin.HashIDParamCtx{})
 //		resp, err := service.Encode(c)

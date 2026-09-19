@@ -216,6 +216,24 @@ var (
 			},
 		},
 	}
+	// InvitationCodesColumns holds the columns for the "invitation_codes" table.
+	InvitationCodesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "code", Type: field.TypeString, Unique: true, Size: 64},
+		{Name: "group_id", Type: field.TypeInt, Default: 0},
+		{Name: "max_uses", Type: field.TypeInt, Default: 1},
+		{Name: "used_count", Type: field.TypeInt, Default: 0},
+		{Name: "expires_at", Type: field.TypeTime, Nullable: true},
+	}
+	// InvitationCodesTable holds the schema information for the "invitation_codes" table.
+	InvitationCodesTable = &schema.Table{
+		Name:       "invitation_codes",
+		Columns:    InvitationCodesColumns,
+		PrimaryKey: []*schema.Column{InvitationCodesColumns[0]},
+	}
 	// MetadataColumns holds the columns for the "metadata" table.
 	MetadataColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -540,6 +558,7 @@ var (
 		FilesTable,
 		FsEventsTable,
 		GroupsTable,
+		InvitationCodesTable,
 		MetadataTable,
 		NodesTable,
 		OauthClientsTable,

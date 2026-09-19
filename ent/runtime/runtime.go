@@ -11,6 +11,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/file"
 	"github.com/cloudreve/Cloudreve/v4/ent/fsevent"
 	"github.com/cloudreve/Cloudreve/v4/ent/group"
+	"github.com/cloudreve/Cloudreve/v4/ent/invitationcode"
 	"github.com/cloudreve/Cloudreve/v4/ent/metadata"
 	"github.com/cloudreve/Cloudreve/v4/ent/node"
 	"github.com/cloudreve/Cloudreve/v4/ent/oauthclient"
@@ -152,6 +153,41 @@ func init() {
 	groupDescSettings := groupFields[4].Descriptor()
 	// group.DefaultSettings holds the default value on creation for the settings field.
 	group.DefaultSettings = groupDescSettings.Default.(*types.GroupSetting)
+	invitationcodeMixin := schema.InvitationCode{}.Mixin()
+	invitationcodeMixinHooks0 := invitationcodeMixin[0].Hooks()
+	invitationcode.Hooks[0] = invitationcodeMixinHooks0[0]
+	invitationcodeMixinInters0 := invitationcodeMixin[0].Interceptors()
+	invitationcode.Interceptors[0] = invitationcodeMixinInters0[0]
+	invitationcodeMixinFields0 := invitationcodeMixin[0].Fields()
+	_ = invitationcodeMixinFields0
+	invitationcodeFields := schema.InvitationCode{}.Fields()
+	_ = invitationcodeFields
+	// invitationcodeDescCreatedAt is the schema descriptor for created_at field.
+	invitationcodeDescCreatedAt := invitationcodeMixinFields0[0].Descriptor()
+	// invitationcode.DefaultCreatedAt holds the default value on creation for the created_at field.
+	invitationcode.DefaultCreatedAt = invitationcodeDescCreatedAt.Default.(func() time.Time)
+	// invitationcodeDescUpdatedAt is the schema descriptor for updated_at field.
+	invitationcodeDescUpdatedAt := invitationcodeMixinFields0[1].Descriptor()
+	// invitationcode.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	invitationcode.DefaultUpdatedAt = invitationcodeDescUpdatedAt.Default.(func() time.Time)
+	// invitationcode.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	invitationcode.UpdateDefaultUpdatedAt = invitationcodeDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// invitationcodeDescCode is the schema descriptor for code field.
+	invitationcodeDescCode := invitationcodeFields[0].Descriptor()
+	// invitationcode.CodeValidator is a validator for the "code" field. It is called by the builders before save.
+	invitationcode.CodeValidator = invitationcodeDescCode.Validators[0].(func(string) error)
+	// invitationcodeDescGroupID is the schema descriptor for group_id field.
+	invitationcodeDescGroupID := invitationcodeFields[1].Descriptor()
+	// invitationcode.DefaultGroupID holds the default value on creation for the group_id field.
+	invitationcode.DefaultGroupID = invitationcodeDescGroupID.Default.(int)
+	// invitationcodeDescMaxUses is the schema descriptor for max_uses field.
+	invitationcodeDescMaxUses := invitationcodeFields[2].Descriptor()
+	// invitationcode.DefaultMaxUses holds the default value on creation for the max_uses field.
+	invitationcode.DefaultMaxUses = invitationcodeDescMaxUses.Default.(int)
+	// invitationcodeDescUsedCount is the schema descriptor for used_count field.
+	invitationcodeDescUsedCount := invitationcodeFields[3].Descriptor()
+	// invitationcode.DefaultUsedCount holds the default value on creation for the used_count field.
+	invitationcode.DefaultUsedCount = invitationcodeDescUsedCount.Default.(int)
 	metadataMixin := schema.Metadata{}.Mixin()
 	metadataMixinHooks0 := metadataMixin[0].Hooks()
 	metadata.Hooks[0] = metadataMixinHooks0[0]

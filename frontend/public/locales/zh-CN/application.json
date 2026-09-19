@@ -33,6 +33,7 @@
     "newPassword": "新密码",
     "repeatNewPassword": "重复新密码",
     "repeatPassword": "重复密码",
+    "invitationCode": "邀请码",
     "resetPassword": "重设密码",
     "backToSingIn": "返回登录",
     "sendMeAnEmail": "发送密码重置邮件",

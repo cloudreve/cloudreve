@@ -1918,6 +1918,77 @@ export function batchUpdateUser(args: BatchUserUpdateService): ThunkResponse<voi
   };
 }
 
+export interface InvitationCode {
+  id: number;
+  code: string;
+  group_id: number;
+  max_uses: number;
+  used_count: number;
+  expires_at?: string;
+  created_at: string;
+  hash_id: string;
+}
+
+export interface ListInvitationCodeResponse {
+  pagination: PaginationResults;
+  codes: InvitationCode[];
+}
+
+export interface ListInvitationCodeService {
+  keyword?: string;
+  page_size: number;
+  page_token?: string;
+}
+
+export interface CreateInvitationCodeService {
+  code?: string;
+  group_id?: number;
+  max_uses?: number;
+  expires_at?: string;
+}
+
+export function listInvitationCodes(args: ListInvitationCodeService): ThunkResponse<ListInvitationCodeResponse> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/admin/user/invitation/list`,
+        { method: "POST", data: args },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function createInvitationCode(args: CreateInvitationCodeService): ThunkResponse<InvitationCode> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/admin/user/invitation`,
+        { method: "PUT", data: args },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function deleteInvitationCode(id: number): ThunkResponse<void> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/admin/user/invitation/${id}`,
+        { method: "DELETE" },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
 export function getFlattenFileList(args: AdminListService): ThunkResponse<ListFileResponse> {
   return async (dispatch, _getState) => {
     return await dispatch(
