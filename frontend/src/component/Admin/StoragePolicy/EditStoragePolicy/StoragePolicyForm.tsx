@@ -6,6 +6,7 @@ import {
   BasicInfoSection,
   DownloadSection,
   EncryptionSection,
+  LoadBalanceSection,
   MediaMetadataSection,
   StorageAndUploadSection,
   ThumbnailsSection,
@@ -29,6 +30,7 @@ const StoragePolicyForm = () => {
       )}
       <Stack spacing={5}>
         <BasicInfoSection />
+        <LoadBalanceSection />
         <StorageAndUploadSection />
         <DownloadSection />
         <ThumbnailsSection />

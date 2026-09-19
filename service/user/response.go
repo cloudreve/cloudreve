@@ -35,6 +35,7 @@ type UserSettings struct {
 	ShareDefaultPrivate     *bool             `json:"share_default_private,omitempty"`
 	PreferredViewers        map[string]string `json:"preferred_viewers,omitempty"`
 	TrashRetention          int               `json:"trash_retention,omitempty"`
+	PreferredPolicy         string            `json:"preferred_policy,omitempty"`
 	OAuthGrants             []OauthGrant      `json:"oauth_grants,omitempty"`
 }
 

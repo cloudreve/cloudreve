@@ -25,6 +25,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 	"github.com/gin-gonic/gin"
 	"github.com/pquerna/otp/totp"
+	"github.com/samber/lo"
 )
 
 const (
@@ -138,7 +139,11 @@ func GetUserSettings(c *gin.Context) (*UserSettings, error) {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get user OAuth grants", err)
 	}
 
-	return BuildUserSettings(u, passkeys, dep.UAParser(), grants), nil
+	res := BuildUserSettings(u, passkeys, dep.UAParser(), grants)
+	if u.Settings.PreferredPolicy > 0 {
+		res.PreferredPolicy = hashid.EncodePolicyID(dep.HashIDEncoder(), u.Settings.PreferredPolicy)
+	}
+	return res, nil
 
 	// 用户组有效期
 
@@ -239,6 +244,9 @@ type (
 		// TrashRetention overrides group trash retention, in seconds.
 		// 0 clears the override. Capped at ~10 years.
 		TrashRetention *int `json:"trash_retention" binding:"omitempty,min=0,max=315360000"`
+		// PreferredPolicy selects the user's default storage policy from the
+		// group's allowed set, hashid-encoded. "" clears the preference.
+		PreferredPolicy *string `json:"preferred_policy" binding:"omitempty"`
 	}
 	PatchUserSettingParamsCtx struct{}
 )
@@ -339,6 +347,26 @@ func (s *PatchUserSetting) Patch(c *gin.Context) error {
 
 	if s.TrashRetention != nil {
 		u.Settings.TrashRetention = *s.TrashRetention
+		saveSetting = true
+	}
+
+	if s.PreferredPolicy != nil {
+		if *s.PreferredPolicy == "" {
+			u.Settings.PreferredPolicy = 0
+		} else {
+			pid, err := dep.HashIDEncoder().Decode(*s.PreferredPolicy, hashid.PolicyID)
+			if err != nil {
+				return serializer.NewError(serializer.CodeParamErr, "Invalid storage policy", err)
+			}
+			allowed, err := dep.StoragePolicyClient().ListByGroup(c, u.Edges.Group)
+			if err != nil {
+				return serializer.NewError(serializer.CodeDBError, "Failed to list storage policies", err)
+			}
+			if !lo.ContainsBy(allowed, func(p *ent.StoragePolicy) bool { return p.ID == pid }) {
+				return serializer.NewError(serializer.CodeNoPermissionErr, "Storage policy is not available for your group", nil)
+			}
+			u.Settings.PreferredPolicy = pid
+		}
 		saveSetting = true
 	}
 

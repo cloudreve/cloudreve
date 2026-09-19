@@ -41,5 +41,8 @@ func (Group) Edges() []ent.Edge {
 			Ref("groups").
 			Field("storage_policy_id").
 			Unique(),
+		// allowed_policies is the pool of storage policies members may pick
+		// from. Empty means the single storage_policies default applies.
+		edge.To("allowed_policies", StoragePolicy.Type),
 	}
 }

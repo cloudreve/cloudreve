@@ -22,14 +22,15 @@ import (
 // StoragePolicyQuery is the builder for querying StoragePolicy entities.
 type StoragePolicyQuery struct {
 	config
-	ctx          *QueryContext
-	order        []storagepolicy.OrderOption
-	inters       []Interceptor
-	predicates   []predicate.StoragePolicy
-	withGroups   *GroupQuery
-	withFiles    *FileQuery
-	withEntities *EntityQuery
-	withNode     *NodeQuery
+	ctx               *QueryContext
+	order             []storagepolicy.OrderOption
+	inters            []Interceptor
+	predicates        []predicate.StoragePolicy
+	withGroups        *GroupQuery
+	withFiles         *FileQuery
+	withEntities      *EntityQuery
+	withAllowedGroups *GroupQuery
+	withNode          *NodeQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -125,6 +126,28 @@ func (spq *StoragePolicyQuery) QueryEntities() *EntityQuery {
 			sqlgraph.From(storagepolicy.Table, storagepolicy.FieldID, selector),
 			sqlgraph.To(entity.Table, entity.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, storagepolicy.EntitiesTable, storagepolicy.EntitiesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(spq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryAllowedGroups chains the current query on the "allowed_groups" edge.
+func (spq *StoragePolicyQuery) QueryAllowedGroups() *GroupQuery {
+	query := (&GroupClient{config: spq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := spq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := spq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(storagepolicy.Table, storagepolicy.FieldID, selector),
+			sqlgraph.To(group.Table, group.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, storagepolicy.AllowedGroupsTable, storagepolicy.AllowedGroupsPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(spq.driver.Dialect(), step)
 		return fromU, nil
@@ -341,15 +364,16 @@ func (spq *StoragePolicyQuery) Clone() *StoragePolicyQuery {
 		return nil
 	}
 	return &StoragePolicyQuery{
-		config:       spq.config,
-		ctx:          spq.ctx.Clone(),
-		order:        append([]storagepolicy.OrderOption{}, spq.order...),
-		inters:       append([]Interceptor{}, spq.inters...),
-		predicates:   append([]predicate.StoragePolicy{}, spq.predicates...),
-		withGroups:   spq.withGroups.Clone(),
-		withFiles:    spq.withFiles.Clone(),
-		withEntities: spq.withEntities.Clone(),
-		withNode:     spq.withNode.Clone(),
+		config:            spq.config,
+		ctx:               spq.ctx.Clone(),
+		order:             append([]storagepolicy.OrderOption{}, spq.order...),
+		inters:            append([]Interceptor{}, spq.inters...),
+		predicates:        append([]predicate.StoragePolicy{}, spq.predicates...),
+		withGroups:        spq.withGroups.Clone(),
+		withFiles:         spq.withFiles.Clone(),
+		withEntities:      spq.withEntities.Clone(),
+		withAllowedGroups: spq.withAllowedGroups.Clone(),
+		withNode:          spq.withNode.Clone(),
 		// clone intermediate query.
 		sql:  spq.sql.Clone(),
 		path: spq.path,
@@ -386,6 +410,17 @@ func (spq *StoragePolicyQuery) WithEntities(opts ...func(*EntityQuery)) *Storage
 		opt(query)
 	}
 	spq.withEntities = query
+	return spq
+}
+
+// WithAllowedGroups tells the query-builder to eager-load the nodes that are connected to
+// the "allowed_groups" edge. The optional arguments are used to configure the query builder of the edge.
+func (spq *StoragePolicyQuery) WithAllowedGroups(opts ...func(*GroupQuery)) *StoragePolicyQuery {
+	query := (&GroupClient{config: spq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	spq.withAllowedGroups = query
 	return spq
 }
 
@@ -478,10 +513,11 @@ func (spq *StoragePolicyQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 	var (
 		nodes       = []*StoragePolicy{}
 		_spec       = spq.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [5]bool{
 			spq.withGroups != nil,
 			spq.withFiles != nil,
 			spq.withEntities != nil,
+			spq.withAllowedGroups != nil,
 			spq.withNode != nil,
 		}
 	)
@@ -521,6 +557,13 @@ func (spq *StoragePolicyQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 		if err := spq.loadEntities(ctx, query, nodes,
 			func(n *StoragePolicy) { n.Edges.Entities = []*Entity{} },
 			func(n *StoragePolicy, e *Entity) { n.Edges.Entities = append(n.Edges.Entities, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := spq.withAllowedGroups; query != nil {
+		if err := spq.loadAllowedGroups(ctx, query, nodes,
+			func(n *StoragePolicy) { n.Edges.AllowedGroups = []*Group{} },
+			func(n *StoragePolicy, e *Group) { n.Edges.AllowedGroups = append(n.Edges.AllowedGroups, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -620,6 +663,67 @@ func (spq *StoragePolicyQuery) loadEntities(ctx context.Context, query *EntityQu
 			return fmt.Errorf(`unexpected referenced foreign-key "storage_policy_entities" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
+	}
+	return nil
+}
+func (spq *StoragePolicyQuery) loadAllowedGroups(ctx context.Context, query *GroupQuery, nodes []*StoragePolicy, init func(*StoragePolicy), assign func(*StoragePolicy, *Group)) error {
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[int]*StoragePolicy)
+	nids := make(map[int]map[*StoragePolicy]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
+		if init != nil {
+			init(node)
+		}
+	}
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(storagepolicy.AllowedGroupsTable)
+		s.Join(joinT).On(s.C(group.FieldID), joinT.C(storagepolicy.AllowedGroupsPrimaryKey[0]))
+		s.Where(sql.InValues(joinT.C(storagepolicy.AllowedGroupsPrimaryKey[1]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(storagepolicy.AllowedGroupsPrimaryKey[1]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
+	}
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(sql.NullInt64)}, values...), nil
+			}
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := int(values[0].(*sql.NullInt64).Int64)
+				inValue := int(values[1].(*sql.NullInt64).Int64)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*StoragePolicy]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
+			}
+		})
+	})
+	neighbors, err := withInterceptors[[]*Group](ctx, query, qr, query.inters)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected "allowed_groups" node returned %v`, n.ID)
+		}
+		for kn := range nodes {
+			assign(kn, n)
+		}
 	}
 	return nil
 }

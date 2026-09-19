@@ -102,6 +102,8 @@ export interface DisplayOption {
   showManageShares?: boolean;
   showCreateArchive?: boolean;
   showResetThumb?: boolean;
+  showDirPolicy?: boolean;
+  showRelocate?: boolean;
 
   andCapability?: Boolset;
   orCapability?: Boolset;
@@ -319,6 +321,15 @@ export const getActionOpt = (
     display.orCapability &&
     display.hasReadable &&
     canManageVersion(targets[0], display.orCapability);
+  // Storage-policy actions apply only to files the user owns; share visitors
+  // cannot re-home entities they do not own.
+  display.showDirPolicy =
+    targets.length == 1 &&
+    !!currentUser &&
+    targets[0].owned &&
+    display.hasFolder &&
+    !display.hasTrashFile;
+  display.showRelocate = targets.length == 1 && !!currentUser && targets[0].owned && !display.hasTrashFile;
   display.showManageShares =
     targets.length == 1 &&
     targets[0].shared &&

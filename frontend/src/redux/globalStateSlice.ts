@@ -218,6 +218,12 @@ export interface GlobalStateSlice {
   directLinkManagementDialogFile?: FileResponse;
   directLinkHighlight?: string;
 
+  // Storage policy dialog ("dir" sets the folder's preferred upload policy,
+  // "relocate" moves the target's entities to another policy)
+  storagePolicyDialogOpen?: boolean;
+  storagePolicyDialogMode?: "dir" | "relocate";
+  storagePolicyDialogFile?: FileResponse;
+
   // Desktop mount setup dialog
   desktopMountSetupDialogOpen?: boolean;
   desktopMountSetupState?: DesktopCallbackState;
@@ -357,6 +363,19 @@ export const globalStateSlice = createSlice({
       state.directLinkManagementDialogOpen = false;
       state.directLinkManagementDialogFile = undefined;
       state.directLinkHighlight = undefined;
+    },
+    setStoragePolicyDialog: (
+      state,
+      action: PayloadAction<{ open: boolean; mode?: "dir" | "relocate"; file?: FileResponse }>,
+    ) => {
+      state.storagePolicyDialogOpen = action.payload.open;
+      state.storagePolicyDialogMode = action.payload.mode;
+      state.storagePolicyDialogFile = action.payload.file;
+    },
+    closeStoragePolicyDialog: (state) => {
+      state.storagePolicyDialogOpen = false;
+      state.storagePolicyDialogMode = undefined;
+      state.storagePolicyDialogFile = undefined;
     },
     setMobileDrawerOpen: (state, action: PayloadAction<boolean>) => {
       state.mobileDrawerOpen = action.payload;
@@ -952,6 +971,8 @@ export const {
   closeExcalidrawViewer,
   setDirectLinkManagementDialog,
   closeDirectLinkManagementDialog,
+  setStoragePolicyDialog,
+  closeStoragePolicyDialog,
   setShareReadmeDetect,
   closeShareReadme,
   setShareReadmeOpen,

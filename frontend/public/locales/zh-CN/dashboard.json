@@ -1190,7 +1190,14 @@
     "enableFileEncryptionDes": "开启后，文件 Blob 会被加密存储。更改此设置只对新增的文件有效。",
     "encryptedFile": "加密的文件",
     "status": "状态",
-    "statusDes": "已暂停的存储策略仍可读取已有文件，但会拒绝新的上传。"
+    "statusDes": "已暂停的存储策略仍可读取已有文件，但会拒绝新的上传。",
+    "loadBalance": "负载均衡",
+    "lbChildren": "子存储策略",
+    "lbChildPolicy": "存储策略",
+    "lbWeight": "权重",
+    "lbAddChild": "添加子策略",
+    "lbChildrenDes": "新上传将按权重比例分配到各子存储策略。",
+    "lbWizardDes": "负载均衡策略按权重将上传分配到子策略，创建后再配置子策略。"
   },
   "node": {
     "slave": "从机",
@@ -1371,10 +1378,12 @@
     "notCopy": "不复制",
     "confirmDelete": "确认要删除用户组 {{group}}？",
     "new": "新建用户组",
-    "editGroup": "编辑 {{group}}"
+    "editGroup": "编辑 {{group}}",
+    "switchablePolicies": "可切换存储策略",
+    "switchablePoliciesDes": "该组成员可以自由切换使用的存储策略。上方默认策略始终可用。"
   },
   "user": {
-    "createdAt": "创建日期",
+    "createdAt": "创建时间",
     "originUserGroup": "原始用户组",
     "originUserGroupDes": "用户在购买用户组前所属的用户组，当前用户组到期后会回退到此用户组。",
     "noOriginUserGroup": "无",
@@ -1444,8 +1453,7 @@
     "invitationCodeCopy": "复制",
     "invitationCodeDefaultGroup": "默认组",
     "noInvitationCodes": "暂无邀请码。",
-    "loadMore": "加载更多",
-    "createdAt": "创建时间"
+    "loadMore": "加载更多"
   },
   "file": {
     "deleteXFiles": "删除 {{num}} 个文件",

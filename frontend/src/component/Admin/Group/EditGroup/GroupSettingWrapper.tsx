@@ -39,6 +39,7 @@ const groupValueFilter = (group: GroupEnt): GroupEnt => {
       storage_policies: {
         id: group.edges.storage_policies?.id ?? 0,
       } as StoragePolicy,
+      allowed_policies: (group.edges.allowed_policies ?? []).map((p) => ({ id: p.id }) as StoragePolicy),
     },
   };
 };

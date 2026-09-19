@@ -8,11 +8,16 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/group"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cache"
 	"github.com/cloudreve/Cloudreve/v4/pkg/conf"
+	"github.com/samber/lo"
 )
 
 type (
 	// Ctx keys for eager loading options.
 	LoadGroupPolicy struct{}
+
+	// LoadGroupAllowedPolicies eagerly loads the group's allowed_policies M2M
+	// edge.
+	LoadGroupAllowedPolicies struct{}
 )
 
 const (
@@ -77,6 +82,10 @@ func (c *groupClient) ListAll(ctx context.Context) ([]*ent.Group, error) {
 }
 
 func (c *groupClient) Upsert(ctx context.Context, group *ent.Group) (*ent.Group, error) {
+	allowedIDs := lo.Map(group.Edges.AllowedPolicies, func(p *ent.StoragePolicy, _ int) int {
+		return p.ID
+	})
+
 	if group.ID == 0 {
 		stm := c.client.Group.Create().
 			SetName(group.Name).
@@ -88,6 +97,9 @@ func (c *groupClient) Upsert(ctx context.Context, group *ent.Group) (*ent.Group,
 		if group.Edges.StoragePolicies != nil && group.Edges.StoragePolicies.ID > 0 {
 			stm.SetStoragePolicyID(group.Edges.StoragePolicies.ID)
 		}
+		if len(allowedIDs) > 0 {
+			stm.AddAllowedPolicyIDs(allowedIDs...)
+		}
 
 		return stm.Save(ctx)
 	}
@@ -98,10 +110,14 @@ func (c *groupClient) Upsert(ctx context.Context, group *ent.Group) (*ent.Group,
 		SetSpeedLimit(group.SpeedLimit).
 		SetPermissions(group.Permissions).
 		SetSettings(group.Settings).
-		ClearStoragePolicies()
+		ClearStoragePolicies().
+		ClearAllowedPolicies()
 
 	if group.Edges.StoragePolicies != nil && group.Edges.StoragePolicies.ID > 0 {
 		stm.SetStoragePolicyID(group.Edges.StoragePolicies.ID)
+	}
+	if len(allowedIDs) > 0 {
+		stm.AddAllowedPolicyIDs(allowedIDs...)
 	}
 
 	res, err := stm.Save(ctx)
@@ -172,6 +188,9 @@ func withGroupEagerLoading(ctx context.Context, q *ent.GroupQuery) *ent.GroupQue
 		q.WithStoragePolicies(func(spq *ent.StoragePolicyQuery) {
 			withStoragePolicyEagerLoading(ctx, spq)
 		})
+	}
+	if _, ok := ctx.Value(LoadGroupAllowedPolicies{}).(bool); ok {
+		q.WithAllowedPolicies()
 	}
 	return q
 }

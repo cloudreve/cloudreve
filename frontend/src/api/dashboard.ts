@@ -47,6 +47,7 @@ export interface GroupEnt extends CommonMixin {
   permissions?: string;
   edges: {
     storage_policies?: StoragePolicy;
+    allowed_policies?: StoragePolicy[];
   };
   total_users?: number;
   settings?: GroupSetting;
@@ -263,6 +264,12 @@ export interface PolicySetting {
   qiniu_upload_cdn?: boolean;
   chunk_concurrency?: number;
   encryption?: boolean;
+  lb_policies?: LBPolicyRef[];
+}
+
+export interface LBPolicyRef {
+  policy: number;
+  weight?: number;
 }
 
 export interface User extends CommonMixin {

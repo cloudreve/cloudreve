@@ -4,12 +4,15 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
+	"math/rand"
+	"sort"
 	"strconv"
 
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/storagepolicy"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cache"
+	"github.com/samber/lo"
 )
 
 const (
@@ -30,6 +33,15 @@ type (
 		TxOperator
 		// GetByGroup returns the storage policies of the group.
 		GetByGroup(ctx context.Context, group *ent.Group) (*ent.StoragePolicy, error)
+		// ListByGroup returns every active storage policy usable by the
+		// group: the allowed_policies set plus the legacy single-policy
+		// default. Returns the set in stable id order.
+		ListByGroup(ctx context.Context, group *ent.Group) ([]*ent.StoragePolicy, error)
+		// ResolveLoadBalance picks a concrete child of a load_balance policy
+		// by its configured weights. Suspended, missing, and nested
+		// load_balance children are skipped; the pick is weighted over the
+		// remaining set.
+		ResolveLoadBalance(ctx context.Context, policy *ent.StoragePolicy) (*ent.StoragePolicy, error)
 		// GetPolicyByID returns the storage policy by id.
 		GetPolicyByID(ctx context.Context, id int) (*ent.StoragePolicy, error)
 		// UpdateAccessKey updates the access key of the storage policy. It also clear related cache in KV.
@@ -159,6 +171,68 @@ func (c *storagePolicyClient) GetByGroup(ctx context.Context, group *ent.Group) 
 	}
 
 	return res, nil
+}
+
+func (c *storagePolicyClient) ListByGroup(ctx context.Context, group *ent.Group) ([]*ent.StoragePolicy, error) {
+	allowed, err := withStoragePolicyEagerLoading(ctx, c.client.Group.QueryAllowedPolicies(group)).
+		Where(storagepolicy.StatusEQ(storagepolicy.StatusActive)).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list allowed storage policies: %w", err)
+	}
+
+	// The legacy storage_policy_id default is always part of the allowed set.
+	if group.Edges.StoragePolicies != nil {
+		def := group.Edges.StoragePolicies
+		if !lo.ContainsBy(allowed, func(p *ent.StoragePolicy) bool { return p.ID == def.ID }) {
+			if def.Status == storagepolicy.StatusActive {
+				allowed = append(allowed, def)
+			}
+		}
+	} else if group.StoragePolicyID > 0 {
+		if def, err := c.GetPolicyByID(ctx, group.StoragePolicyID); err == nil && def.Status == storagepolicy.StatusActive {
+			if !lo.ContainsBy(allowed, func(p *ent.StoragePolicy) bool { return p.ID == def.ID }) {
+				allowed = append(allowed, def)
+			}
+		}
+	}
+
+	sort.Slice(allowed, func(i, j int) bool { return allowed[i].ID < allowed[j].ID })
+	return allowed, nil
+}
+
+func (c *storagePolicyClient) ResolveLoadBalance(ctx context.Context, policy *ent.StoragePolicy) (*ent.StoragePolicy, error) {
+	refs := policy.Settings.LBPolicies
+	if len(refs) == 0 {
+		return nil, fmt.Errorf("load-balance policy %d has no child policies", policy.ID)
+	}
+
+	children := make([]*ent.StoragePolicy, 0, len(refs))
+	weights := make([]int, 0, len(refs))
+	for _, ref := range refs {
+		child, err := c.GetPolicyByID(ctx, ref.PolicyID)
+		if err != nil || child.Status != storagepolicy.StatusActive || child.Type == types.PolicyTypeLoadBalance {
+			continue
+		}
+		children = append(children, child)
+		weights = append(weights, max(ref.Weight, 1))
+	}
+	if len(children) == 0 {
+		return nil, fmt.Errorf("load-balance policy %d has no usable child policies", policy.ID)
+	}
+
+	total := 0
+	for _, w := range weights {
+		total += w
+	}
+	n := rand.Intn(total)
+	for i, w := range weights {
+		if n < w {
+			return children[i], nil
+		}
+		n -= w
+	}
+	return children[len(children)-1], nil
 }
 
 // GetPolicyByID returns the storage policy by id.

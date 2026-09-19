@@ -732,18 +732,82 @@ func (f *DBFS) generateEncryptMetadata(ctx context.Context, uploadRequest *fs.Up
 
 // getPreferredPolicy tries to get the preferred storage policy for the given file.
 func (f *DBFS) getPreferredPolicy(ctx context.Context, file *File) (*ent.StoragePolicy, error) {
-	ownerGroup := file.Owner().Edges.Group
+	owner := file.Owner()
+	ownerGroup := owner.Edges.Group
 	if ownerGroup == nil {
 		return nil, fmt.Errorf("owner group not loaded")
 	}
 
 	sc, _ := inventory.InheritTx(ctx, f.storagePolicyClient)
-	groupPolicy, err := sc.GetByGroup(ctx, ownerGroup)
+	allowed, err := sc.ListByGroup(ctx, ownerGroup)
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get available storage policies", err)
 	}
+	if len(allowed) == 0 {
+		return nil, serializer.NewError(serializer.CodeDBError, "No active storage policy available for the group", nil)
+	}
 
-	return groupPolicy, nil
+	candidate := f.pickPolicy(ctx, file, owner, allowed)
+
+	// A load_balance policy resolves to one of its weighted children before
+	// any storage driver sees it.
+	if candidate.Type == types.PolicyTypeLoadBalance {
+		child, err := sc.ResolveLoadBalance(ctx, candidate)
+		if err != nil {
+			return nil, serializer.NewError(serializer.CodeDBError, "Failed to resolve load-balanced storage policy", err)
+		}
+		candidate = child
+	}
+
+	return candidate, nil
+}
+
+// pickPolicy chooses among the group's allowed policies: the nearest ancestor
+// directory carrying a preferred-policy marker wins; next the owner's own
+// preferred_policy setting (applied only in their own tree); finally the
+// group default, or the first allowed policy when none is configured.
+func (f *DBFS) pickPolicy(ctx context.Context, file *File, owner *ent.User, allowed []*ent.StoragePolicy) *ent.StoragePolicy {
+	inAllowed := func(id int) *ent.StoragePolicy {
+		for _, p := range allowed {
+			if p.ID == id {
+				return p
+			}
+		}
+		return nil
+	}
+
+	// The nearest ancestor directory with a preference wins; if its choice is
+	// no longer usable, the preference is ignored rather than inherited from
+	// a further ancestor. Ancestor metadata may not be eager-loaded, so each
+	// level is loaded lazily until a marker is found.
+	for _, ancestor := range file.AncestorsChain() {
+		if _, err := ancestor.Model.Edges.MetadataOrErr(); err != nil {
+			if err := f.fileClient.QueryMetadata(ctx, ancestor.Model); err != nil {
+				continue
+			}
+		}
+		raw := ancestor.Metadata()[MetadataPreferredPolicy]
+		if raw == "" {
+			continue
+		}
+		if id, err := f.hasher.Decode(raw, hashid.PolicyID); err == nil {
+			if p := inAllowed(id); p != nil {
+				return p
+			}
+		}
+		break
+	}
+
+	if f.user.ID == owner.ID && owner.Settings != nil && owner.Settings.PreferredPolicy > 0 {
+		if p := inAllowed(owner.Settings.PreferredPolicy); p != nil {
+			return p
+		}
+	}
+
+	if p := inAllowed(owner.Edges.Group.StoragePolicyID); p != nil {
+		return p
+	}
+	return allowed[0]
 }
 
 func (f *DBFS) getFileByPath(ctx context.Context, navigator Navigator, path *fs.URI) (*File, error) {

@@ -272,6 +272,21 @@ func (spc *StoragePolicyCreate) AddEntities(e ...*Entity) *StoragePolicyCreate {
 	return spc.AddEntityIDs(ids...)
 }
 
+// AddAllowedGroupIDs adds the "allowed_groups" edge to the Group entity by IDs.
+func (spc *StoragePolicyCreate) AddAllowedGroupIDs(ids ...int) *StoragePolicyCreate {
+	spc.mutation.AddAllowedGroupIDs(ids...)
+	return spc
+}
+
+// AddAllowedGroups adds the "allowed_groups" edges to the Group entity.
+func (spc *StoragePolicyCreate) AddAllowedGroups(g ...*Group) *StoragePolicyCreate {
+	ids := make([]int, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return spc.AddAllowedGroupIDs(ids...)
+}
+
 // SetNode sets the "node" edge to the Node entity.
 func (spc *StoragePolicyCreate) SetNode(n *Node) *StoragePolicyCreate {
 	return spc.SetNodeID(n.ID)
@@ -496,6 +511,22 @@ func (spc *StoragePolicyCreate) createSpec() (*StoragePolicy, *sqlgraph.CreateSp
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(entity.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := spc.mutation.AllowedGroupsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   storagepolicy.AllowedGroupsTable,
+			Columns: storagepolicy.AllowedGroupsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

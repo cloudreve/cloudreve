@@ -345,6 +345,21 @@ func (spu *StoragePolicyUpdate) AddEntities(e ...*Entity) *StoragePolicyUpdate {
 	return spu.AddEntityIDs(ids...)
 }
 
+// AddAllowedGroupIDs adds the "allowed_groups" edge to the Group entity by IDs.
+func (spu *StoragePolicyUpdate) AddAllowedGroupIDs(ids ...int) *StoragePolicyUpdate {
+	spu.mutation.AddAllowedGroupIDs(ids...)
+	return spu
+}
+
+// AddAllowedGroups adds the "allowed_groups" edges to the Group entity.
+func (spu *StoragePolicyUpdate) AddAllowedGroups(g ...*Group) *StoragePolicyUpdate {
+	ids := make([]int, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return spu.AddAllowedGroupIDs(ids...)
+}
+
 // SetNode sets the "node" edge to the Node entity.
 func (spu *StoragePolicyUpdate) SetNode(n *Node) *StoragePolicyUpdate {
 	return spu.SetNodeID(n.ID)
@@ -416,6 +431,27 @@ func (spu *StoragePolicyUpdate) RemoveEntities(e ...*Entity) *StoragePolicyUpdat
 		ids[i] = e[i].ID
 	}
 	return spu.RemoveEntityIDs(ids...)
+}
+
+// ClearAllowedGroups clears all "allowed_groups" edges to the Group entity.
+func (spu *StoragePolicyUpdate) ClearAllowedGroups() *StoragePolicyUpdate {
+	spu.mutation.ClearAllowedGroups()
+	return spu
+}
+
+// RemoveAllowedGroupIDs removes the "allowed_groups" edge to Group entities by IDs.
+func (spu *StoragePolicyUpdate) RemoveAllowedGroupIDs(ids ...int) *StoragePolicyUpdate {
+	spu.mutation.RemoveAllowedGroupIDs(ids...)
+	return spu
+}
+
+// RemoveAllowedGroups removes "allowed_groups" edges to Group entities.
+func (spu *StoragePolicyUpdate) RemoveAllowedGroups(g ...*Group) *StoragePolicyUpdate {
+	ids := make([]int, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return spu.RemoveAllowedGroupIDs(ids...)
 }
 
 // ClearNode clears the "node" edge to the Node entity.
@@ -691,6 +727,51 @@ func (spu *StoragePolicyUpdate) sqlSave(ctx context.Context) (n int, err error) 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(entity.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if spu.mutation.AllowedGroupsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   storagepolicy.AllowedGroupsTable,
+			Columns: storagepolicy.AllowedGroupsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := spu.mutation.RemovedAllowedGroupsIDs(); len(nodes) > 0 && !spu.mutation.AllowedGroupsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   storagepolicy.AllowedGroupsTable,
+			Columns: storagepolicy.AllowedGroupsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := spu.mutation.AllowedGroupsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   storagepolicy.AllowedGroupsTable,
+			Columns: storagepolicy.AllowedGroupsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -1059,6 +1140,21 @@ func (spuo *StoragePolicyUpdateOne) AddEntities(e ...*Entity) *StoragePolicyUpda
 	return spuo.AddEntityIDs(ids...)
 }
 
+// AddAllowedGroupIDs adds the "allowed_groups" edge to the Group entity by IDs.
+func (spuo *StoragePolicyUpdateOne) AddAllowedGroupIDs(ids ...int) *StoragePolicyUpdateOne {
+	spuo.mutation.AddAllowedGroupIDs(ids...)
+	return spuo
+}
+
+// AddAllowedGroups adds the "allowed_groups" edges to the Group entity.
+func (spuo *StoragePolicyUpdateOne) AddAllowedGroups(g ...*Group) *StoragePolicyUpdateOne {
+	ids := make([]int, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return spuo.AddAllowedGroupIDs(ids...)
+}
+
 // SetNode sets the "node" edge to the Node entity.
 func (spuo *StoragePolicyUpdateOne) SetNode(n *Node) *StoragePolicyUpdateOne {
 	return spuo.SetNodeID(n.ID)
@@ -1130,6 +1226,27 @@ func (spuo *StoragePolicyUpdateOne) RemoveEntities(e ...*Entity) *StoragePolicyU
 		ids[i] = e[i].ID
 	}
 	return spuo.RemoveEntityIDs(ids...)
+}
+
+// ClearAllowedGroups clears all "allowed_groups" edges to the Group entity.
+func (spuo *StoragePolicyUpdateOne) ClearAllowedGroups() *StoragePolicyUpdateOne {
+	spuo.mutation.ClearAllowedGroups()
+	return spuo
+}
+
+// RemoveAllowedGroupIDs removes the "allowed_groups" edge to Group entities by IDs.
+func (spuo *StoragePolicyUpdateOne) RemoveAllowedGroupIDs(ids ...int) *StoragePolicyUpdateOne {
+	spuo.mutation.RemoveAllowedGroupIDs(ids...)
+	return spuo
+}
+
+// RemoveAllowedGroups removes "allowed_groups" edges to Group entities.
+func (spuo *StoragePolicyUpdateOne) RemoveAllowedGroups(g ...*Group) *StoragePolicyUpdateOne {
+	ids := make([]int, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return spuo.RemoveAllowedGroupIDs(ids...)
 }
 
 // ClearNode clears the "node" edge to the Node entity.
@@ -1435,6 +1552,51 @@ func (spuo *StoragePolicyUpdateOne) sqlSave(ctx context.Context) (_node *Storage
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(entity.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if spuo.mutation.AllowedGroupsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   storagepolicy.AllowedGroupsTable,
+			Columns: storagepolicy.AllowedGroupsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := spuo.mutation.RemovedAllowedGroupsIDs(); len(nodes) > 0 && !spuo.mutation.AllowedGroupsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   storagepolicy.AllowedGroupsTable,
+			Columns: storagepolicy.AllowedGroupsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := spuo.mutation.AllowedGroupsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   storagepolicy.AllowedGroupsTable,
+			Columns: storagepolicy.AllowedGroupsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

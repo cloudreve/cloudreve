@@ -479,7 +479,16 @@
     "ftsIndexed": "已索引",
     "ftsNotIndexed": "未索引",
     "lineEnding": "换行符",
-    "downloadAll": "全部下载"
+    "downloadAll": "全部下载",
+    "dirPolicyTitle": "上传存储策略",
+    "dirPolicyDes": "上传到「{{name}}」的新文件将使用所选的存储策略。",
+    "relocateTitle": "迁移存储",
+    "relocateDes": "将「{{name}}」的物理内容迁移到所选存储策略。",
+    "relocateSubmitted": "迁移任务已提交",
+    "relocateStart": "迁移",
+    "policySaved": "存储策略已更新",
+    "policyInherit": "继承（使用父目录或用户组默认）",
+    "policyGroupDefault": "用户组默认"
   },
   "modals": {
     "includePasswordInShareLink": "在链接中包含密码",
@@ -1047,7 +1056,12 @@
     "shareDefaultPrivate": "默认分享隐私",
     "shareDefaultPrivateDes": "新建分享默认启用私密分享（密码保护）。",
     "sharePrivateOn": "私密",
-    "sharePrivateOff": "公开"
+    "sharePrivateOff": "公开",
+    "preferredPolicy": "首选存储策略",
+    "preferredPolicyDes": "在您自己的文件中上传新文件时使用此存储策略，除非某个目录单独指定。",
+    "policySaved": "存储策略已更新",
+    "policyInherit": "继承（用户组默认）",
+    "policyGroupDefault": "用户组默认"
   },
   "vas": {
     "points": "积分",
