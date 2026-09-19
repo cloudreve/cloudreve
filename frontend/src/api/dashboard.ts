@@ -66,6 +66,8 @@ export interface GroupSetting {
   redirected_source?: boolean;
   login_ip_whitelist?: string[];
   default_pinned?: number[];
+  allowed_nodes?: number[];
+  allow_select_node?: boolean;
 }
 
 export interface AdminListGroupResponse {

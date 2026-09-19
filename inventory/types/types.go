@@ -71,6 +71,12 @@ type (
 		// DefaultPinned is a list of share entity IDs seeded as share
 		// shortcuts for members of this group on file-system init.
 		DefaultPinned []int `json:"default_pinned,omitempty"`
+		// AllowedNodes restricts which nodes this group's tasks may run on.
+		// Empty means all nodes are eligible.
+		AllowedNodes []int `json:"allowed_nodes,omitempty"`
+		// AllowSelectNode lets members pick a preferred node when creating
+		// tasks (remote download, archive create/extract).
+		AllowSelectNode bool `json:"allow_select_node,omitempty"`
 	}
 
 	// PolicySetting 非公有的存储策略属性

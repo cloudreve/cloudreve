@@ -76,12 +76,12 @@ func init() {
 
 // NewExtractArchiveTask creates a new ExtractArchiveTask. volumes optionally
 // lists the URIs of all volumes of a multi-volume archive selected together.
-func NewExtractArchiveTask(ctx context.Context, src, dst, encoding, password string, mask []string, volumes []string) (queue.Task, error) {
+func NewExtractArchiveTask(ctx context.Context, src, dst, encoding, password string, mask []string, volumes []string, sel NodeSelection) (queue.Task, error) {
 	state := &ExtractArchiveTaskState{
 		Uri:        src,
 		Dst:        dst,
 		Encoding:   encoding,
-		NodeState:  NodeState{},
+		NodeState:  sel.state(),
 		Password:   password,
 		FileMask:   mask,
 		VolumeUris: volumes,
@@ -654,17 +654,17 @@ type (
 	}
 
 	SlaveExtractArchiveTaskState struct {
-		FileName        string                `json:"file_name"`
-		Entity          *ent.Entity           `json:"entity"`
-		Policy          *ent.StoragePolicy    `json:"policy"`
-		Encoding        string                `json:"encoding,omitempty"`
-		Dst             string                `json:"dst,omitempty"`
-		UserID          int                   `json:"user_id"`
-		TempPath        string                `json:"temp_path,omitempty"`
-		TempZipFilePath string                `json:"temp_zip_file_path,omitempty"`
-		ProcessedCursor string                `json:"processed_cursor,omitempty"`
-		Password        string                `json:"password,omitempty"`
-		FileMask        []string              `json:"file_mask,omitempty"`
+		FileName        string                 `json:"file_name"`
+		Entity          *ent.Entity            `json:"entity"`
+		Policy          *ent.StoragePolicy     `json:"policy"`
+		Encoding        string                 `json:"encoding,omitempty"`
+		Dst             string                 `json:"dst,omitempty"`
+		UserID          int                    `json:"user_id"`
+		TempPath        string                 `json:"temp_path,omitempty"`
+		TempZipFilePath string                 `json:"temp_zip_file_path,omitempty"`
+		ProcessedCursor string                 `json:"processed_cursor,omitempty"`
+		Password        string                 `json:"password,omitempty"`
+		FileMask        []string               `json:"file_mask,omitempty"`
 		Volumes         map[string]*ent.Entity `json:"volumes,omitempty"`
 	}
 )
@@ -698,7 +698,7 @@ func (m *SlaveExtractArchiveTask) Do(ctx context.Context) (task.Status, error) {
 		return task.StatusError, fmt.Errorf("failed to get node pool: %w", err)
 	}
 
-	m.node, err = np.Get(ctx, types.NodeCapabilityNone, 0)
+	m.node, err = np.Get(ctx, types.NodeCapabilityNone, 0, nil)
 	if err != nil || !m.node.IsMaster() {
 		return task.StatusError, fmt.Errorf("failed to get master node: %w", err)
 	}

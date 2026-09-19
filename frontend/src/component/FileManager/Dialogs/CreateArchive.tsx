@@ -9,6 +9,7 @@ import { getFileLinkedUri } from "../../../util";
 import CrUri from "../../../util/uri.ts";
 import { OutlineIconTextField } from "../../Common/Form/OutlineIconTextField.tsx";
 import { PathSelectorForm } from "../../Common/Form/PathSelectorForm.tsx";
+import TargetNodeSelect from "../../Common/Form/TargetNodeSelect.tsx";
 import { ViewTaskAction } from "../../Common/Snackbar/snackbar.tsx";
 import DraggableDialog from "../../Dialogs/DraggableDialog.tsx";
 import Archive from "../../Icons/Archive.tsx";
@@ -24,6 +25,7 @@ const CreateArchive = () => {
   const [loading, setLoading] = useState(false);
   const [fileName, setFileName] = useState("archive.zip");
   const [path, setPath] = useState("");
+  const [targetNode, setTargetNode] = useState("");
 
   const open = useAppSelector((state) => state.globalState.createArchiveDialogOpen);
   const targets = useAppSelector((state) => state.globalState.createArchiveDialogFiles);
@@ -32,6 +34,7 @@ const CreateArchive = () => {
   useEffect(() => {
     if (open) {
       setPath(current ?? "");
+      setTargetNode("");
     }
   }, [open]);
 
@@ -50,6 +53,7 @@ const CreateArchive = () => {
       sendCreateArchive({
         src: targets?.map((t) => getFileLinkedUri(t)),
         dst: dst.join(fileName).toString(),
+        target_node: targetNode || undefined,
       }),
     )
       .then(() => {
@@ -63,7 +67,7 @@ const CreateArchive = () => {
       .finally(() => {
         setLoading(false);
       });
-  }, [targets, fileName, path]);
+  }, [targets, fileName, path, targetNode]);
 
   return (
     <DraggableDialog
@@ -94,6 +98,7 @@ const CreateArchive = () => {
           <Stack spacing={3} direction={isMobile ? "column" : "row"}>
             <PathSelectorForm onChange={setPath} path={path} label={t("modals.saveToTitle")} />
           </Stack>
+          <TargetNodeSelect value={targetNode} onChange={setTargetNode} />
         </Stack>
       </DialogContent>
     </DraggableDialog>

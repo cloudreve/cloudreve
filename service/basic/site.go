@@ -1,12 +1,15 @@
 package basic
 
 import (
+	"slices"
 	"sort"
 	"strings"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
+	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
 	"github.com/cloudreve/Cloudreve/v4/pkg/thumb"
 	"github.com/cloudreve/Cloudreve/v4/service/user"
@@ -57,6 +60,12 @@ type SiteConfig struct {
 	// AbuseCaptcha controls whether the report-abuse dialog shows captcha.
 	AbuseCaptcha bool `json:"abuse_captcha,omitempty"`
 
+	// TaskNodes lists nodes the current user may target when creating tasks
+	// (remote download, archive ops); populated when the group allows node
+	// selection, filtered to the group's allowed pool.
+	TaskNodes       []TaskNode `json:"task_nodes,omitempty"`
+	AllowSelectNode bool       `json:"allow_select_node,omitempty"`
+
 	// Explorer section
 	Icons                string                     `json:"icons,omitempty"`
 	EmojiPreset          string                     `json:"emoji_preset,omitempty"`
@@ -92,6 +101,12 @@ type SiteConfig struct {
 	//WopiExts             []string            `json:"wopi_exts"`
 	//AppFeedbackLink      string              `json:"app_feedback"`
 	//AppForumLink         string              `json:"app_forum"`
+}
+
+// TaskNode is the minimal public node descriptor for task targeting.
+type TaskNode struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 type (
@@ -217,6 +232,7 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 	customNavItems := settings.CustomNavItems(c)
 	customHTML := settings.CustomHTML(c)
 	shareDefaults := settings.ShareDefaults(c)
+	taskNodes, allowSelect := taskNodesForUser(c, dep, u)
 	return &SiteConfig{
 		InstanceID:                 siteBasic.ID,
 		SiteName:                   siteBasic.Name,
@@ -238,7 +254,47 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 		DefaultShareLinksInProfile: string(shareDefaults.LinksInProfile),
 		DownloadCDNRoutes:          settings.DownloadCDNRoutes(c),
 		AbuseCaptcha:               settings.AbuseCaptchaEnabled(c),
+		TaskNodes:                  taskNodes,
+		AllowSelectNode:            allowSelect,
 	}, nil
+}
+
+// taskNodesForUser returns the nodes a user may target for tasks: active
+// nodes with any task capability, intersected with the group's allowed pool.
+// Returns nil when the group disallows selection.
+func taskNodesForUser(c *gin.Context, dep dependency.Dep, u *ent.User) ([]TaskNode, bool) {
+	if u == nil || u.Edges.Group == nil || !u.Edges.Group.Settings.AllowSelectNode {
+		return nil, false
+	}
+
+	nodes, err := dep.NodeClient().ListActiveNodes(c, nil)
+	if err != nil {
+		return nil, true
+	}
+
+	allowed := u.Edges.Group.Settings.AllowedNodes
+	taskCaps := []types.NodeCapability{
+		types.NodeCapabilityCreateArchive,
+		types.NodeCapabilityExtractArchive,
+		types.NodeCapabilityRemoteDownload,
+	}
+	res := make([]TaskNode, 0, len(nodes))
+	for _, n := range nodes {
+		if len(allowed) > 0 && !slices.Contains(allowed, n.ID) {
+			continue
+		}
+		capable := false
+		for _, cap := range taskCaps {
+			if n.Capabilities != nil && n.Capabilities.Enabled(int(cap)) {
+				capable = true
+				break
+			}
+		}
+		if capable {
+			res = append(res, TaskNode{ID: hashid.EncodeNodeID(dep.HashIDEncoder(), n.ID), Name: n.Name})
+		}
+	}
+	return res, true
 }
 
 const (

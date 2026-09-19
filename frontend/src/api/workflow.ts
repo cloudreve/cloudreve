@@ -6,6 +6,7 @@ export interface ArchiveWorkflowService {
   encoding?: string;
   password?: string;
   file_mask?: string[];
+  target_node?: string;
 }
 
 export interface TaskListResponse {
@@ -106,6 +107,7 @@ export interface DownloadWorkflowService {
   password?: string;
   headers?: string[];
   provider?: string;
+  target_node?: string;
 }
 
 export interface ImportWorkflowService {

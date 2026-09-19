@@ -103,6 +103,8 @@ type RemoteDownloadTaskOption struct {
 	HTTPUsername string
 	HTTPPassword string
 	HTTPHeaders  []string
+	// NodeSel carries the user/group node constraints for dispatch.
+	NodeSel NodeSelection
 }
 
 // NewRemoteDownloadTask creates a new RemoteDownloadTask
@@ -119,6 +121,7 @@ func NewRemoteDownloadTask(ctx context.Context, src string, srcFile, dst string,
 		state.HTTPUsername = opts.HTTPUsername
 		state.HTTPPassword = opts.HTTPPassword
 		state.HTTPHeaders = opts.HTTPHeaders
+		state.NodeState = opts.NodeSel.state()
 	}
 	stateBytes, err := json.Marshal(state)
 	if err != nil {

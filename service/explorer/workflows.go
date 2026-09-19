@@ -10,6 +10,7 @@ import (
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/ent"
+	"github.com/cloudreve/Cloudreve/v4/ent/node"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
@@ -25,6 +26,7 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/samber/lo"
 	"math"
+	"slices"
 )
 
 // ItemMoveService 处理多文件/目录移动
@@ -75,17 +77,52 @@ func init() {
 
 type (
 	DownloadWorkflowService struct {
-		Src      []string `json:"src"`
-		SrcFile  string   `json:"src_file"`
-		Dst      string   `json:"dst" binding:"required"`
-		FileName string   `json:"file_name" binding:"omitempty,max=255"`
-		Username string   `json:"username" binding:"omitempty,max=255"`
-		Password string   `json:"password" binding:"omitempty,max=255"`
-		Headers  []string `json:"headers" binding:"omitempty,max=32,dive,max=2048"`
-		Provider string   `json:"provider" binding:"omitempty,max=64"`
+		Src        []string `json:"src"`
+		SrcFile    string   `json:"src_file"`
+		Dst        string   `json:"dst" binding:"required"`
+		FileName   string   `json:"file_name" binding:"omitempty,max=255"`
+		Username   string   `json:"username" binding:"omitempty,max=255"`
+		Password   string   `json:"password" binding:"omitempty,max=255"`
+		Headers    []string `json:"headers" binding:"omitempty,max=32,dive,max=2048"`
+		Provider   string   `json:"provider" binding:"omitempty,max=64"`
+		TargetNode string   `json:"target_node" binding:"omitempty,max=64"`
 	}
 	CreateDownloadParamCtx struct{}
 )
+
+// resolveNodeSelection validates the caller's target_node pick against group
+// constraints and returns the NodeSelection for task creation. An empty
+// target means auto dispatch; the group's allowed pool always applies.
+func resolveNodeSelection(c *gin.Context, dep dependency.Dep, target string, capability types.NodeCapability) (*workflows.NodeSelection, error) {
+	user := inventory.UserFromContext(c)
+	sel := &workflows.NodeSelection{AllowedNodes: user.Edges.Group.Settings.AllowedNodes}
+
+	if target == "" {
+		return sel, nil
+	}
+
+	if !user.Edges.Group.Settings.AllowSelectNode {
+		return nil, serializer.NewError(serializer.CodeGroupNotAllowed, "Group not allowed to select node", nil)
+	}
+
+	nodeID, err := dep.HashIDEncoder().Decode(target, hashid.NodeID)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeParamErr, "Invalid target node", err)
+	}
+
+	if len(sel.AllowedNodes) > 0 && !slices.Contains(sel.AllowedNodes, nodeID) {
+		return nil, serializer.NewError(serializer.CodeParamErr, "Target node not allowed for this group", nil)
+	}
+
+	n, err := dep.NodeClient().GetNodeById(c, nodeID)
+	if err != nil || n.Status != node.StatusActive ||
+		n.Capabilities == nil || !n.Capabilities.Enabled(int(capability)) {
+		return nil, serializer.NewError(serializer.CodeParamErr, "Target node unavailable", err)
+	}
+
+	sel.TargetNodeID = nodeID
+	return sel, nil
+}
 
 func (service *DownloadWorkflowService) CreateDownloadTask(c *gin.Context) ([]*TaskResponse, error) {
 	dep := dependency.FromContext(c)
@@ -169,6 +206,11 @@ func (service *DownloadWorkflowService) CreateDownloadTask(c *gin.Context) ([]*T
 		return nil, serializer.NewError(serializer.CodeParamErr, "Invalid downloader provider", nil)
 	}
 
+	nodeSel, err := resolveNodeSelection(c, dep, service.TargetNode, types.NodeCapabilityRemoteDownload)
+	if err != nil {
+		return nil, err
+	}
+
 	// Custom file name only applies to single-source tasks; HTTP credentials
 	// and headers only apply to plain HTTP(S) source URLs.
 	taskOpts := &workflows.RemoteDownloadTaskOption{
@@ -176,6 +218,7 @@ func (service *DownloadWorkflowService) CreateDownloadTask(c *gin.Context) ([]*T
 		HTTPUsername: service.Username,
 		HTTPPassword: service.Password,
 		HTTPHeaders:  service.Headers,
+		NodeSel:      *nodeSel,
 	}
 	if len(service.Src) <= 1 {
 		taskOpts.FileName = service.FileName
@@ -227,11 +270,12 @@ func (service *DownloadWorkflowService) CreateDownloadTask(c *gin.Context) ([]*T
 
 type (
 	ArchiveWorkflowService struct {
-		Src      []string `json:"src" binding:"required"`
-		Dst      string   `json:"dst" binding:"required"`
-		Encoding string   `json:"encoding"`
-		Password string   `json:"password"`
-		FileMask []string `json:"file_mask"`
+		Src        []string `json:"src" binding:"required"`
+		Dst        string   `json:"dst" binding:"required"`
+		Encoding   string   `json:"encoding"`
+		Password   string   `json:"password"`
+		FileMask   []string `json:"file_mask"`
+		TargetNode string   `json:"target_node" binding:"omitempty,max=64"`
 	}
 	CreateArchiveParamCtx struct{}
 )
@@ -270,8 +314,13 @@ func (service *ArchiveWorkflowService) CreateExtractTask(c *gin.Context) (*TaskR
 		volumes = service.Src
 	}
 
+	nodeSel, err := resolveNodeSelection(c, dep, service.TargetNode, types.NodeCapabilityExtractArchive)
+	if err != nil {
+		return nil, err
+	}
+
 	// Create task
-	t, err := workflows.NewExtractArchiveTask(c, src, service.Dst, service.Encoding, service.Password, service.FileMask, volumes)
+	t, err := workflows.NewExtractArchiveTask(c, src, service.Dst, service.Encoding, service.Password, service.FileMask, volumes, *nodeSel)
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeCreateTaskError, "Failed to create task", err)
 	}
@@ -316,8 +365,13 @@ func (service *ArchiveWorkflowService) CreateCompressTask(c *gin.Context) (*Task
 	}
 	m.OnUploadFailed(c, session)
 
+	nodeSel, err := resolveNodeSelection(c, dep, service.TargetNode, types.NodeCapabilityCreateArchive)
+	if err != nil {
+		return nil, err
+	}
+
 	// Create task
-	t, err := workflows.NewCreateArchiveTask(c, service.Src, service.Dst)
+	t, err := workflows.NewCreateArchiveTask(c, service.Src, service.Dst, *nodeSel)
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeCreateTaskError, "Failed to create task", err)
 	}

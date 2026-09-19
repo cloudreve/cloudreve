@@ -391,14 +391,32 @@ const FileManagementSection = () => {
             </SettingForm>
             <SettingForm title={t("group.allowedNodes")} lgWidth={5}>
               <FormControl fullWidth>
-                <MultipleNodeSelectionInput />
+                <MultipleNodeSelectionInput
+                  value={values.settings?.allowed_nodes ?? []}
+                  onChange={(v) =>
+                    setGroup((p: GroupEnt) => ({
+                      ...p,
+                      settings: { ...p.settings, allowed_nodes: v.length > 0 ? v : undefined },
+                    }))
+                  }
+                />
                 <NoMarginHelperText>{t("group.allowedNodesDes")}</NoMarginHelperText>
               </FormControl>
             </SettingForm>
             <SettingForm lgWidth={5}>
               <FormControl fullWidth>
                 <FormControlLabel
-                  control={<Switch checked={false} />}
+                  control={
+                    <Switch
+                      checked={!!values.settings?.allow_select_node}
+                      onChange={(e) =>
+                        setGroup((p: GroupEnt) => ({
+                          ...p,
+                          settings: { ...p.settings, allow_select_node: e.target.checked ? true : undefined },
+                        }))
+                      }
+                    />
+                  }
                   label={
                     <Box sx={{ display: "flex", alignItems: "center" }}>
                       {t("group.allowSelectNode")}

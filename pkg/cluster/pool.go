@@ -20,7 +20,7 @@ type NodePool interface {
 	Upsert(ctx context.Context, node *ent.Node)
 	// Get returns a node with the given capability and preferred node id. `allowed` is a list of allowed node ids.
 	// If `allowed` is empty, all nodes with the capability are considered.
-	Get(ctx context.Context, capability types.NodeCapability, preferred int) (Node, error)
+	Get(ctx context.Context, capability types.NodeCapability, preferred int, allowed []int) (Node, error)
 }
 
 type (
@@ -85,7 +85,7 @@ func NewNodePool(ctx context.Context, l logging.Logger, config conf.ConfigProvid
 	return pool, nil
 }
 
-func (p *weightedNodePool) Get(ctx context.Context, capability types.NodeCapability, preferred int) (Node, error) {
+func (p *weightedNodePool) Get(ctx context.Context, capability types.NodeCapability, preferred int, allowed []int) (Node, error) {
 	l := logging.FromContext(ctx)
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -93,6 +93,18 @@ func (p *weightedNodePool) Get(ctx context.Context, capability types.NodeCapabil
 	nodes, ok := p.nodes[capability]
 	if !ok || len(nodes) == 0 {
 		return nil, fmt.Errorf("no node found with capability %d: %w", capability, ErrNoAvailableNode)
+	}
+
+	if len(allowed) > 0 {
+		allowedSet := lo.SliceToMap(allowed, func(id int) (int, struct{}) { return id, struct{}{} })
+		filtered := lo.Filter(nodes, func(item *nodeItem, _ int) bool {
+			_, ok := allowedSet[item.node.ID()]
+			return ok
+		})
+		if len(filtered) == 0 {
+			return nil, fmt.Errorf("no allowed node found with capability %d: %w", capability, ErrNoAvailableNode)
+		}
+		nodes = filtered
 	}
 
 	var selected *nodeItem
@@ -198,6 +210,6 @@ func NewSlaveDummyNodePool(ctx context.Context, config conf.ConfigProvider, sett
 func (s *slaveDummyNodePool) Upsert(ctx context.Context, node *ent.Node) {
 }
 
-func (s *slaveDummyNodePool) Get(ctx context.Context, capability types.NodeCapability, preferred int) (Node, error) {
+func (s *slaveDummyNodePool) Get(ctx context.Context, capability types.NodeCapability, preferred int, allowed []int) (Node, error) {
 	return s.masterNode, nil
 }

@@ -191,9 +191,10 @@ Order = user-visible value first; each ships with backend + UI + tests.
    - [x] PR #144 — task `creator_ip` capture with CIDR-capable admin filter (#115 OSS half), group remote-download quotas per count + per volume (#16), yt-dlp downloader provider (#88), progressive image preview (#113), v3 migrator `DatabaseURL` passthrough (#42)
    - [x] `activity_event` entity (immutable, tx-aware, actor+IP+CID) + per-file Activity dialog + admin `/admin/event` feed + per-type enablement + retention cron (#184)
    - [x] Coverage wave 2: email/user-activated/token-refresh/share-viewed/version/metadata/view/thumb/live-photo/copy-from/webdav/profile+security/oauth/admin-ops/import (1bbaddf)
-   - [ ] Event coverage remainder (needs unbuilt features): payment_*, link/unlink_account, membership_unsubscribe, report_abuse, mount, quota-notify
+   - [ ] Event coverage remainder (needs unbuilt features): payment_*, link/unlink_account, membership_unsubscribe, mount, quota-notify
    - [x] site announcement: `announcement` setting (markdown) + post-login modal + per-user dismissal re-triggering on content change (#184)
-   - [ ] group `allowed_nodes` + task `target_node`; `abuse_report` + admin queue + share context-menu Report entry
+   - [x] `abuse_report` entity + public `POST /abuse/report` (IP rate-limit + `abuse_captcha` gate) + admin `/admin/abuse` queue (resolve/dismiss + reversible share block) + share-menu Report entry (#185)
+   - [x] group `allowed_nodes` pool + `allow_select_node` + task `target_node` dispatch (persisted in task state, weighted LB within pool); group admin multi-select + task-dialog node picker
 
 ## 5. Phase C — security + quality
 

@@ -25,8 +25,23 @@ const (
 
 type NodeState struct {
 	NodeID int `json:"node_id"`
+	// AllowedNodes restricts auto-dispatch to the group's node pool, captured
+	// at task creation so later group edits don't reroute queued tasks.
+	AllowedNodes []int `json:"allowed_nodes,omitempty"`
 
 	progress queue.Progresses
+}
+
+// NodeSelection carries the caller-side node constraints for a new task:
+// TargetNodeID is an explicit user pick (0 = auto), AllowedNodes is the
+// group's eligible pool (empty = all).
+type NodeSelection struct {
+	TargetNodeID int
+	AllowedNodes []int
+}
+
+func (s NodeSelection) state() NodeState {
+	return NodeState{NodeID: s.TargetNodeID, AllowedNodes: s.AllowedNodes}
 }
 
 // allocateNode allocates a node for the task.
@@ -36,7 +51,7 @@ func allocateNode(ctx context.Context, dep dependency.Dep, state *NodeState, cap
 		return nil, fmt.Errorf("failed to get node pool: %w", err)
 	}
 
-	node, err := np.Get(ctx, capability, state.NodeID)
+	node, err := np.Get(ctx, capability, state.NodeID, state.AllowedNodes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get node: %w", err)
 	}

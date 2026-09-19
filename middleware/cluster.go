@@ -63,7 +63,7 @@ func SlaveRPCSignRequired() gin.HandlerFunc {
 			return
 		}
 
-		slaveNode, err := np.Get(c, types.NodeCapabilityNone, nodeId)
+		slaveNode, err := np.Get(c, types.NodeCapabilityNone, nodeId, nil)
 		if slaveNode == nil || slaveNode.IsMaster() {
 			c.JSON(200, serializer.ParamErr(c, "Unknown node ID", err))
 			c.Abort()

@@ -11,6 +11,7 @@ import CrUri, { Filesystem } from "../../../util/uri.ts";
 import { FileDisplayForm } from "../../Common/Form/FileDisplayForm.tsx";
 import { OutlineIconTextField } from "../../Common/Form/OutlineIconTextField.tsx";
 import { PathSelectorForm } from "../../Common/Form/PathSelectorForm.tsx";
+import TargetNodeSelect from "../../Common/Form/TargetNodeSelect.tsx";
 import { ViewTaskAction } from "../../Common/Snackbar/snackbar.tsx";
 import DraggableDialog from "../../Dialogs/DraggableDialog.tsx";
 import Edit from "../../Icons/Edit.tsx";
@@ -41,6 +42,7 @@ const CreateRemoteDownload = () => {
   const [password, setPassword] = useState("");
   const [headers, setHeaders] = useState("");
   const [provider, setProvider] = useState("");
+  const [targetNode, setTargetNode] = useState("");
 
   const providers = useAppSelector((state) => state.siteConfig.explorer?.config?.remote_download_providers);
   const open = useAppSelector((state) => state.globalState.remoteDownloadDialogOpen);
@@ -58,6 +60,7 @@ const CreateRemoteDownload = () => {
       setPassword("");
       setHeaders("");
       setProvider("");
+      setTargetNode("");
     }
   }, [open]);
 
@@ -81,6 +84,7 @@ const CreateRemoteDownload = () => {
         password: password || undefined,
         headers: headers ? headers.split("\n").filter((h) => h.trim()) : undefined,
         provider: provider || undefined,
+        target_node: targetNode || undefined,
       }),
     )
       .then(() => {
@@ -94,7 +98,7 @@ const CreateRemoteDownload = () => {
       .finally(() => {
         setLoading(false);
       });
-  }, [target, url, path, fileName, username, password, headers, provider]);
+  }, [target, url, path, fileName, username, password, headers, provider, targetNode]);
 
   return (
     <DraggableDialog
@@ -148,6 +152,7 @@ const CreateRemoteDownload = () => {
               fullWidth
             />
           </Stack>
+          <TargetNodeSelect value={targetNode} onChange={setTargetNode} />
           {providers && providers.length > 1 && (
             <Stack spacing={3} direction={isMobile ? "column" : "row"}>
               <FormControl variant="outlined" fullWidth>

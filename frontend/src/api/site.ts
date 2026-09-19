@@ -34,6 +34,8 @@ export interface SiteConfig {
   sso_auto_redirect?: boolean;
   download_cdn_routes?: { name: string; url: string }[];
   abuse_captcha?: boolean;
+  allow_select_node?: boolean;
+  task_nodes?: { id: string; name: string }[];
   logo?: string;
   logo_light?: string;
   tos_url?: string;

@@ -9,6 +9,7 @@ import { fileExtension, getFileLinkedUri } from "../../../util";
 import EncodingSelector, { defaultEncodingValue } from "../../Common/Form/EncodingSelector.tsx";
 import { FileDisplayForm } from "../../Common/Form/FileDisplayForm.tsx";
 import { PathSelectorForm } from "../../Common/Form/PathSelectorForm.tsx";
+import TargetNodeSelect, { useShowTargetNodeSelect } from "../../Common/Form/TargetNodeSelect.tsx";
 import { ViewTaskAction } from "../../Common/Snackbar/snackbar.tsx";
 import DraggableDialog from "../../Dialogs/DraggableDialog.tsx";
 import Password from "../../Icons/Password.tsx";
@@ -26,6 +27,7 @@ const ExtractArchive = () => {
   const [encoding, setEncoding] = useState(defaultEncodingValue);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [targetNode, setTargetNode] = useState("");
 
   const open = useAppSelector((state) => state.globalState.extractArchiveDialogOpen);
   const target = useAppSelector((state) => state.globalState.extractArchiveDialogFile);
@@ -33,6 +35,7 @@ const ExtractArchive = () => {
   const current = useAppSelector((state) => state.fileManager[FileManagerIndex.main].pure_path);
   const mask = useAppSelector((state) => state.globalState.extractArchiveDialogMask);
   const predefinedEncoding = useAppSelector((state) => state.globalState.extractArchiveDialogEncoding);
+  const showNodeSelect = useShowTargetNodeSelect();
 
   useEffect(() => {
     setEncoding(predefinedEncoding ?? defaultEncodingValue);
@@ -51,6 +54,7 @@ const ExtractArchive = () => {
   useEffect(() => {
     if (open) {
       setPath(current ?? "");
+      setTargetNode("");
     }
   }, [open]);
 
@@ -71,6 +75,7 @@ const ExtractArchive = () => {
         encoding: showEncodingOption && encoding != defaultEncodingValue ? encoding : undefined,
         password: showPasswordOption && password ? password : undefined,
         file_mask: mask ?? undefined,
+        target_node: targetNode || undefined,
       }),
     )
       .then(() => {
@@ -84,7 +89,7 @@ const ExtractArchive = () => {
       .finally(() => {
         setLoading(false);
       });
-  }, [target, targets, encoding, path, showPasswordOption, showEncodingOption, password, mask]);
+  }, [target, targets, encoding, path, showPasswordOption, showEncodingOption, password, mask, targetNode]);
 
   return (
     <DraggableDialog
@@ -136,6 +141,15 @@ const ExtractArchive = () => {
           >
             <PathSelectorForm onChange={setPath} path={path} variant={"extractTo"} label={t("modals.decompressTo")} />
           </Grid2>
+          {showNodeSelect && (
+            <Grid2
+              size={{
+                xs: 12,
+              }}
+            >
+              <TargetNodeSelect value={targetNode} onChange={setTargetNode} />
+            </Grid2>
+          )}
           {showPasswordOption && (
             <Grid2
               size={{

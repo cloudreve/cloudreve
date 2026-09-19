@@ -76,7 +76,7 @@ func (t *SlaveUploadTask) Do(ctx context.Context) (task.Status, error) {
 		return task.StatusError, fmt.Errorf("failed to get node pool: %w", err)
 	}
 
-	t.node, err = np.Get(ctx, types.NodeCapabilityNone, 0)
+	t.node, err = np.Get(ctx, types.NodeCapabilityNone, 0, nil)
 	if err != nil || !t.node.IsMaster() {
 		return task.StatusError, fmt.Errorf("failed to get master node: %w", err)
 	}
