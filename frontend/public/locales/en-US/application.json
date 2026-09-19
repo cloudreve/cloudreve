@@ -573,6 +573,8 @@
     "remoteDownloadHttpUser": "HTTP username (optional)",
     "remoteDownloadHttpPassword": "HTTP password (optional)",
     "remoteDownloadHeaders": "Request headers (optional)",
+    "remoteDownloadProvider": "Downloader",
+    "remoteDownloadProviderAuto": "Auto (any node)",
     "remoteDownloadHeadersDescription": "One header per line, e.g. Cookie: sid=...",
     "processNode": "Target node",
     "remoteDownloadNodeAuto": "Auto dispatch",

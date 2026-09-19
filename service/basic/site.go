@@ -67,6 +67,10 @@ type SiteConfig struct {
 	CustomProps          []types.CustomProps        `json:"custom_props,omitempty"`
 	ShowEncryptionStatus bool                       `json:"show_encryption_status,omitempty"`
 	FullTextSearch       bool                       `json:"full_text_search,omitempty"`
+	// RemoteDownloadProviders lists distinct downloader providers offered by
+	// active remote-download-capable nodes, so clients can let users pick
+	// between e.g. Aria2 and qBittorrent per download.
+	RemoteDownloadProviders []string `json:"remote_download_providers,omitempty"`
 
 	// Thumbnail section
 	ThumbExts []string `json:"thumb_exts,omitempty"`
@@ -139,6 +143,7 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 			CustomProps:          customProps,
 			ShowEncryptionStatus: showEncryptionStatus,
 			FullTextSearch:       settings.FTSEnabled(c),
+			RemoteDownloadProviders: remoteDownloadProviders(c, dep),
 		}, nil
 	case "emojis":
 		emojis := settings.EmojiPresets(c)
@@ -269,4 +274,25 @@ func GetCaptchaImage(c *gin.Context) *CaptchaResponse {
 		Image:  base64stringD,
 		Ticket: idKeyD,
 	}
+}
+
+// remoteDownloadProviders returns the distinct downloader providers offered by
+// active nodes with remote-download capability, in stable sorted order.
+func remoteDownloadProviders(c *gin.Context, dep dependency.Dep) []string {
+	nodes, err := dep.NodeClient().ListActiveNodes(c, nil)
+	if err != nil {
+		return nil
+	}
+	seen := map[string]bool{}
+	var providers []string
+	for _, n := range nodes {
+		if n.Capabilities == nil || !n.Capabilities.Enabled(int(types.NodeCapabilityRemoteDownload)) ||
+			n.Settings == nil || n.Settings.Provider == "" || seen[string(n.Settings.Provider)] {
+			continue
+		}
+		seen[string(n.Settings.Provider)] = true
+		providers = append(providers, string(n.Settings.Provider))
+	}
+	sort.Strings(providers)
+	return providers
 }

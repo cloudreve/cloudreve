@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/boolset"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cluster"
 	"github.com/cloudreve/Cloudreve/v4/pkg/downloader"
 	"github.com/stretchr/testify/assert"
@@ -158,4 +160,22 @@ func TestNewRemoteDownloadTaskSanitizesFileName(t *testing.T) {
 	state := &RemoteDownloadTaskState{}
 	a.NoError(json.Unmarshal([]byte(tsk.(*RemoteDownloadTask).Task.PrivateState), state))
 	a.Equal(".._.._etc_passwd", state.FileName)
+}
+
+func TestPickProviderNode(t *testing.T) {
+	caps := &boolset.BooleanSet{}
+	boolset.Set(types.NodeCapabilityRemoteDownload, true, caps)
+
+	nodes := []*ent.Node{
+		{ID: 3, Capabilities: caps, Settings: &types.NodeSetting{Provider: types.DownloaderProviderQBittorrent}},
+		{ID: 1, Capabilities: caps, Settings: &types.NodeSetting{Provider: types.DownloaderProviderAria2}},
+		{ID: 2, Capabilities: caps, Settings: &types.NodeSetting{Provider: types.DownloaderProviderAria2}},
+		{ID: 4, Capabilities: nil, Settings: &types.NodeSetting{Provider: types.DownloaderProviderAria2}},
+		{ID: 5, Capabilities: caps, Settings: nil},
+	}
+
+	assert.Equal(t, 1, PickProviderNode(nodes, string(types.DownloaderProviderAria2)))
+	assert.Equal(t, 3, PickProviderNode(nodes, string(types.DownloaderProviderQBittorrent)))
+	assert.Equal(t, 0, PickProviderNode(nodes, "deluge"))
+	assert.Equal(t, 0, PickProviderNode(nil, string(types.DownloaderProviderAria2)))
 }

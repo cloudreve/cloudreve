@@ -48,6 +48,9 @@ type (
 		SrcUri             string                 `json:"src_uri,omitempty"`
 		Dst                string                 `json:"dst,omitempty"`
 		FileName           string                 `json:"file_name,omitempty"`
+		// Provider pins the task to a node offering this downloader provider
+		// (e.g. "aria2"/"qbittorrent"). Empty = pool picks any capable node.
+		Provider           string                 `json:"provider,omitempty"`
 		HTTPUsername       string                 `json:"http_username,omitempty"`
 		HTTPPassword       string                 `json:"http_password,omitempty"`
 		HTTPHeaders        []string               `json:"http_headers,omitempty"`
@@ -96,6 +99,7 @@ func init() {
 // plain HTTP(S) sources.
 type RemoteDownloadTaskOption struct {
 	FileName     string
+	Provider     string
 	HTTPUsername string
 	HTTPPassword string
 	HTTPHeaders  []string
@@ -111,6 +115,7 @@ func NewRemoteDownloadTask(ctx context.Context, src string, srcFile, dst string,
 	}
 	if opts != nil {
 		state.FileName = sanitizeFileName(opts.FileName)
+		state.Provider = opts.Provider
 		state.HTTPUsername = opts.HTTPUsername
 		state.HTTPPassword = opts.HTTPPassword
 		state.HTTPHeaders = opts.HTTPHeaders
@@ -152,6 +157,12 @@ func (m *RemoteDownloadTask) Do(ctx context.Context) (task.Status, error) {
 		return task.StatusError, fmt.Errorf("failed to unmarshal state: %w", err)
 	}
 	m.state = state
+
+	// Resolve a user-picked downloader provider to a preferred node. Runs only
+	// until a node is locked in; falls back to any capable node if no match.
+	if m.state.NodeID == 0 && m.state.Provider != "" {
+		m.state.NodeID = providerNodeID(ctx, dep, m.state.Provider)
+	}
 
 	// select node
 	node, err := allocateNode(ctx, dep, &m.state.NodeState, types.NodeCapabilityRemoteDownload)
@@ -824,4 +835,29 @@ func (m *RemoteDownloadTask) Progress(ctx context.Context) queue.Progresses {
 func sanitizeFileName(name string) string {
 	r := strings.NewReplacer("\\", "_", "/", "_", ":", "_", "*", "_", "?", "_", "\"", "_", "<", "_", ">", "_", "|", "_")
 	return r.Replace(name)
+}
+
+// providerNodeID resolves a downloader provider name to the lowest-ID active
+// node offering it for remote download. Returns 0 when no node matches, which
+// makes the pool fall back to any capable node.
+func providerNodeID(ctx context.Context, dep dependency.Dep, provider string) int {
+	nodes, err := dep.NodeClient().ListActiveNodes(ctx, nil)
+	if err != nil {
+		return 0
+	}
+	return PickProviderNode(nodes, provider)
+}
+
+func PickProviderNode(nodes []*ent.Node, provider string) int {
+	best := 0
+	for _, n := range nodes {
+		if n.Capabilities == nil || !n.Capabilities.Enabled(int(types.NodeCapabilityRemoteDownload)) ||
+			n.Settings == nil || string(n.Settings.Provider) != provider {
+			continue
+		}
+		if best == 0 || n.ID < best {
+			best = n.ID
+		}
+	}
+	return best
 }

@@ -573,6 +573,8 @@
     "remoteDownloadHttpUser": "HTTP 用户名（可选）",
     "remoteDownloadHttpPassword": "HTTP 密码（可选）",
     "remoteDownloadHeaders": "请求头（可选）",
+    "remoteDownloadProvider": "下载器",
+    "remoteDownloadProviderAuto": "自动（任意节点）",
     "remoteDownloadHeadersDescription": "每行一个请求头，例如 Cookie: sid=...",
     "processNode": "处理节点",
     "remoteDownloadNodeAuto": "自动分配",

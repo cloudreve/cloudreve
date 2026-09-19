@@ -56,6 +56,7 @@ export interface SiteConfig {
   thumb_exts?: string[];
   show_encryption_status?: boolean;
   full_text_search?: boolean;
+  remote_download_providers?: string[];
   share_default_private?: boolean;
   default_share_links_in_profile?: string;
 }

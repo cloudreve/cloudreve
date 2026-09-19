@@ -105,6 +105,7 @@ export interface DownloadWorkflowService {
   username?: string;
   password?: string;
   headers?: string[];
+  provider?: string;
 }
 
 export interface ImportWorkflowService {

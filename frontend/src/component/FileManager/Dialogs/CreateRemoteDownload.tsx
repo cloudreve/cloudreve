@@ -1,4 +1,4 @@
-import { DialogContent, Stack, useMediaQuery, useTheme } from "@mui/material";
+import { DialogContent, FormControl, InputLabel, MenuItem, Select, Stack, useMediaQuery, useTheme } from "@mui/material";
 import { useSnackbar } from "notistack";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -19,6 +19,13 @@ import LockClosedKey from "../../Icons/LockClosedKey.tsx";
 import PersonOutlined from "../../Icons/PersonOutlined.tsx";
 import { FileManagerIndex } from "../FileManager.tsx";
 
+const providerNames: Record<string, string> = {
+  aria2: "Aria2",
+  qbittorrent: "qBittorrent",
+};
+
+const providerDisplayName = (p: string) => providerNames[p] ?? p;
+
 const CreateRemoteDownload = () => {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
@@ -33,7 +40,9 @@ const CreateRemoteDownload = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [headers, setHeaders] = useState("");
+  const [provider, setProvider] = useState("");
 
+  const providers = useAppSelector((state) => state.siteConfig.explorer?.config?.remote_download_providers);
   const open = useAppSelector((state) => state.globalState.remoteDownloadDialogOpen);
   const target = useAppSelector((state) => state.globalState.remoteDownloadDialogFile);
   const current = useAppSelector((state) => state.fileManager[FileManagerIndex.main].pure_path);
@@ -48,6 +57,7 @@ const CreateRemoteDownload = () => {
       setUsername("");
       setPassword("");
       setHeaders("");
+      setProvider("");
     }
   }, [open]);
 
@@ -70,6 +80,7 @@ const CreateRemoteDownload = () => {
         username: username || undefined,
         password: password || undefined,
         headers: headers ? headers.split("\n").filter((h) => h.trim()) : undefined,
+        provider: provider || undefined,
       }),
     )
       .then(() => {
@@ -83,7 +94,7 @@ const CreateRemoteDownload = () => {
       .finally(() => {
         setLoading(false);
       });
-  }, [target, url, path, fileName, username, password, headers]);
+  }, [target, url, path, fileName, username, password, headers, provider]);
 
   return (
     <DraggableDialog
@@ -137,6 +148,28 @@ const CreateRemoteDownload = () => {
               fullWidth
             />
           </Stack>
+          {providers && providers.length > 1 && (
+            <Stack spacing={3} direction={isMobile ? "column" : "row"}>
+              <FormControl variant="outlined" fullWidth>
+                <InputLabel>{t("application:modals.remoteDownloadProvider")}</InputLabel>
+                <Select
+                  variant="outlined"
+                  label={t("application:modals.remoteDownloadProvider")}
+                  value={provider}
+                  onChange={(e) => setProvider(e.target.value as string)}
+                >
+                  <MenuItem value="">
+                    <em>{t("application:modals.remoteDownloadProviderAuto")}</em>
+                  </MenuItem>
+                  {providers.map((p) => (
+                    <MenuItem key={p} value={p}>
+                      {providerDisplayName(p)}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Stack>
+          )}
           {!target && (
             <Stack spacing={3} direction={isMobile ? "column" : "row"}>
               <OutlineIconTextField

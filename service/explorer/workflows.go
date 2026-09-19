@@ -81,6 +81,7 @@ type (
 		Username string   `json:"username" binding:"omitempty,max=255"`
 		Password string   `json:"password" binding:"omitempty,max=255"`
 		Headers  []string `json:"headers" binding:"omitempty,max=32,dive,max=2048"`
+		Provider string   `json:"provider" binding:"omitempty,max=64"`
 	}
 	CreateDownloadParamCtx struct{}
 )
@@ -144,9 +145,16 @@ func (service *DownloadWorkflowService) CreateDownloadTask(c *gin.Context) ([]*T
 		}
 	}
 
+	// Validate a requested downloader provider against what the node pool
+	// actually offers.
+	if service.Provider != "" && providerNodeAvailable(c, dep, service.Provider) == 0 {
+		return nil, serializer.NewError(serializer.CodeParamErr, "Invalid downloader provider", nil)
+	}
+
 	// Custom file name only applies to single-source tasks; HTTP credentials
 	// and headers only apply to plain HTTP(S) source URLs.
 	taskOpts := &workflows.RemoteDownloadTaskOption{
+		Provider:     service.Provider,
 		HTTPUsername: service.Username,
 		HTTPPassword: service.Password,
 		HTTPHeaders:  service.Headers,
@@ -678,4 +686,14 @@ func (service *BlobAuditWorkflowService) CreateBlobAuditTask(c *gin.Context) (*T
 	}
 
 	return BuildTaskResponse(t, nil, hasher), nil
+}
+
+// providerNodeAvailable returns the ID of an active remote-download node
+// offering the given provider, or 0 when none does.
+func providerNodeAvailable(c *gin.Context, dep dependency.Dep, provider string) int {
+	nodes, err := dep.NodeClient().ListActiveNodes(c, nil)
+	if err != nil {
+		return 0
+	}
+	return workflows.PickProviderNode(nodes, provider)
 }
