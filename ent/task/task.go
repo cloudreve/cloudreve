@@ -34,6 +34,8 @@ const (
 	FieldCorrelationID = "correlation_id"
 	// FieldUserTasks holds the string denoting the user_tasks field in the database.
 	FieldUserTasks = "user_tasks"
+	// FieldCreatorIP holds the string denoting the creator_ip field in the database.
+	FieldCreatorIP = "creator_ip"
 	// FieldHidden holds the string denoting the hidden field in the database.
 	FieldHidden = "hidden"
 	// EdgeUser holds the string denoting the user edge name in mutations.
@@ -61,6 +63,7 @@ var Columns = []string{
 	FieldPrivateState,
 	FieldCorrelationID,
 	FieldUserTasks,
+	FieldCreatorIP,
 	FieldHidden,
 }
 
@@ -88,6 +91,8 @@ var (
 	DefaultUpdatedAt func() time.Time
 	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
 	UpdateDefaultUpdatedAt func() time.Time
+	// CreatorIPValidator is a validator for the "creator_ip" field. It is called by the builders before save.
+	CreatorIPValidator func(string) error
 	// DefaultHidden holds the default value on creation for the "hidden" field.
 	DefaultHidden bool
 )
@@ -168,6 +173,11 @@ func ByCorrelationID(opts ...sql.OrderTermOption) OrderOption {
 // ByUserTasks orders the results by the user_tasks field.
 func ByUserTasks(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUserTasks, opts...).ToFunc()
+}
+
+// ByCreatorIP orders the results by the creator_ip field.
+func ByCreatorIP(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCreatorIP, opts...).ToFunc()
 }
 
 // ByHidden orders the results by the hidden field.

@@ -383,8 +383,12 @@ func init() {
 	task.DefaultUpdatedAt = taskDescUpdatedAt.Default.(func() time.Time)
 	// task.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	task.UpdateDefaultUpdatedAt = taskDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// taskDescCreatorIP is the schema descriptor for creator_ip field.
+	taskDescCreatorIP := taskFields[6].Descriptor()
+	// task.CreatorIPValidator is a validator for the "creator_ip" field. It is called by the builders before save.
+	task.CreatorIPValidator = taskDescCreatorIP.Validators[0].(func(string) error)
 	// taskDescHidden is the schema descriptor for hidden field.
-	taskDescHidden := taskFields[6].Descriptor()
+	taskDescHidden := taskFields[7].Descriptor()
 	// task.DefaultHidden holds the default value on creation for the hidden field.
 	task.DefaultHidden = taskDescHidden.Default.(bool)
 	userMixin := schema.User{}.Mixin()

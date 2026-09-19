@@ -26,6 +26,9 @@ func (Task) Fields() []ent.Field {
 			Optional().
 			Immutable(),
 		field.Int("user_tasks").Optional(),
+		// creator_ip records the client IP of the request that created the task,
+		// when the creation happened on an HTTP request context.
+		field.String("creator_ip").Optional().MaxLen(45),
 		// hidden is set when the owner deletes the task record; admin views keep it.
 		field.Bool("hidden").Default(false),
 	}

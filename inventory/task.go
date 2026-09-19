@@ -26,6 +26,7 @@ type (
 		PrivateState  string
 		OwnerID       int
 		CorrelationID uuid.UUID
+		CreatorIP     string
 	}
 )
 
@@ -61,6 +62,8 @@ type (
 		Status        []task.Status
 		UserID        int
 		CorrelationID *uuid.UUID
+		// CreatorIP filters tasks created from a matching client IP (substring).
+		CreatorIP string
 		// ExcludeHidden filters out tasks hidden by their owner.
 		ExcludeHidden bool
 	}
@@ -114,6 +117,10 @@ func (c *taskClient) New(ctx context.Context, task *TaskArgs) (*ent.Task, error)
 
 	if task.CorrelationID.String() != uuid.Nil.String() {
 		stm.SetCorrelationID(task.CorrelationID)
+	}
+
+	if task.CreatorIP != "" {
+		stm.SetCreatorIP(task.CreatorIP)
 	}
 
 	newTask, err := stm.Save(ctx)
@@ -238,6 +245,10 @@ func (c *taskClient) List(ctx context.Context, args *ListTaskArgs) (*ListTaskRes
 
 	if args.CorrelationID != nil {
 		q.Where(task.CorrelationID(*args.CorrelationID))
+	}
+
+	if args.CreatorIP != "" {
+		q.Where(task.CreatorIPContainsFold(args.CreatorIP))
 	}
 
 	if args.ExcludeHidden {

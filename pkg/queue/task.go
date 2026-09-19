@@ -531,6 +531,9 @@ func saveTaskToInventory(ctx context.Context, task Task, newStatus task.Status, 
 		PrivateState:  task.State(),
 		OwnerID:       task.Owner().ID,
 		CorrelationID: logging.CorrelationID(ctx),
+		// The first persistence happens on the request's context when the task
+		// is submitted from an HTTP handler; gin.Context satisfies ClientIP.
+		CreatorIP: clientIPFromContext(ctx),
 	}
 
 	var (
@@ -549,4 +552,16 @@ func saveTaskToInventory(ctx context.Context, task Task, newStatus task.Status, 
 
 	task.OnPersisted(res)
 	return nil
+}
+
+// clientIPFromContext extracts the client IP when ctx is an HTTP request
+// context (gin.Context implements ClientIP()). Worker contexts return "".
+func clientIPFromContext(ctx context.Context) string {
+	type clientIPer interface {
+		ClientIP() string
+	}
+	if c, ok := ctx.(clientIPer); ok && c != nil {
+		return c.ClientIP()
+	}
+	return ""
 }

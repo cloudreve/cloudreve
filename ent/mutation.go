@@ -14212,6 +14212,7 @@ type TaskMutation struct {
 	public_state   **types.TaskPublicState
 	private_state  *string
 	correlation_id *uuid.UUID
+	creator_ip     *string
 	hidden         *bool
 	clearedFields  map[string]struct{}
 	user           *int
@@ -14695,6 +14696,55 @@ func (m *TaskMutation) ResetUserTasks() {
 	delete(m.clearedFields, task.FieldUserTasks)
 }
 
+// SetCreatorIP sets the "creator_ip" field.
+func (m *TaskMutation) SetCreatorIP(s string) {
+	m.creator_ip = &s
+}
+
+// CreatorIP returns the value of the "creator_ip" field in the mutation.
+func (m *TaskMutation) CreatorIP() (r string, exists bool) {
+	v := m.creator_ip
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatorIP returns the old "creator_ip" field's value of the Task entity.
+// If the Task object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskMutation) OldCreatorIP(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatorIP is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatorIP requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatorIP: %w", err)
+	}
+	return oldValue.CreatorIP, nil
+}
+
+// ClearCreatorIP clears the value of the "creator_ip" field.
+func (m *TaskMutation) ClearCreatorIP() {
+	m.creator_ip = nil
+	m.clearedFields[task.FieldCreatorIP] = struct{}{}
+}
+
+// CreatorIPCleared returns if the "creator_ip" field was cleared in this mutation.
+func (m *TaskMutation) CreatorIPCleared() bool {
+	_, ok := m.clearedFields[task.FieldCreatorIP]
+	return ok
+}
+
+// ResetCreatorIP resets all changes to the "creator_ip" field.
+func (m *TaskMutation) ResetCreatorIP() {
+	m.creator_ip = nil
+	delete(m.clearedFields, task.FieldCreatorIP)
+}
+
 // SetHidden sets the "hidden" field.
 func (m *TaskMutation) SetHidden(b bool) {
 	m.hidden = &b
@@ -14805,7 +14855,7 @@ func (m *TaskMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TaskMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 11)
 	if m.created_at != nil {
 		fields = append(fields, task.FieldCreatedAt)
 	}
@@ -14832,6 +14882,9 @@ func (m *TaskMutation) Fields() []string {
 	}
 	if m.user != nil {
 		fields = append(fields, task.FieldUserTasks)
+	}
+	if m.creator_ip != nil {
+		fields = append(fields, task.FieldCreatorIP)
 	}
 	if m.hidden != nil {
 		fields = append(fields, task.FieldHidden)
@@ -14862,6 +14915,8 @@ func (m *TaskMutation) Field(name string) (ent.Value, bool) {
 		return m.CorrelationID()
 	case task.FieldUserTasks:
 		return m.UserTasks()
+	case task.FieldCreatorIP:
+		return m.CreatorIP()
 	case task.FieldHidden:
 		return m.Hidden()
 	}
@@ -14891,6 +14946,8 @@ func (m *TaskMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldCorrelationID(ctx)
 	case task.FieldUserTasks:
 		return m.OldUserTasks(ctx)
+	case task.FieldCreatorIP:
+		return m.OldCreatorIP(ctx)
 	case task.FieldHidden:
 		return m.OldHidden(ctx)
 	}
@@ -14965,6 +15022,13 @@ func (m *TaskMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetUserTasks(v)
 		return nil
+	case task.FieldCreatorIP:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatorIP(v)
+		return nil
 	case task.FieldHidden:
 		v, ok := value.(bool)
 		if !ok {
@@ -15017,6 +15081,9 @@ func (m *TaskMutation) ClearedFields() []string {
 	if m.FieldCleared(task.FieldUserTasks) {
 		fields = append(fields, task.FieldUserTasks)
 	}
+	if m.FieldCleared(task.FieldCreatorIP) {
+		fields = append(fields, task.FieldCreatorIP)
+	}
 	return fields
 }
 
@@ -15042,6 +15109,9 @@ func (m *TaskMutation) ClearField(name string) error {
 		return nil
 	case task.FieldUserTasks:
 		m.ClearUserTasks()
+		return nil
+	case task.FieldCreatorIP:
+		m.ClearCreatorIP()
 		return nil
 	}
 	return fmt.Errorf("unknown Task nullable field %s", name)
@@ -15077,6 +15147,9 @@ func (m *TaskMutation) ResetField(name string) error {
 		return nil
 	case task.FieldUserTasks:
 		m.ResetUserTasks()
+		return nil
+	case task.FieldCreatorIP:
+		m.ResetCreatorIP()
 		return nil
 	case task.FieldHidden:
 		m.ResetHidden()

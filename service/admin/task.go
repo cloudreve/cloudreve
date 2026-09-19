@@ -77,6 +77,7 @@ const (
 	taskStatusCondition        = "task_status"
 	taskCorrelationIDCondition = "task_correlation_id"
 	taskUserIDCondition        = "task_user_id"
+	taskCreatorIPCondition     = "task_creator_ip"
 )
 
 func (s *AdminListService) Tasks(c *gin.Context) (*ListTaskResponse, error) {
@@ -124,6 +125,7 @@ func (s *AdminListService) Tasks(c *gin.Context) (*ListTaskResponse, error) {
 		},
 		UserID:        userID,
 		CorrelationID: correlationID,
+		CreatorIP:     s.Conditions[taskCreatorIPCondition],
 		Types:         taskType,
 		Status:        status,
 	})

@@ -45,6 +45,7 @@ export const UserQuery = "user";
 export const TypeQuery = "type";
 export const StatusQuery = "status";
 export const CorrelationIDQuery = "correlation_id";
+export const CreatorIPQuery = "creator_ip";
 
 const TaskList = () => {
   const { t } = useTranslation("dashboard");
@@ -65,6 +66,7 @@ const TaskList = () => {
   const [type, setType] = useQueryState(TypeQuery, { defaultValue: "" });
   const [status, setStatus] = useQueryState(StatusQuery, { defaultValue: "" });
   const [correlationID, setCorrelationID] = useQueryState(CorrelationIDQuery, { defaultValue: "" });
+  const [creatorIP, setCreatorIP] = useQueryState(CreatorIPQuery, { defaultValue: "" });
 
   const [count, setCount] = useState(0);
   const [selected, setSelected] = useState<readonly number[]>([]);
@@ -92,11 +94,12 @@ const TaskList = () => {
     setType("");
     setStatus("");
     setCorrelationID("");
-  }, [setUser, setType, setStatus, setCorrelationID]);
+    setCreatorIP("");
+  }, [setUser, setType, setStatus, setCorrelationID, setCreatorIP]);
 
   useEffect(() => {
     fetchTasks();
-  }, [page, pageSize, orderBy, orderDirection, user, type, status, correlationID]);
+  }, [page, pageSize, orderBy, orderDirection, user, type, status, correlationID, creatorIP]);
 
   const fetchTasks = () => {
     setLoading(true);
@@ -112,6 +115,7 @@ const TaskList = () => {
         task_user_id: user,
         task_type: type,
         task_correlation_id: correlationID,
+        task_creator_ip: creatorIP,
       },
     };
 
@@ -227,6 +231,8 @@ const TaskList = () => {
             setUser={setUser}
             correlationID={correlationID}
             setCorrelationID={setCorrelationID}
+            creatorIP={creatorIP}
+            setCreatorIP={setCreatorIP}
             type={type}
             setType={setType}
             clearFilters={clearFilters}

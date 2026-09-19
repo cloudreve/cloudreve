@@ -91,6 +91,11 @@ func UserTasks(v int) predicate.Task {
 	return predicate.Task(sql.FieldEQ(FieldUserTasks, v))
 }
 
+// CreatorIP applies equality check predicate on the "creator_ip" field. It's identical to CreatorIPEQ.
+func CreatorIP(v string) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldCreatorIP, v))
+}
+
 // Hidden applies equality check predicate on the "hidden" field. It's identical to HiddenEQ.
 func Hidden(v bool) predicate.Task {
 	return predicate.Task(sql.FieldEQ(FieldHidden, v))
@@ -464,6 +469,81 @@ func UserTasksIsNil() predicate.Task {
 // UserTasksNotNil applies the NotNil predicate on the "user_tasks" field.
 func UserTasksNotNil() predicate.Task {
 	return predicate.Task(sql.FieldNotNull(FieldUserTasks))
+}
+
+// CreatorIPEQ applies the EQ predicate on the "creator_ip" field.
+func CreatorIPEQ(v string) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldCreatorIP, v))
+}
+
+// CreatorIPNEQ applies the NEQ predicate on the "creator_ip" field.
+func CreatorIPNEQ(v string) predicate.Task {
+	return predicate.Task(sql.FieldNEQ(FieldCreatorIP, v))
+}
+
+// CreatorIPIn applies the In predicate on the "creator_ip" field.
+func CreatorIPIn(vs ...string) predicate.Task {
+	return predicate.Task(sql.FieldIn(FieldCreatorIP, vs...))
+}
+
+// CreatorIPNotIn applies the NotIn predicate on the "creator_ip" field.
+func CreatorIPNotIn(vs ...string) predicate.Task {
+	return predicate.Task(sql.FieldNotIn(FieldCreatorIP, vs...))
+}
+
+// CreatorIPGT applies the GT predicate on the "creator_ip" field.
+func CreatorIPGT(v string) predicate.Task {
+	return predicate.Task(sql.FieldGT(FieldCreatorIP, v))
+}
+
+// CreatorIPGTE applies the GTE predicate on the "creator_ip" field.
+func CreatorIPGTE(v string) predicate.Task {
+	return predicate.Task(sql.FieldGTE(FieldCreatorIP, v))
+}
+
+// CreatorIPLT applies the LT predicate on the "creator_ip" field.
+func CreatorIPLT(v string) predicate.Task {
+	return predicate.Task(sql.FieldLT(FieldCreatorIP, v))
+}
+
+// CreatorIPLTE applies the LTE predicate on the "creator_ip" field.
+func CreatorIPLTE(v string) predicate.Task {
+	return predicate.Task(sql.FieldLTE(FieldCreatorIP, v))
+}
+
+// CreatorIPContains applies the Contains predicate on the "creator_ip" field.
+func CreatorIPContains(v string) predicate.Task {
+	return predicate.Task(sql.FieldContains(FieldCreatorIP, v))
+}
+
+// CreatorIPHasPrefix applies the HasPrefix predicate on the "creator_ip" field.
+func CreatorIPHasPrefix(v string) predicate.Task {
+	return predicate.Task(sql.FieldHasPrefix(FieldCreatorIP, v))
+}
+
+// CreatorIPHasSuffix applies the HasSuffix predicate on the "creator_ip" field.
+func CreatorIPHasSuffix(v string) predicate.Task {
+	return predicate.Task(sql.FieldHasSuffix(FieldCreatorIP, v))
+}
+
+// CreatorIPIsNil applies the IsNil predicate on the "creator_ip" field.
+func CreatorIPIsNil() predicate.Task {
+	return predicate.Task(sql.FieldIsNull(FieldCreatorIP))
+}
+
+// CreatorIPNotNil applies the NotNil predicate on the "creator_ip" field.
+func CreatorIPNotNil() predicate.Task {
+	return predicate.Task(sql.FieldNotNull(FieldCreatorIP))
+}
+
+// CreatorIPEqualFold applies the EqualFold predicate on the "creator_ip" field.
+func CreatorIPEqualFold(v string) predicate.Task {
+	return predicate.Task(sql.FieldEqualFold(FieldCreatorIP, v))
+}
+
+// CreatorIPContainsFold applies the ContainsFold predicate on the "creator_ip" field.
+func CreatorIPContainsFold(v string) predicate.Task {
+	return predicate.Task(sql.FieldContainsFold(FieldCreatorIP, v))
 }
 
 // HiddenEQ applies the EQ predicate on the "hidden" field.

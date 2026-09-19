@@ -456,6 +456,7 @@ var (
 		{Name: "public_state", Type: field.TypeJSON},
 		{Name: "private_state", Type: field.TypeString, Nullable: true, Size: 2147483647},
 		{Name: "correlation_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "creator_ip", Type: field.TypeString, Nullable: true, Size: 45},
 		{Name: "hidden", Type: field.TypeBool, Default: false},
 		{Name: "user_tasks", Type: field.TypeInt, Nullable: true},
 	}
@@ -467,7 +468,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "tasks_users_tasks",
-				Columns:    []*schema.Column{TasksColumns[10]},
+				Columns:    []*schema.Column{TasksColumns[11]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},

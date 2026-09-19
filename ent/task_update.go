@@ -130,6 +130,26 @@ func (tu *TaskUpdate) ClearUserTasks() *TaskUpdate {
 	return tu
 }
 
+// SetCreatorIP sets the "creator_ip" field.
+func (tu *TaskUpdate) SetCreatorIP(s string) *TaskUpdate {
+	tu.mutation.SetCreatorIP(s)
+	return tu
+}
+
+// SetNillableCreatorIP sets the "creator_ip" field if the given value is not nil.
+func (tu *TaskUpdate) SetNillableCreatorIP(s *string) *TaskUpdate {
+	if s != nil {
+		tu.SetCreatorIP(*s)
+	}
+	return tu
+}
+
+// ClearCreatorIP clears the value of the "creator_ip" field.
+func (tu *TaskUpdate) ClearCreatorIP() *TaskUpdate {
+	tu.mutation.ClearCreatorIP()
+	return tu
+}
+
 // SetHidden sets the "hidden" field.
 func (tu *TaskUpdate) SetHidden(b bool) *TaskUpdate {
 	tu.mutation.SetHidden(b)
@@ -223,6 +243,11 @@ func (tu *TaskUpdate) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Task.status": %w`, err)}
 		}
 	}
+	if v, ok := tu.mutation.CreatorIP(); ok {
+		if err := task.CreatorIPValidator(v); err != nil {
+			return &ValidationError{Name: "creator_ip", err: fmt.Errorf(`ent: validator failed for field "Task.creator_ip": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -264,6 +289,12 @@ func (tu *TaskUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if tu.mutation.CorrelationIDCleared() {
 		_spec.ClearField(task.FieldCorrelationID, field.TypeUUID)
+	}
+	if value, ok := tu.mutation.CreatorIP(); ok {
+		_spec.SetField(task.FieldCreatorIP, field.TypeString, value)
+	}
+	if tu.mutation.CreatorIPCleared() {
+		_spec.ClearField(task.FieldCreatorIP, field.TypeString)
 	}
 	if value, ok := tu.mutation.Hidden(); ok {
 		_spec.SetField(task.FieldHidden, field.TypeBool, value)
@@ -417,6 +448,26 @@ func (tuo *TaskUpdateOne) ClearUserTasks() *TaskUpdateOne {
 	return tuo
 }
 
+// SetCreatorIP sets the "creator_ip" field.
+func (tuo *TaskUpdateOne) SetCreatorIP(s string) *TaskUpdateOne {
+	tuo.mutation.SetCreatorIP(s)
+	return tuo
+}
+
+// SetNillableCreatorIP sets the "creator_ip" field if the given value is not nil.
+func (tuo *TaskUpdateOne) SetNillableCreatorIP(s *string) *TaskUpdateOne {
+	if s != nil {
+		tuo.SetCreatorIP(*s)
+	}
+	return tuo
+}
+
+// ClearCreatorIP clears the value of the "creator_ip" field.
+func (tuo *TaskUpdateOne) ClearCreatorIP() *TaskUpdateOne {
+	tuo.mutation.ClearCreatorIP()
+	return tuo
+}
+
 // SetHidden sets the "hidden" field.
 func (tuo *TaskUpdateOne) SetHidden(b bool) *TaskUpdateOne {
 	tuo.mutation.SetHidden(b)
@@ -523,6 +574,11 @@ func (tuo *TaskUpdateOne) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Task.status": %w`, err)}
 		}
 	}
+	if v, ok := tuo.mutation.CreatorIP(); ok {
+		if err := task.CreatorIPValidator(v); err != nil {
+			return &ValidationError{Name: "creator_ip", err: fmt.Errorf(`ent: validator failed for field "Task.creator_ip": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -581,6 +637,12 @@ func (tuo *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) 
 	}
 	if tuo.mutation.CorrelationIDCleared() {
 		_spec.ClearField(task.FieldCorrelationID, field.TypeUUID)
+	}
+	if value, ok := tuo.mutation.CreatorIP(); ok {
+		_spec.SetField(task.FieldCreatorIP, field.TypeString, value)
+	}
+	if tuo.mutation.CreatorIPCleared() {
+		_spec.ClearField(task.FieldCreatorIP, field.TypeString)
 	}
 	if value, ok := tuo.mutation.Hidden(); ok {
 		_spec.SetField(task.FieldHidden, field.TypeBool, value)

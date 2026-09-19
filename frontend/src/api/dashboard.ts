@@ -539,6 +539,7 @@ export interface Task extends CommonMixin {
   public_state?: TaskPublicState;
   private_state?: string;
   correlation_id?: string;
+  creator_ip?: string;
   user_tasks?: number;
   edges: {
     user?: User;
