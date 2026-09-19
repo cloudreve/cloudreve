@@ -184,8 +184,9 @@ Order = user-visible value first; each ships with backend + UI + tests.
    - [ ] QQ Connect (non-OIDC protocol, separate integration), account linking UI for existing local accounts, group/role claim mapping
 4. **VAS/monetization-free** — credits + redemption codes as *free* features (gift codes for admin use), storage/membership SKU definitions; payment processors stay out of scope (fixes #3231). See §1.3a for the SKU/credits/gift-code spec.
    - [ ] `sku` entity (storage-capacity + group-upgrade types, duration, cash+points price, label, bullets); Shop page (Memberships/Storage/Redeem tabs)
-   - [ ] `credit_account` + `credit_txn` ledger; Finance settings tab (balance + Recharge + ledger); admin manual adjust
-   - [ ] `gift_code` entity + admin generate/list/revoke + user redeem; then paid-share price_points wired to the ledger
+   - [x] `user.credits` + `credit_txn` ledger (guarded atomic adjust); Finance settings tab (balance + grants + redeem + ledger); admin manual adjust (#183)
+   - [x] `gift_code` entity (points/storage/group × amount × duration) + `user_grant` expiring grants + `grant_expire` cron; admin generate/list/revoke + user redeem (#183)
+   - [ ] Paid-share `price_points` wired to the ledger + purchase/resume-ticket flow
 5. **System extensions** — activity/audit log, site announcements, node selection, report-abuse queue (fixes #3480, #3479 IP whitelist). See §1.3a.
    - [x] PR #144 — task `creator_ip` capture with CIDR-capable admin filter (#115 OSS half), group remote-download quotas per count + per volume (#16), yt-dlp downloader provider (#88), progressive image preview (#113), v3 migrator `DatabaseURL` passthrough (#42)
    - [ ] `activity_event` entity + per-file Activity dialog + admin event feed/detail; site announcement modal + dismissal; group `allowed_nodes` + task `target_node`; `abuse_report` + admin queue + share context-menu Report entry
