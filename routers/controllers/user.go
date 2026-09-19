@@ -291,6 +291,26 @@ func UserRedeemGiftCode(c *gin.Context) {
 	c.JSON(200, serializer.Response{Data: res})
 }
 
+// UserListSkus lists enabled products for the shop page.
+func UserListSkus(c *gin.Context) {
+	service := ParametersFromContext[*user.SkuListService](c, user.SkuListParamCtx{})
+	res, err := service.List(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
+
+// UserPurchaseSku buys a product with credit points.
+func UserPurchaseSku(c *gin.Context) {
+	service := ParametersFromContext[*user.PurchaseSkuService](c, user.PurchaseSkuParamCtx{})
+	res, err := service.Create(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
+
 // UserInit2FA 初始化二步验证
 func UserInit2FA(c *gin.Context) {
 	secret, err := user.Init2FA(c)

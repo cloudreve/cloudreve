@@ -237,6 +237,18 @@ func (f ShareFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ShareMutation", m)
 }
 
+// The SkuFunc type is an adapter to allow the use of ordinary
+// function as Sku mutator.
+type SkuFunc func(context.Context, *ent.SkuMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f SkuFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.SkuMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SkuMutation", m)
+}
+
 // The StoragePolicyFunc type is an adapter to allow the use of ordinary
 // function as StoragePolicy mutator.
 type StoragePolicyFunc func(context.Context, *ent.StoragePolicyMutation) (ent.Value, error)

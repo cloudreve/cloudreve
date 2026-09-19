@@ -333,6 +333,42 @@ func AdminAdjustCredit(c *gin.Context) {
 	c.JSON(200, serializer.Response{})
 }
 
+func AdminListSkus(c *gin.Context) {
+	service := ParametersFromContext[*admin.SkuListService](c, admin.SkuListParamCtx{})
+	res, err := service.List(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
+
+func AdminCreateSku(c *gin.Context) {
+	service := ParametersFromContext[*admin.SkuUpsertService](c, admin.SkuUpsertParamCtx{})
+	res, err := service.Create(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
+
+func AdminUpdateSku(c *gin.Context) {
+	service := ParametersFromContext[*admin.SkuUpsertService](c, admin.SkuUpsertParamCtx{})
+	res, err := service.Update(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
+
+func AdminDeleteSku(c *gin.Context) {
+	service := ParametersFromContext[*admin.SingleSkuService](c, admin.SingleSkuParamCtx{})
+	err := service.Delete(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{})
+}
+
 func AdminListEvents(c *gin.Context) {
 	service := ParametersFromContext[*admin.EventListService](c, admin.EventListParamCtx{})
 	res, err := service.Get(c)

@@ -25,6 +25,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/schema"
 	"github.com/cloudreve/Cloudreve/v4/ent/setting"
 	"github.com/cloudreve/Cloudreve/v4/ent/share"
+	"github.com/cloudreve/Cloudreve/v4/ent/sku"
 	"github.com/cloudreve/Cloudreve/v4/ent/storagepolicy"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
@@ -482,6 +483,33 @@ func init() {
 	shareDescDownloads := shareFields[2].Descriptor()
 	// share.DefaultDownloads holds the default value on creation for the downloads field.
 	share.DefaultDownloads = shareDescDownloads.Default.(int)
+	skuMixin := schema.Sku{}.Mixin()
+	skuMixinHooks0 := skuMixin[0].Hooks()
+	sku.Hooks[0] = skuMixinHooks0[0]
+	skuMixinInters0 := skuMixin[0].Interceptors()
+	sku.Interceptors[0] = skuMixinInters0[0]
+	skuMixinFields0 := skuMixin[0].Fields()
+	_ = skuMixinFields0
+	skuFields := schema.Sku{}.Fields()
+	_ = skuFields
+	// skuDescCreatedAt is the schema descriptor for created_at field.
+	skuDescCreatedAt := skuMixinFields0[0].Descriptor()
+	// sku.DefaultCreatedAt holds the default value on creation for the created_at field.
+	sku.DefaultCreatedAt = skuDescCreatedAt.Default.(func() time.Time)
+	// skuDescUpdatedAt is the schema descriptor for updated_at field.
+	skuDescUpdatedAt := skuMixinFields0[1].Descriptor()
+	// sku.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	sku.DefaultUpdatedAt = skuDescUpdatedAt.Default.(func() time.Time)
+	// sku.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	sku.UpdateDefaultUpdatedAt = skuDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// skuDescEnabled is the schema descriptor for enabled field.
+	skuDescEnabled := skuFields[8].Descriptor()
+	// sku.DefaultEnabled holds the default value on creation for the enabled field.
+	sku.DefaultEnabled = skuDescEnabled.Default.(bool)
+	// skuDescWeight is the schema descriptor for weight field.
+	skuDescWeight := skuFields[9].Descriptor()
+	// sku.DefaultWeight holds the default value on creation for the weight field.
+	sku.DefaultWeight = skuDescWeight.Default.(int)
 	storagepolicyMixin := schema.StoragePolicy{}.Mixin()
 	storagepolicyMixinHooks0 := storagepolicyMixin[0].Hooks()
 	storagepolicy.Hooks[0] = storagepolicyMixinHooks0[0]

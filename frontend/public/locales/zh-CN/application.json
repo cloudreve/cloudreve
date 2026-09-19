@@ -134,6 +134,7 @@
     "remoteDownload": "离线下载",
     "connect": "连接与挂载",
     "taskQueue": "后台任务",
+    "shop": "商城",
     "setting": "设置",
     "videos": "视频",
     "photos": "图片",
@@ -1112,6 +1113,17 @@
     ],
     "reportDescription": "补充说明",
     "reportAbuseSuccess": "举报已提交"
+  },
+  "shop": {
+    "memberships": "会员",
+    "storagePacks": "容量包",
+    "redeem": "兑换",
+    "balance": "余额：{{credits}} 积分",
+    "purchased": "已购买 {{name}}",
+    "permanent": "永久",
+    "noProducts": "暂无商品",
+    "buyWithPoints": "{{points}} 积分购买",
+    "pointsUnavailable": "不支持积分购买"
   },
   "announcement": {
     "title": "公告",

@@ -314,3 +314,17 @@ export interface CreditTxnList {
   txns: CreditTxn[];
   total: number;
 }
+
+export interface ShopSku {
+  id: string;
+  name: string;
+  type: "storage" | "group";
+  amount: number;
+  group?: string;
+  group_id?: string;
+  duration: number;
+  price: number;
+  points?: number;
+  label?: string;
+  des?: string;
+}

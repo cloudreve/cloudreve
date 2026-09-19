@@ -34,6 +34,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/passkey"
 	"github.com/cloudreve/Cloudreve/v4/ent/setting"
 	"github.com/cloudreve/Cloudreve/v4/ent/share"
+	"github.com/cloudreve/Cloudreve/v4/ent/sku"
 	"github.com/cloudreve/Cloudreve/v4/ent/storagepolicy"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
@@ -85,6 +86,8 @@ type Client struct {
 	Setting *SettingClient
 	// Share is the client for interacting with the Share builders.
 	Share *ShareClient
+	// Sku is the client for interacting with the Sku builders.
+	Sku *SkuClient
 	// StoragePolicy is the client for interacting with the StoragePolicy builders.
 	StoragePolicy *StoragePolicyClient
 	// Task is the client for interacting with the Task builders.
@@ -123,6 +126,7 @@ func (c *Client) init() {
 	c.Passkey = NewPasskeyClient(c.config)
 	c.Setting = NewSettingClient(c.config)
 	c.Share = NewShareClient(c.config)
+	c.Sku = NewSkuClient(c.config)
 	c.StoragePolicy = NewStoragePolicyClient(c.config)
 	c.Task = NewTaskClient(c.config)
 	c.User = NewUserClient(c.config)
@@ -238,6 +242,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Passkey:        NewPasskeyClient(cfg),
 		Setting:        NewSettingClient(cfg),
 		Share:          NewShareClient(cfg),
+		Sku:            NewSkuClient(cfg),
 		StoragePolicy:  NewStoragePolicyClient(cfg),
 		Task:           NewTaskClient(cfg),
 		User:           NewUserClient(cfg),
@@ -280,6 +285,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Passkey:        NewPasskeyClient(cfg),
 		Setting:        NewSettingClient(cfg),
 		Share:          NewShareClient(cfg),
+		Sku:            NewSkuClient(cfg),
 		StoragePolicy:  NewStoragePolicyClient(cfg),
 		Task:           NewTaskClient(cfg),
 		User:           NewUserClient(cfg),
@@ -316,7 +322,7 @@ func (c *Client) Use(hooks ...Hook) {
 		c.AbuseReport, c.AclEntry, c.ActivityEvent, c.CreditTxn, c.DavAccount,
 		c.DirectLink, c.Entity, c.File, c.FsEvent, c.GiftCode, c.Group,
 		c.InvitationCode, c.Metadata, c.Node, c.OAuthClient, c.OAuthGrant, c.Passkey,
-		c.Setting, c.Share, c.StoragePolicy, c.Task, c.User, c.UserGrant,
+		c.Setting, c.Share, c.Sku, c.StoragePolicy, c.Task, c.User, c.UserGrant,
 	} {
 		n.Use(hooks...)
 	}
@@ -329,7 +335,7 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.AbuseReport, c.AclEntry, c.ActivityEvent, c.CreditTxn, c.DavAccount,
 		c.DirectLink, c.Entity, c.File, c.FsEvent, c.GiftCode, c.Group,
 		c.InvitationCode, c.Metadata, c.Node, c.OAuthClient, c.OAuthGrant, c.Passkey,
-		c.Setting, c.Share, c.StoragePolicy, c.Task, c.User, c.UserGrant,
+		c.Setting, c.Share, c.Sku, c.StoragePolicy, c.Task, c.User, c.UserGrant,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -376,6 +382,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Setting.mutate(ctx, m)
 	case *ShareMutation:
 		return c.Share.mutate(ctx, m)
+	case *SkuMutation:
+		return c.Sku.mutate(ctx, m)
 	case *StoragePolicyMutation:
 		return c.StoragePolicy.mutate(ctx, m)
 	case *TaskMutation:
@@ -3417,6 +3425,141 @@ func (c *ShareClient) mutate(ctx context.Context, m *ShareMutation) (Value, erro
 	}
 }
 
+// SkuClient is a client for the Sku schema.
+type SkuClient struct {
+	config
+}
+
+// NewSkuClient returns a client for the Sku from the given config.
+func NewSkuClient(c config) *SkuClient {
+	return &SkuClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `sku.Hooks(f(g(h())))`.
+func (c *SkuClient) Use(hooks ...Hook) {
+	c.hooks.Sku = append(c.hooks.Sku, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `sku.Intercept(f(g(h())))`.
+func (c *SkuClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Sku = append(c.inters.Sku, interceptors...)
+}
+
+// Create returns a builder for creating a Sku entity.
+func (c *SkuClient) Create() *SkuCreate {
+	mutation := newSkuMutation(c.config, OpCreate)
+	return &SkuCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Sku entities.
+func (c *SkuClient) CreateBulk(builders ...*SkuCreate) *SkuCreateBulk {
+	return &SkuCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *SkuClient) MapCreateBulk(slice any, setFunc func(*SkuCreate, int)) *SkuCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &SkuCreateBulk{err: fmt.Errorf("calling to SkuClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*SkuCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &SkuCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Sku.
+func (c *SkuClient) Update() *SkuUpdate {
+	mutation := newSkuMutation(c.config, OpUpdate)
+	return &SkuUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *SkuClient) UpdateOne(s *Sku) *SkuUpdateOne {
+	mutation := newSkuMutation(c.config, OpUpdateOne, withSku(s))
+	return &SkuUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *SkuClient) UpdateOneID(id int) *SkuUpdateOne {
+	mutation := newSkuMutation(c.config, OpUpdateOne, withSkuID(id))
+	return &SkuUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Sku.
+func (c *SkuClient) Delete() *SkuDelete {
+	mutation := newSkuMutation(c.config, OpDelete)
+	return &SkuDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *SkuClient) DeleteOne(s *Sku) *SkuDeleteOne {
+	return c.DeleteOneID(s.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *SkuClient) DeleteOneID(id int) *SkuDeleteOne {
+	builder := c.Delete().Where(sku.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &SkuDeleteOne{builder}
+}
+
+// Query returns a query builder for Sku.
+func (c *SkuClient) Query() *SkuQuery {
+	return &SkuQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeSku},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Sku entity by its id.
+func (c *SkuClient) Get(ctx context.Context, id int) (*Sku, error) {
+	return c.Query().Where(sku.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *SkuClient) GetX(ctx context.Context, id int) *Sku {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *SkuClient) Hooks() []Hook {
+	hooks := c.hooks.Sku
+	return append(hooks[:len(hooks):len(hooks)], sku.Hooks[:]...)
+}
+
+// Interceptors returns the client interceptors.
+func (c *SkuClient) Interceptors() []Interceptor {
+	inters := c.inters.Sku
+	return append(inters[:len(inters):len(inters)], sku.Interceptors[:]...)
+}
+
+func (c *SkuClient) mutate(ctx context.Context, m *SkuMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&SkuCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&SkuUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&SkuUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&SkuDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Sku mutation op: %q", m.Op())
+	}
+}
+
 // StoragePolicyClient is a client for the StoragePolicy schema.
 type StoragePolicyClient struct {
 	config
@@ -4266,13 +4409,13 @@ type (
 	hooks struct {
 		AbuseReport, AclEntry, ActivityEvent, CreditTxn, DavAccount, DirectLink, Entity,
 		File, FsEvent, GiftCode, Group, InvitationCode, Metadata, Node, OAuthClient,
-		OAuthGrant, Passkey, Setting, Share, StoragePolicy, Task, User,
+		OAuthGrant, Passkey, Setting, Share, Sku, StoragePolicy, Task, User,
 		UserGrant []ent.Hook
 	}
 	inters struct {
 		AbuseReport, AclEntry, ActivityEvent, CreditTxn, DavAccount, DirectLink, Entity,
 		File, FsEvent, GiftCode, Group, InvitationCode, Metadata, Node, OAuthClient,
-		OAuthGrant, Passkey, Setting, Share, StoragePolicy, Task, User,
+		OAuthGrant, Passkey, Setting, Share, Sku, StoragePolicy, Task, User,
 		UserGrant []ent.Interceptor
 	}
 )

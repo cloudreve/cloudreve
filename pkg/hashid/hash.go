@@ -23,6 +23,7 @@ const (
 	DavAccountID
 	PaymentID
 	InvitationCodeID
+	SkuID
 )
 
 var (
@@ -144,6 +145,11 @@ func EncodeSourceLinkID(encoder Encoder, id int) string {
 // EncodeInvitationCodeID encode invitation code id to hash id
 func EncodeInvitationCodeID(encoder Encoder, id int) string {
 	return encodeID(encoder, id, InvitationCodeID)
+}
+
+// EncodeSkuID encode sku id to hash id
+func EncodeSkuID(encoder Encoder, id int) string {
+	return encodeID(encoder, id, SkuID)
 }
 
 func FromContext(c context.Context) int {

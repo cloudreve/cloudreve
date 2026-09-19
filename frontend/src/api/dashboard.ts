@@ -656,6 +656,26 @@ export interface GiftCodeListResponse {
   total: number;
 }
 
+export interface Sku {
+  id: number;
+  name: string;
+  type: "storage" | "group";
+  amount: number;
+  duration?: number;
+  price?: number;
+  points?: number;
+  label?: string;
+  des?: string;
+  enabled: boolean;
+  weight: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SkuUpsertService {
+  sku: Sku;
+}
+
 export interface ActivityEvent {
   id: string;
   type: number;
