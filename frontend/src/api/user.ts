@@ -285,3 +285,30 @@ export interface GrantResponse {
   code: string;
   state: string;
 }
+
+export interface UserGrant {
+  id: number;
+  type: "storage" | "group";
+  amount: number;
+  expires_at?: string;
+}
+
+export interface CreditInfo {
+  credits: number;
+  storage_bonus: number;
+  grants: UserGrant[];
+}
+
+export interface CreditTxn {
+  id: number;
+  amount: number;
+  type: "purchase" | "gift" | "share_income" | "adjust";
+  ref?: string;
+  des?: string;
+  created_at: string;
+}
+
+export interface CreditTxnList {
+  txns: CreditTxn[];
+  total: number;
+}

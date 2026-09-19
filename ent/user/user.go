@@ -39,6 +39,8 @@ const (
 	FieldLastLogin = "last_login"
 	// FieldStorage holds the string denoting the storage field in the database.
 	FieldStorage = "storage"
+	// FieldCredits holds the string denoting the credits field in the database.
+	FieldCredits = "credits"
 	// FieldTwoFactorSecret holds the string denoting the two_factor_secret field in the database.
 	FieldTwoFactorSecret = "two_factor_secret"
 	// FieldAvatar holds the string denoting the avatar field in the database.
@@ -65,6 +67,12 @@ const (
 	EdgeEntities = "entities"
 	// EdgeOauthGrants holds the string denoting the oauth_grants edge name in mutations.
 	EdgeOauthGrants = "oauth_grants"
+	// EdgeCreditTxns holds the string denoting the credit_txns edge name in mutations.
+	EdgeCreditTxns = "credit_txns"
+	// EdgeRedeemedCodes holds the string denoting the redeemed_codes edge name in mutations.
+	EdgeRedeemedCodes = "redeemed_codes"
+	// EdgeGrants holds the string denoting the grants edge name in mutations.
+	EdgeGrants = "grants"
 	// Table holds the table name of the user in the database.
 	Table = "users"
 	// GroupTable is the table that holds the group relation/edge.
@@ -130,6 +138,27 @@ const (
 	OauthGrantsInverseTable = "oauth_grants"
 	// OauthGrantsColumn is the table column denoting the oauth_grants relation/edge.
 	OauthGrantsColumn = "user_id"
+	// CreditTxnsTable is the table that holds the credit_txns relation/edge.
+	CreditTxnsTable = "credit_txns"
+	// CreditTxnsInverseTable is the table name for the CreditTxn entity.
+	// It exists in this package in order to avoid circular dependency with the "credittxn" package.
+	CreditTxnsInverseTable = "credit_txns"
+	// CreditTxnsColumn is the table column denoting the credit_txns relation/edge.
+	CreditTxnsColumn = "user_id"
+	// RedeemedCodesTable is the table that holds the redeemed_codes relation/edge.
+	RedeemedCodesTable = "gift_codes"
+	// RedeemedCodesInverseTable is the table name for the GiftCode entity.
+	// It exists in this package in order to avoid circular dependency with the "giftcode" package.
+	RedeemedCodesInverseTable = "gift_codes"
+	// RedeemedCodesColumn is the table column denoting the redeemed_codes relation/edge.
+	RedeemedCodesColumn = "used_by_id"
+	// GrantsTable is the table that holds the grants relation/edge.
+	GrantsTable = "user_grants"
+	// GrantsInverseTable is the table name for the UserGrant entity.
+	// It exists in this package in order to avoid circular dependency with the "usergrant" package.
+	GrantsInverseTable = "user_grants"
+	// GrantsColumn is the table column denoting the grants relation/edge.
+	GrantsColumn = "user_id"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -146,6 +175,7 @@ var Columns = []string{
 	FieldBanReason,
 	FieldLastLogin,
 	FieldStorage,
+	FieldCredits,
 	FieldTwoFactorSecret,
 	FieldAvatar,
 	FieldSettings,
@@ -182,6 +212,8 @@ var (
 	NickValidator func(string) error
 	// DefaultStorage holds the default value on creation for the "storage" field.
 	DefaultStorage int64
+	// DefaultCredits holds the default value on creation for the "credits" field.
+	DefaultCredits int64
 	// DefaultSettings holds the default value on creation for the "settings" field.
 	DefaultSettings *types.UserSetting
 )
@@ -275,6 +307,11 @@ func ByLastLogin(opts ...sql.OrderTermOption) OrderOption {
 // ByStorage orders the results by the storage field.
 func ByStorage(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStorage, opts...).ToFunc()
+}
+
+// ByCredits orders the results by the credits field.
+func ByCredits(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCredits, opts...).ToFunc()
 }
 
 // ByTwoFactorSecret orders the results by the two_factor_secret field.
@@ -410,6 +447,48 @@ func ByOauthGrants(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newOauthGrantsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByCreditTxnsCount orders the results by credit_txns count.
+func ByCreditTxnsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newCreditTxnsStep(), opts...)
+	}
+}
+
+// ByCreditTxns orders the results by credit_txns terms.
+func ByCreditTxns(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCreditTxnsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByRedeemedCodesCount orders the results by redeemed_codes count.
+func ByRedeemedCodesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newRedeemedCodesStep(), opts...)
+	}
+}
+
+// ByRedeemedCodes orders the results by redeemed_codes terms.
+func ByRedeemedCodes(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newRedeemedCodesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByGrantsCount orders the results by grants count.
+func ByGrantsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newGrantsStep(), opts...)
+	}
+}
+
+// ByGrants orders the results by grants terms.
+func ByGrants(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newGrantsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newGroupStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -471,5 +550,26 @@ func newOauthGrantsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(OauthGrantsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, OauthGrantsTable, OauthGrantsColumn),
+	)
+}
+func newCreditTxnsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CreditTxnsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, CreditTxnsTable, CreditTxnsColumn),
+	)
+}
+func newRedeemedCodesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(RedeemedCodesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, RedeemedCodesTable, RedeemedCodesColumn),
+	)
+}
+func newGrantsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(GrantsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, GrantsTable, GrantsColumn),
 	)
 }

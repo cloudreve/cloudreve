@@ -11,10 +11,12 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/cloudreve/Cloudreve/v4/ent/credittxn"
 	"github.com/cloudreve/Cloudreve/v4/ent/davaccount"
 	"github.com/cloudreve/Cloudreve/v4/ent/entity"
 	"github.com/cloudreve/Cloudreve/v4/ent/file"
 	"github.com/cloudreve/Cloudreve/v4/ent/fsevent"
+	"github.com/cloudreve/Cloudreve/v4/ent/giftcode"
 	"github.com/cloudreve/Cloudreve/v4/ent/group"
 	"github.com/cloudreve/Cloudreve/v4/ent/oauthgrant"
 	"github.com/cloudreve/Cloudreve/v4/ent/passkey"
@@ -22,24 +24,28 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/share"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
+	"github.com/cloudreve/Cloudreve/v4/ent/usergrant"
 )
 
 // UserQuery is the builder for querying User entities.
 type UserQuery struct {
 	config
-	ctx             *QueryContext
-	order           []user.OrderOption
-	inters          []Interceptor
-	predicates      []predicate.User
-	withGroup       *GroupQuery
-	withFiles       *FileQuery
-	withDavAccounts *DavAccountQuery
-	withShares      *ShareQuery
-	withPasskey     *PasskeyQuery
-	withTasks       *TaskQuery
-	withFsevents    *FsEventQuery
-	withEntities    *EntityQuery
-	withOauthGrants *OAuthGrantQuery
+	ctx               *QueryContext
+	order             []user.OrderOption
+	inters            []Interceptor
+	predicates        []predicate.User
+	withGroup         *GroupQuery
+	withFiles         *FileQuery
+	withDavAccounts   *DavAccountQuery
+	withShares        *ShareQuery
+	withPasskey       *PasskeyQuery
+	withTasks         *TaskQuery
+	withFsevents      *FsEventQuery
+	withEntities      *EntityQuery
+	withOauthGrants   *OAuthGrantQuery
+	withCreditTxns    *CreditTxnQuery
+	withRedeemedCodes *GiftCodeQuery
+	withGrants        *UserGrantQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -274,6 +280,72 @@ func (uq *UserQuery) QueryOauthGrants() *OAuthGrantQuery {
 	return query
 }
 
+// QueryCreditTxns chains the current query on the "credit_txns" edge.
+func (uq *UserQuery) QueryCreditTxns() *CreditTxnQuery {
+	query := (&CreditTxnClient{config: uq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := uq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := uq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(credittxn.Table, credittxn.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.CreditTxnsTable, user.CreditTxnsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryRedeemedCodes chains the current query on the "redeemed_codes" edge.
+func (uq *UserQuery) QueryRedeemedCodes() *GiftCodeQuery {
+	query := (&GiftCodeClient{config: uq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := uq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := uq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(giftcode.Table, giftcode.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.RedeemedCodesTable, user.RedeemedCodesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryGrants chains the current query on the "grants" edge.
+func (uq *UserQuery) QueryGrants() *UserGrantQuery {
+	query := (&UserGrantClient{config: uq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := uq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := uq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(usergrant.Table, usergrant.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.GrantsTable, user.GrantsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // First returns the first User entity from the query.
 // Returns a *NotFoundError when no User was found.
 func (uq *UserQuery) First(ctx context.Context) (*User, error) {
@@ -461,20 +533,23 @@ func (uq *UserQuery) Clone() *UserQuery {
 		return nil
 	}
 	return &UserQuery{
-		config:          uq.config,
-		ctx:             uq.ctx.Clone(),
-		order:           append([]user.OrderOption{}, uq.order...),
-		inters:          append([]Interceptor{}, uq.inters...),
-		predicates:      append([]predicate.User{}, uq.predicates...),
-		withGroup:       uq.withGroup.Clone(),
-		withFiles:       uq.withFiles.Clone(),
-		withDavAccounts: uq.withDavAccounts.Clone(),
-		withShares:      uq.withShares.Clone(),
-		withPasskey:     uq.withPasskey.Clone(),
-		withTasks:       uq.withTasks.Clone(),
-		withFsevents:    uq.withFsevents.Clone(),
-		withEntities:    uq.withEntities.Clone(),
-		withOauthGrants: uq.withOauthGrants.Clone(),
+		config:            uq.config,
+		ctx:               uq.ctx.Clone(),
+		order:             append([]user.OrderOption{}, uq.order...),
+		inters:            append([]Interceptor{}, uq.inters...),
+		predicates:        append([]predicate.User{}, uq.predicates...),
+		withGroup:         uq.withGroup.Clone(),
+		withFiles:         uq.withFiles.Clone(),
+		withDavAccounts:   uq.withDavAccounts.Clone(),
+		withShares:        uq.withShares.Clone(),
+		withPasskey:       uq.withPasskey.Clone(),
+		withTasks:         uq.withTasks.Clone(),
+		withFsevents:      uq.withFsevents.Clone(),
+		withEntities:      uq.withEntities.Clone(),
+		withOauthGrants:   uq.withOauthGrants.Clone(),
+		withCreditTxns:    uq.withCreditTxns.Clone(),
+		withRedeemedCodes: uq.withRedeemedCodes.Clone(),
+		withGrants:        uq.withGrants.Clone(),
 		// clone intermediate query.
 		sql:  uq.sql.Clone(),
 		path: uq.path,
@@ -580,6 +655,39 @@ func (uq *UserQuery) WithOauthGrants(opts ...func(*OAuthGrantQuery)) *UserQuery 
 	return uq
 }
 
+// WithCreditTxns tells the query-builder to eager-load the nodes that are connected to
+// the "credit_txns" edge. The optional arguments are used to configure the query builder of the edge.
+func (uq *UserQuery) WithCreditTxns(opts ...func(*CreditTxnQuery)) *UserQuery {
+	query := (&CreditTxnClient{config: uq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	uq.withCreditTxns = query
+	return uq
+}
+
+// WithRedeemedCodes tells the query-builder to eager-load the nodes that are connected to
+// the "redeemed_codes" edge. The optional arguments are used to configure the query builder of the edge.
+func (uq *UserQuery) WithRedeemedCodes(opts ...func(*GiftCodeQuery)) *UserQuery {
+	query := (&GiftCodeClient{config: uq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	uq.withRedeemedCodes = query
+	return uq
+}
+
+// WithGrants tells the query-builder to eager-load the nodes that are connected to
+// the "grants" edge. The optional arguments are used to configure the query builder of the edge.
+func (uq *UserQuery) WithGrants(opts ...func(*UserGrantQuery)) *UserQuery {
+	query := (&UserGrantClient{config: uq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	uq.withGrants = query
+	return uq
+}
+
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 //
@@ -658,7 +766,7 @@ func (uq *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	var (
 		nodes       = []*User{}
 		_spec       = uq.querySpec()
-		loadedTypes = [9]bool{
+		loadedTypes = [12]bool{
 			uq.withGroup != nil,
 			uq.withFiles != nil,
 			uq.withDavAccounts != nil,
@@ -668,6 +776,9 @@ func (uq *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 			uq.withFsevents != nil,
 			uq.withEntities != nil,
 			uq.withOauthGrants != nil,
+			uq.withCreditTxns != nil,
+			uq.withRedeemedCodes != nil,
+			uq.withGrants != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -747,6 +858,27 @@ func (uq *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 		if err := uq.loadOauthGrants(ctx, query, nodes,
 			func(n *User) { n.Edges.OauthGrants = []*OAuthGrant{} },
 			func(n *User, e *OAuthGrant) { n.Edges.OauthGrants = append(n.Edges.OauthGrants, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := uq.withCreditTxns; query != nil {
+		if err := uq.loadCreditTxns(ctx, query, nodes,
+			func(n *User) { n.Edges.CreditTxns = []*CreditTxn{} },
+			func(n *User, e *CreditTxn) { n.Edges.CreditTxns = append(n.Edges.CreditTxns, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := uq.withRedeemedCodes; query != nil {
+		if err := uq.loadRedeemedCodes(ctx, query, nodes,
+			func(n *User) { n.Edges.RedeemedCodes = []*GiftCode{} },
+			func(n *User, e *GiftCode) { n.Edges.RedeemedCodes = append(n.Edges.RedeemedCodes, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := uq.withGrants; query != nil {
+		if err := uq.loadGrants(ctx, query, nodes,
+			func(n *User) { n.Edges.Grants = []*UserGrant{} },
+			func(n *User, e *UserGrant) { n.Edges.Grants = append(n.Edges.Grants, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -1008,6 +1140,96 @@ func (uq *UserQuery) loadOauthGrants(ctx context.Context, query *OAuthGrantQuery
 	}
 	query.Where(predicate.OAuthGrant(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(user.OauthGrantsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.UserID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (uq *UserQuery) loadCreditTxns(ctx context.Context, query *CreditTxnQuery, nodes []*User, init func(*User), assign func(*User, *CreditTxn)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(credittxn.FieldUserID)
+	}
+	query.Where(predicate.CreditTxn(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.CreditTxnsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.UserID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (uq *UserQuery) loadRedeemedCodes(ctx context.Context, query *GiftCodeQuery, nodes []*User, init func(*User), assign func(*User, *GiftCode)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(giftcode.FieldUsedByID)
+	}
+	query.Where(predicate.GiftCode(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.RedeemedCodesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.UsedByID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "used_by_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (uq *UserQuery) loadGrants(ctx context.Context, query *UserGrantQuery, nodes []*User, init func(*User), assign func(*User, *UserGrant)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(usergrant.FieldUserID)
+	}
+	query.Where(predicate.UserGrant(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.GrantsColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {

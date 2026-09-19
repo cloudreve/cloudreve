@@ -42,6 +42,8 @@ type User struct {
 	LastLogin *time.Time `json:"last_login,omitempty"`
 	// Storage holds the value of the "storage" field.
 	Storage int64 `json:"storage,omitempty"`
+	// Credits holds the value of the "credits" field.
+	Credits int64 `json:"credits,omitempty"`
 	// TwoFactorSecret holds the value of the "two_factor_secret" field.
 	TwoFactorSecret string `json:"-"`
 	// Avatar holds the value of the "avatar" field.
@@ -76,9 +78,15 @@ type UserEdges struct {
 	Entities []*Entity `json:"entities,omitempty"`
 	// OauthGrants holds the value of the oauth_grants edge.
 	OauthGrants []*OAuthGrant `json:"oauth_grants,omitempty"`
+	// CreditTxns holds the value of the credit_txns edge.
+	CreditTxns []*CreditTxn `json:"credit_txns,omitempty"`
+	// RedeemedCodes holds the value of the redeemed_codes edge.
+	RedeemedCodes []*GiftCode `json:"redeemed_codes,omitempty"`
+	// Grants holds the value of the grants edge.
+	Grants []*UserGrant `json:"grants,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [9]bool
+	loadedTypes [12]bool
 }
 
 // GroupOrErr returns the Group value or an error if the edge
@@ -166,6 +174,33 @@ func (e UserEdges) OauthGrantsOrErr() ([]*OAuthGrant, error) {
 	return nil, &NotLoadedError{edge: "oauth_grants"}
 }
 
+// CreditTxnsOrErr returns the CreditTxns value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) CreditTxnsOrErr() ([]*CreditTxn, error) {
+	if e.loadedTypes[9] {
+		return e.CreditTxns, nil
+	}
+	return nil, &NotLoadedError{edge: "credit_txns"}
+}
+
+// RedeemedCodesOrErr returns the RedeemedCodes value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) RedeemedCodesOrErr() ([]*GiftCode, error) {
+	if e.loadedTypes[10] {
+		return e.RedeemedCodes, nil
+	}
+	return nil, &NotLoadedError{edge: "redeemed_codes"}
+}
+
+// GrantsOrErr returns the Grants value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) GrantsOrErr() ([]*UserGrant, error) {
+	if e.loadedTypes[11] {
+		return e.Grants, nil
+	}
+	return nil, &NotLoadedError{edge: "grants"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*User) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -173,7 +208,7 @@ func (*User) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case user.FieldSettings:
 			values[i] = new([]byte)
-		case user.FieldID, user.FieldStorage, user.FieldGroupUsers:
+		case user.FieldID, user.FieldStorage, user.FieldCredits, user.FieldGroupUsers:
 			values[i] = new(sql.NullInt64)
 		case user.FieldEmail, user.FieldNick, user.FieldPassword, user.FieldStatus, user.FieldBanReason, user.FieldTwoFactorSecret, user.FieldAvatar:
 			values[i] = new(sql.NullString)
@@ -269,6 +304,12 @@ func (u *User) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				u.Storage = value.Int64
 			}
+		case user.FieldCredits:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field credits", values[i])
+			} else if value.Valid {
+				u.Credits = value.Int64
+			}
 		case user.FieldTwoFactorSecret:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field two_factor_secret", values[i])
@@ -353,6 +394,21 @@ func (u *User) QueryOauthGrants() *OAuthGrantQuery {
 	return NewUserClient(u.config).QueryOauthGrants(u)
 }
 
+// QueryCreditTxns queries the "credit_txns" edge of the User entity.
+func (u *User) QueryCreditTxns() *CreditTxnQuery {
+	return NewUserClient(u.config).QueryCreditTxns(u)
+}
+
+// QueryRedeemedCodes queries the "redeemed_codes" edge of the User entity.
+func (u *User) QueryRedeemedCodes() *GiftCodeQuery {
+	return NewUserClient(u.config).QueryRedeemedCodes(u)
+}
+
+// QueryGrants queries the "grants" edge of the User entity.
+func (u *User) QueryGrants() *UserGrantQuery {
+	return NewUserClient(u.config).QueryGrants(u)
+}
+
 // Update returns a builder for updating this User.
 // Note that you need to call User.Unwrap() before calling this method if this User
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -413,6 +469,9 @@ func (u *User) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("storage=")
 	builder.WriteString(fmt.Sprintf("%v", u.Storage))
+	builder.WriteString(", ")
+	builder.WriteString("credits=")
+	builder.WriteString(fmt.Sprintf("%v", u.Credits))
 	builder.WriteString(", ")
 	builder.WriteString("two_factor_secret=<sensitive>")
 	builder.WriteString(", ")
@@ -480,6 +539,24 @@ func (e *User) SetEntities(v []*Entity) {
 func (e *User) SetOauthGrants(v []*OAuthGrant) {
 	e.Edges.OauthGrants = v
 	e.Edges.loadedTypes[8] = true
+}
+
+// SetCreditTxns manually set the edge as loaded state.
+func (e *User) SetCreditTxns(v []*CreditTxn) {
+	e.Edges.CreditTxns = v
+	e.Edges.loadedTypes[9] = true
+}
+
+// SetRedeemedCodes manually set the edge as loaded state.
+func (e *User) SetRedeemedCodes(v []*GiftCode) {
+	e.Edges.RedeemedCodes = v
+	e.Edges.loadedTypes[10] = true
+}
+
+// SetGrants manually set the edge as loaded state.
+func (e *User) SetGrants(v []*UserGrant) {
+	e.Edges.Grants = v
+	e.Edges.loadedTypes[11] = true
 }
 
 // Users is a parsable slice of User.

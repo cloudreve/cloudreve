@@ -1070,7 +1070,29 @@
     "preferredPolicyDes": "在您自己的文件中上传新文件时使用此存储策略，除非某个目录单独指定。",
     "policySaved": "存储策略已更新",
     "policyInherit": "继承（用户组默认）",
-    "policyGroupDefault": "用户组默认"
+    "policyGroupDefault": "用户组默认",
+    "finance": "财务",
+    "creditBalance": "积分余额",
+    "storageBonus": "容量加成",
+    "activeGrants": "生效中的权益",
+    "grantStorage": "容量",
+    "grantGroup": "用户组",
+    "redeemGiftCode": "兑换礼品码",
+    "redeemGiftCodeDes": "输入礼品码以兑换积分或权益",
+    "giftCodePlaceholder": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "redeem": "兑换",
+    "giftCodeRedeemed": "礼品码兑换成功",
+    "creditLedger": "积分流水",
+    "txnChange": "变动",
+    "txnTime": "时间",
+    "txnReason": "事由",
+    "noTxns": "暂无流水",
+    "txnType": {
+      "purchase": "商店购买",
+      "gift": "礼品码",
+      "share_income": "分享售出",
+      "adjust": "手动调整"
+    }
   },
   "vas": {
     "points": "积分",

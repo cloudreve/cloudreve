@@ -249,49 +249,36 @@ func UpdateOption(c *gin.Context) {
 	}
 
 	c.JSON(200, serializer.Response{})
+}
 
-	//var service user.SettingUpdateService
-	//if err := c.ShouldBindUri(&service); err == nil {
-	//	var (
-	//		subService user.OptionsChangeHandler
-	//		subErr     error
-	//	)
-	//
-	//	switch service.Option {
-	//	case "nick":
-	//		subService = &user.ChangerNick{}
-	//	case "vip":
-	//		subService = &user.VIPUnsubscribe{}
-	//	case "qq":
-	//		subService = &user.QQBind{}
-	//	case "policy":
-	//		subService = &user.PolicyChange{}
-	//	case "homepage":
-	//		subService = &user.HomePage{}
-	//	case "password":
-	//		subService = &user.PasswordChange{}
-	//	case "2fa":
-	//		subService = &user.Enable2FA{}
-	//	case "authn":
-	//		subService = &user.DeleteWebAuthn{}
-	//	case "theme":
-	//		subService = &user.ThemeChose{}
-	//	default:
-	//		subService = &user.ChangerNick{}
-	//	}
-	//
-	//	subErr = c.ShouldBindJSON(subService)
-	//	if subErr != nil {
-	//		c.JSON(200, ErrorResponse(subErr))
-	//		return
-	//	}
-	//
-	//	res := subService.Update(c, CurrentUser(c))
-	//	c.JSON(200, res)
-	//
-	//} else {
-	//	c.JSON(200, ErrorResponse(err))
-	//}
+// UserCredit returns the caller's credit balance and active grants.
+func UserCredit(c *gin.Context) {
+	service := ParametersFromContext[*user.CreditService](c, user.CreditParamCtx{})
+	res, err := service.Get(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
+
+// UserCreditTxns lists the caller's credit ledger.
+func UserCreditTxns(c *gin.Context) {
+	service := ParametersFromContext[*user.CreditTxnListService](c, user.CreditTxnListParamCtx{})
+	res, err := service.List(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
+
+// UserRedeemGiftCode redeems a gift code for the caller.
+func UserRedeemGiftCode(c *gin.Context) {
+	service := ParametersFromContext[*user.RedeemGiftCodeService](c, user.RedeemGiftCodeParamCtx{})
+	res, err := service.Create(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
 }
 
 // UserInit2FA 初始化二步验证

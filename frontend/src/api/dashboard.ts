@@ -629,3 +629,41 @@ export interface ListOAuthClientResponse {
 export interface UpsertOAuthClientService {
   client: OAuthClient;
 }
+
+export interface GiftCode {
+  id: number;
+  code: string;
+  type: "points" | "storage" | "group";
+  amount: number;
+  duration?: number;
+  used_by_id?: number;
+  used_at?: string;
+  des?: string;
+  created_at: string;
+  edges?: {
+    redeemer?: {
+      id: number;
+      email: string;
+      nick: string;
+    };
+  };
+}
+
+export interface GiftCodeListResponse {
+  codes: GiftCode[];
+  total: number;
+}
+
+export interface CreateGiftCodeService {
+  type: "points" | "storage" | "group";
+  amount: number;
+  duration?: number;
+  qty: number;
+  des?: string;
+}
+
+export interface AdjustCreditService {
+  email: string;
+  delta: number;
+  des?: string;
+}

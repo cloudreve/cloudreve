@@ -98,6 +98,7 @@ type DBFSDependencies struct {
 	FileClient          inventory.FileClient
 	ShareClient         inventory.ShareClient
 	AclClient           inventory.AclClient
+	VasClient           inventory.VasClient
 	UserClient          inventory.UserClient
 	StoragePolicyClient inventory.StoragePolicyClient
 	DirectLinkClient    inventory.DirectLinkClient
@@ -118,6 +119,7 @@ func NewDatabaseFS(u *ent.User, deps DBFSDependencies) fs.FileSystem {
 		fileClient:          deps.FileClient,
 		shareClient:         deps.ShareClient,
 		aclClient:           deps.AclClient,
+		vasClient:           deps.VasClient,
 		l:                   deps.Logger,
 		ls:                  deps.LockSystem,
 		settingClient:       deps.SettingProvider,
@@ -140,6 +142,7 @@ type DBFS struct {
 	storagePolicyClient inventory.StoragePolicyClient
 	shareClient         inventory.ShareClient
 	aclClient           inventory.AclClient
+	vasClient           inventory.VasClient
 	directLinkClient    inventory.DirectLinkClient
 	l                   logging.Logger
 	ls                  lock.LockSystem
@@ -306,6 +309,12 @@ func (f *DBFS) Capacity(ctx context.Context, u *ent.User) (*fs.Capacity, error) 
 
 	res.Used = f.user.Storage
 	res.Total = requesterGroup.MaxStorage
+
+	if f.vasClient != nil {
+		if bonus, err := f.vasClient.StorageBonus(ctx, u.ID); err == nil {
+			res.Total += bonus
+		}
+	}
 	return res, nil
 }
 

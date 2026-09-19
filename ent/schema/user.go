@@ -38,6 +38,10 @@ func (User) Fields() []ent.Field {
 			Comment("Time of the last successful sign-in"),
 		field.Int64("storage").
 			Default(0),
+		// credits is the user's point balance; movements are recorded in
+		// credit_txns and applied under the users-row lock.
+		field.Int64("credits").
+			Default(0),
 		field.String("two_factor_secret").
 			Sensitive().
 			Optional(),
@@ -65,6 +69,9 @@ func (User) Edges() []ent.Edge {
 		edge.To("fsevents", FsEvent.Type),
 		edge.To("entities", Entity.Type),
 		edge.To("oauth_grants", OAuthGrant.Type),
+		edge.To("credit_txns", CreditTxn.Type),
+		edge.To("redeemed_codes", GiftCode.Type),
+		edge.To("grants", UserGrant.Type),
 	}
 }
 

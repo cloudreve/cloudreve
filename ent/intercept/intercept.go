@@ -9,11 +9,13 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/aclentry"
+	"github.com/cloudreve/Cloudreve/v4/ent/credittxn"
 	"github.com/cloudreve/Cloudreve/v4/ent/davaccount"
 	"github.com/cloudreve/Cloudreve/v4/ent/directlink"
 	"github.com/cloudreve/Cloudreve/v4/ent/entity"
 	"github.com/cloudreve/Cloudreve/v4/ent/file"
 	"github.com/cloudreve/Cloudreve/v4/ent/fsevent"
+	"github.com/cloudreve/Cloudreve/v4/ent/giftcode"
 	"github.com/cloudreve/Cloudreve/v4/ent/group"
 	"github.com/cloudreve/Cloudreve/v4/ent/invitationcode"
 	"github.com/cloudreve/Cloudreve/v4/ent/metadata"
@@ -27,6 +29,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/storagepolicy"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
+	"github.com/cloudreve/Cloudreve/v4/ent/usergrant"
 )
 
 // The Query interface represents an operation that queries a graph.
@@ -110,6 +113,33 @@ func (f TraverseAclEntry) Traverse(ctx context.Context, q ent.Query) error {
 		return f(ctx, q)
 	}
 	return fmt.Errorf("unexpected query type %T. expect *ent.AclEntryQuery", q)
+}
+
+// The CreditTxnFunc type is an adapter to allow the use of ordinary function as a Querier.
+type CreditTxnFunc func(context.Context, *ent.CreditTxnQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f CreditTxnFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.CreditTxnQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.CreditTxnQuery", q)
+}
+
+// The TraverseCreditTxn type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseCreditTxn func(context.Context, *ent.CreditTxnQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseCreditTxn) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseCreditTxn) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.CreditTxnQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.CreditTxnQuery", q)
 }
 
 // The DavAccountFunc type is an adapter to allow the use of ordinary function as a Querier.
@@ -245,6 +275,33 @@ func (f TraverseFsEvent) Traverse(ctx context.Context, q ent.Query) error {
 		return f(ctx, q)
 	}
 	return fmt.Errorf("unexpected query type %T. expect *ent.FsEventQuery", q)
+}
+
+// The GiftCodeFunc type is an adapter to allow the use of ordinary function as a Querier.
+type GiftCodeFunc func(context.Context, *ent.GiftCodeQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f GiftCodeFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.GiftCodeQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.GiftCodeQuery", q)
+}
+
+// The TraverseGiftCode type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseGiftCode func(context.Context, *ent.GiftCodeQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseGiftCode) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseGiftCode) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.GiftCodeQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.GiftCodeQuery", q)
 }
 
 // The GroupFunc type is an adapter to allow the use of ordinary function as a Querier.
@@ -571,11 +628,40 @@ func (f TraverseUser) Traverse(ctx context.Context, q ent.Query) error {
 	return fmt.Errorf("unexpected query type %T. expect *ent.UserQuery", q)
 }
 
+// The UserGrantFunc type is an adapter to allow the use of ordinary function as a Querier.
+type UserGrantFunc func(context.Context, *ent.UserGrantQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f UserGrantFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.UserGrantQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.UserGrantQuery", q)
+}
+
+// The TraverseUserGrant type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseUserGrant func(context.Context, *ent.UserGrantQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseUserGrant) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseUserGrant) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.UserGrantQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.UserGrantQuery", q)
+}
+
 // NewQuery returns the generic Query interface for the given typed query.
 func NewQuery(q ent.Query) (Query, error) {
 	switch q := q.(type) {
 	case *ent.AclEntryQuery:
 		return &query[*ent.AclEntryQuery, predicate.AclEntry, aclentry.OrderOption]{typ: ent.TypeAclEntry, tq: q}, nil
+	case *ent.CreditTxnQuery:
+		return &query[*ent.CreditTxnQuery, predicate.CreditTxn, credittxn.OrderOption]{typ: ent.TypeCreditTxn, tq: q}, nil
 	case *ent.DavAccountQuery:
 		return &query[*ent.DavAccountQuery, predicate.DavAccount, davaccount.OrderOption]{typ: ent.TypeDavAccount, tq: q}, nil
 	case *ent.DirectLinkQuery:
@@ -586,6 +672,8 @@ func NewQuery(q ent.Query) (Query, error) {
 		return &query[*ent.FileQuery, predicate.File, file.OrderOption]{typ: ent.TypeFile, tq: q}, nil
 	case *ent.FsEventQuery:
 		return &query[*ent.FsEventQuery, predicate.FsEvent, fsevent.OrderOption]{typ: ent.TypeFsEvent, tq: q}, nil
+	case *ent.GiftCodeQuery:
+		return &query[*ent.GiftCodeQuery, predicate.GiftCode, giftcode.OrderOption]{typ: ent.TypeGiftCode, tq: q}, nil
 	case *ent.GroupQuery:
 		return &query[*ent.GroupQuery, predicate.Group, group.OrderOption]{typ: ent.TypeGroup, tq: q}, nil
 	case *ent.InvitationCodeQuery:
@@ -610,6 +698,8 @@ func NewQuery(q ent.Query) (Query, error) {
 		return &query[*ent.TaskQuery, predicate.Task, task.OrderOption]{typ: ent.TypeTask, tq: q}, nil
 	case *ent.UserQuery:
 		return &query[*ent.UserQuery, predicate.User, user.OrderOption]{typ: ent.TypeUser, tq: q}, nil
+	case *ent.UserGrantQuery:
+		return &query[*ent.UserGrantQuery, predicate.UserGrant, usergrant.OrderOption]{typ: ent.TypeUserGrant, tq: q}, nil
 	default:
 		return nil, fmt.Errorf("unknown query type %T", q)
 	}

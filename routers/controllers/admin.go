@@ -297,6 +297,42 @@ func AdminDeleteInvitationCode(c *gin.Context) {
 	c.JSON(200, serializer.Response{})
 }
 
+func AdminListGiftCodes(c *gin.Context) {
+	service := ParametersFromContext[*admin.GiftCodeListService](c, admin.GiftCodeListParamCtx{})
+	res, err := service.List(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
+
+func AdminCreateGiftCode(c *gin.Context) {
+	service := ParametersFromContext[*admin.CreateGiftCodeService](c, admin.CreateGiftCodeParamCtx{})
+	res, err := service.Create(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
+
+func AdminDeleteGiftCode(c *gin.Context) {
+	service := ParametersFromContext[*admin.SingleGiftCodeService](c, admin.SingleGiftCodeParamCtx{})
+	err := service.Delete(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{})
+}
+
+func AdminAdjustCredit(c *gin.Context) {
+	service := ParametersFromContext[*admin.AdjustCreditService](c, admin.AdjustCreditParamCtx{})
+	err := service.Create(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{})
+}
+
 //	func AdminHashIDEncode(c *gin.Context) {
 //		service := ParametersFromContext[*admin.HashIDService](c, admin.HashIDParamCtx{})
 //		resp, err := service.Encode(c)

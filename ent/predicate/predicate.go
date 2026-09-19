@@ -9,6 +9,9 @@ import (
 // AclEntry is the predicate function for aclentry builders.
 type AclEntry func(*sql.Selector)
 
+// CreditTxn is the predicate function for credittxn builders.
+type CreditTxn func(*sql.Selector)
+
 // DavAccount is the predicate function for davaccount builders.
 type DavAccount func(*sql.Selector)
 
@@ -23,6 +26,9 @@ type File func(*sql.Selector)
 
 // FsEvent is the predicate function for fsevent builders.
 type FsEvent func(*sql.Selector)
+
+// GiftCode is the predicate function for giftcode builders.
+type GiftCode func(*sql.Selector)
 
 // Group is the predicate function for group builders.
 type Group func(*sql.Selector)
@@ -59,3 +65,6 @@ type Task func(*sql.Selector)
 
 // User is the predicate function for user builders.
 type User func(*sql.Selector)
+
+// UserGrant is the predicate function for usergrant builders.
+type UserGrant func(*sql.Selector)

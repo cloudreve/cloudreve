@@ -13,11 +13,13 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/cloudreve/Cloudreve/v4/ent/aclentry"
+	"github.com/cloudreve/Cloudreve/v4/ent/credittxn"
 	"github.com/cloudreve/Cloudreve/v4/ent/davaccount"
 	"github.com/cloudreve/Cloudreve/v4/ent/directlink"
 	"github.com/cloudreve/Cloudreve/v4/ent/entity"
 	"github.com/cloudreve/Cloudreve/v4/ent/file"
 	"github.com/cloudreve/Cloudreve/v4/ent/fsevent"
+	"github.com/cloudreve/Cloudreve/v4/ent/giftcode"
 	"github.com/cloudreve/Cloudreve/v4/ent/group"
 	"github.com/cloudreve/Cloudreve/v4/ent/invitationcode"
 	"github.com/cloudreve/Cloudreve/v4/ent/metadata"
@@ -30,6 +32,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/storagepolicy"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
+	"github.com/cloudreve/Cloudreve/v4/ent/usergrant"
 )
 
 // ent aliases to avoid import conflicts in user's code.
@@ -91,11 +94,13 @@ func checkColumn(table, column string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
 			aclentry.Table:       aclentry.ValidColumn,
+			credittxn.Table:      credittxn.ValidColumn,
 			davaccount.Table:     davaccount.ValidColumn,
 			directlink.Table:     directlink.ValidColumn,
 			entity.Table:         entity.ValidColumn,
 			file.Table:           file.ValidColumn,
 			fsevent.Table:        fsevent.ValidColumn,
+			giftcode.Table:       giftcode.ValidColumn,
 			group.Table:          group.ValidColumn,
 			invitationcode.Table: invitationcode.ValidColumn,
 			metadata.Table:       metadata.ValidColumn,
@@ -108,6 +113,7 @@ func checkColumn(table, column string) error {
 			storagepolicy.Table:  storagepolicy.ValidColumn,
 			task.Table:           task.ValidColumn,
 			user.Table:           user.ValidColumn,
+			usergrant.Table:      usergrant.ValidColumn,
 		})
 	})
 	return columnCheck(table, column)

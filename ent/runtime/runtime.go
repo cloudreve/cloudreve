@@ -6,11 +6,13 @@ import (
 	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/ent/aclentry"
+	"github.com/cloudreve/Cloudreve/v4/ent/credittxn"
 	"github.com/cloudreve/Cloudreve/v4/ent/davaccount"
 	"github.com/cloudreve/Cloudreve/v4/ent/directlink"
 	"github.com/cloudreve/Cloudreve/v4/ent/entity"
 	"github.com/cloudreve/Cloudreve/v4/ent/file"
 	"github.com/cloudreve/Cloudreve/v4/ent/fsevent"
+	"github.com/cloudreve/Cloudreve/v4/ent/giftcode"
 	"github.com/cloudreve/Cloudreve/v4/ent/group"
 	"github.com/cloudreve/Cloudreve/v4/ent/invitationcode"
 	"github.com/cloudreve/Cloudreve/v4/ent/metadata"
@@ -24,6 +26,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/storagepolicy"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
+	"github.com/cloudreve/Cloudreve/v4/ent/usergrant"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 )
 
@@ -50,6 +53,25 @@ func init() {
 	aclentry.DefaultUpdatedAt = aclentryDescUpdatedAt.Default.(func() time.Time)
 	// aclentry.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	aclentry.UpdateDefaultUpdatedAt = aclentryDescUpdatedAt.UpdateDefault.(func() time.Time)
+	credittxnMixin := schema.CreditTxn{}.Mixin()
+	credittxnMixinHooks0 := credittxnMixin[0].Hooks()
+	credittxn.Hooks[0] = credittxnMixinHooks0[0]
+	credittxnMixinInters0 := credittxnMixin[0].Interceptors()
+	credittxn.Interceptors[0] = credittxnMixinInters0[0]
+	credittxnMixinFields0 := credittxnMixin[0].Fields()
+	_ = credittxnMixinFields0
+	credittxnFields := schema.CreditTxn{}.Fields()
+	_ = credittxnFields
+	// credittxnDescCreatedAt is the schema descriptor for created_at field.
+	credittxnDescCreatedAt := credittxnMixinFields0[0].Descriptor()
+	// credittxn.DefaultCreatedAt holds the default value on creation for the created_at field.
+	credittxn.DefaultCreatedAt = credittxnDescCreatedAt.Default.(func() time.Time)
+	// credittxnDescUpdatedAt is the schema descriptor for updated_at field.
+	credittxnDescUpdatedAt := credittxnMixinFields0[1].Descriptor()
+	// credittxn.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	credittxn.DefaultUpdatedAt = credittxnDescUpdatedAt.Default.(func() time.Time)
+	// credittxn.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	credittxn.UpdateDefaultUpdatedAt = credittxnDescUpdatedAt.UpdateDefault.(func() time.Time)
 	davaccountMixin := schema.DavAccount{}.Mixin()
 	davaccountMixinHooks0 := davaccountMixin[0].Hooks()
 	davaccount.Hooks[0] = davaccountMixinHooks0[0]
@@ -150,6 +172,25 @@ func init() {
 	fsevent.DefaultUpdatedAt = fseventDescUpdatedAt.Default.(func() time.Time)
 	// fsevent.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	fsevent.UpdateDefaultUpdatedAt = fseventDescUpdatedAt.UpdateDefault.(func() time.Time)
+	giftcodeMixin := schema.GiftCode{}.Mixin()
+	giftcodeMixinHooks0 := giftcodeMixin[0].Hooks()
+	giftcode.Hooks[0] = giftcodeMixinHooks0[0]
+	giftcodeMixinInters0 := giftcodeMixin[0].Interceptors()
+	giftcode.Interceptors[0] = giftcodeMixinInters0[0]
+	giftcodeMixinFields0 := giftcodeMixin[0].Fields()
+	_ = giftcodeMixinFields0
+	giftcodeFields := schema.GiftCode{}.Fields()
+	_ = giftcodeFields
+	// giftcodeDescCreatedAt is the schema descriptor for created_at field.
+	giftcodeDescCreatedAt := giftcodeMixinFields0[0].Descriptor()
+	// giftcode.DefaultCreatedAt holds the default value on creation for the created_at field.
+	giftcode.DefaultCreatedAt = giftcodeDescCreatedAt.Default.(func() time.Time)
+	// giftcodeDescUpdatedAt is the schema descriptor for updated_at field.
+	giftcodeDescUpdatedAt := giftcodeMixinFields0[1].Descriptor()
+	// giftcode.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	giftcode.DefaultUpdatedAt = giftcodeDescUpdatedAt.Default.(func() time.Time)
+	// giftcode.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	giftcode.UpdateDefaultUpdatedAt = giftcodeDescUpdatedAt.UpdateDefault.(func() time.Time)
 	groupMixin := schema.Group{}.Mixin()
 	groupMixinHooks0 := groupMixin[0].Hooks()
 	group.Hooks[0] = groupMixinHooks0[0]
@@ -478,10 +519,33 @@ func init() {
 	userDescStorage := userFields[7].Descriptor()
 	// user.DefaultStorage holds the default value on creation for the storage field.
 	user.DefaultStorage = userDescStorage.Default.(int64)
+	// userDescCredits is the schema descriptor for credits field.
+	userDescCredits := userFields[8].Descriptor()
+	// user.DefaultCredits holds the default value on creation for the credits field.
+	user.DefaultCredits = userDescCredits.Default.(int64)
 	// userDescSettings is the schema descriptor for settings field.
-	userDescSettings := userFields[10].Descriptor()
+	userDescSettings := userFields[11].Descriptor()
 	// user.DefaultSettings holds the default value on creation for the settings field.
 	user.DefaultSettings = userDescSettings.Default.(*types.UserSetting)
+	usergrantMixin := schema.UserGrant{}.Mixin()
+	usergrantMixinHooks0 := usergrantMixin[0].Hooks()
+	usergrant.Hooks[0] = usergrantMixinHooks0[0]
+	usergrantMixinInters0 := usergrantMixin[0].Interceptors()
+	usergrant.Interceptors[0] = usergrantMixinInters0[0]
+	usergrantMixinFields0 := usergrantMixin[0].Fields()
+	_ = usergrantMixinFields0
+	usergrantFields := schema.UserGrant{}.Fields()
+	_ = usergrantFields
+	// usergrantDescCreatedAt is the schema descriptor for created_at field.
+	usergrantDescCreatedAt := usergrantMixinFields0[0].Descriptor()
+	// usergrant.DefaultCreatedAt holds the default value on creation for the created_at field.
+	usergrant.DefaultCreatedAt = usergrantDescCreatedAt.Default.(func() time.Time)
+	// usergrantDescUpdatedAt is the schema descriptor for updated_at field.
+	usergrantDescUpdatedAt := usergrantMixinFields0[1].Descriptor()
+	// usergrant.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	usergrant.DefaultUpdatedAt = usergrantDescUpdatedAt.Default.(func() time.Time)
+	// usergrant.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	usergrant.UpdateDefaultUpdatedAt = usergrantDescUpdatedAt.UpdateDefault.(func() time.Time)
 }
 
 const (
