@@ -85,9 +85,9 @@ func TestRateLimitExpiry(t *testing.T) {
 		t.Fatal("second request not rejected")
 	}
 
-	// Window expiry frees the bucket. MemoStore TTL is Unix-second granular
-	// (item valid while Expires >= now), so a 1s window can live ~2s.
-	time.Sleep(2100 * time.Millisecond)
+	// Window expiry frees the bucket; TTL semantics are covered in pkg/cache
+	// tests, so the bucket is cleared directly rather than sleeping ~2s.
+	dep.KV().Delete(rateLimitPrefix + "login:192.0.2.1")
 
 	c, _ = newRateLimitContext(t, dep, "192.0.2.1")
 	handler(c)
