@@ -263,90 +263,51 @@ func (e *exifExtractor) Extract(ctx context.Context, ext string, source entityso
 	return metas, nil
 }
 
+// exifTagTable maps EXIF tag names (in fallback order) to MediaMeta keys.
+// skipUint entries ignore pure-integer values, which vendor APIs sometimes
+// return instead of the real string value.
+var exifTagTable = []struct {
+	keys     []string
+	metaKey  string
+	clean    func(string) string
+	skipUint bool
+}{
+	{[]string{"Artist"}, Artist, SanitizeMeta, false},
+	{[]string{"Copyright"}, Copyright, SanitizeString, false},
+	{[]string{"CameraModel", "Model", "UniqueCameraModel"}, CameraModel, SanitizeString, true},
+	{[]string{"CameraMake", "Make"}, CameraMake, SanitizeString, true},
+	{[]string{"CameraOwnerName"}, CameraOwnerName, SanitizeString, false},
+	{[]string{"BodySerialNumber"}, BodySerialNumber, SanitizeString, false},
+	{[]string{"LensMake"}, LensMake, SanitizeString, true},
+	{[]string{"LensModel", "Lens"}, LensModel, SanitizeString, true},
+	{[]string{"Software"}, Software, SanitizeString, false},
+	{[]string{"ISOSpeedRatings"}, ISOSpeedRatings, nil, false},
+	{[]string{"PixelXDimension", "ImageWidth"}, PixelXDimension, nil, false},
+	{[]string{"PixelYDimension", "ImageLength"}, PixelYDimension, nil, false},
+	{[]string{"ImageDescription"}, ImageDescription, SanitizeDescription, false},
+	{[]string{"ProjectionType"}, ProjectionType, SanitizeString, false},
+}
+
+func extractExifTags(metas []driver.MediaMeta, exifMap map[string]string, from, to int) []driver.MediaMeta {
+	for _, e := range exifTagTable[from:to] {
+		for _, k := range e.keys {
+			v, ok := exifMap[k]
+			if !ok || (e.skipUint && IsUInt(v)) {
+				continue
+			}
+			if e.clean != nil {
+				v = e.clean(v)
+			}
+			metas = append(metas, driver.MediaMeta{Key: e.metaKey, Value: v})
+			break
+		}
+	}
+	return metas
+}
+
 func ExtractExifMap(exifMap map[string]string, gpsTime time.Time) []driver.MediaMeta {
 	metas := make([]driver.MediaMeta, 0)
-	if value, ok := exifMap["Artist"]; ok {
-		metas = append(metas, driver.MediaMeta{
-			Key:   Artist,
-			Value: SanitizeMeta(value),
-		})
-	}
-
-	if value, ok := exifMap["Copyright"]; ok {
-		metas = append(metas, driver.MediaMeta{
-			Key:   Copyright,
-			Value: SanitizeString(value),
-		})
-	}
-
-	cameraMode := ""
-	if value, ok := exifMap["CameraModel"]; ok && !IsUInt(value) {
-		cameraMode = SanitizeString(value)
-	} else if value, ok = exifMap["Model"]; ok && !IsUInt(value) {
-		cameraMode = SanitizeString(value)
-	} else if value, ok = exifMap["UniqueCameraModel"]; ok && !IsUInt(value) {
-		cameraMode = SanitizeString(value)
-	}
-	if cameraMode != "" {
-		metas = append(metas, driver.MediaMeta{
-			Key:   CameraModel,
-			Value: cameraMode,
-		})
-	}
-
-	cameraMake := ""
-	if value, ok := exifMap["CameraMake"]; ok && !IsUInt(value) {
-		cameraMake = SanitizeString(value)
-	} else if value, ok = exifMap["Make"]; ok && !IsUInt(value) {
-		cameraMake = SanitizeString(value)
-	}
-	if cameraMake != "" {
-		metas = append(metas, driver.MediaMeta{
-			Key:   CameraMake,
-			Value: cameraMake,
-		})
-	}
-
-	if value, ok := exifMap["CameraOwnerName"]; ok {
-		metas = append(metas, driver.MediaMeta{
-			Key:   CameraOwnerName,
-			Value: SanitizeString(value),
-		})
-	}
-
-	if value, ok := exifMap["BodySerialNumber"]; ok {
-		metas = append(metas, driver.MediaMeta{
-			Key:   BodySerialNumber,
-			Value: SanitizeString(value),
-		})
-	}
-
-	if value, ok := exifMap["LensMake"]; ok && !IsUInt(value) {
-		metas = append(metas, driver.MediaMeta{
-			Key:   LensMake,
-			Value: SanitizeString(value),
-		})
-	}
-
-	lens := ""
-	if value, ok := exifMap["LensModel"]; ok && !IsUInt(value) {
-		lens = SanitizeString(value)
-	} else if value, ok = exifMap["Lens"]; ok && !IsUInt(value) {
-		lens = SanitizeString(value)
-	}
-	if lens != "" {
-		metas = append(metas, driver.MediaMeta{
-			Key:   LensModel,
-			Value: lens,
-		})
-	}
-
-	if value, ok := exifMap["Software"]; ok {
-		metas = append(metas, driver.MediaMeta{
-			Key:   Software,
-			Value: SanitizeString(value),
-		})
-	}
+	metas = extractExifTags(metas, exifMap, 0, 9)
 
 	if value, ok := exifMap["ExposureTime"]; ok {
 		value = strings.TrimSuffix(value, " sec.")
@@ -427,38 +388,9 @@ func ExtractExifMap(exifMap map[string]string, gpsTime time.Time) []driver.Media
 		})
 	}
 
-	if value, ok := exifMap["ISOSpeedRatings"]; ok {
-		metas = append(metas, driver.MediaMeta{
-			Key:   ISOSpeedRatings,
-			Value: value,
-		})
-	}
+	metas = extractExifTags(metas, exifMap, 9, 10)
 
-	width := ""
-	if value, ok := exifMap["PixelXDimension"]; ok {
-		width = value
-	} else if value, ok := exifMap["ImageWidth"]; ok {
-		width = value
-	}
-	if width != "" {
-		metas = append(metas, driver.MediaMeta{
-			Key:   PixelXDimension,
-			Value: width,
-		})
-	}
-
-	height := ""
-	if value, ok := exifMap["PixelYDimension"]; ok {
-		height = value
-	} else if value, ok := exifMap["ImageLength"]; ok {
-		height = value
-	}
-	if height != "" {
-		metas = append(metas, driver.MediaMeta{
-			Key:   PixelYDimension,
-			Value: height,
-		})
-	}
+	metas = extractExifTags(metas, exifMap, 10, 12)
 
 	orientation := "1"
 	if value, ok := exifMap["Orientation"]; ok {
@@ -498,19 +430,7 @@ func ExtractExifMap(exifMap map[string]string, gpsTime time.Time) []driver.Media
 		})
 	}
 
-	if value, ok := exifMap["ImageDescription"]; ok {
-		metas = append(metas, driver.MediaMeta{
-			Key:   ImageDescription,
-			Value: SanitizeDescription(value),
-		})
-	}
-
-	if value, ok := exifMap["ProjectionType"]; ok {
-		metas = append(metas, driver.MediaMeta{
-			Key:   ProjectionType,
-			Value: SanitizeString(value),
-		})
-	}
+	metas = extractExifTags(metas, exifMap, 12, 14)
 
 	return metas
 }
