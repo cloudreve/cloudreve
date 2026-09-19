@@ -198,6 +198,7 @@ export interface GlobalStateSlice {
   // Extract archive dialog
   extractArchiveDialogOpen?: boolean;
   extractArchiveDialogFile?: FileResponse;
+  extractArchiveDialogFiles?: FileResponse[];
   extractArchiveDialogMask?: string[];
   extractArchiveDialogEncoding?: string;
 
@@ -430,15 +431,17 @@ export const globalStateSlice = createSlice({
     },
     setExtractArchiveDialog: (
       state,
-      action: PayloadAction<{ open: boolean; file?: FileResponse; mask?: string[]; encoding?: string }>,
+      action: PayloadAction<{ open: boolean; file?: FileResponse; files?: FileResponse[]; mask?: string[]; encoding?: string }>,
     ) => {
       state.extractArchiveDialogOpen = action.payload.open;
       state.extractArchiveDialogFile = action.payload.file;
+      state.extractArchiveDialogFiles = action.payload.files;
       state.extractArchiveDialogMask = action.payload.mask;
       state.extractArchiveDialogEncoding = action.payload.encoding;
     },
     closeExtractArchiveDialog: (state) => {
       state.extractArchiveDialogOpen = false;
+      state.extractArchiveDialogFiles = undefined;
       state.extractArchiveDialogMask = undefined;
       state.extractArchiveDialogEncoding = undefined;
     },

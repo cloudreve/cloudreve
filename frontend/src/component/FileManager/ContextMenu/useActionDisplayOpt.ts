@@ -13,6 +13,28 @@ import { FileManagerIndex } from "../FileManager.tsx";
 
 const supportedArchiveTypes = ["zip", "gz", "xz", "tar", "rar", "7z", "bz2"];
 
+// archiveVolumeSetKey returns the volume-set key of a file name following the
+// same conventions as the backend (partN.rar, .rNN), or null when the name is
+// not a recognizable multi-volume member.
+const archiveVolumeSetKey = (name: string): string | null => {
+  const l = name.toLowerCase();
+  let m = /^(.+)\.part\d+\.rar$/.exec(l);
+  if (m) return `rar:${m[1]}`;
+  m = /^(.+)\.r\d+$/.exec(l);
+  if (m) return `rarold:${m[1]}`;
+  if (l.endsWith(".rar")) return `rarold:${l.slice(0, -4)}`;
+  return null;
+};
+
+// isSingleVolumeSet is true when all files are volumes of the same archive set.
+export const isSingleVolumeSet = (files: FileResponse[]): boolean => {
+  if (files.length < 2 || files.some((f) => f.type != FileType.file)) {
+    return false;
+  }
+  const key = archiveVolumeSetKey(files[0].name);
+  return key != null && files.every((f) => archiveVolumeSetKey(f.name) === key);
+};
+
 export const canManageVersion = (file: FileResponse, bs: Boolset) => {
   return (
     file.type == FileType.file &&
@@ -267,12 +289,11 @@ export const getActionOpt = (
     display.orCapability?.enabled(NavigatorCapability.enter_folder) &&
     display.allReadable;
   display.showExtractArchive =
-    targets.length == 1 &&
     display.hasFile &&
     display.showDownload &&
     !!currentUser &&
     groupBs.enabled(GroupPermission.archive_task) &&
-    supportedArchiveTypes.includes(firstFileSuffix ?? "");
+    ((targets.length == 1 && supportedArchiveTypes.includes(firstFileSuffix ?? "")) || isSingleVolumeSet(targets));
   display.showTorrentRemoteDownload =
     targets.length == 1 &&
     display.hasFile &&

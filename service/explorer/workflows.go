@@ -260,8 +260,17 @@ func (service *ArchiveWorkflowService) CreateExtractTask(c *gin.Context) (*TaskR
 		return nil, serializer.NewError(serializer.CodeParamErr, "Invalid destination", err)
 	}
 
+	// When multiple sources form a single multi-volume archive set, extract
+	// from the first volume and pass all volumes to the task.
+	src := service.Src[0]
+	var volumes []string
+	if first, ok := workflows.FirstVolumeURI(service.Src); ok {
+		src = first
+		volumes = service.Src
+	}
+
 	// Create task
-	t, err := workflows.NewExtractArchiveTask(c, service.Src[0], service.Dst, service.Encoding, service.Password, service.FileMask)
+	t, err := workflows.NewExtractArchiveTask(c, src, service.Dst, service.Encoding, service.Password, service.FileMask, volumes)
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeCreateTaskError, "Failed to create task", err)
 	}

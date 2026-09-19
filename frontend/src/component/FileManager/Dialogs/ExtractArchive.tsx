@@ -29,6 +29,7 @@ const ExtractArchive = () => {
 
   const open = useAppSelector((state) => state.globalState.extractArchiveDialogOpen);
   const target = useAppSelector((state) => state.globalState.extractArchiveDialogFile);
+  const targets = useAppSelector((state) => state.globalState.extractArchiveDialogFiles);
   const current = useAppSelector((state) => state.fileManager[FileManagerIndex.main].pure_path);
   const mask = useAppSelector((state) => state.globalState.extractArchiveDialogMask);
   const predefinedEncoding = useAppSelector((state) => state.globalState.extractArchiveDialogEncoding);
@@ -44,7 +45,7 @@ const ExtractArchive = () => {
 
   const showPasswordOption = useMemo(() => {
     const ext = fileExtension(target?.name ?? "");
-    return ext === "zip" || ext === "7z";
+    return ext === "zip" || ext === "7z" || ext === "rar";
   }, [target?.name]);
 
   useEffect(() => {
@@ -65,7 +66,7 @@ const ExtractArchive = () => {
     setLoading(true);
     dispatch(
       sendExtractArchive({
-        src: [getFileLinkedUri(target)],
+        src: (targets ?? [target]).map((f) => getFileLinkedUri(f)),
         dst: path,
         encoding: showEncodingOption && encoding != defaultEncodingValue ? encoding : undefined,
         password: showPasswordOption && password ? password : undefined,
@@ -83,7 +84,7 @@ const ExtractArchive = () => {
       .finally(() => {
         setLoading(false);
       });
-  }, [target, encoding, path, showPasswordOption, showEncodingOption, password, mask]);
+  }, [target, targets, encoding, path, showPasswordOption, showEncodingOption, password, mask]);
 
   return (
     <DraggableDialog
