@@ -94,7 +94,7 @@ func (f *FfmpegGenerator) Generate(ctx context.Context, es entitysource.EntitySo
 
 	if err := cmd.Run(); err != nil {
 		f.l.Warning("Failed to invoke ffmpeg: %s", stdErr.String())
-		return &Result{Path: tempOutputPath}, fmt.Errorf("failed to invoke ffmpeg: %w, raw output: %s", err, stdErr.String())
+		return &Result{Path: tempOutputPath}, fmt.Errorf("failed to invoke ffmpeg: %w, raw output: %s: %w", err, stdErr.String(), ErrPassThrough)
 	}
 
 	return &Result{Path: tempOutputPath}, nil

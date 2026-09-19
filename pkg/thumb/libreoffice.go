@@ -79,7 +79,7 @@ func (l *LibreOfficeGenerator) Generate(ctx context.Context, es entitysource.Ent
 
 	if err := cmd.Run(); err != nil {
 		l.l.Warning("Failed to invoke LibreOffice: %s", stdErr.String())
-		return &Result{Path: tempOutputPath}, fmt.Errorf("failed to invoke LibreOffice: %w, raw output: %s", err, stdErr.String())
+		return &Result{Path: tempOutputPath}, fmt.Errorf("failed to invoke LibreOffice: %w, raw output: %s: %w", err, stdErr.String(), ErrPassThrough)
 	}
 
 	return &Result{

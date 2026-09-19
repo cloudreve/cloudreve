@@ -105,7 +105,10 @@ func (v *VipsGenerator) Generate(ctx context.Context, es entitysource.EntitySour
 
 	if err := cmd.Run(); err != nil {
 		v.l.Warning("Failed to invoke vips: %s", vipsErr.String())
-		return &Result{Path: tempPath}, fmt.Errorf("failed to invoke vips: %w, raw output: %s", err, vipsErr.String())
+		// A non-zero exit usually means vips cannot decode the format (e.g.
+		// psd, html). Pass through so later generators can try instead of
+		// failing the whole pipeline.
+		return &Result{Path: tempPath}, fmt.Errorf("failed to invoke vips: %w, raw output: %s: %w", err, vipsErr.String(), ErrPassThrough)
 	}
 
 	return &Result{Path: tempPath}, nil
