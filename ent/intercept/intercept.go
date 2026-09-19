@@ -28,6 +28,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/predicate"
 	"github.com/cloudreve/Cloudreve/v4/ent/setting"
 	"github.com/cloudreve/Cloudreve/v4/ent/share"
+	"github.com/cloudreve/Cloudreve/v4/ent/sku"
 	"github.com/cloudreve/Cloudreve/v4/ent/storagepolicy"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
@@ -603,6 +604,33 @@ func (f TraverseShare) Traverse(ctx context.Context, q ent.Query) error {
 	return fmt.Errorf("unexpected query type %T. expect *ent.ShareQuery", q)
 }
 
+// The SkuFunc type is an adapter to allow the use of ordinary function as a Querier.
+type SkuFunc func(context.Context, *ent.SkuQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f SkuFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.SkuQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.SkuQuery", q)
+}
+
+// The TraverseSku type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseSku func(context.Context, *ent.SkuQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseSku) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseSku) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.SkuQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.SkuQuery", q)
+}
+
 // The StoragePolicyFunc type is an adapter to allow the use of ordinary function as a Querier.
 type StoragePolicyFunc func(context.Context, *ent.StoragePolicyQuery) (ent.Value, error)
 
@@ -752,6 +780,8 @@ func NewQuery(q ent.Query) (Query, error) {
 		return &query[*ent.SettingQuery, predicate.Setting, setting.OrderOption]{typ: ent.TypeSetting, tq: q}, nil
 	case *ent.ShareQuery:
 		return &query[*ent.ShareQuery, predicate.Share, share.OrderOption]{typ: ent.TypeShare, tq: q}, nil
+	case *ent.SkuQuery:
+		return &query[*ent.SkuQuery, predicate.Sku, sku.OrderOption]{typ: ent.TypeSku, tq: q}, nil
 	case *ent.StoragePolicyQuery:
 		return &query[*ent.StoragePolicyQuery, predicate.StoragePolicy, storagepolicy.OrderOption]{typ: ent.TypeStoragePolicy, tq: q}, nil
 	case *ent.TaskQuery:

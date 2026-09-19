@@ -10,6 +10,8 @@ import SessionManager from "../../../session";
 import { GroupBS } from "../../../session/utils.ts";
 import BoxMultiple from "../../Icons/BoxMultiple.tsx";
 import BoxMultipleFilled from "../../Icons/BoxMultipleFilled.tsx";
+import BuildingShop from "../../Icons/BuildingShop.tsx";
+import BuildingShopFilled from "../../Icons/BuildingShopFilled.tsx";
 import CloudDownload from "../../Icons/CloudDownload.tsx";
 import CloudDownloadOutlined from "../../Icons/CloudDownloadOutlined.tsx";
 import CubeSync from "../../Icons/CubeSync.tsx";
@@ -82,6 +84,12 @@ const RemoteDownloadNavigationItem: NavigationItem = {
   label: "navbar.remoteDownload",
   icon: [CloudDownload, CloudDownloadOutlined],
   path: "/downloads",
+};
+
+const ShopNavigationItem: NavigationItem = {
+  label: "navbar.shop",
+  icon: [BuildingShopFilled, BuildingShop],
+  path: "/shop",
 };
 
 export const SideNavItemComponent = ({ item }: { item: NavigationItem }) => {
@@ -274,6 +282,7 @@ const PageNavigation = () => {
             {connectEnabled && <SideNavItemComponent item={ConnectNavigationItem} />}
             <SideNavItemComponent item={TaskNavigationItem} />
             {remoteDownloadEnabled && <SideNavItemComponent item={RemoteDownloadNavigationItem} />}
+            <SideNavItemComponent item={ShopNavigationItem} />
           </>
         </Box>
       )}

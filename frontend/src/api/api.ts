@@ -38,6 +38,7 @@ import {
   QueueMetric,
   SetSettingService,
   Share as ShareEnt,
+  Sku,
   Task,
   TestNodeDownloaderService,
   TestNodeService,
@@ -112,6 +113,7 @@ import {
   RefreshTokenRequest,
   ResetPasswordService,
   SendResetEmailService,
+  ShopSku,
   SignUpService,
   Token,
   TwoFALoginRequest,
@@ -2672,6 +2674,76 @@ export function adminDeleteGiftCode(id: number): ThunkResponse<void> {
     return await dispatch(
       send(
         `/admin/vas/giftcode/${id}`,
+        { method: "DELETE" },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function getShopSkus(): ThunkResponse<ShopSku[]> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/user/shop/skus",
+        { method: "GET" },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function purchaseSku(sku: string): ThunkResponse<CreditInfo> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/user/shop/purchase",
+        { method: "POST", data: { sku } },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function adminListSkus(): ThunkResponse<Sku[]> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/admin/vas/sku",
+        { method: "GET" },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function adminUpsertSku(sku: Sku): ThunkResponse<Sku> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        sku.id > 0 ? `/admin/vas/sku/${sku.id}` : "/admin/vas/sku",
+        { method: "PUT", data: { sku } },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function adminDeleteSku(id: number): ThunkResponse<void> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/admin/vas/sku/${id}`,
         { method: "DELETE" },
         {
           ...defaultOpts,

@@ -1322,6 +1322,29 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 						controllers.FromJSON[adminsvc.AdjustCreditService](adminsvc.AdjustCreditParamCtx{}),
 						controllers.AdminAdjustCredit,
 					)
+					// 列出商品
+					vas.GET("sku",
+						controllers.FromQuery[adminsvc.SkuListService](adminsvc.SkuListParamCtx{}),
+						controllers.AdminListSkus,
+					)
+					// 创建商品
+					vas.PUT("sku",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
+						controllers.FromJSON[adminsvc.SkuUpsertService](adminsvc.SkuUpsertParamCtx{}),
+						controllers.AdminCreateSku,
+					)
+					// 更新商品
+					vas.PUT("sku/:id",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
+						controllers.FromJSON[adminsvc.SkuUpsertService](adminsvc.SkuUpsertParamCtx{}),
+						controllers.AdminUpdateSku,
+					)
+					// 删除商品
+					vas.DELETE("sku/:id",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
+						controllers.FromUri[adminsvc.SingleSkuService](adminsvc.SingleSkuParamCtx{}),
+						controllers.AdminDeleteSku,
+					)
 				}
 
 				event := admin.Group("event", middleware.AdminSection(types.GroupPermissionAdminEvents))
@@ -1514,6 +1537,23 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 						middleware.RateLimitByIP("redeem", 20, time.Hour),
 						controllers.FromJSON[usersvc.RedeemGiftCodeService](usersvc.RedeemGiftCodeParamCtx{}),
 						controllers.UserRedeemGiftCode,
+					)
+				}
+
+				// 积分商城
+				shop := user.Group("shop")
+				{
+					// 列出商品
+					shop.GET("skus",
+						middleware.RequiredScopes(types.ScopeUserInfoRead),
+						controllers.FromQuery[usersvc.SkuListService](usersvc.SkuListParamCtx{}),
+						controllers.UserListSkus,
+					)
+					// 积分购买商品
+					shop.POST("purchase",
+						middleware.RequiredScopes(types.ScopeUserInfoWrite),
+						controllers.FromJSON[usersvc.PurchaseSkuService](usersvc.PurchaseSkuParamCtx{}),
+						controllers.UserPurchaseSku,
 					)
 				}
 			}

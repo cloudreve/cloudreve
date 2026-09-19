@@ -63,6 +63,9 @@ type Setting func(*sql.Selector)
 // Share is the predicate function for share builders.
 type Share func(*sql.Selector)
 
+// Sku is the predicate function for sku builders.
+type Sku func(*sql.Selector)
+
 // StoragePolicy is the predicate function for storagepolicy builders.
 type StoragePolicy func(*sql.Selector)
 

@@ -8,6 +8,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/credittxn"
 	"github.com/cloudreve/Cloudreve/v4/ent/giftcode"
+	"github.com/cloudreve/Cloudreve/v4/ent/sku"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
@@ -16,6 +17,22 @@ import (
 )
 
 type (
+	// SkuListService lists all products for admins.
+	SkuListService  struct{}
+	SkuListParamCtx struct{}
+
+	// SkuUpsertService creates or updates one product. ID zero creates.
+	SkuUpsertService struct {
+		Sku *ent.Sku `json:"sku" binding:"required"`
+	}
+	SkuUpsertParamCtx struct{}
+
+	// SingleSkuService targets one product by ID.
+	SingleSkuService struct {
+		ID int `uri:"id" json:"id" binding:"required"`
+	}
+	SingleSkuParamCtx struct{}
+
 	// GiftCodeListService lists gift codes for admins.
 	GiftCodeListService struct {
 		Page     int `form:"page" json:"page" binding:"required,min=1"`
@@ -90,6 +107,51 @@ func (service *SingleGiftCodeService) Delete(c *gin.Context) error {
 	dep := dependency.FromContext(c)
 	if err := dep.VasClient().DeleteGiftCodes(c, []int{service.ID}); err != nil {
 		return serializer.NewError(serializer.CodeDBError, "Failed to delete gift code", err)
+	}
+	return nil
+}
+
+func (service *SkuListService) List(c *gin.Context) ([]*ent.Sku, error) {
+	skus, err := dependency.FromContext(c).VasClient().ListSkus(c, false)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to list products", err)
+	}
+	return skus, nil
+}
+
+func (service *SkuUpsertService) Update(c *gin.Context) (*ent.Sku, error) {
+	return upsertSku(c, service.Sku)
+}
+
+func (service *SkuUpsertService) Create(c *gin.Context) (*ent.Sku, error) {
+	return upsertSku(c, service.Sku)
+}
+
+func upsertSku(c *gin.Context, s *ent.Sku) (*ent.Sku, error) {
+	dep := dependency.FromContext(c)
+
+	if s.Name == "" || s.Amount <= 0 || s.Duration < 0 || s.Price < 0 || s.Weight < 0 {
+		return nil, serializer.NewError(serializer.CodeParamErr, "Invalid product fields", nil)
+	}
+	if s.Points != nil && *s.Points <= 0 {
+		return nil, serializer.NewError(serializer.CodeParamErr, "Invalid points price", nil)
+	}
+	if s.Type == sku.TypeGroup {
+		if _, err := dep.GroupClient().GetByID(c, int(s.Amount)); err != nil {
+			return nil, serializer.NewError(serializer.CodeParamErr, "Invalid target group", err)
+		}
+	}
+
+	res, err := dep.VasClient().UpsertSku(c, s)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to save product", err)
+	}
+	return res, nil
+}
+
+func (service *SingleSkuService) Delete(c *gin.Context) error {
+	if err := dependency.FromContext(c).VasClient().DeleteSkus(c, []int{service.ID}); err != nil {
+		return serializer.NewError(serializer.CodeDBError, "Failed to delete product", err)
 	}
 	return nil
 }

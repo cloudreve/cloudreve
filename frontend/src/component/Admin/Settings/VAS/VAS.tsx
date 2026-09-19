@@ -17,10 +17,9 @@ import SettingForm from "../../../Pages/Setting/SettingForm.tsx";
 import { NoMarginHelperText, SettingSection, SettingSectionContent } from "../Settings.tsx";
 import { SettingContext } from "../SettingWrapper.tsx";
 import GiftCodes from "./GiftCodes.tsx";
-import GroupProducts from "./GroupProducts.tsx";
 import ManualCreditAdjust from "./ManualCreditAdjust.tsx";
 import PaymentProviders from "./PaymentProviders.tsx";
-import StorageProducts from "./StorageProducts.tsx";
+import SkuTable from "./SkuTable.tsx";
 const VAS = () => {
   const { t } = useTranslation("dashboard");
   const { formRef } = useContext(SettingContext);
@@ -170,7 +169,7 @@ const VAS = () => {
           <SettingSectionContent>
             <SettingForm lgWidth={12}>
               <FormControl fullWidth>
-                <StorageProducts />
+                <SkuTable type="storage" />
                 <NoMarginHelperText>{t("settings.storageProductsDes")}</NoMarginHelperText>
               </FormControl>
             </SettingForm>
@@ -184,7 +183,7 @@ const VAS = () => {
           <SettingSectionContent>
             <SettingForm lgWidth={12}>
               <FormControl fullWidth>
-                <GroupProducts />
+                <SkuTable type="group" />
                 <NoMarginHelperText>{t("settings.groupProductsDes")}</NoMarginHelperText>
               </FormControl>
             </SettingForm>

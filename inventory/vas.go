@@ -3,12 +3,14 @@ package inventory
 import (
 	"context"
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/credittxn"
 	"github.com/cloudreve/Cloudreve/v4/ent/giftcode"
 	"github.com/cloudreve/Cloudreve/v4/ent/schema"
+	"github.com/cloudreve/Cloudreve/v4/ent/sku"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
 	"github.com/cloudreve/Cloudreve/v4/ent/usergrant"
 	"github.com/cloudreve/Cloudreve/v4/pkg/conf"
@@ -16,8 +18,9 @@ import (
 )
 
 var (
-	ErrGiftCodeNotFound = errors.New("gift code not found")
-	ErrGiftCodeUsed     = errors.New("gift code already used")
+	ErrGiftCodeNotFound  = errors.New("gift code not found")
+	ErrGiftCodeUsed      = errors.New("gift code already used")
+	ErrSkuNotPurchasable = errors.New("sku not purchasable with points")
 )
 
 type (
@@ -49,6 +52,20 @@ type (
 		// upgrades whose users still sit on the granted group. Users without a
 		// recorded previous group fall back to defaultGroupID.
 		ExpireGrants(ctx context.Context, defaultGroupID int) error
+		// ListSkus returns products ordered by weight desc then id. When
+		// onlyEnabled is set, disabled products are excluded.
+		ListSkus(ctx context.Context, onlyEnabled bool) ([]*ent.Sku, error)
+		// GetSku returns one product by id.
+		GetSku(ctx context.Context, id int) (*ent.Sku, error)
+		// UpsertSku creates the product when its ID is zero, otherwise
+		// updates the mutable product fields.
+		UpsertSku(ctx context.Context, sku *ent.Sku) (*ent.Sku, error)
+		// DeleteSkus removes products by id.
+		DeleteSkus(ctx context.Context, ids []int) error
+		// PurchaseSku atomically debits the sku points price and applies its
+		// grant. Fails with ErrInsufficientPoints when the balance cannot
+		// cover the price, leaving the grant unapplied.
+		PurchaseSku(ctx context.Context, userID int, sku *ent.Sku) error
 	}
 
 	CreateGiftCodeParams struct {
@@ -228,15 +245,18 @@ func (c *vasClient) RedeemGiftCode(ctx context.Context, userID int, code string)
 }
 
 func (c *vasClient) applyGroupCode(ctx context.Context, userID int, gc *ent.GiftCode) error {
+	return c.applyGroupGrant(ctx, userID, int(gc.Amount), gc.Duration)
+}
+
+func (c *vasClient) applyGroupGrant(ctx context.Context, userID, targetGroup int, durationSeconds int64) error {
 	u, err := c.client.User.Get(ctx, userID)
 	if err != nil {
 		return err
 	}
-	targetGroup := int(gc.Amount)
 	if _, err := c.client.Group.Get(ctx, targetGroup); err != nil {
 		return err
 	}
-	if err := c.createGrant(ctx, userID, usergrant.TypeGroup, gc.Amount, gc.Duration, u.GroupUsers); err != nil {
+	if err := c.createGrant(ctx, userID, usergrant.TypeGroup, int64(targetGroup), durationSeconds, u.GroupUsers); err != nil {
 		return err
 	}
 	return c.client.User.Update().Where(user.ID(userID)).SetGroupUsers(targetGroup).Exec(ctx)
@@ -318,6 +338,83 @@ func (c *vasClient) ExpireGrants(ctx context.Context, defaultGroupID int) error 
 		}
 	}
 	return nil
+}
+
+func (c *vasClient) ListSkus(ctx context.Context, onlyEnabled bool) ([]*ent.Sku, error) {
+	q := c.client.Sku.Query()
+	if onlyEnabled {
+		q = q.Where(sku.Enabled(true))
+	}
+	return q.Order(ent.Desc(sku.FieldWeight), ent.Asc(sku.FieldID)).All(ctx)
+}
+
+func (c *vasClient) GetSku(ctx context.Context, id int) (*ent.Sku, error) {
+	return c.client.Sku.Get(ctx, id)
+}
+
+func (c *vasClient) UpsertSku(ctx context.Context, s *ent.Sku) (*ent.Sku, error) {
+	if s.ID == 0 {
+		return c.client.Sku.Create().
+			SetName(s.Name).
+			SetType(s.Type).
+			SetAmount(s.Amount).
+			SetDuration(s.Duration).
+			SetPrice(s.Price).
+			SetNillablePoints(s.Points).
+			SetLabel(s.Label).
+			SetDes(s.Des).
+			SetEnabled(s.Enabled).
+			SetWeight(s.Weight).
+			Save(ctx)
+	}
+	return c.client.Sku.UpdateOneID(s.ID).
+		SetName(s.Name).
+		SetType(s.Type).
+		SetAmount(s.Amount).
+		SetDuration(s.Duration).
+		SetPrice(s.Price).
+		SetNillablePoints(s.Points).
+		SetLabel(s.Label).
+		SetDes(s.Des).
+		SetEnabled(s.Enabled).
+		SetWeight(s.Weight).
+		Save(ctx)
+}
+
+func (c *vasClient) DeleteSkus(ctx context.Context, ids []int) error {
+	_, err := c.client.Sku.Delete().
+		Where(sku.IDIn(ids...)).
+		Exec(schema.SkipSoftDelete(ctx))
+	return err
+}
+
+func (c *vasClient) PurchaseSku(ctx context.Context, userID int, s *ent.Sku) error {
+	if s.Points == nil {
+		return ErrSkuNotPurchasable
+	}
+
+	txVc, tx, ctx, err := WithTx(ctx, c)
+	if err != nil {
+		return err
+	}
+
+	if err := txVc.CreditAdjust(ctx, userID, -*s.Points, credittxn.TypePurchase,
+		strconv.Itoa(s.ID), s.Name); err != nil {
+		_ = Rollback(tx)
+		return err
+	}
+
+	switch s.Type {
+	case sku.TypeStorage:
+		err = txVc.createGrant(ctx, userID, usergrant.TypeStorage, s.Amount, s.Duration, 0)
+	case sku.TypeGroup:
+		err = txVc.applyGroupGrant(ctx, userID, int(s.Amount), s.Duration)
+	}
+	if err != nil {
+		return Rollback(tx)
+	}
+
+	return Commit(tx)
 }
 
 func newGiftCodeString() string {

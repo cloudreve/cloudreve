@@ -1,8 +1,6 @@
 import {
   Box,
-  Button,
   Chip,
-  InputAdornment,
   Paper,
   Stack,
   Table,
@@ -13,15 +11,14 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import { useSnackbar } from "notistack";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getCredit, getCreditTxns, redeemGiftCode } from "../../../api/api.ts";
+import { getCredit, getCreditTxns } from "../../../api/api.ts";
 import { CreditInfo, CreditTxnList } from "../../../api/user.ts";
 import { useAppDispatch } from "../../../redux/hooks.ts";
 import { sizeToString } from "../../../util/index.ts";
 import FacebookCircularProgress from "../../Common/CircularProgress.tsx";
-import { DenseFilledTextField } from "../../Common/StyledComponents.tsx";
+import RedeemCodeInput from "../../Common/Form/RedeemCodeInput.tsx";
 import TablePagination from "../../Admin/Common/TablePagination.tsx";
 import { NoMarginHelperText, SettingSection, SettingSectionContent } from "../../Admin/Settings/Settings.tsx";
 import SettingForm from "./SettingForm.tsx";
@@ -29,13 +26,10 @@ import SettingForm from "./SettingForm.tsx";
 const FinanceSetting = () => {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
-  const { enqueueSnackbar } = useSnackbar();
   const [info, setInfo] = useState<CreditInfo | undefined>(undefined);
   const [txns, setTxns] = useState<CreditTxnList | undefined>(undefined);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [code, setCode] = useState("");
-  const [redeeming, setRedeeming] = useState(false);
 
   const loadInfo = () => {
     dispatch(getCredit()).then((res) => setInfo(res));
@@ -48,21 +42,6 @@ const FinanceSetting = () => {
   useEffect(() => {
     dispatch(getCreditTxns(page, pageSize)).then((res) => setTxns(res));
   }, [page, pageSize]);
-
-  const onRedeem = () => {
-    if (!code.trim()) {
-      return;
-    }
-    setRedeeming(true);
-    dispatch(redeemGiftCode(code.trim()))
-      .then(() => {
-        enqueueSnackbar(t("setting.giftCodeRedeemed"), { variant: "success" });
-        setCode("");
-        loadInfo();
-        dispatch(getCreditTxns(page, pageSize)).then((res) => setTxns(res));
-      })
-      .finally(() => setRedeeming(false));
-  };
 
   const txnReason = (type: string) => t(`setting.txnType.${type}`, { defaultValue: type });
 
@@ -120,21 +99,10 @@ const FinanceSetting = () => {
           )}
 
           <SettingForm title={t("setting.redeemGiftCode")} lgWidth={5}>
-            <DenseFilledTextField
-              fullWidth
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder={t("setting.giftCodePlaceholder")}
-              slotProps={{
-                input: {
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <Button variant="contained" onClick={onRedeem} disabled={redeeming || !code.trim()}>
-                        {t("setting.redeem")}
-                      </Button>
-                    </InputAdornment>
-                  ),
-                },
+            <RedeemCodeInput
+              onRedeemed={() => {
+                loadInfo();
+                dispatch(getCreditTxns(page, pageSize)).then((res) => setTxns(res));
               }}
             />
             <NoMarginHelperText>{t("setting.redeemGiftCodeDes")}</NoMarginHelperText>

@@ -31,6 +31,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/predicate"
 	"github.com/cloudreve/Cloudreve/v4/ent/setting"
 	"github.com/cloudreve/Cloudreve/v4/ent/share"
+	"github.com/cloudreve/Cloudreve/v4/ent/sku"
 	"github.com/cloudreve/Cloudreve/v4/ent/storagepolicy"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
@@ -69,6 +70,7 @@ const (
 	TypePasskey        = "Passkey"
 	TypeSetting        = "Setting"
 	TypeShare          = "Share"
+	TypeSku            = "Sku"
 	TypeStoragePolicy  = "StoragePolicy"
 	TypeTask           = "Task"
 	TypeUser           = "User"
@@ -18369,6 +18371,1268 @@ func (m *ShareMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown Share edge %s", name)
+}
+
+// SkuMutation represents an operation that mutates the Sku nodes in the graph.
+type SkuMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *int
+	created_at    *time.Time
+	updated_at    *time.Time
+	deleted_at    *time.Time
+	name          *string
+	_type         *sku.Type
+	amount        *int64
+	addamount     *int64
+	duration      *int64
+	addduration   *int64
+	price         *int64
+	addprice      *int64
+	points        *int64
+	addpoints     *int64
+	label         *string
+	des           *string
+	enabled       *bool
+	weight        *int
+	addweight     *int
+	clearedFields map[string]struct{}
+	done          bool
+	oldValue      func(context.Context) (*Sku, error)
+	predicates    []predicate.Sku
+}
+
+var _ ent.Mutation = (*SkuMutation)(nil)
+
+// skuOption allows management of the mutation configuration using functional options.
+type skuOption func(*SkuMutation)
+
+// newSkuMutation creates new mutation for the Sku entity.
+func newSkuMutation(c config, op Op, opts ...skuOption) *SkuMutation {
+	m := &SkuMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeSku,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withSkuID sets the ID field of the mutation.
+func withSkuID(id int) skuOption {
+	return func(m *SkuMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *Sku
+		)
+		m.oldValue = func(ctx context.Context) (*Sku, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().Sku.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withSku sets the old Sku of the mutation.
+func withSku(node *Sku) skuOption {
+	return func(m *SkuMutation) {
+		m.oldValue = func(context.Context) (*Sku, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m SkuMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m SkuMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *SkuMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *SkuMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Sku.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *SkuMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *SkuMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the Sku entity.
+// If the Sku object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SkuMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *SkuMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *SkuMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *SkuMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the Sku entity.
+// If the Sku object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SkuMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *SkuMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (m *SkuMutation) SetDeletedAt(t time.Time) {
+	m.deleted_at = &t
+}
+
+// DeletedAt returns the value of the "deleted_at" field in the mutation.
+func (m *SkuMutation) DeletedAt() (r time.Time, exists bool) {
+	v := m.deleted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeletedAt returns the old "deleted_at" field's value of the Sku entity.
+// If the Sku object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SkuMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
+	}
+	return oldValue.DeletedAt, nil
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (m *SkuMutation) ClearDeletedAt() {
+	m.deleted_at = nil
+	m.clearedFields[sku.FieldDeletedAt] = struct{}{}
+}
+
+// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
+func (m *SkuMutation) DeletedAtCleared() bool {
+	_, ok := m.clearedFields[sku.FieldDeletedAt]
+	return ok
+}
+
+// ResetDeletedAt resets all changes to the "deleted_at" field.
+func (m *SkuMutation) ResetDeletedAt() {
+	m.deleted_at = nil
+	delete(m.clearedFields, sku.FieldDeletedAt)
+}
+
+// SetName sets the "name" field.
+func (m *SkuMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *SkuMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the Sku entity.
+// If the Sku object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SkuMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *SkuMutation) ResetName() {
+	m.name = nil
+}
+
+// SetType sets the "type" field.
+func (m *SkuMutation) SetType(s sku.Type) {
+	m._type = &s
+}
+
+// GetType returns the value of the "type" field in the mutation.
+func (m *SkuMutation) GetType() (r sku.Type, exists bool) {
+	v := m._type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldType returns the old "type" field's value of the Sku entity.
+// If the Sku object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SkuMutation) OldType(ctx context.Context) (v sku.Type, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldType: %w", err)
+	}
+	return oldValue.Type, nil
+}
+
+// ResetType resets all changes to the "type" field.
+func (m *SkuMutation) ResetType() {
+	m._type = nil
+}
+
+// SetAmount sets the "amount" field.
+func (m *SkuMutation) SetAmount(i int64) {
+	m.amount = &i
+	m.addamount = nil
+}
+
+// Amount returns the value of the "amount" field in the mutation.
+func (m *SkuMutation) Amount() (r int64, exists bool) {
+	v := m.amount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAmount returns the old "amount" field's value of the Sku entity.
+// If the Sku object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SkuMutation) OldAmount(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAmount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAmount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAmount: %w", err)
+	}
+	return oldValue.Amount, nil
+}
+
+// AddAmount adds i to the "amount" field.
+func (m *SkuMutation) AddAmount(i int64) {
+	if m.addamount != nil {
+		*m.addamount += i
+	} else {
+		m.addamount = &i
+	}
+}
+
+// AddedAmount returns the value that was added to the "amount" field in this mutation.
+func (m *SkuMutation) AddedAmount() (r int64, exists bool) {
+	v := m.addamount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAmount resets all changes to the "amount" field.
+func (m *SkuMutation) ResetAmount() {
+	m.amount = nil
+	m.addamount = nil
+}
+
+// SetDuration sets the "duration" field.
+func (m *SkuMutation) SetDuration(i int64) {
+	m.duration = &i
+	m.addduration = nil
+}
+
+// Duration returns the value of the "duration" field in the mutation.
+func (m *SkuMutation) Duration() (r int64, exists bool) {
+	v := m.duration
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDuration returns the old "duration" field's value of the Sku entity.
+// If the Sku object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SkuMutation) OldDuration(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDuration is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDuration requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDuration: %w", err)
+	}
+	return oldValue.Duration, nil
+}
+
+// AddDuration adds i to the "duration" field.
+func (m *SkuMutation) AddDuration(i int64) {
+	if m.addduration != nil {
+		*m.addduration += i
+	} else {
+		m.addduration = &i
+	}
+}
+
+// AddedDuration returns the value that was added to the "duration" field in this mutation.
+func (m *SkuMutation) AddedDuration() (r int64, exists bool) {
+	v := m.addduration
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearDuration clears the value of the "duration" field.
+func (m *SkuMutation) ClearDuration() {
+	m.duration = nil
+	m.addduration = nil
+	m.clearedFields[sku.FieldDuration] = struct{}{}
+}
+
+// DurationCleared returns if the "duration" field was cleared in this mutation.
+func (m *SkuMutation) DurationCleared() bool {
+	_, ok := m.clearedFields[sku.FieldDuration]
+	return ok
+}
+
+// ResetDuration resets all changes to the "duration" field.
+func (m *SkuMutation) ResetDuration() {
+	m.duration = nil
+	m.addduration = nil
+	delete(m.clearedFields, sku.FieldDuration)
+}
+
+// SetPrice sets the "price" field.
+func (m *SkuMutation) SetPrice(i int64) {
+	m.price = &i
+	m.addprice = nil
+}
+
+// Price returns the value of the "price" field in the mutation.
+func (m *SkuMutation) Price() (r int64, exists bool) {
+	v := m.price
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPrice returns the old "price" field's value of the Sku entity.
+// If the Sku object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SkuMutation) OldPrice(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPrice is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPrice requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPrice: %w", err)
+	}
+	return oldValue.Price, nil
+}
+
+// AddPrice adds i to the "price" field.
+func (m *SkuMutation) AddPrice(i int64) {
+	if m.addprice != nil {
+		*m.addprice += i
+	} else {
+		m.addprice = &i
+	}
+}
+
+// AddedPrice returns the value that was added to the "price" field in this mutation.
+func (m *SkuMutation) AddedPrice() (r int64, exists bool) {
+	v := m.addprice
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearPrice clears the value of the "price" field.
+func (m *SkuMutation) ClearPrice() {
+	m.price = nil
+	m.addprice = nil
+	m.clearedFields[sku.FieldPrice] = struct{}{}
+}
+
+// PriceCleared returns if the "price" field was cleared in this mutation.
+func (m *SkuMutation) PriceCleared() bool {
+	_, ok := m.clearedFields[sku.FieldPrice]
+	return ok
+}
+
+// ResetPrice resets all changes to the "price" field.
+func (m *SkuMutation) ResetPrice() {
+	m.price = nil
+	m.addprice = nil
+	delete(m.clearedFields, sku.FieldPrice)
+}
+
+// SetPoints sets the "points" field.
+func (m *SkuMutation) SetPoints(i int64) {
+	m.points = &i
+	m.addpoints = nil
+}
+
+// Points returns the value of the "points" field in the mutation.
+func (m *SkuMutation) Points() (r int64, exists bool) {
+	v := m.points
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPoints returns the old "points" field's value of the Sku entity.
+// If the Sku object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SkuMutation) OldPoints(ctx context.Context) (v *int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPoints is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPoints requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPoints: %w", err)
+	}
+	return oldValue.Points, nil
+}
+
+// AddPoints adds i to the "points" field.
+func (m *SkuMutation) AddPoints(i int64) {
+	if m.addpoints != nil {
+		*m.addpoints += i
+	} else {
+		m.addpoints = &i
+	}
+}
+
+// AddedPoints returns the value that was added to the "points" field in this mutation.
+func (m *SkuMutation) AddedPoints() (r int64, exists bool) {
+	v := m.addpoints
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearPoints clears the value of the "points" field.
+func (m *SkuMutation) ClearPoints() {
+	m.points = nil
+	m.addpoints = nil
+	m.clearedFields[sku.FieldPoints] = struct{}{}
+}
+
+// PointsCleared returns if the "points" field was cleared in this mutation.
+func (m *SkuMutation) PointsCleared() bool {
+	_, ok := m.clearedFields[sku.FieldPoints]
+	return ok
+}
+
+// ResetPoints resets all changes to the "points" field.
+func (m *SkuMutation) ResetPoints() {
+	m.points = nil
+	m.addpoints = nil
+	delete(m.clearedFields, sku.FieldPoints)
+}
+
+// SetLabel sets the "label" field.
+func (m *SkuMutation) SetLabel(s string) {
+	m.label = &s
+}
+
+// Label returns the value of the "label" field in the mutation.
+func (m *SkuMutation) Label() (r string, exists bool) {
+	v := m.label
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLabel returns the old "label" field's value of the Sku entity.
+// If the Sku object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SkuMutation) OldLabel(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLabel is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLabel requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLabel: %w", err)
+	}
+	return oldValue.Label, nil
+}
+
+// ClearLabel clears the value of the "label" field.
+func (m *SkuMutation) ClearLabel() {
+	m.label = nil
+	m.clearedFields[sku.FieldLabel] = struct{}{}
+}
+
+// LabelCleared returns if the "label" field was cleared in this mutation.
+func (m *SkuMutation) LabelCleared() bool {
+	_, ok := m.clearedFields[sku.FieldLabel]
+	return ok
+}
+
+// ResetLabel resets all changes to the "label" field.
+func (m *SkuMutation) ResetLabel() {
+	m.label = nil
+	delete(m.clearedFields, sku.FieldLabel)
+}
+
+// SetDes sets the "des" field.
+func (m *SkuMutation) SetDes(s string) {
+	m.des = &s
+}
+
+// Des returns the value of the "des" field in the mutation.
+func (m *SkuMutation) Des() (r string, exists bool) {
+	v := m.des
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDes returns the old "des" field's value of the Sku entity.
+// If the Sku object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SkuMutation) OldDes(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDes is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDes requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDes: %w", err)
+	}
+	return oldValue.Des, nil
+}
+
+// ClearDes clears the value of the "des" field.
+func (m *SkuMutation) ClearDes() {
+	m.des = nil
+	m.clearedFields[sku.FieldDes] = struct{}{}
+}
+
+// DesCleared returns if the "des" field was cleared in this mutation.
+func (m *SkuMutation) DesCleared() bool {
+	_, ok := m.clearedFields[sku.FieldDes]
+	return ok
+}
+
+// ResetDes resets all changes to the "des" field.
+func (m *SkuMutation) ResetDes() {
+	m.des = nil
+	delete(m.clearedFields, sku.FieldDes)
+}
+
+// SetEnabled sets the "enabled" field.
+func (m *SkuMutation) SetEnabled(b bool) {
+	m.enabled = &b
+}
+
+// Enabled returns the value of the "enabled" field in the mutation.
+func (m *SkuMutation) Enabled() (r bool, exists bool) {
+	v := m.enabled
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEnabled returns the old "enabled" field's value of the Sku entity.
+// If the Sku object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SkuMutation) OldEnabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEnabled is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEnabled requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEnabled: %w", err)
+	}
+	return oldValue.Enabled, nil
+}
+
+// ResetEnabled resets all changes to the "enabled" field.
+func (m *SkuMutation) ResetEnabled() {
+	m.enabled = nil
+}
+
+// SetWeight sets the "weight" field.
+func (m *SkuMutation) SetWeight(i int) {
+	m.weight = &i
+	m.addweight = nil
+}
+
+// Weight returns the value of the "weight" field in the mutation.
+func (m *SkuMutation) Weight() (r int, exists bool) {
+	v := m.weight
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWeight returns the old "weight" field's value of the Sku entity.
+// If the Sku object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SkuMutation) OldWeight(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWeight is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWeight requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWeight: %w", err)
+	}
+	return oldValue.Weight, nil
+}
+
+// AddWeight adds i to the "weight" field.
+func (m *SkuMutation) AddWeight(i int) {
+	if m.addweight != nil {
+		*m.addweight += i
+	} else {
+		m.addweight = &i
+	}
+}
+
+// AddedWeight returns the value that was added to the "weight" field in this mutation.
+func (m *SkuMutation) AddedWeight() (r int, exists bool) {
+	v := m.addweight
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetWeight resets all changes to the "weight" field.
+func (m *SkuMutation) ResetWeight() {
+	m.weight = nil
+	m.addweight = nil
+}
+
+// Where appends a list predicates to the SkuMutation builder.
+func (m *SkuMutation) Where(ps ...predicate.Sku) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the SkuMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *SkuMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Sku, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *SkuMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *SkuMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (Sku).
+func (m *SkuMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *SkuMutation) Fields() []string {
+	fields := make([]string, 0, 13)
+	if m.created_at != nil {
+		fields = append(fields, sku.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, sku.FieldUpdatedAt)
+	}
+	if m.deleted_at != nil {
+		fields = append(fields, sku.FieldDeletedAt)
+	}
+	if m.name != nil {
+		fields = append(fields, sku.FieldName)
+	}
+	if m._type != nil {
+		fields = append(fields, sku.FieldType)
+	}
+	if m.amount != nil {
+		fields = append(fields, sku.FieldAmount)
+	}
+	if m.duration != nil {
+		fields = append(fields, sku.FieldDuration)
+	}
+	if m.price != nil {
+		fields = append(fields, sku.FieldPrice)
+	}
+	if m.points != nil {
+		fields = append(fields, sku.FieldPoints)
+	}
+	if m.label != nil {
+		fields = append(fields, sku.FieldLabel)
+	}
+	if m.des != nil {
+		fields = append(fields, sku.FieldDes)
+	}
+	if m.enabled != nil {
+		fields = append(fields, sku.FieldEnabled)
+	}
+	if m.weight != nil {
+		fields = append(fields, sku.FieldWeight)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *SkuMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case sku.FieldCreatedAt:
+		return m.CreatedAt()
+	case sku.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case sku.FieldDeletedAt:
+		return m.DeletedAt()
+	case sku.FieldName:
+		return m.Name()
+	case sku.FieldType:
+		return m.GetType()
+	case sku.FieldAmount:
+		return m.Amount()
+	case sku.FieldDuration:
+		return m.Duration()
+	case sku.FieldPrice:
+		return m.Price()
+	case sku.FieldPoints:
+		return m.Points()
+	case sku.FieldLabel:
+		return m.Label()
+	case sku.FieldDes:
+		return m.Des()
+	case sku.FieldEnabled:
+		return m.Enabled()
+	case sku.FieldWeight:
+		return m.Weight()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *SkuMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case sku.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case sku.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case sku.FieldDeletedAt:
+		return m.OldDeletedAt(ctx)
+	case sku.FieldName:
+		return m.OldName(ctx)
+	case sku.FieldType:
+		return m.OldType(ctx)
+	case sku.FieldAmount:
+		return m.OldAmount(ctx)
+	case sku.FieldDuration:
+		return m.OldDuration(ctx)
+	case sku.FieldPrice:
+		return m.OldPrice(ctx)
+	case sku.FieldPoints:
+		return m.OldPoints(ctx)
+	case sku.FieldLabel:
+		return m.OldLabel(ctx)
+	case sku.FieldDes:
+		return m.OldDes(ctx)
+	case sku.FieldEnabled:
+		return m.OldEnabled(ctx)
+	case sku.FieldWeight:
+		return m.OldWeight(ctx)
+	}
+	return nil, fmt.Errorf("unknown Sku field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *SkuMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case sku.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case sku.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case sku.FieldDeletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeletedAt(v)
+		return nil
+	case sku.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case sku.FieldType:
+		v, ok := value.(sku.Type)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetType(v)
+		return nil
+	case sku.FieldAmount:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAmount(v)
+		return nil
+	case sku.FieldDuration:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDuration(v)
+		return nil
+	case sku.FieldPrice:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPrice(v)
+		return nil
+	case sku.FieldPoints:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPoints(v)
+		return nil
+	case sku.FieldLabel:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLabel(v)
+		return nil
+	case sku.FieldDes:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDes(v)
+		return nil
+	case sku.FieldEnabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEnabled(v)
+		return nil
+	case sku.FieldWeight:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWeight(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Sku field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *SkuMutation) AddedFields() []string {
+	var fields []string
+	if m.addamount != nil {
+		fields = append(fields, sku.FieldAmount)
+	}
+	if m.addduration != nil {
+		fields = append(fields, sku.FieldDuration)
+	}
+	if m.addprice != nil {
+		fields = append(fields, sku.FieldPrice)
+	}
+	if m.addpoints != nil {
+		fields = append(fields, sku.FieldPoints)
+	}
+	if m.addweight != nil {
+		fields = append(fields, sku.FieldWeight)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *SkuMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case sku.FieldAmount:
+		return m.AddedAmount()
+	case sku.FieldDuration:
+		return m.AddedDuration()
+	case sku.FieldPrice:
+		return m.AddedPrice()
+	case sku.FieldPoints:
+		return m.AddedPoints()
+	case sku.FieldWeight:
+		return m.AddedWeight()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *SkuMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case sku.FieldAmount:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAmount(v)
+		return nil
+	case sku.FieldDuration:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddDuration(v)
+		return nil
+	case sku.FieldPrice:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPrice(v)
+		return nil
+	case sku.FieldPoints:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPoints(v)
+		return nil
+	case sku.FieldWeight:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddWeight(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Sku numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *SkuMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(sku.FieldDeletedAt) {
+		fields = append(fields, sku.FieldDeletedAt)
+	}
+	if m.FieldCleared(sku.FieldDuration) {
+		fields = append(fields, sku.FieldDuration)
+	}
+	if m.FieldCleared(sku.FieldPrice) {
+		fields = append(fields, sku.FieldPrice)
+	}
+	if m.FieldCleared(sku.FieldPoints) {
+		fields = append(fields, sku.FieldPoints)
+	}
+	if m.FieldCleared(sku.FieldLabel) {
+		fields = append(fields, sku.FieldLabel)
+	}
+	if m.FieldCleared(sku.FieldDes) {
+		fields = append(fields, sku.FieldDes)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *SkuMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *SkuMutation) ClearField(name string) error {
+	switch name {
+	case sku.FieldDeletedAt:
+		m.ClearDeletedAt()
+		return nil
+	case sku.FieldDuration:
+		m.ClearDuration()
+		return nil
+	case sku.FieldPrice:
+		m.ClearPrice()
+		return nil
+	case sku.FieldPoints:
+		m.ClearPoints()
+		return nil
+	case sku.FieldLabel:
+		m.ClearLabel()
+		return nil
+	case sku.FieldDes:
+		m.ClearDes()
+		return nil
+	}
+	return fmt.Errorf("unknown Sku nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *SkuMutation) ResetField(name string) error {
+	switch name {
+	case sku.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case sku.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case sku.FieldDeletedAt:
+		m.ResetDeletedAt()
+		return nil
+	case sku.FieldName:
+		m.ResetName()
+		return nil
+	case sku.FieldType:
+		m.ResetType()
+		return nil
+	case sku.FieldAmount:
+		m.ResetAmount()
+		return nil
+	case sku.FieldDuration:
+		m.ResetDuration()
+		return nil
+	case sku.FieldPrice:
+		m.ResetPrice()
+		return nil
+	case sku.FieldPoints:
+		m.ResetPoints()
+		return nil
+	case sku.FieldLabel:
+		m.ResetLabel()
+		return nil
+	case sku.FieldDes:
+		m.ResetDes()
+		return nil
+	case sku.FieldEnabled:
+		m.ResetEnabled()
+		return nil
+	case sku.FieldWeight:
+		m.ResetWeight()
+		return nil
+	}
+	return fmt.Errorf("unknown Sku field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *SkuMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *SkuMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *SkuMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *SkuMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *SkuMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *SkuMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *SkuMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown Sku unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *SkuMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown Sku edge %s", name)
 }
 
 // StoragePolicyMutation represents an operation that mutates the StoragePolicy nodes in the graph.

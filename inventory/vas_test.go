@@ -10,6 +10,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/credittxn"
 	"github.com/cloudreve/Cloudreve/v4/ent/enttest"
 	"github.com/cloudreve/Cloudreve/v4/ent/giftcode"
+	"github.com/cloudreve/Cloudreve/v4/ent/sku"
 	"github.com/cloudreve/Cloudreve/v4/ent/usergrant"
 	"github.com/cloudreve/Cloudreve/v4/pkg/boolset"
 	"github.com/stretchr/testify/require"
@@ -184,4 +185,57 @@ func TestDeleteGiftCodes(t *testing.T) {
 	require.NoError(t, c.DeleteGiftCodes(ctx, []int{codes[0].ID, codes[1].ID}))
 	// Used code survives revocation; unused is gone.
 	require.Equal(t, 1, client.GiftCode.Query().CountX(ctx))
+}
+
+func TestPurchaseSku(t *testing.T) {
+	ctx := context.Background()
+	client, c := newVasClient(t)
+	group, u := vasFixture(t, client)
+	vip := client.Group.Create().SetName("vip").SetPermissions(&boolset.BooleanSet{}).SaveX(ctx)
+	require.NoError(t, c.CreditAdjust(ctx, u.ID, 500, credittxn.TypeAdjust, "", "seed"))
+
+	points := int64(200)
+	storageSku, err := c.UpsertSku(ctx, &ent.Sku{
+		Name: "1GB pack", Type: sku.TypeStorage, Amount: 1024,
+		Duration: int64(time.Hour.Seconds()), Points: &points, Enabled: true,
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, c.PurchaseSku(ctx, u.ID, storageSku))
+	u = client.User.GetX(ctx, u.ID)
+	require.Equal(t, int64(300), u.Credits)
+
+	bonus, err := c.StorageBonus(ctx, u.ID)
+	require.NoError(t, err)
+	require.Equal(t, int64(1024), bonus)
+
+	txns, _, _ := c.ListCreditTxns(ctx, u.ID, 1, 10)
+	require.Equal(t, credittxn.TypePurchase, txns[0].Type)
+	require.Equal(t, int64(-200), txns[0].Amount)
+
+	// Group sku → user moved, prev group recorded.
+	groupSku, err := c.UpsertSku(ctx, &ent.Sku{
+		Name: "vip month", Type: sku.TypeGroup, Amount: int64(vip.ID),
+		Duration: int64(time.Hour.Seconds()), Points: &points, Enabled: true,
+	})
+	require.NoError(t, err)
+	require.NoError(t, c.PurchaseSku(ctx, u.ID, groupSku))
+	require.Equal(t, vip.ID, client.User.GetX(ctx, u.ID).GroupUsers)
+	grant := client.UserGrant.Query().Where(usergrant.TypeEQ(usergrant.TypeGroup)).OnlyX(ctx)
+	require.Equal(t, group.ID, grant.PrevGroupID)
+
+	// No points price → not purchasable.
+	cashOnly, err := c.UpsertSku(ctx, &ent.Sku{
+		Name: "cash only", Type: sku.TypeStorage, Amount: 1, Price: 700, Enabled: true,
+	})
+	require.NoError(t, err)
+	require.ErrorIs(t, c.PurchaseSku(ctx, u.ID, cashOnly), ErrSkuNotPurchasable)
+
+	// Insufficient balance → no grant applied.
+	balance := client.User.GetX(ctx, u.ID).Credits
+	require.NoError(t, c.CreditAdjust(ctx, u.ID, -balance, credittxn.TypeAdjust, "", "drain"))
+	require.ErrorIs(t, c.PurchaseSku(ctx, u.ID, storageSku), ErrInsufficientPoints)
+	bonus, err = c.StorageBonus(ctx, u.ID)
+	require.NoError(t, err)
+	require.Equal(t, int64(1024), bonus)
 }

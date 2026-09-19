@@ -602,6 +602,29 @@ var (
 			},
 		},
 	}
+	// SkusColumns holds the columns for the "skus" table.
+	SkusColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "name", Type: field.TypeString},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"storage", "group"}},
+		{Name: "amount", Type: field.TypeInt64},
+		{Name: "duration", Type: field.TypeInt64, Nullable: true},
+		{Name: "price", Type: field.TypeInt64, Nullable: true},
+		{Name: "points", Type: field.TypeInt64, Nullable: true},
+		{Name: "label", Type: field.TypeString, Nullable: true},
+		{Name: "des", Type: field.TypeString, Nullable: true},
+		{Name: "enabled", Type: field.TypeBool, Default: true},
+		{Name: "weight", Type: field.TypeInt, Default: 0},
+	}
+	// SkusTable holds the schema information for the "skus" table.
+	SkusTable = &schema.Table{
+		Name:       "skus",
+		Columns:    SkusColumns,
+		PrimaryKey: []*schema.Column{SkusColumns[0]},
+	}
 	// StoragePoliciesColumns holds the columns for the "storage_policies" table.
 	StoragePoliciesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -808,6 +831,7 @@ var (
 		PasskeysTable,
 		SettingsTable,
 		SharesTable,
+		SkusTable,
 		StoragePoliciesTable,
 		TasksTable,
 		UsersTable,

@@ -134,6 +134,7 @@
     "remoteDownload": "Remote Download",
     "connect": "Connect & Mount",
     "taskQueue": "Background Tasks",
+    "shop": "Shop",
     "setting": "Settings",
     "videos": "Videos",
     "photos": "Photos",
@@ -1112,6 +1113,17 @@
     ],
     "reportDescription": "Additional description",
     "reportAbuseSuccess": "Report submitted."
+  },
+  "shop": {
+    "memberships": "Memberships",
+    "storagePacks": "Storage packs",
+    "redeem": "Redeem",
+    "balance": "Balance: {{credits}} pts",
+    "purchased": "Purchased {{name}}",
+    "permanent": "Permanent",
+    "noProducts": "No products available",
+    "buyWithPoints": "Buy for {{points}} pts",
+    "pointsUnavailable": "Not purchasable with points"
   },
   "announcement": {
     "title": "Announcement",
