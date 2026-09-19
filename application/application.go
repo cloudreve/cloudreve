@@ -188,7 +188,7 @@ func (s *server) Close() {
 	}
 
 	ctx := context.Background()
-	if conf.SystemConfig.GracePeriod != 0 {
+	if s.config.System().GracePeriod != 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, time.Duration(s.config.System().GracePeriod)*time.Second)
 		defer cancel()
@@ -231,8 +231,8 @@ func (s *server) runUnix(server *http.Server) error {
 	defer listener.Close()
 	defer os.Remove(s.config.Unix().Listen)
 
-	if conf.UnixConfig.Perm > 0 {
-		err = os.Chmod(conf.UnixConfig.Listen, os.FileMode(s.config.Unix().Perm))
+	if s.config.Unix().Perm > 0 {
+		err = os.Chmod(s.config.Unix().Listen, os.FileMode(s.config.Unix().Perm))
 		if err != nil {
 			s.logger.Warning(
 				"Failed to set permission to %q for socket file %q: %s",

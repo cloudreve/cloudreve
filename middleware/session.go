@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/cloudreve/Cloudreve/v4/pkg/conf"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 	"github.com/gin-contrib/sessions"
@@ -22,7 +21,7 @@ const SessionName = "cloudreve-session"
 func Session(dep dependency.Dep) gin.HandlerFunc {
 	Store = sessionstore.NewStore(dep.KV(), []byte(dep.ConfigProvider().System().SessionSecret))
 	sameSiteMode := http.SameSiteDefaultMode
-	switch strings.ToLower(conf.CORSConfig.SameSite) {
+	switch strings.ToLower(dep.ConfigProvider().Cors().SameSite) {
 	case "default":
 		sameSiteMode = http.SameSiteDefaultMode
 	case "none":
@@ -39,7 +38,7 @@ func Session(dep dependency.Dep) gin.HandlerFunc {
 		MaxAge:   60 * 86400,
 		Path:     "/",
 		SameSite: sameSiteMode,
-		Secure:   conf.CORSConfig.Secure,
+		Secure:   dep.ConfigProvider().Cors().Secure,
 	})
 
 	return sessions.Sessions(SessionName, Store)
