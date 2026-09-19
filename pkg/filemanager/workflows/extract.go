@@ -126,6 +126,9 @@ func (m *ExtractArchiveTask) Do(ctx context.Context) (task.Status, error) {
 	}
 	m.state = state
 
+	// Prefer the node hosting the source file's storage policy.
+	preferPolicyNode(ctx, dep, &m.state.NodeState, m.state.Uri)
+
 	// select node
 	node, err := allocateNode(ctx, dep, &m.state.NodeState, types.NodeCapabilityExtractArchive)
 	if err != nil {
