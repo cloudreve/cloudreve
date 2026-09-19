@@ -5,6 +5,8 @@ import { TransitionGroup } from "react-transition-group";
 import { sendMetadataPatch } from "../../../../api/api.ts";
 import { CustomProps as CustomPropsType, FileResponse } from "../../../../api/explorer.ts";
 import { useAppDispatch, useAppSelector } from "../../../../redux/hooks.ts";
+import { fileUpdated } from "../../../../redux/fileManagerSlice.ts";
+import { FileManagerIndex } from "../../FileManager.tsx";
 import { DisplayOption } from "../../ContextMenu/useActionDisplayOpt.ts";
 import AddButton from "./AddButton.tsx";
 import CustomPropsCard from "./CustomPropsItem.tsx";
@@ -28,22 +30,28 @@ const CustomProps = ({ file, setTarget, targetDisplayOptions }: CustomPropsProps
   const [loading, setLoading] = useState(false);
   const dispatch = useAppDispatch();
   const custom_props = useAppSelector((state) => state.siteConfig.explorer?.config?.custom_props);
+  // `file` is a snapshot taken when the sidebar opened; prefer live metadata
+  // from the file list so props patched from list view appear immediately.
+  const liveMetadata = useAppSelector(
+    (state) => state.fileManager[FileManagerIndex.main]?.list?.files.find((f) => f.path === file.path)?.metadata,
+  );
+  const metadata = liveMetadata ?? file.metadata;
 
   const existingProps = useMemo(() => {
-    if (!file.metadata) {
+    if (!metadata) {
       return [];
     }
-    return Object.keys(file.metadata)
+    return Object.keys(metadata)
       .filter((key) => key.startsWith(customPropsMetadataPrefix))
       .map((key) => {
         const propId = key.slice(customPropsMetadataPrefix.length);
         return {
           id: propId,
           props: custom_props?.find((prop) => prop.id === propId),
-          value: file.metadata?.[key] ?? "",
+          value: metadata?.[key] ?? "",
         } as CustomPropsItem;
       });
-  }, [file.metadata]);
+  }, [metadata, custom_props]);
 
   const existingPropIds = useMemo(() => {
     return existingProps?.map((prop) => prop.id) ?? [];
@@ -62,21 +70,22 @@ const CustomProps = ({ file, setTarget, targetDisplayOptions }: CustomPropsProps
       }),
     )
       .then(() => {
-        if (remove) {
-          const newMetadata = { ...file.metadata };
-          props.forEach((prop) => {
+        const newMetadata = { ...metadata };
+        props.forEach((prop) => {
+          if (remove) {
             delete newMetadata[customPropsMetadataPrefix + prop.id];
-          });
-          setTarget({ ...file, metadata: newMetadata });
-        } else {
-          setTarget({
-            ...file,
-            metadata: {
-              ...file.metadata,
-              ...Object.assign({}, ...props.map((prop) => ({ [customPropsMetadataPrefix + prop.id]: prop.value }))),
-            },
-          });
-        }
+          } else {
+            newMetadata[customPropsMetadataPrefix + prop.id] = prop.value;
+          }
+        });
+        const updated = { ...file, metadata: newMetadata };
+        setTarget(updated);
+        dispatch(
+          fileUpdated({
+            index: FileManagerIndex.main,
+            value: [{ file: updated, oldPath: file.path, includeMetadata: true }],
+          }),
+        );
       })
       .finally(() => {
         setLoading(false);
