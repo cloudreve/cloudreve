@@ -2,6 +2,7 @@ import { Box, Drawer, Popover, PopoverProps, Stack, useMediaQuery, useTheme } fr
 import { useContext, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "../../../redux/hooks.ts";
 import SessionManager from "../../../session";
+import CustomHTMLContent from "../../Common/CustomHTMLContent.tsx";
 import TreeNavigation from "../../FileManager/TreeView/TreeNavigation.tsx";
 import { PageVariant, PageVariantContext } from "../NavBarFrame.tsx";
 import DrawerHeader from "./DrawerHeader.tsx";
@@ -41,7 +42,7 @@ const DrawerContent = () => {
         {isDashboard && <AdminPageNavigation />}
         {sidebar_bottom && (
           <Box sx={{ width: "100%" }}>
-            <div dangerouslySetInnerHTML={{ __html: sidebar_bottom }} />
+            <CustomHTMLContent html={sidebar_bottom} />
           </Box>
         )}
       </Stack>

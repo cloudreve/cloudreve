@@ -165,7 +165,7 @@
     "customHTML": "Custom HTML",
     "customHTMLDes": "Insert custom HTML content at the preset position of the site.",
     "sidebarBottom": "Sidebar bottom",
-    "sidebarBottomDes": "Custom HTML content displayed at the bottom of the sidebar.",
+    "sidebarBottomDes": "Custom HTML content displayed at the bottom of the sidebar. <script> tags are executed.",
     "addNavItem": "Add navigation item",
     "customNavItems": "Custom sidebar items",
     "customNavItemsDes": "You can add custom items to the sidebar, and users will be redirected to the corresponding link when clicked.",
