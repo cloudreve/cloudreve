@@ -33,7 +33,7 @@ conf/conf.ini
 .vscode/
 
 dist/
-data/
+/data/
 tmp/
 .devcontainer/
 /cloudreve
