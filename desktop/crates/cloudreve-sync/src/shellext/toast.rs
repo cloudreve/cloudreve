@@ -2,8 +2,8 @@ use crate::drive::commands::{ConflictAction, ManagerCommand};
 use crate::drive::manager::DriveManager;
 use crate::inventory::InventoryDb;
 use crate::utils::app::{AppRoot, get_app_root};
-use std::collections::HashMap;
 use base64::{Engine as _, engine::general_purpose::URL_SAFE};
+use std::collections::HashMap;
 use std::sync::Arc;
 use windows::{
     Win32::{Foundation::*, System::Com::*, UI::Notifications::*},
@@ -59,9 +59,9 @@ pub struct ToastInputData {
 #[implement(INotificationActivationCallback)]
 pub struct ToastActivator {
     drive_manager: Arc<DriveManager>,
-     #[allow(dead_code)]
+    #[allow(dead_code)]
     inventory: Arc<InventoryDb>,
-     #[allow(dead_code)]
+    #[allow(dead_code)]
     app_root: AppRoot,
 }
 
@@ -114,7 +114,14 @@ impl ToastActivator {
             let command_tx = self.drive_manager.get_command_sender();
             if let Err(e) = command_tx.send(ManagerCommand::ResolveConflict {
                 drive_id: params.get("drive_id").unwrap_or(&String::new()).to_string(),
-                path: URL_SAFE.decode(params.get("path").unwrap_or(&String::new()).to_string().as_bytes())
+                path: URL_SAFE
+                    .decode(
+                        params
+                            .get("path")
+                            .unwrap_or(&String::new())
+                            .to_string()
+                            .as_bytes(),
+                    )
                     .ok()
                     .and_then(|bytes| String::from_utf8(bytes).ok())
                     .unwrap_or_default(),

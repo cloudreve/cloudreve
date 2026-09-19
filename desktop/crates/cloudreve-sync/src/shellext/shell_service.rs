@@ -1,9 +1,7 @@
 use super::context_menu::*;
 use crate::drive::manager::DriveManager;
 use crate::shellext::custom_state::{CLSID_CUSTOM_STATE_HANDLER, CustomStateHandlerFactory};
-use crate::shellext::status_ui::{
-    CLSID_STATUS_UI_HANDLER, StatusUIHandlerFactoryFactory,
-};
+use crate::shellext::status_ui::{CLSID_STATUS_UI_HANDLER, StatusUIHandlerFactoryFactory};
 use crate::shellext::thumbnail::{CLSID_THUMBNAIL_PROVIDER, ThumbnailProviderFactory};
 use crate::shellext::toast::{CLSID_TOAST_ACTIVATOR, ToastActivatorFactory};
 use std::sync::{Arc, mpsc};
@@ -74,7 +72,7 @@ pub fn init_and_start_service_task(drive_manager: Arc<DriveManager>) -> ServiceH
 }
 
 pub struct ServiceHandle {
-     #[allow(dead_code)]
+    #[allow(dead_code)]
     thread: Option<thread::JoinHandle<()>>,
     init_result: mpsc::Receiver<windows::core::Result<()>>,
 }

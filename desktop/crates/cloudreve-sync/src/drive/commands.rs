@@ -2,18 +2,20 @@ use crate::{
     cfapi::{
         filter::ticket,
         placeholder::{LocalFileInfo, OpenOptions, PinState},
-        utility::WriteAt,
     },
     drive::{
+        ignore,
         mounts::Mount,
         placeholder::CrPlaceholder,
-        sync::{GroupedFsEvents, SyncMode},
+        sync::{GroupedFsEvents, SyncMode, local_snapshot_differs},
         utils::{local_path_to_cr_uri, notify_shell_change},
     },
     inventory::ConflictState,
     tasks::TaskPayload,
     utils::toast,
 };
+#[cfg(windows)]
+use crate::cfapi::utility::WriteAt;
 use anyhow::{Context, Result};
 use bytes::Bytes;
 use cloudreve_api::{
@@ -36,10 +38,14 @@ use std::{
     collections::HashMap,
     ops::Range,
     path::{Path, PathBuf},
+    time::Duration,
 };
 use tokio::sync::oneshot::Sender;
 use uuid::Uuid;
+#[cfg(windows)]
 use windows::Win32::UI::Shell::SHCNE_ATTRIBUTES;
+#[cfg(not(windows))]
+const SHCNE_ATTRIBUTES: u32 = 0;
 const PAGE_SIZE: i32 = 1000;
 
 /// Generate a unique filename by appending a counter suffix before the extension.
@@ -127,6 +133,9 @@ pub enum MountCommand {
         source: PathBuf,
         destination: PathBuf,
     },
+    /// Restart the remote event listener with a fresh backoff and kick a
+    /// full-hierarchy sync. User-triggered recovery for a lost connection.
+    Reconnect,
 }
 
 // SAFETY: Windows CFAPI is designed to allow callbacks from arbitrary threads.
@@ -518,6 +527,19 @@ impl Mount {
             return Ok(());
         }
 
+        // If the source is a directory, the OS emits Remove/Create events for
+        // every descendant in addition to the directory's own events. Suppress
+        // the subtree for a short window — registered before the remote call so
+        // events racing the in-flight move are covered as well — so child
+        // events are not propagated as remote deletes/creates.
+        if source.is_dir() {
+            let ttl = Duration::from_secs(15);
+            self.event_blocker
+                .register_prefix(&EventKind::Remove(RemoveKind::Any), source.clone(), ttl);
+            self.event_blocker
+                .register_prefix(&EventKind::Create(CreateKind::Any), target.clone(), ttl);
+        }
+
         // if target and src under the same dir, trigger rename call
         let target_parent = target.parent().context("root cannot be moved")?;
         let source_parent = source.parent().context("root cannot be moved")?;
@@ -535,6 +557,7 @@ impl Mount {
                 .await
             {
                 Ok(_) => {
+
                     // Block the modify name events for rename (From for source, To for target)
                     self.event_blocker.register_once(
                         &EventKind::Modify(ModifyKind::Name(RenameMode::From)),
@@ -566,10 +589,16 @@ impl Mount {
                 )?
                 .to_string(),
                 copy: None,
+                // The OS already resolved local naming before emitting the
+                // rename (Explorer prompts replace/skip; skip produces no
+                // event), so a remote name collision at the destination is a
+                // stale remote entity and must be overwritten.
+                on_conflict: Some("overwrite".to_string()),
             })
             .await
         {
             Ok(_) => {
+
                 // Block remove event for source and create event for target
                 self.event_blocker
                     .register_once(&EventKind::Remove(RemoveKind::Any), source.clone());
@@ -585,7 +614,40 @@ impl Mount {
     }
 
     pub async fn process_fs_events(&self, events: GroupedFsEvents) -> Result<()> {
-        for (event_kind, events) in events {
+        // Hot-reload ignore rules when an ignore file was touched in this
+        // batch, so the new rules apply to the events that follow.
+        let ignore_file_touched = events.values().flatten().any(|event| {
+            event.paths.iter().any(|path| {
+                path.file_name()
+                    .and_then(|name| name.to_str())
+                    .is_some_and(ignore::is_ignore_file_name)
+            })
+        });
+        if ignore_file_touched {
+            if let Err(err) = self.reload_ignore_patterns().await {
+                tracing::warn!(
+                    target: "drive::commands",
+                    error = %err,
+                    "Failed to reload ignore patterns"
+                );
+            }
+        }
+
+        // Process groups in a deterministic order: renames/moves first, then
+        // creates and modifications, removes last. A directory move can emit
+        // per-descendant remove events in the same batch; committing the move
+        // remotely before handling removes prevents child URIs from being
+        // deleted on the server.
+        let mut groups: Vec<(EventKind, Vec<Event>)> = events.into_iter().collect();
+        groups.sort_by_key(|(kind, _)| match kind {
+            EventKind::Modify(ModifyKind::Name(_)) => 0,
+            EventKind::Create(_) => 1,
+            EventKind::Modify(_) => 2,
+            EventKind::Remove(_) => 3,
+            _ => 4,
+        });
+
+        for (event_kind, events) in groups {
             // Filter out events that were pre-registered by rename operations
             let filtered_events = self.event_blocker.filter_events(events, &event_kind);
 
@@ -780,6 +842,35 @@ impl Mount {
         Ok(())
     }
 
+    pub async fn resolve_all_conflicts(&self, action: ConflictAction) -> Result<(usize, usize)> {
+        let pending = self
+            .inventory
+            .query_pending_conflicts(Some(&self.id))
+            .context("failed to query pending conflicts")?;
+
+        let mut success = 0usize;
+        let mut failed = 0usize;
+
+        for conflict in pending {
+            let path = conflict.local_path.clone();
+            let file_id = conflict.id;
+            if let Err(e) = self.resolve_conflict(action, file_id, path).await {
+                tracing::error!(
+                    target: "drive::commands",
+                    id = %self.id,
+                    path = %conflict.local_path,
+                    error = %e,
+                    "Failed to resolve conflict during batch operation"
+                );
+                failed += 1;
+            } else {
+                success += 1;
+            }
+        }
+
+        Ok((success, failed))
+    }
+
     async fn process_fs_modify_name_event(&self, events: Vec<Event>) -> Result<()> {
         tracing::trace!(target: "drive::commands", count=events.len(), "Processing filesystem modify name event");
         for event in events {
@@ -849,6 +940,30 @@ impl Mount {
                 }
             };
             if placeholder_info.is_directory() {
+                #[cfg(not(windows))]
+                {
+                    // Windows receives richer CFAPI callbacks for directory
+                    // hydration and placeholder population. Non-Windows full
+                    // sync only has filesystem watcher events, so a directory
+                    // modify event must rescan the directory's first layer to
+                    // discover newly-created children.
+                    tracing::debug!(
+                        target: "drive::commands",
+                        path = %path.display(),
+                        "Syncing directory after filesystem modify event"
+                    );
+                    if let Err(err) = self
+                        .sync_paths(vec![path.clone()], SyncMode::PathAndFirstLayer)
+                        .await
+                    {
+                        tracing::error!(
+                            target: "drive::commands",
+                            path = %path.display(),
+                            error = %err,
+                            "Failed to sync directory after filesystem modify event"
+                        );
+                    }
+                }
                 continue;
             }
 
@@ -906,8 +1021,22 @@ impl Mount {
                 continue;
             }
 
-            // General modification, quque a upload task if not exist
-            if !placeholder_info.in_sync() {
+            // General modification, queue an upload task if not exist.
+            // Also queue when the recorded local snapshot no longer matches
+            // the on-disk state even though the IN_SYNC flag looks set - the
+            // flag may be stale after a race with a metadata refresh.
+            let snapshot_differs = match path.to_str() {
+                Some(path_str) => self
+                    .inventory
+                    .query_by_path(path_str)
+                    .map(|entry| {
+                        entry.is_some_and(|meta| local_snapshot_differs(&meta, &placeholder_info))
+                    })
+                    .unwrap_or(false),
+                None => false,
+            };
+
+            if !placeholder_info.in_sync() || snapshot_differs {
                 tracing::debug!(target: "drive::commands", path = %path.display(), "Queuing upload task for modified file");
                 let payload = TaskPayload::upload(path.clone());
                 let result = self

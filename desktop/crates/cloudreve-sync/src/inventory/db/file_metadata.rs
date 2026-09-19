@@ -1,7 +1,5 @@
 use super::InventoryDb;
-use crate::inventory::{
-    ConflictState, FileMetadata, MetadataEntry,
-};
+use crate::inventory::{ConflictState, FileMetadata, MetadataEntry};
 use anyhow::{Context, Result};
 use diesel::prelude::*;
 use diesel::sql_types::Text;
@@ -29,13 +27,35 @@ impl InventoryDb {
         Ok(())
     }
 
+    /// Delete every inventory row belonging to a removed drive: file metadata,
+    /// queued/finished tasks, upload sessions, and cached drive props.
+    /// Runs in a single transaction so a drive is never half-removed.
     pub fn nuke_drive(&self, drive: &str) -> Result<()> {
+        use crate::inventory::schema::{drive_props, task_queue, upload_sessions};
+
         let mut conn = self.connection()?;
-        diesel::delete(
-            file_metadata_dsl::file_metadata.filter(file_metadata_dsl::drive_id.eq(drive)),
-        )
-        .execute(&mut conn)
-        .context("Failed to delete inventory rows for drive")?;
+        (&mut *conn)
+            .transaction::<(), diesel::result::Error, _>(|tx| {
+                diesel::delete(
+                    file_metadata_dsl::file_metadata
+                        .filter(file_metadata_dsl::drive_id.eq(drive)),
+                )
+                .execute(tx)?;
+                diesel::delete(
+                    task_queue::table.filter(task_queue::drive_id.eq(drive)),
+                )
+                .execute(tx)?;
+                diesel::delete(
+                    upload_sessions::table.filter(upload_sessions::drive_id.eq(drive)),
+                )
+                .execute(tx)?;
+                diesel::delete(
+                    drive_props::table.filter(drive_props::drive_id.eq(drive)),
+                )
+                .execute(tx)?;
+                Ok(())
+            })
+            .context("Failed to delete inventory rows for drive")?;
         Ok(())
     }
 
@@ -100,6 +120,42 @@ impl InventoryDb {
             .context("Failed to query inventory metadata by id")?;
 
         row.map(FileMetadata::try_from).transpose()
+    }
+
+    /// List all distinct drive IDs present in the inventory.
+    pub fn list_drive_ids(&self) -> Result<Vec<String>> {
+        let mut conn = self.connection()?;
+        file_metadata_dsl::file_metadata
+            .select(file_metadata_dsl::drive_id)
+            .distinct()
+            .load::<String>(&mut conn)
+            .context("Failed to list inventory drive IDs")
+    }
+
+    /// Query files that are waiting for manual conflict resolution.
+    ///
+    /// `drive_id` is optional because the popup can show either a single drive
+    /// or the aggregate status across all configured drives.
+    pub fn query_pending_conflicts(&self, drive_id: Option<&str>) -> Result<Vec<FileMetadata>> {
+        let mut conn = self.connection()?;
+        let mut query = file_metadata_dsl::file_metadata
+            .filter(
+                file_metadata_dsl::conflict_state
+                    .eq(Some(ConflictState::Pending.as_str().to_string())),
+            )
+            .into_boxed();
+
+        if let Some(drive_id) = drive_id {
+            query = query.filter(file_metadata_dsl::drive_id.eq(drive_id));
+        }
+
+        query
+            .order(file_metadata_dsl::updated_at.desc())
+            .load::<FileMetadataRow>(&mut conn)
+            .context("Failed to query pending conflict metadata")?
+            .into_iter()
+            .map(FileMetadata::try_from)
+            .collect()
     }
 
     /// Batch delete file metadata by local path
@@ -232,6 +288,8 @@ struct FileMetadataRow {
     shared: bool,
     size: i64,
     conflict_state: Option<String>,
+    local_updated_at: Option<i64>,
+    local_size: Option<i64>,
 }
 
 #[derive(Insertable)]
@@ -249,6 +307,8 @@ struct NewFileMetadata {
     shared: bool,
     size: i64,
     conflict_state: Option<String>,
+    local_updated_at: Option<i64>,
+    local_size: Option<i64>,
 }
 
 #[derive(AsChangeset)]
@@ -267,6 +327,10 @@ struct FileMetadataChangeset {
     /// - Some(None) explicitly sets conflict_state to NULL
     /// - Some(Some(value)) sets it to a value
     conflict_state: Option<Option<String>>,
+    /// Local snapshots are only overwritten when the new entry carries one;
+    /// entries built without snapshot info leave the stored value untouched.
+    local_updated_at: Option<Option<i64>>,
+    local_size: Option<Option<i64>>,
 }
 
 impl TryFrom<FileMetadataRow> for FileMetadata {
@@ -300,6 +364,8 @@ impl TryFrom<FileMetadataRow> for FileMetadata {
             shared: row.shared,
             size: row.size,
             conflict_state,
+            local_updated_at: row.local_updated_at,
+            local_size: row.local_size,
         })
     }
 }
@@ -327,6 +393,8 @@ impl TryFrom<&MetadataEntry> for NewFileMetadata {
             shared: entry.shared,
             size: entry.size,
             conflict_state: entry.conflict_state.map(|s| s.as_str().to_string()),
+            local_updated_at: entry.local_updated_at,
+            local_size: entry.local_size,
         })
     }
 }
@@ -351,6 +419,76 @@ impl FileMetadataChangeset {
             size: entry.size,
             // Use Some(...) to always update the column, even when clearing to NULL
             conflict_state: Some(entry.conflict_state.map(|s| s.as_str().to_string())),
+            // Keep the stored snapshot when the entry carries none
+            local_updated_at: entry.local_updated_at.map(Some),
+            local_size: entry.local_size.map(Some),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::inventory::models::{DrivePropsUpdate, NewTaskRecord};
+    use uuid::Uuid;
+
+    fn test_db() -> (tempfile::TempDir, InventoryDb) {
+        let dir = tempfile::tempdir().unwrap();
+        let db = InventoryDb::with_path(dir.path().join("meta.db")).unwrap();
+        (dir, db)
+    }
+
+    #[test]
+    fn nuke_drive_clears_all_drive_scoped_tables() {
+        let (_dir, db) = test_db();
+        let drive_a = Uuid::new_v4().to_string();
+        let drive_b = Uuid::new_v4().to_string();
+
+        for drive in [&drive_a, &drive_b] {
+            db.insert(&MetadataEntry::new(
+                Uuid::parse_str(drive).unwrap(),
+                format!("{drive}/file.txt"),
+                false,
+            ))
+            .unwrap();
+            db.insert_task_if_not_exist(&NewTaskRecord::new(
+                format!("task-{drive}"),
+                drive.clone(),
+                "upload",
+                format!("{drive}/file.txt"),
+            ))
+            .unwrap();
+            db.upsert_drive_props(drive, DrivePropsUpdate {
+                capacity: Some(None),
+                ..Default::default()
+            })
+            .unwrap();
+        }
+
+        db.nuke_drive(&drive_a).unwrap();
+
+        // Drive A: everything gone
+        assert!(db
+            .query_by_path(&format!("{drive_a}/file.txt"))
+            .unwrap()
+            .is_none());
+        assert!(db
+            .list_tasks(Some(&drive_a), None)
+            .unwrap()
+            .is_empty());
+        assert!(!db.has_drive_props(&drive_a).unwrap());
+
+        // Drive B: untouched
+        assert!(db
+            .query_by_path(&format!("{drive_b}/file.txt"))
+            .unwrap()
+            .is_some());
+        assert_eq!(
+            db.list_tasks(Some(&drive_b), None)
+                .unwrap()
+                .len(),
+            1
+        );
+        assert!(db.has_drive_props(&drive_b).unwrap());
     }
 }

@@ -60,6 +60,10 @@ pub struct AppConfig {
     pub log_level: LogLevel,
     /// Maximum number of log files to keep
     pub log_max_files: usize,
+    /// Delay before starting upload after file stops changing (seconds). 0 disables the delay.
+    pub sync_delay_seconds: u64,
+    /// Whether to hide the system tray icon (popup stays reachable via shortcuts/relaunch)
+    pub hide_tray_icon: bool,
     /// Language/locale setting (e.g., "en-US", "zh-CN"). None means use system default.
     pub language: Option<String>,
 }
@@ -74,6 +78,8 @@ impl Default for AppConfig {
             log_to_file: true,
             log_level: LogLevel::Debug,
             log_max_files: 5,
+            sync_delay_seconds: 0,
+            hide_tray_icon: false,
             language: None,
         }
     }
@@ -147,9 +153,10 @@ impl ConfigManager {
             }
         }
 
-        let config = self.config.read().map_err(|e| {
-            anyhow::anyhow!("Failed to acquire read lock on config: {}", e)
-        })?;
+        let config = self
+            .config
+            .read()
+            .map_err(|e| anyhow::anyhow!("Failed to acquire read lock on config: {}", e))?;
 
         let content =
             serde_json::to_string_pretty(&*config).context("Failed to serialize config")?;
@@ -175,9 +182,10 @@ impl ConfigManager {
         F: FnOnce(&mut AppConfig),
     {
         {
-            let mut config = self.config.write().map_err(|e| {
-                anyhow::anyhow!("Failed to acquire write lock on config: {}", e)
-            })?;
+            let mut config = self
+                .config
+                .write()
+                .map_err(|e| anyhow::anyhow!("Failed to acquire write lock on config: {}", e))?;
             f(&mut config);
         }
         self.save()
@@ -185,10 +193,7 @@ impl ConfigManager {
 
     /// Get whether auto-start is enabled
     pub fn auto_start(&self) -> bool {
-        self.config
-            .read()
-            .map(|c| c.auto_start)
-            .unwrap_or(true)
+        self.config.read().map(|c| c.auto_start).unwrap_or(true)
     }
 
     /// Set whether auto-start is enabled
@@ -245,10 +250,7 @@ impl ConfigManager {
 
     /// Get whether log to file is enabled
     pub fn log_to_file(&self) -> bool {
-        self.config
-            .read()
-            .map(|c| c.log_to_file)
-            .unwrap_or(true)
+        self.config.read().map(|c| c.log_to_file).unwrap_or(true)
     }
 
     /// Set whether log to file is enabled
@@ -275,16 +277,43 @@ impl ConfigManager {
 
     /// Get the max log files
     pub fn log_max_files(&self) -> usize {
-        self.config
-            .read()
-            .map(|c| c.log_max_files)
-            .unwrap_or(5)
+        self.config.read().map(|c| c.log_max_files).unwrap_or(5)
     }
 
     /// Set the max log files
     pub fn set_log_max_files(&self, max_files: usize) -> Result<()> {
         self.update(|config| {
             config.log_max_files = max_files;
+        })
+    }
+
+    /// Get the sync delay in seconds
+    pub fn sync_delay_seconds(&self) -> u64 {
+        self.config
+            .read()
+            .map(|c| c.sync_delay_seconds)
+            .unwrap_or(0)
+    }
+
+    /// Set the sync delay in seconds
+    pub fn set_sync_delay_seconds(&self, seconds: u64) -> Result<()> {
+        self.update(|config| {
+            config.sync_delay_seconds = seconds;
+        })
+    }
+
+    /// Whether the system tray icon is hidden
+    pub fn hide_tray_icon(&self) -> bool {
+        self.config
+            .read()
+            .map(|c| c.hide_tray_icon)
+            .unwrap_or(false)
+    }
+
+    /// Set whether the system tray icon is hidden
+    pub fn set_hide_tray_icon(&self, hide: bool) -> Result<()> {
+        self.update(|config| {
+            config.hide_tray_icon = hide;
         })
     }
 

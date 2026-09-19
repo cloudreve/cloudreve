@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
 use crate::models::common::PaginationResults;
 use crate::models::explorer::Share;
+use serde::{Deserialize, Serialize};
 
 /// List share service
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -20,4 +20,3 @@ pub struct ListShareResponse {
     pub shares: Vec<Share>,
     pub pagination: PaginationResults,
 }
-

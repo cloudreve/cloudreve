@@ -11,11 +11,7 @@ use anyhow::{Context, Result};
 use chrono::DateTime;
 use cloudreve_api::models::explorer::{FileResponse, file_type};
 use nt_time::FileTime;
-use std::{
-    ffi::OsString,
-    path::PathBuf,
-    sync::Arc,
-};
+use std::{ffi::OsString, path::PathBuf, sync::Arc};
 use uuid::Uuid;
 use widestring::U16CString;
 use windows::{
@@ -25,11 +21,8 @@ use windows::{
         System::Variant::VT_UI4,
         UI::Shell::{
             IShellItem2,
-            PropertiesSystem::{
-                GPS_EXTRINSICPROPERTIESONLY, GPS_READWRITE, IPropertyStore,
-            },
-            SHCNE_CREATE, SHCNE_DELETE, SHCNE_MKDIR,
-            SHCreateItemFromParsingName,
+            PropertiesSystem::{GPS_EXTRINSICPROPERTIESONLY, GPS_READWRITE, IPropertyStore},
+            SHCNE_CREATE, SHCNE_DELETE, SHCNE_MKDIR, SHCreateItemFromParsingName,
         },
     },
     core::PCWSTR,
@@ -222,9 +215,28 @@ impl CrPlaceholder {
                 .context("failed to create placeholder")?;
         }
 
-        // Upser inventory
+        // Record a local snapshot (mtime + size) so future syncs can detect
+        // local edits even when the CFAPI IN_SYNC flag is stale or cleared by
+        // a race. The snapshot is read from disk after the metadata update so
+        // it always reflects the state this sync point produces.
+        let mut entry = MetadataEntry::from(file_meta);
+        match LocalFileInfo::from_path(&self.local_path) {
+            Ok(fresh) if fresh.exists => {
+                let mtime_ms = fresh.last_modified.and_then(|time| {
+                    time.duration_since(std::time::UNIX_EPOCH)
+                        .ok()
+                        .map(|duration| duration.as_millis() as i64)
+                });
+                if let (Some(mtime_ms), Some(size)) = (mtime_ms, fresh.file_size) {
+                    entry = entry.with_local_snapshot(mtime_ms, size as i64);
+                }
+            }
+            _ => {}
+        }
+
+        // Upsert inventory
         inventory
-            .upsert(&MetadataEntry::from(file_meta))
+            .upsert(&entry)
             .context("failed to upsert inventory")?;
 
         // Notify shell change
@@ -267,6 +279,8 @@ impl CrPlaceholder {
             permissions: file_info.permission.clone().unwrap_or_default(),
             shared: file_info.shared.unwrap_or(false),
             conflict_state: None,
+            local_updated_at: None,
+            local_size: None,
         });
         self
     }
@@ -284,14 +298,12 @@ impl CrPlaceholder {
     ///
     /// # Example
     ///
-    /// ```no_run
-    /// use std::path::Path;
-    ///
+    /// ```ignore
     /// // Set error state on a file
-    /// update_sync_error_state(Path::new("C:\\MyFolder\\file.txt"), true)?;
+    /// placeholder.update_sync_error_state(true)?;
     ///
     /// // Clear error state
-    /// update_sync_error_state(Path::new("C:\\MyFolder\\file.txt"), false)?;
+    /// placeholder.update_sync_error_state(false)?;
     /// ```
     pub fn update_sync_error_state(&self, set_error: bool) -> Result<()> {
         if !self.local_file_info.is_placeholder() {

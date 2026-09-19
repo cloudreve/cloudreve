@@ -2,7 +2,11 @@ use std::{path::PathBuf, str::FromStr, sync::Arc, time::SystemTime};
 
 use crate::utils::toast::send_conflict_toast;
 use crate::{
-    drive::{placeholder::CrPlaceholder, utils::local_path_to_cr_uri},
+    drive::{
+        placeholder::CrPlaceholder,
+        sync::{calculate_file_hash, local_snapshot_differs, remote_file_hash_fingerprint},
+        utils::local_path_to_cr_uri,
+    },
     inventory::{ConflictState, FileMetadata, InventoryDb},
     tasks::queue::QueuedTask,
     uploader::{ProgressCallback, ProgressUpdate, UploadParams, Uploader, UploaderConfig},
@@ -109,18 +113,6 @@ impl<'a> UploadTask<'a> {
             return Ok(());
         }
 
-        if placeholder_file.local_file_info.in_sync()
-            && !placeholder_file.local_file_info.is_directory()
-        {
-            info!(
-                target: "tasks::upload",
-                task_id = %self.task.task_id,
-                local_path = %self.task.payload.local_path_display(),
-                "Local file is in sync, skipping upload"
-            );
-            return Ok(());
-        }
-
         let is_directory = placeholder_file.local_file_info.is_directory;
         let file_size = placeholder_file.local_file_info.file_size.unwrap_or(0);
         self.local_file = Some(placeholder_file);
@@ -136,6 +128,34 @@ impl<'a> UploadTask<'a> {
             .inventory
             .query_by_path(path_str)
             .context("failed to get inventory meta")?;
+
+        // Skip only when the file is flagged in-sync AND the recorded local
+        // snapshot still matches the current on-disk state. A stale IN_SYNC
+        // flag (e.g. set by a concurrent metadata refresh while local edits
+        // existed) must not silently drop the pending upload.
+        let snapshot_differs = self
+            .local_file
+            .as_ref()
+            .and_then(|file| {
+                self.inventory_meta
+                    .as_ref()
+                    .map(|meta| (meta, &file.local_file_info))
+            })
+            .map(|(meta, info)| local_snapshot_differs(meta, info))
+            .unwrap_or(false);
+
+        if self.local_file.as_ref().unwrap().local_file_info.in_sync()
+            && !is_directory
+            && !snapshot_differs
+        {
+            info!(
+                target: "tasks::upload",
+                task_id = %self.task.task_id,
+                local_path = %self.task.payload.local_path_display(),
+                "Local file is in sync, skipping upload"
+            );
+            return Ok(());
+        }
 
         // clear file error state
         // Mark file as error state
@@ -163,6 +183,81 @@ impl<'a> UploadTask<'a> {
         self.handle_error(upload_res).await
     }
 
+    /// Check whether the local file really conflicts with the remote version.
+    /// Returns `Ok(Some(remote))` if the contents match (so no conflict should be
+    /// recorded) along with the remote metadata, `Ok(None)` if the contents differ,
+    /// or `Err` if the check itself failed.
+    async fn check_actual_conflict(&self) -> Result<Option<FileResponse>> {
+        let uri = local_path_to_cr_uri(
+            self.task.payload.local_path.clone(),
+            self.sync_path.clone(),
+            self.remote_base.clone(),
+        )
+        .context("failed to convert local path to cloudreve uri")?
+        .to_string();
+
+        let remote = self
+            .cr_client
+            .get_file_info(&cloudreve_api::models::explorer::GetFileInfoService {
+                uri: Some(uri),
+                id: None,
+                extended: None,
+                folder_summary: None,
+            })
+            .await
+            .context("failed to get remote file info for conflict check")?;
+
+        let local_size = self
+            .local_file
+            .as_ref()
+            .and_then(|f| f.local_file_info.file_size)
+            .unwrap_or(0);
+        let remote_size = remote.size as u64;
+
+        if let Some(fingerprint) = remote_file_hash_fingerprint(&remote) {
+            match calculate_file_hash(self.task.payload.local_path.clone(), fingerprint.algorithm)
+                .await
+            {
+                Ok(local_hash) => {
+                    let matches = local_hash.eq_ignore_ascii_case(&fingerprint.value);
+                    info!(
+                        target: "tasks::upload",
+                        task_id = %self.task.task_id,
+                        local_path = %self.task.payload.local_path_display(),
+                        algorithm = %fingerprint.algorithm.as_str(),
+                        matches = matches,
+                        "Compared local and remote hashes after upload conflict error"
+                    );
+                    return if matches { Ok(Some(remote)) } else { Ok(None) };
+                }
+                Err(err) => {
+                    warn!(
+                        target: "tasks::upload",
+                        task_id = %self.task.task_id,
+                        local_path = %self.task.payload.local_path_display(),
+                        error = %err,
+                        "Failed to calculate local hash; falling back to size comparison"
+                    );
+                }
+            }
+        }
+
+        // No usable remote hash; fall back to size comparison.
+        info!(
+            target: "tasks::upload",
+            task_id = %self.task.task_id,
+            local_path = %self.task.payload.local_path_display(),
+            local_size = local_size,
+            remote_size = remote_size,
+            "Remote file has no hash; compared sizes after upload conflict error"
+        );
+        if local_size == remote_size {
+            Ok(Some(remote))
+        } else {
+            Ok(None)
+        }
+    }
+
     async fn handle_error(&mut self, r: Result<()>) -> Result<()> {
         match r {
             Ok(()) => Ok(()),
@@ -183,12 +278,47 @@ impl<'a> UploadTask<'a> {
                 });
 
                 if is_conflict_error {
-                    warn!(
-                        target: "tasks::upload",
-                        task_id = %self.task.task_id,
-                        local_path = %self.task.payload.local_path_display(),
-                        "Conflict detected, server has newer version or object exists"
-                    );
+                    match self.check_actual_conflict().await {
+                        Ok(Some(remote)) => {
+                            info!(
+                                target: "tasks::upload",
+                                task_id = %self.task.task_id,
+                                local_path = %self.task.payload.local_path_display(),
+                                "Upload conflict error but contents match; syncing remote metadata instead"
+                            );
+                            // Update local placeholder/inventory from remote to reflect
+                            // the existing file and avoid leaving a stale conflict state.
+                            if let Err(sync_err) =
+                                self.sync_remote_metadata_after_match(&remote).await
+                            {
+                                warn!(
+                                    target: "tasks::upload",
+                                    task_id = %self.task.task_id,
+                                    local_path = %self.task.payload.local_path_display(),
+                                    error = ?sync_err,
+                                    "Failed to sync remote metadata after content match"
+                                );
+                            }
+                            return Ok(());
+                        }
+                        Ok(None) => {
+                            warn!(
+                                target: "tasks::upload",
+                                task_id = %self.task.task_id,
+                                local_path = %self.task.payload.local_path_display(),
+                                "Conflict detected, server has newer version or object exists"
+                            );
+                        }
+                        Err(check_err) => {
+                            warn!(
+                                target: "tasks::upload",
+                                task_id = %self.task.task_id,
+                                local_path = %self.task.payload.local_path_display(),
+                                error = %check_err,
+                                "Failed to verify actual conflict; treating as conflict"
+                            );
+                        }
+                    }
 
                     // Mark the file as conflicted in the inventory
                     let path_str = self.task.payload.local_path.to_str().unwrap_or_default();
@@ -228,6 +358,26 @@ impl<'a> UploadTask<'a> {
                 Err(e)
             }
         }
+    }
+
+    /// Pull remote metadata into the local placeholder/inventory after we have
+    /// determined that the local file matches the existing remote file.
+    async fn sync_remote_metadata_after_match(&mut self, remote: &FileResponse) -> Result<()> {
+        self.local_file = Some(self.local_file.take().unwrap().with_remote_file(remote));
+
+        self.local_file
+            .as_mut()
+            .unwrap()
+            .commit(self.inventory.clone())
+            .context("failed to commit remote metadata after content match")?;
+
+        self.local_file
+            .as_mut()
+            .unwrap()
+            .update_sync_error_state(false)
+            .context("failed to clear sync error state after content match")?;
+
+        Ok(())
     }
 
     async fn clear_file_content(&mut self) -> Result<()> {

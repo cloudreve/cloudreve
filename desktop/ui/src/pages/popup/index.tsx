@@ -1,5 +1,7 @@
 import {
   Box,
+  Button,
+  ButtonGroup,
   IconButton,
   List,
   Typography,
@@ -19,6 +21,7 @@ import CloudreveLogo from "../../common/CloudreveLogo";
 import type { StatusSummary } from "./types";
 import DriveChips from "./DriveChips";
 import TaskItem from "./TaskItem";
+import ConflictItem from "./ConflictItem";
 
 export default function Popup() {
   const { t } = useTranslation();
@@ -26,23 +29,47 @@ export default function Popup() {
   const [selectedDrive, setSelectedDrive] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const isFetchingRef = useRef(false);
+  const suppressBlurCloseUntilRef = useRef(0);
 
-  // Close window on blur (when it loses focus)
+  // Close the tray popup on ordinary focus loss, but keep it alive while a native
+  // context menu is open. On Linux/Wayland and macOS, opening the browser/system
+  // right-click menu can temporarily move focus away from the webview; closing
+  // immediately would destroy the popup before the user can choose a menu item.
   useEffect(() => {
     let unlisten: () => void;
     const currentWindow = getCurrentWindow();
+    const handleContextMenu = () => {
+      suppressBlurCloseUntilRef.current = Date.now() + 3000;
+    };
+    const handlePointerDown = (event: PointerEvent) => {
+      if (event.button !== 2) {
+        suppressBlurCloseUntilRef.current = 0;
+      }
+    };
+
+    window.addEventListener("contextmenu", handleContextMenu);
+    window.addEventListener("pointerdown", handlePointerDown);
 
     currentWindow
       .onFocusChanged(({ payload: focused }) => {
-        if (!focused) {
-          currentWindow.close();
+        if (focused) {
+          suppressBlurCloseUntilRef.current = 0;
+          return;
         }
+
+        if (Date.now() < suppressBlurCloseUntilRef.current) {
+          return;
+        }
+
+        currentWindow.close();
       })
       .then((fn) => {
         unlisten = fn;
       });
 
     return () => {
+      window.removeEventListener("contextmenu", handleContextMenu);
+      window.removeEventListener("pointerdown", handlePointerDown);
       if (unlisten) {
         unlisten();
       }
@@ -100,10 +127,24 @@ export default function Popup() {
     }
   };
 
+  const handleResolveAll = async (action: "keep_remote" | "overwrite_remote") => {
+    try {
+      await invoke("resolve_all_conflicts", {
+        driveId: selectedDrive,
+        action,
+      });
+      fetchSummary();
+    } catch (error) {
+      console.error("Failed to resolve all conflicts:", error);
+    }
+  };
+
   const hasActiveTasks =
     summary?.active_tasks && summary.active_tasks.length > 0;
   const hasFinishedTasks =
     summary?.finished_tasks && summary.finished_tasks.length > 0;
+  const hasPendingConflicts =
+    summary?.pending_conflicts && summary.pending_conflicts.length > 0;
 
   return (
     <Box
@@ -168,7 +209,7 @@ export default function Popup() {
               {t("popup.loading", "Loading...")}
             </Typography>
           </Box>
-        ) : !hasActiveTasks && !hasFinishedTasks ? (
+        ) : !hasPendingConflicts && !hasActiveTasks && !hasFinishedTasks ? (
           <Box
             sx={{
               display: "flex",
@@ -186,6 +227,50 @@ export default function Popup() {
           </Box>
         ) : (
           <List disablePadding>
+            {/* Pending Conflicts */}
+            {hasPendingConflicts && (
+              <>
+                <Box
+                  sx={{
+                    px: 2,
+                    py: 1,
+                    pb: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <Typography
+                    variant="caption"
+                    color="warning.main"
+                    sx={{ fontWeight: 700, textTransform: "uppercase" }}
+                  >
+                    {t("popup.conflicts", "Conflicts")}
+                  </Typography>
+                  <ButtonGroup size="small" variant="text" color="warning">
+                    <Button onClick={() => handleResolveAll("keep_remote")}>
+                      {t("popup.keepAllRemote", "Keep all remote")}
+                    </Button>
+                    <Button onClick={() => handleResolveAll("overwrite_remote")}>
+                      {t("popup.overwriteAllRemote", "Overwrite all remote")}
+                    </Button>
+                  </ButtonGroup>
+                </Box>
+                {summary?.pending_conflicts.map((conflict) => (
+                  <ConflictItem
+                    key={conflict.id}
+                    conflict={conflict}
+                    onResolved={fetchSummary}
+                  />
+                ))}
+              </>
+            )}
+
+            {/* Divider between conflicts and tasks */}
+            {hasPendingConflicts && (hasActiveTasks || hasFinishedTasks) && (
+              <Divider sx={{ my: 1 }} />
+            )}
+
             {/* Active Tasks */}
             {hasActiveTasks && (
               <>
@@ -195,7 +280,7 @@ export default function Popup() {
                   sx={{
                     px: 2,
                     py: 1,
-                    pb:0,
+                    pb: 0,
                     display: "block",
                     fontWeight: 600,
                     textTransform: "uppercase",
@@ -223,7 +308,7 @@ export default function Popup() {
                   sx={{
                     px: 2,
                     py: 1,
-                    pb:0,
+                    pb: 0,
                     display: "block",
                     fontWeight: 600,
                     textTransform: "uppercase",
@@ -264,6 +349,8 @@ export default function Popup() {
               },
             }}
           />
+        ) : hasPendingConflicts ? (
+          <FolderIcon sx={{ fontSize: 18, color: "warning.main" }} />
         ) : (
           <CheckCircleIcon
             sx={{ fontSize: 18, color: "success.main" }}
@@ -274,6 +361,10 @@ export default function Popup() {
             ? t("popup.syncingStatus", "Syncing {{count}} file(s)...", {
                 count: summary?.active_tasks.length ?? 0,
               })
+            : hasPendingConflicts
+              ? t("popup.conflictStatus", "{{count}} conflict(s) need attention", {
+                  count: summary?.pending_conflicts.length ?? 0,
+                })
             : t("popup.upToDate", "Your files are up to date")}
         </Typography>
       </Box>

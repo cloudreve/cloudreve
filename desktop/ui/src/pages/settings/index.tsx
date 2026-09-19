@@ -1,12 +1,15 @@
 import {
   Box,
+  IconButton,
   List,
   ListItemButton,
   ListItemIcon,
   ListItemText,
 } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import CloudreveLogo from "../../common/CloudreveLogo";
 import DrivesSection from "./DrivesSection";
 import GeneralSection from "./GeneralSection";
@@ -115,8 +118,24 @@ export default function Settings() {
           sx={{
             height: 32,
             flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            px: 0.5,
           }}
-        />
+        >
+          <IconButton
+            size="small"
+            onClick={() => getCurrentWindow().close()}
+            sx={{
+              // Keep the button itself draggable-region-free so clicks work.
+              WebkitAppRegion: "no-drag",
+              appRegion: "no-drag",
+            }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Box>
         {/* Content */}
         <Box sx={{ flex: 1, overflow: "auto", px: 3, pb: 3,pt:1 }}>
           {renderContent()}

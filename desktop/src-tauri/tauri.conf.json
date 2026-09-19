@@ -10,6 +10,7 @@
     "beforeBuildCommand": "yarn run build"
   },
   "app": {
+    "enableGTKAppId": true,
     "windows": [
       {
         "label": "main",
@@ -45,5 +46,12 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["cloudreve"]
+      }
+    }
   }
 }

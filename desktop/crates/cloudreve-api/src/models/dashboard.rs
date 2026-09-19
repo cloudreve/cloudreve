@@ -41,4 +41,3 @@ pub struct HomepageSummary {
     pub license: License,
     pub version: Version,
 }
-

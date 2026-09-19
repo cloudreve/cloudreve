@@ -35,10 +35,20 @@ export interface TaskWithProgress extends TaskRecord {
   live_progress?: TaskProgress;
 }
 
+export interface PendingConflict {
+  id: number;
+  drive_id: string;
+  local_path: string;
+  is_folder: boolean;
+  updated_at: number;
+  size: number;
+}
+
 export interface StatusSummary {
   drives: DriveConfig[];
   active_tasks: TaskWithProgress[];
   finished_tasks: TaskRecord[];
+  pending_conflicts: PendingConflict[];
 }
 
 export interface FileIconResponse {

@@ -8,10 +8,10 @@ use async_trait::async_trait;
 pub trait SiteApi {
     /// Get site configuration
     async fn get_site_config(&self, section: &str) -> ApiResult<SiteConfig>;
-    
+
     /// Get captcha
     async fn get_captcha(&self) -> ApiResult<CaptchaResponse>;
-    
+
     /// Create abuse report
     async fn create_abuse_report(&self, request: &CreateAbuseReportService) -> ApiResult<()>;
 }
@@ -22,19 +22,21 @@ impl SiteApi for Client {
         self.get(
             &format!("/site/config/{}", section),
             RequestOptions::new().no_credential(),
-        ).await
+        )
+        .await
     }
-    
+
     async fn get_captcha(&self) -> ApiResult<CaptchaResponse> {
-        self.get("/site/captcha", RequestOptions::new().no_credential()).await
+        self.get("/site/captcha", RequestOptions::new().no_credential())
+            .await
     }
-    
+
     async fn create_abuse_report(&self, request: &CreateAbuseReportService) -> ApiResult<()> {
         self.post(
             "/site/abuse",
             request,
             RequestOptions::new().no_credential(),
-        ).await
+        )
+        .await
     }
 }
-

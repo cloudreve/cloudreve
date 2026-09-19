@@ -1,8 +1,6 @@
 use std::{
     path::Path,
-    sync::{
-        Arc, Weak,
-    },
+    sync::{Arc, Weak},
 };
 
 use widestring::U16CString;

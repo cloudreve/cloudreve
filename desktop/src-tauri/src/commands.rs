@@ -1,19 +1,25 @@
 use crate::AppStateHandle;
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use chrono::{Duration, Utc};
+use cloudreve_sync::drive::commands::ConflictAction;
 use cloudreve_sync::{
     config::LogLevel, ConfigManager, Credentials, DriveConfig, DriveInfo, StatusSummary,
 };
+#[cfg(windows)]
+use tauri::utils::{config::WindowEffectsConfig, WindowEffect};
 #[cfg(target_os = "macos")]
 use tauri::TitleBarStyle;
 use tauri::{
-    utils::{config::WindowEffectsConfig, WindowEffect},
-    webview::WebviewWindowBuilder,
+    tray::TrayIcon,
+    utils::config::Color,
+    webview::{WebviewWindow, WebviewWindowBuilder},
     AppHandle, Manager, State, WebviewUrl,
 };
+#[cfg(windows)]
 use tauri_plugin_frame::WebviewWindowExt;
 use tauri_plugin_positioner::{Position, WindowExt};
 use uuid::Uuid;
+#[cfg(windows)]
 use windows::ApplicationModel::{StartupTask, StartupTaskState};
 
 /// Result type for Tauri commands
@@ -96,6 +102,10 @@ pub async fn add_drive(
         return Err(t!("localPathCannotBeRootDrive").to_string());
     }
 
+    // Normalize the site URL once so every consumer (API client, reauthorize
+    // window, view-online links) sees the same canonical form.
+    let site_url = cloudreve_sync::normalize_site_url(&config.site_url);
+
     // Convert relative expiry times (seconds) to absolute RFC3339 timestamps
     let now = Utc::now();
     let access_expires = (now + Duration::seconds(config.access_token_expires as i64)).to_rfc3339();
@@ -116,7 +126,7 @@ pub async fn add_drive(
             .update_drive_credentials(
                 &drive_id,
                 config.drive_name,
-                config.site_url,
+                site_url.clone(),
                 credentials,
                 &config.user_id,
             )
@@ -139,7 +149,7 @@ pub async fn add_drive(
     let drive_config = DriveConfig {
         id: drive_id,
         name: config.drive_name,
-        instance_url: config.site_url,
+        instance_url: site_url,
         remote_path: config.remote_path,
         credentials,
         sync_path: config.local_path.into(),
@@ -193,6 +203,28 @@ pub async fn remove_drive(
         .map_err(|e| e.to_string())?;
 
     Ok(result)
+}
+
+/// Manually reconnect a drive: restart its remote event listener with a
+/// fresh retry backoff and trigger a full sync. Recovers drives stuck in
+/// the long-retry wait after repeated connection failures.
+#[tauri::command]
+pub async fn reconnect_drive(
+    state: State<'_, AppStateHandle>,
+    drive_id: String,
+) -> CommandResult<()> {
+    let app_state = state
+        .get()
+        .ok_or_else(|| "App not yet initialized".to_string())?;
+    let mount = app_state
+        .drive_manager
+        .get_drive(&drive_id)
+        .await
+        .ok_or_else(|| "Drive not found".to_string())?;
+    mount
+        .command_tx
+        .send(cloudreve_sync::drive::commands::MountCommand::Reconnect)
+        .map_err(|e| e.to_string())
 }
 
 /// Get ignore patterns for a drive
@@ -269,6 +301,90 @@ pub async fn get_status_summary(
         .map_err(|e| e.to_string())
 }
 
+/// Resolve a pending local-vs-remote conflict.
+#[tauri::command]
+pub async fn resolve_conflict(
+    state: State<'_, AppStateHandle>,
+    drive_id: String,
+    file_id: i64,
+    path: String,
+    action: String,
+) -> CommandResult<()> {
+    let app_state = state
+        .get()
+        .ok_or_else(|| "App not yet initialized".to_string())?;
+    // Keep the frontend contract string-based so TS does not need to mirror the
+    // Rust enum layout. The accepted values are the same action IDs used by the
+    // Windows shell/toast resolver.
+    let action = ConflictAction::from_str(&action)
+        .ok_or_else(|| format!("Invalid conflict action: {action}"))?;
+    let drive = app_state
+        .drive_manager
+        .get_drive(&drive_id)
+        .await
+        .ok_or_else(|| format!("Drive not found: {drive_id}"))?;
+
+    drive
+        .resolve_conflict(action, file_id, path)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Resolve all pending conflicts for a drive (or all drives if drive_id is None).
+#[tauri::command]
+pub async fn resolve_all_conflicts(
+    state: State<'_, AppStateHandle>,
+    drive_id: Option<String>,
+    action: String,
+) -> CommandResult<(usize, usize)> {
+    let app_state = state
+        .get()
+        .ok_or_else(|| "App not yet initialized".to_string())?;
+    let action = ConflictAction::from_str(&action)
+        .ok_or_else(|| format!("Invalid conflict action: {action}"))?;
+
+    let mut total_success = 0usize;
+    let mut total_failed = 0usize;
+
+    if let Some(id) = drive_id {
+        let drive = app_state
+            .drive_manager
+            .get_drive(&id)
+            .await
+            .ok_or_else(|| format!("Drive not found: {id}"))?;
+        let (s, f) = drive
+            .resolve_all_conflicts(action)
+            .await
+            .map_err(|e| e.to_string())?;
+        total_success += s;
+        total_failed += f;
+    } else {
+        let drives = app_state.drive_manager.list_drives().await;
+        for config in drives {
+            if let Some(drive) = app_state.drive_manager.get_drive(&config.id).await {
+                match drive.resolve_all_conflicts(action).await {
+                    Ok((s, f)) => {
+                        total_success += s;
+                        total_failed += f;
+                    }
+                    Err(e) => {
+                        tracing::error!(
+                            target: "commands",
+                            drive_id = %config.id,
+                            error = %e,
+                            "Failed to resolve all conflicts for drive"
+                        );
+                        // We intentionally continue with other drives rather
+                        // than failing the whole batch.
+                    }
+                }
+            }
+        }
+    }
+
+    Ok((total_success, total_failed))
+}
+
 /// Get all drives with their status information for the settings UI
 #[tauri::command]
 pub async fn get_drives_info(state: State<'_, AppStateHandle>) -> CommandResult<Vec<DriveInfo>> {
@@ -293,24 +409,55 @@ pub struct FileIconResponse {
     pub height: u32,
 }
 
+fn file_icon_to_response(icon: file_icon_provider::Icon) -> FileIconResponse {
+    FileIconResponse {
+        data: BASE64.encode(&icon.pixels),
+        width: icon.width,
+        height: icon.height,
+    }
+}
+
 /// Get file icon for a given path
 /// Returns base64 encoded RGBA pixel data with dimensions
 #[tauri::command]
-pub async fn get_file_icon(path: String, size: Option<u16>) -> CommandResult<FileIconResponse> {
+pub async fn get_file_icon(
+    #[allow(unused_variables)] app: AppHandle,
+    path: String,
+    size: Option<u16>,
+) -> CommandResult<FileIconResponse> {
     let icon_size = size.unwrap_or(32);
 
-    // Run the blocking icon retrieval in a separate thread
-    let result =
-        tokio::task::spawn_blocking(move || file_icon_provider::get_file_icon(&path, icon_size))
-            .await
-            .map_err(|e| format!("Task join error: {}", e))?
-            .map_err(|e| format!("Failed to get file icon: {:?}", e))?;
+    #[cfg(target_os = "linux")]
+    {
+        // file_icon_provider uses GTK on Linux. GTK APIs must run on the main
+        // thread, so do not use `spawn_blocking` here even though icon lookup can
+        // be slow; doing so causes gtk::IconTheme to panic on worker threads.
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        app.run_on_main_thread(move || {
+            let result = file_icon_provider::get_file_icon(&path, icon_size)
+                .map(file_icon_to_response)
+                .map_err(|e| format!("Failed to get file icon: {:?}", e));
+            let _ = tx.send(result);
+        })
+        .map_err(|e| format!("Failed to schedule file icon lookup: {}", e))?;
 
-    Ok(FileIconResponse {
-        data: BASE64.encode(&result.pixels),
-        width: result.width,
-        height: result.height,
-    })
+        return rx
+            .await
+            .map_err(|e| format!("File icon lookup was cancelled: {}", e))?;
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        // Run the blocking icon retrieval in a separate thread
+        let result = tokio::task::spawn_blocking(move || {
+            file_icon_provider::get_file_icon(&path, icon_size)
+        })
+        .await
+        .map_err(|e| format!("Task join error: {}", e))?
+        .map_err(|e| format!("Failed to get file icon: {:?}", e))?;
+
+        Ok(file_icon_to_response(result))
+    }
 }
 
 /// Show or create the main window (positioned at tray center)
@@ -323,19 +470,122 @@ pub fn show_main_window_center(app: &AppHandle) {
     show_main_window_at_position(app, Position::Center);
 }
 
+fn move_window_safely(window: &WebviewWindow, position: Position, label: &str) {
+    // tauri-plugin-positioner assumes tray/monitor geometry is available and
+    // can panic or error on some Linux desktop sessions when the tray position
+    // is unknown. Probe the monitor first and fall back to centering so popup
+    // display remains usable instead of crashing the runtime worker.
+    match position {
+        Position::Center => {
+            if let Err(err) = window.center() {
+                tracing::warn!(
+                    target: "main",
+                    window = label,
+                    error = %err,
+                    "Failed to center window"
+                );
+            }
+        }
+        position => match window.current_monitor() {
+            Ok(Some(_)) => {
+                if let Err(err) = window.move_window(position) {
+                    tracing::warn!(
+                        target: "main",
+                        window = label,
+                        error = %err,
+                        "Failed to move window with positioner; falling back to center"
+                    );
+                    let _ = window.center();
+                }
+            }
+            Ok(None) => {
+                tracing::warn!(
+                    target: "main",
+                    window = label,
+                    "Window has no current monitor; falling back to center"
+                );
+                let _ = window.center();
+            }
+            Err(err) => {
+                tracing::warn!(
+                    target: "main",
+                    window = label,
+                    error = %err,
+                    "Failed to get current monitor; falling back to center"
+                );
+                let _ = window.center();
+            }
+        },
+    }
+}
+
+fn apply_default_window_icon<'a>(
+    builder: WebviewWindowBuilder<'a, tauri::Wry, AppHandle>,
+    app: &'a AppHandle,
+    label: &str,
+) -> Option<WebviewWindowBuilder<'a, tauri::Wry, AppHandle>> {
+    // Non-Windows desktops otherwise tend to show the Wayland/X11 default icon
+    // for custom windows. Reusing Tauri's default icon keeps taskbar entries
+    // consistent without hard-coding a platform-specific icon path here.
+    let Some(icon) = app.default_window_icon() else {
+        tracing::warn!(
+            target: "main",
+            window = label,
+            "No default window icon is configured"
+        );
+        return Some(builder);
+    };
+
+    match builder.icon(icon.clone()) {
+        Ok(builder) => Some(builder),
+        Err(err) => {
+            tracing::warn!(
+                target: "main",
+                window = label,
+                error = %err,
+                "Failed to set window icon"
+            );
+            None
+        }
+    }
+}
+
+/// Attach a handler that updates macOS Dock visibility when the window is
+/// closed, destroyed, or loses focus. This is a per-window safeguard in
+/// addition to the global `RunEvent::WindowEvent` handler because some window
+/// state changes (e.g. clicking outside the add-drive/settings popup) are not
+/// reliably reflected by `webview_windows()`/`is_visible()` immediately. The
+/// check is retried several times to give AppKit time to catch up.
+#[cfg(target_os = "macos")]
+fn update_dock_on_window_close(window: &WebviewWindow) {
+    let window_clone = window.clone();
+    window.on_window_event(move |event| {
+        if matches!(
+            event,
+            tauri::WindowEvent::CloseRequested { .. }
+                | tauri::WindowEvent::Destroyed
+                | tauri::WindowEvent::Focused(false)
+        ) {
+            crate::schedule_update_dock_visibility(&window_clone.app_handle().clone());
+        }
+    });
+}
+
 /// Internal function to show or create the main window at a specific position
 fn show_main_window_at_position(app: &AppHandle, position: Position) {
     // Check if window already exists
     if let Some(window) = app.get_webview_window("main_popup") {
-        let _ = window.move_window(position);
+        move_window_safely(&window, position, "main_popup");
         let _ = window.show();
         let _ = window.unminimize();
         let _ = window.set_focus();
+        #[cfg(target_os = "macos")]
+        crate::update_dock_visibility(app);
         return;
     }
 
     // Create new main window
-    match WebviewWindowBuilder::new(
+    let builder = WebviewWindowBuilder::new(
         app,
         "main_popup",
         WebviewUrl::App(get_url_with_lang("index.html/#/popup").into()),
@@ -346,26 +596,61 @@ fn show_main_window_at_position(app: &AppHandle, position: Position) {
     .visible(false)
     .decorations(false)
     .skip_taskbar(true)
-    .minimizable(false)
-    .build()
-    {
+    .minimizable(false);
+
+    #[cfg(not(windows))]
+    // Transparent webviews render differently across GTK/WebKit and AppKit; on
+    // non-Windows this produced unreadable shadows/ghosting. Use an opaque
+    // white background there and keep Windows transparency for Mica/Acrylic.
+    let builder = builder.background_color(Color(255, 255, 255, 255));
+
+    let Some(builder) = apply_default_window_icon(builder, app, "main_popup") else {
+        return;
+    };
+
+    match builder.build() {
         Ok(window) => {
-            // Set up close request handler for fast popup launch
-            let window_clone = window.clone();
+            #[cfg(target_os = "macos")]
+            update_dock_on_window_close(&window);
+
+            // Set up window event handlers for macOS:
+            // - CloseRequested: when fast popup launch is enabled, hide instead of
+            //   destroying so the popup can be reshown quickly.
+            // - Focused(false): dismiss the popup when clicking outside and update
+            //   Dock visibility immediately.
+            let window_for_events = window.clone();
             window.on_window_event(move |event| {
-                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                    // Check if fast popup launch is enabled
-                    if ConfigManager::get().fast_popup_launch() {
-                        // Prevent default close behavior and hide window instead
-                        api.prevent_close();
-                        let _ = window_clone.hide();
+                match event {
+                    tauri::WindowEvent::CloseRequested { api, .. } => {
+                        if ConfigManager::get().fast_popup_launch() {
+                            api.prevent_close();
+                            let _ = window_for_events.hide();
+                            // The window is hidden rather than destroyed; make
+                            // sure the Dock icon is re-evaluated repeatedly.
+                            #[cfg(target_os = "macos")]
+                            crate::schedule_update_dock_visibility(
+                                &window_for_events.app_handle().clone(),
+                            );
+                        }
                     }
+                    #[cfg(target_os = "macos")]
+                    tauri::WindowEvent::Focused(false) => {
+                        let _ = window_for_events.hide();
+                        // Schedule multiple Dock visibility checks because the
+                        // window state reported by Tauri can lag behind AppKit.
+                        crate::schedule_update_dock_visibility(
+                            &window_for_events.app_handle().clone(),
+                        );
+                    }
+                    _ => {}
                 }
             });
 
-            let _ = window.move_window(position);
+            move_window_safely(&window, position, "main_popup");
             let _ = window.show();
             let _ = window.set_focus();
+            #[cfg(target_os = "macos")]
+            crate::update_dock_visibility(app);
         }
         Err(e) => {
             tracing::error!(target: "main_popup", error = %e, "Failed to create main window");
@@ -402,7 +687,11 @@ pub async fn show_reauthorize_window(
 
 /// Show or create the add-drive window
 pub fn show_add_drive_window_impl(app: &AppHandle) {
-    show_drive_window_internal(app, "Add Drive", &get_url_with_lang("index.html/#/add-drive"));
+    show_drive_window_internal(
+        app,
+        "Add Drive",
+        &get_url_with_lang("index.html/#/add-drive"),
+    );
 }
 
 /// Show or create the reauthorize window for a specific drive
@@ -429,10 +718,13 @@ fn show_drive_window_internal(app: &AppHandle, title: &str, url_path: &str) {
         let _ = window.show();
         let _ = window.unminimize();
         let _ = window.set_focus();
+        #[cfg(target_os = "macos")]
+        crate::update_dock_visibility(app);
         return;
     }
 
-    // Create new window with mica effect
+    // Create new window with mica effect on Windows only.
+    #[cfg(windows)]
     let effects = WindowEffectsConfig {
         effects: vec![WindowEffect::Mica, WindowEffect::Acrylic],
         state: None,
@@ -445,10 +737,18 @@ fn show_drive_window_internal(app: &AppHandle, title: &str, url_path: &str) {
         .inner_size(470.0, 630.0)
         .resizable(false)
         .visible(false)
-        .transparent(true)
-        .effects(effects)
         .decorations(false)
         .minimizable(false);
+
+    #[cfg(not(windows))]
+    // See `show_main_window_at_position`: keep non-Windows webviews opaque to
+    // avoid platform compositor artifacts while preserving Windows effects.
+    let builder = builder.background_color(Color(255, 255, 255, 255));
+
+    // Windows Mica/Acrylic effects require the window to be created transparent
+    // (WebviewWindow has no post-build transparency switch in Tauri 2).
+    #[cfg(windows)]
+    let builder = builder.transparent(true);
 
     // Platform-specific: title_bar_style and hidden_title are macOS-only
     #[cfg(target_os = "macos")]
@@ -456,12 +756,27 @@ fn show_drive_window_internal(app: &AppHandle, title: &str, url_path: &str) {
         .title_bar_style(TitleBarStyle::Overlay)
         .hidden_title(true);
 
+    let Some(builder) = apply_default_window_icon(builder, app, "add-drive") else {
+        return;
+    };
+
     match builder.build() {
         Ok(window) => {
-            let _ = window.move_window(Position::Center);
+            #[cfg(target_os = "macos")]
+            update_dock_on_window_close(&window);
+
+            #[cfg(windows)]
+            {
+                let _ = window.set_effects(effects);
+            }
+
+            move_window_safely(&window, Position::Center, "add-drive");
+            #[cfg(windows)]
             let _ = window.create_overlay_titlebar();
             let _ = window.show();
             let _ = window.set_focus();
+            #[cfg(target_os = "macos")]
+            crate::update_dock_visibility(app);
         }
         Err(e) => {
             tracing::error!(target: "main", error = %e, "Failed to create window: {}", title);
@@ -483,8 +798,19 @@ pub fn show_settings_window_impl(app: &AppHandle) {
         let _ = window.show();
         let _ = window.unminimize();
         let _ = window.set_focus();
+        #[cfg(target_os = "macos")]
+        crate::update_dock_visibility(app);
         return;
     }
+
+    // Create new window with mica effect on Windows only.
+    #[cfg(windows)]
+    let effects = WindowEffectsConfig {
+        effects: vec![WindowEffect::Mica, WindowEffect::Acrylic],
+        state: None,
+        radius: None,
+        color: None,
+    };
 
     let builder = WebviewWindowBuilder::new(
         app,
@@ -499,18 +825,43 @@ pub fn show_settings_window_impl(app: &AppHandle) {
     .decorations(false)
     .minimizable(true);
 
+    #[cfg(not(windows))]
+    // See `show_main_window_at_position`: keep non-Windows webviews opaque to
+    // avoid platform compositor artifacts while preserving Windows effects.
+    let builder = builder.background_color(Color(255, 255, 255, 255));
+
+    // Windows Mica/Acrylic effects require the window to be created transparent
+    // (WebviewWindow has no post-build transparency switch in Tauri 2).
+    #[cfg(windows)]
+    let builder = builder.transparent(true);
+
     // Platform-specific: title_bar_style and hidden_title are macOS-only
     #[cfg(target_os = "macos")]
     let builder = builder
         .title_bar_style(TitleBarStyle::Overlay)
         .hidden_title(true);
 
+    let Some(builder) = apply_default_window_icon(builder, app, "settings") else {
+        return;
+    };
+
     match builder.build() {
         Ok(window) => {
-            let _ = window.move_window(Position::Center);
+            #[cfg(target_os = "macos")]
+            update_dock_on_window_close(&window);
+
+            #[cfg(windows)]
+            {
+                let _ = window.set_effects(effects);
+            }
+
+            move_window_safely(&window, Position::Center, "settings");
+            #[cfg(windows)]
             let _ = window.create_overlay_titlebar();
             let _ = window.show();
             let _ = window.set_focus();
+            #[cfg(target_os = "macos")]
+            crate::update_dock_visibility(app);
         }
         Err(e) => {
             tracing::error!(target: "main", error = %e, "Failed to create settings window");
@@ -519,61 +870,321 @@ pub fn show_settings_window_impl(app: &AppHandle) {
 }
 
 /// The TaskId defined in AppxManifest.xml for the startup task
+#[cfg(windows)]
 const STARTUP_TASK_ID: &str = "cloudreve";
+#[cfg(target_os = "linux")]
+const AUTOSTART_DESKTOP_FILE: &str = "cloudreve-desktop.desktop";
+#[cfg(target_os = "macos")]
+const MACOS_LAUNCH_AGENT_FILE: &str = "cloudreve.desktop.plist";
+#[cfg(target_os = "macos")]
+const MACOS_LAUNCH_AGENT_LABEL: &str = "cloudreve.desktop";
+
+#[cfg(target_os = "linux")]
+fn linux_autostart_path() -> CommandResult<std::path::PathBuf> {
+    let config_home = std::env::var_os("XDG_CONFIG_HOME")
+        .map(std::path::PathBuf::from)
+        .or_else(|| {
+            std::env::var_os("HOME")
+                .map(std::path::PathBuf::from)
+                .map(|home| home.join(".config"))
+        })
+        .ok_or_else(|| "Unable to determine XDG config directory".to_string())?;
+
+    Ok(config_home.join("autostart").join(AUTOSTART_DESKTOP_FILE))
+}
+
+#[cfg(target_os = "linux")]
+fn linux_desktop_exec_quote(value: &str) -> String {
+    let escaped = value
+        .replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('$', "\\$")
+        .replace('`', "\\`")
+        .replace('\n', "")
+        .replace('\r', "");
+    format!("\"{}\"", escaped)
+}
+
+#[cfg(target_os = "linux")]
+fn linux_autostart_entry() -> CommandResult<String> {
+    let exe = std::env::current_exe()
+        .map_err(|e| format!("Failed to get current executable path: {}", e))?;
+    let exec = linux_desktop_exec_quote(&exe.display().to_string());
+
+    Ok(format!(
+        "[Desktop Entry]\n\
+         Type=Application\n\
+         Version=1.0\n\
+         Name=Cloudreve\n\
+         Comment=Cloudreve Desktop Sync Client\n\
+         Exec={}\n\
+         Terminal=false\n\
+         X-GNOME-Autostart-enabled=true\n\
+         Hidden=false\n",
+        exec
+    ))
+}
+
+#[cfg(target_os = "linux")]
+fn linux_get_auto_start_enabled() -> CommandResult<bool> {
+    let path = linux_autostart_path()?;
+    let content = match std::fs::read_to_string(path) {
+        Ok(content) => content,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(err) => return Err(format!("Failed to read autostart entry: {}", err)),
+    };
+
+    let disabled = content.lines().any(|line| {
+        matches!(
+            line.trim(),
+            "Hidden=true" | "X-GNOME-Autostart-enabled=false"
+        )
+    });
+    Ok(!disabled)
+}
+
+#[cfg(target_os = "linux")]
+fn linux_set_auto_start(enabled: bool) -> CommandResult<bool> {
+    let path = linux_autostart_path()?;
+
+    if enabled {
+        let parent = path
+            .parent()
+            .ok_or_else(|| "Invalid autostart entry path".to_string())?;
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create autostart directory: {}", e))?;
+        std::fs::write(&path, linux_autostart_entry()?)
+            .map_err(|e| format!("Failed to write autostart entry: {}", e))?;
+        Ok(true)
+    } else {
+        match std::fs::remove_file(&path) {
+            Ok(_) => Ok(false),
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(false),
+            Err(err) => Err(format!("Failed to remove autostart entry: {}", err)),
+        }
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn macos_launch_agent_path() -> CommandResult<std::path::PathBuf> {
+    let home = std::env::var_os("HOME")
+        .map(std::path::PathBuf::from)
+        .ok_or_else(|| "Unable to determine home directory".to_string())?;
+    Ok(home
+        .join("Library")
+        .join("LaunchAgents")
+        .join(MACOS_LAUNCH_AGENT_FILE))
+}
+
+#[cfg(target_os = "macos")]
+fn macos_plist_escape(value: &str) -> String {
+    value
+        .replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&apos;")
+        .replace('\n', "")
+        .replace('\r', "")
+}
+
+#[cfg(target_os = "macos")]
+fn macos_launch_agent_entry() -> CommandResult<String> {
+    let exe = std::env::current_exe()
+        .map_err(|e| format!("Failed to get current executable path: {}", e))?;
+    let exe = macos_plist_escape(&exe.display().to_string());
+    let label = macos_plist_escape(MACOS_LAUNCH_AGENT_LABEL);
+
+    Ok(format!(
+        r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>{}</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>{}</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>LimitLoadToSessionType</key>
+  <string>Aqua</string>
+</dict>
+</plist>
+"#,
+        label, exe
+    ))
+}
+
+#[cfg(target_os = "macos")]
+fn macos_get_auto_start_enabled() -> CommandResult<bool> {
+    let path = macos_launch_agent_path()?;
+    let content = match std::fs::read_to_string(path) {
+        Ok(content) => content,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(err) => return Err(format!("Failed to read LaunchAgent: {}", err)),
+    };
+
+    // Verify the plist is ours and configured to start at login.
+    let has_label = content.contains(&format!("<string>{}</string>", MACOS_LAUNCH_AGENT_LABEL));
+    let run_at_load = content.contains("<key>RunAtLoad</key>") && content.contains("<true/>");
+    Ok(has_label && run_at_load)
+}
+
+#[cfg(target_os = "macos")]
+fn macos_set_auto_start(enabled: bool) -> CommandResult<bool> {
+    let path = macos_launch_agent_path()?;
+
+    if enabled {
+        let parent = path
+            .parent()
+            .ok_or_else(|| "Invalid LaunchAgent path".to_string())?;
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create LaunchAgents directory: {}", e))?;
+        std::fs::write(&path, macos_launch_agent_entry()?)
+            .map_err(|e| format!("Failed to write LaunchAgent: {}", e))?;
+
+        // Load the agent so it applies to the current session and is enabled
+        // for future logins. Ignore errors: launchctl may fail if the agent is
+        // already loaded, which still leaves the plist in place for next boot.
+        let path_str = path.display().to_string();
+        let _ = std::process::Command::new("/bin/launchctl")
+            .args(["load", "-w", &path_str])
+            .output();
+
+        Ok(true)
+    } else {
+        // Only remove the plist. We intentionally do not `launchctl unload`
+        // because if the current process was launched by this agent, unload
+        // would terminate the running app. The agent will not be started on
+        // the next login since the plist is gone.
+        match std::fs::remove_file(&path) {
+            Ok(_) => Ok(false),
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(false),
+            Err(err) => Err(format!("Failed to remove LaunchAgent: {}", err)),
+        }
+    }
+}
 
 /// Get whether auto-start is enabled using Windows StartupTask API
 #[tauri::command]
 pub async fn get_auto_start_enabled() -> CommandResult<bool> {
-    tokio::task::spawn_blocking(|| {
-        let task_id: windows::core::HSTRING = STARTUP_TASK_ID.into();
-        let task = StartupTask::GetAsync(&task_id)
-            .map_err(|e| format!("Failed to get startup task: {}", e))?
-            .get()
-            .map_err(|e| format!("Failed to get startup task: {}", e))?;
+    #[cfg(target_os = "macos")]
+    {
+        return tokio::task::spawn_blocking(macos_get_auto_start_enabled)
+            .await
+            .map_err(|e| format!("Task join error: {}", e))?;
+    }
 
-        let state = task
-            .State()
-            .map_err(|e| format!("Failed to get task state: {}", e))?;
+    #[cfg(target_os = "linux")]
+    {
+        return tokio::task::spawn_blocking(linux_get_auto_start_enabled)
+            .await
+            .map_err(|e| format!("Task join error: {}", e))?;
+    }
 
-        Ok(matches!(
-            state,
-            StartupTaskState::Enabled | StartupTaskState::EnabledByPolicy
-        ))
-    })
-    .await
-    .map_err(|e| format!("Task join error: {}", e))?
+    #[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
+    {
+        Ok(false)
+    }
+
+    #[cfg(windows)]
+    {
+        tokio::task::spawn_blocking(|| {
+            let task_id: windows::core::HSTRING = STARTUP_TASK_ID.into();
+            let task = StartupTask::GetAsync(&task_id)
+                .map_err(|e| format!("Failed to get startup task: {}", e))?
+                .get()
+                .map_err(|e| format!("Failed to get startup task: {}", e))?;
+
+            let state = task
+                .State()
+                .map_err(|e| format!("Failed to get task state: {}", e))?;
+
+            Ok(matches!(
+                state,
+                StartupTaskState::Enabled | StartupTaskState::EnabledByPolicy
+            ))
+        })
+        .await
+        .map_err(|e| format!("Task join error: {}", e))?
+    }
 }
 
 /// Set auto-start configuration using Windows StartupTask API
 #[tauri::command]
 pub async fn set_auto_start(enabled: bool) -> CommandResult<bool> {
-    tokio::task::spawn_blocking(move || {
-        let task_id: windows::core::HSTRING = STARTUP_TASK_ID.into();
-        let task = StartupTask::GetAsync(&task_id)
-            .map_err(|e| format!("Failed to get startup task: {}", e))?
-            .get()
-            .map_err(|e| format!("Failed to get startup task: {}", e))?;
+    #[cfg(target_os = "macos")]
+    {
+        return tokio::task::spawn_blocking(move || macos_set_auto_start(enabled))
+            .await
+            .map_err(|e| format!("Task join error: {}", e))?;
+    }
 
-        if enabled {
-            // Request enable - may prompt user for consent
-            let new_state = task
-                .RequestEnableAsync()
-                .map_err(|e| format!("Failed to request enable: {}", e))?
+    #[cfg(target_os = "linux")]
+    {
+        return tokio::task::spawn_blocking(move || linux_set_auto_start(enabled))
+            .await
+            .map_err(|e| format!("Task join error: {}", e))?;
+    }
+
+    #[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
+    {
+        Err("Auto-start configuration is not supported on this platform yet".to_string())
+    }
+
+    #[cfg(windows)]
+    {
+        tokio::task::spawn_blocking(move || {
+            let task_id: windows::core::HSTRING = STARTUP_TASK_ID.into();
+            let task = StartupTask::GetAsync(&task_id)
+                .map_err(|e| format!("Failed to get startup task: {}", e))?
                 .get()
-                .map_err(|e| format!("Failed to enable startup task: {}", e))?;
+                .map_err(|e| format!("Failed to get startup task: {}", e))?;
 
-            Ok(matches!(
-                new_state,
-                StartupTaskState::Enabled | StartupTaskState::EnabledByPolicy
-            ))
-        } else {
-            task.Disable()
-                .map_err(|e| format!("Failed to disable startup task: {}", e))?;
-            Ok(false)
-        }
-    })
-    .await
-    .map_err(|e| format!("Task join error: {}", e))?
+            if enabled {
+                // Request enable - may prompt user for consent
+                let new_state = task
+                    .RequestEnableAsync()
+                    .map_err(|e| format!("Failed to request enable: {}", e))?
+                    .get()
+                    .map_err(|e| format!("Failed to enable startup task: {}", e))?;
+
+                Ok(matches!(
+                    new_state,
+                    StartupTaskState::Enabled | StartupTaskState::EnabledByPolicy
+                ))
+            } else {
+                task.Disable()
+                    .map_err(|e| format!("Failed to disable startup task: {}", e))?;
+                Ok(false)
+            }
+        })
+        .await
+        .map_err(|e| format!("Task join error: {}", e))?
+    }
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod linux_autostart_tests {
+    use super::linux_desktop_exec_quote;
+
+    #[test]
+    fn quotes_exec_paths_for_desktop_entries() {
+        assert_eq!(
+            linux_desktop_exec_quote("/opt/Cloudreve Desktop/cloudreve"),
+            "\"/opt/Cloudreve Desktop/cloudreve\""
+        );
+    }
+
+    #[test]
+    fn escapes_shell_sensitive_exec_characters() {
+        assert_eq!(
+            linux_desktop_exec_quote("/tmp/cloudreve\"$`\\bin"),
+            "\"/tmp/cloudreve\\\"\\$\\`\\\\bin\""
+        );
+    }
 }
 
 /// Set notification settings for credential expiry
@@ -611,6 +1222,8 @@ pub async fn get_general_settings() -> CommandResult<GeneralSettings> {
         log_to_file: config.log_to_file,
         log_level: config.log_level.as_str().to_string(),
         log_max_files: config.log_max_files,
+        sync_delay_seconds: config.sync_delay_seconds,
+        hide_tray_icon: config.hide_tray_icon,
         log_dir: ConfigManager::get_log_dir().display().to_string(),
         language: config.language,
     })
@@ -624,6 +1237,8 @@ pub struct GeneralSettings {
     pub log_to_file: bool,
     pub log_level: String,
     pub log_max_files: usize,
+    pub sync_delay_seconds: u64,
+    pub hide_tray_icon: bool,
     pub log_dir: String,
     pub language: Option<String>,
 }
@@ -655,6 +1270,26 @@ pub async fn set_log_max_files(max_files: usize) -> CommandResult<()> {
         .map_err(|e| e.to_string())
 }
 
+/// Set sync delay in seconds
+#[tauri::command]
+pub async fn set_sync_delay_seconds(seconds: u64) -> CommandResult<()> {
+    ConfigManager::get()
+        .set_sync_delay_seconds(seconds)
+        .map_err(|e| e.to_string())
+}
+
+/// Set whether the system tray icon is hidden and apply it live
+#[tauri::command]
+pub async fn set_hide_tray_icon(app: AppHandle, hide: bool) -> CommandResult<()> {
+    ConfigManager::get()
+        .set_hide_tray_icon(hide)
+        .map_err(|e| e.to_string())?;
+    if let Some(tray) = app.try_state::<TrayIcon>() {
+        tray.set_visible(!hide).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 /// Set language setting and update rust_i18n locale
 #[tauri::command]
 pub async fn set_language(app: AppHandle, language: Option<String>) -> CommandResult<()> {
@@ -663,14 +1298,18 @@ pub async fn set_language(app: AppHandle, language: Option<String>) -> CommandRe
         .set_language(language.clone())
         .map_err(|e| e.to_string())?;
 
-    // Update rust_i18n locale
-    let locale = language.unwrap_or_else(|| {
-        sys_locale::get_locale().unwrap_or_else(|| String::from("en-US"))
-    });
-    rust_i18n::set_locale(&locale);
+    // Update rust_i18n locale to the effective locale (config setting or
+    // normalized system locale).
+    rust_i18n::set_locale(&crate::get_effective_locale());
+
+    // Rebuild the tray context menu with the new locale so it doesn't show
+    // raw i18n keys.
+    if let Err(e) = crate::rebuild_tray_menu(&app) {
+        tracing::warn!(target: "main", error = %e, "Failed to rebuild tray menu after language change");
+    }
 
     // Close main window to force reload with new language
-     // Check if window already exists
+    // Check if window already exists
     if let Some(window) = app.get_webview_window("main_popup") {
         let _ = window.close();
         let _ = window.destroy();

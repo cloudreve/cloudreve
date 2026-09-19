@@ -14,6 +14,8 @@ diesel::table! {
         shared -> Bool,
         size -> BigInt,
         conflict_state -> Nullable<Text>,
+        local_updated_at -> Nullable<BigInt>,
+        local_size -> Nullable<BigInt>,
     }
 }
 

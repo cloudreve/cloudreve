@@ -23,7 +23,9 @@ use dashmap::DashMap;
 use futures::StreamExt;
 use tokio::io::AsyncWriteExt;
 use tokio_util::sync::CancellationToken;
-use tracing::{debug, info, warn};
+#[cfg(windows)]
+use tracing::warn;
+use tracing::{debug, info};
 use uuid::Uuid;
 
 use crate::{
@@ -213,16 +215,6 @@ impl<'a> DownloadTask<'a> {
         let local_file_info = LocalFileInfo::from_path(&self.task.payload.local_path)
             .context("failed to get local file info")?;
 
-        if !local_file_info.exists {
-            info!(
-                target: "tasks::download",
-                task_id = %self.task.task_id,
-                local_path = %self.task.payload.local_path_display(),
-                "Local file does not exist, skipping download"
-            );
-            return Ok(());
-        }
-
         if local_file_info.is_directory {
             info!(
                 target: "tasks::download",
@@ -233,27 +225,40 @@ impl<'a> DownloadTask<'a> {
             return Ok(());
         }
 
-        // Check if file is a placeholder and is hydrated (has content on disk)
-        if !local_file_info.is_placeholder() {
-            info!(
-                target: "tasks::download",
-                task_id = %self.task.task_id,
-                local_path = %self.task.payload.local_path_display(),
-                "File is not a placeholder, skipping download"
-            );
-            return Ok(());
-        }
+        #[cfg(windows)]
+        {
+            if !local_file_info.exists {
+                info!(
+                    target: "tasks::download",
+                    task_id = %self.task.task_id,
+                    local_path = %self.task.payload.local_path_display(),
+                    "Local file does not exist, skipping download"
+                );
+                return Ok(());
+            }
 
-        // partial_on_disk means the file content is NOT fully present locally
-        // We need the file to be hydrated (NOT partial_on_disk) to replace its content
-        if local_file_info.partial_on_disk() {
-            info!(
-                target: "tasks::download",
-                task_id = %self.task.task_id,
-                local_path = %self.task.payload.local_path_display(),
-                "File is not fully hydrated, skipping download - file must be hydrated first"
-            );
-            return Ok(());
+            // Check if file is a placeholder and is hydrated (has content on disk)
+            if !local_file_info.is_placeholder() {
+                info!(
+                    target: "tasks::download",
+                    task_id = %self.task.task_id,
+                    local_path = %self.task.payload.local_path_display(),
+                    "File is not a placeholder, skipping download"
+                );
+                return Ok(());
+            }
+
+            // partial_on_disk means the file content is NOT fully present locally
+            // We need the file to be hydrated (NOT partial_on_disk) to replace its content
+            if local_file_info.partial_on_disk() {
+                info!(
+                    target: "tasks::download",
+                    task_id = %self.task.task_id,
+                    local_path = %self.task.payload.local_path_display(),
+                    "File is not fully hydrated, skipping download - file must be hydrated first"
+                );
+                return Ok(());
+            }
         }
 
         self.local_file_info = Some(local_file_info);
@@ -319,8 +324,18 @@ impl<'a> DownloadTask<'a> {
         // Get download URL from server using inventory metadata for entity validation
         let mut request = FileURLService::default();
         request.uris.push(uri.clone());
-        if self.remote_file_info.as_ref().map(|f|f.primary_entity.is_some()).unwrap_or(false) {
-            request.entity = self.remote_file_info.as_ref().unwrap().primary_entity.clone();
+        if self
+            .remote_file_info
+            .as_ref()
+            .map(|f| f.primary_entity.is_some())
+            .unwrap_or(false)
+        {
+            request.entity = self
+                .remote_file_info
+                .as_ref()
+                .unwrap()
+                .primary_entity
+                .clone();
         }
 
         let entity_url_res = self
@@ -518,6 +533,10 @@ impl<'a> DownloadTask<'a> {
 
         #[cfg(not(windows))]
         {
+            if let Some(parent) = local_path.parent() {
+                std::fs::create_dir_all(parent)
+                    .context("failed to create parent directory for download")?;
+            }
             // On non-Windows, just copy the file
             std::fs::copy(temp_path, local_path)
                 .context("failed to copy temp file to local path")?;

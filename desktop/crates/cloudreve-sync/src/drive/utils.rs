@@ -3,7 +3,9 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use cloudreve_api::models::uri::CrUri;
 use url::Url;
+#[cfg(windows)]
 use widestring::U16CString;
+#[cfg(windows)]
 use windows::Win32::UI::Shell::{SHCNE_ID, SHCNF_PATHW, SHChangeNotify};
 
 use crate::drive::mounts::DriveConfig;
@@ -86,13 +88,18 @@ pub fn recycle_bin_url(config: &DriveConfig) -> Result<String> {
     {
         let mut query = base.query_pairs_mut();
         query.append_pair("user_hint", config.user_id.as_str());
-         query.append_pair("path", "cloudreve://trash");
+        query.append_pair("path", "cloudreve://trash");
     }
 
     Ok(base.to_string())
 }
 
-// notify_shell_change notify the shell to refresh the file or directory
+/// Notifies the platform shell that a local file or directory changed.
+///
+/// On Windows this calls `SHChangeNotify` so Explorer refreshes Cloud Files
+/// placeholder state, shell overlays, and file attributes after create/delete or
+/// hydrate/dehydrate operations.
+#[cfg(windows)]
 pub fn notify_shell_change(path: &PathBuf, event: SHCNE_ID) -> Result<()> {
     let utf16_path = U16CString::from_os_str(path.as_path())?;
     unsafe {
@@ -103,5 +110,17 @@ pub fn notify_shell_change(path: &PathBuf, event: SHCNE_ID) -> Result<()> {
             None,
         );
     }
+    Ok(())
+}
+
+/// No-op shell notification shim for non-Windows full sync.
+///
+/// Linux and other non-Windows platforms do not use the Windows CFAPI
+/// placeholder model, and there is no single cross-desktop equivalent of
+/// `SHChangeNotify`. Ordinary file managers observe real file and directory
+/// changes through filesystem notifications, so full-sync correctness does not
+/// depend on an explicit shell refresh hook here.
+#[cfg(not(windows))]
+pub fn notify_shell_change(_path: &PathBuf, _event: u32) -> Result<()> {
     Ok(())
 }

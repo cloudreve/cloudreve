@@ -183,4 +183,3 @@ pub struct GenerateRedeemsService {
 pub struct DeleteGiftCodeService {
     pub id: i32,
 }
-

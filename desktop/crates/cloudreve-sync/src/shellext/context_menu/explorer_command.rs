@@ -1,5 +1,8 @@
 use super::{CLSID_EXPLORER_COMMAND, SubCommands};
-use crate::{drive::manager::DriveManager, utils::app::{AppRoot, get_app_root}};
+use crate::{
+    drive::manager::DriveManager,
+    utils::app::{AppRoot, get_app_root},
+};
 use std::sync::Arc;
 use windows::{
     Win32::{Foundation::*, System::Com::*, UI::Shell::*},

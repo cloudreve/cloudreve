@@ -1,0 +1,70 @@
+# Maintainer: Cloudreve Desktop maintainers
+pkgname=cloudreve-desktop
+pkgver=0.2.0
+pkgrel=1
+pkgdesc='Cloudreve Desktop Sync Client'
+arch=('x86_64')
+url='https://github.com/Dvorinka/cloudreve'
+license=('MIT')
+# Arch's global makepkg.conf may enable LTO. The Rust `ring` crate embeds
+# native C/ASM objects in its rlib, and rust-lld can fail to link those objects
+# under makepkg LTO with `ring_core_*` undefined symbols. Keep LTO disabled for
+# this package; a clean target directory does not fix that linker failure.
+options=(!lto)
+depends=(
+  'gtk3'
+  'hicolor-icon-theme'
+  'libayatana-appindicator'
+  'openssl'
+  'webkit2gtk-4.1'
+)
+makedepends=(
+  'rust'
+  'file'
+  'nodejs'
+  'pkgconf'
+  'yarn'
+)
+# The desktop sources live in the desktop/ subdirectory of the monorepo.
+# Until desktop release tags exist, build from the pinned master snapshot.
+source=("${pkgname}::git+https://github.com/Dvorinka/cloudreve.git")
+sha256sums=('SKIP')
+
+prepare() {
+  cd "${pkgname}/desktop"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --target "$CARCH-unknown-linux-gnu"
+}
+
+build() {
+  cd "${pkgname}/desktop"
+  export RUSTUP_TOOLCHAIN=stable
+  export CARGO_TARGET_DIR=target
+  # `ring` compiles bundled C/ASM sources and links them into Rust. If Arch's
+  # makepkg LTO flags leak into those CFLAGS, GCC emits LTO objects that
+  # rust-lld cannot consume reliably, resulting in `ring_core_*` undefined
+  # symbols at the final binary link step. Strip the known Arch LTO flag here
+  # as a defensive guard in addition to package-level `options=(!lto)`.
+  export CFLAGS="${CFLAGS//-flto=auto/}"
+  export CXXFLAGS="${CXXFLAGS//-flto=auto/}"
+
+  # makepkg reuses srcdir between builds unless the caller passes -C. Remove any
+  # stale node_modules tree first so a previous pnpm/yarn-mixed install cannot
+  # leave broken package links that TypeScript later resolves during `yarn build`.
+  rm -rf ui/node_modules
+  yarn --cwd ui install --frozen-lockfile
+  yarn --cwd ui run build
+  # Enable Tauri's custom protocol for production builds. Without this feature,
+  # tauri's build script marks the binary as `cfg(dev)`, so the installed app
+  # tries to load `build.devUrl` (localhost:5173) instead of bundled assets.
+  cargo build --release -p cloudreve-desktop --features tauri/custom-protocol
+}
+
+package() {
+  cd "${pkgname}/desktop"
+
+  install -Dm755 target/release/cloudreve-desktop "$pkgdir/usr/bin/cloudreve-desktop"
+  install -Dm644 package/linux/cloudreve-desktop.desktop "$pkgdir/usr/share/applications/cloudreve-desktop.desktop"
+  install -Dm644 src-tauri/icons/128x128.png "$pkgdir/usr/share/icons/hicolor/128x128/apps/cloudreve.png"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

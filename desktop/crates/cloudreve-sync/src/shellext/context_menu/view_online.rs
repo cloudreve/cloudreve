@@ -1,20 +1,21 @@
-use crate::{drive::commands::ManagerCommand, utils::app::AppRoot};
 use crate::drive::manager::DriveManager;
+use crate::{drive::commands::ManagerCommand, utils::app::AppRoot};
 use rust_i18n::t;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use windows::{
-    Win32::{Foundation::*, System::Com::*, UI::Shell::*},
+    Win32::{Foundation::*, System::Com::*, System::Ole::*, UI::Shell::*},
     core::*,
 };
 
-#[implement(IExplorerCommand)]
+/// shlguid.h: SID_SFolderView — resolves IFolderView from the command site.
+const SID_S_FOLDER_VIEW: GUID = GUID::from_u128(0xcde725b0_ccc9_4519_917e_325d72fab4ce);
+
+#[implement(IExplorerCommand, IObjectWithSite)]
 pub struct ViewOnlineCommandHandler {
     drive_manager: Arc<DriveManager>,
     app_root: AppRoot,
-
-    #[allow(dead_code)]
-    site: Option<IUnknown>,
+    site: Mutex<Option<IUnknown>>,
 }
 
 impl ViewOnlineCommandHandler {
@@ -22,7 +23,31 @@ impl ViewOnlineCommandHandler {
         Self {
             drive_manager,
             app_root,
-            site: None,
+            site: Mutex::new(None),
+        }
+    }
+
+    fn send_view_online(&self, path: PathBuf) {
+        tracing::debug!(target: "shellext::context_menu", path = %path.display(), "View online requested");
+        let command_tx = self.drive_manager.get_command_sender();
+        if let Err(e) = command_tx.send(ManagerCommand::ViewOnline { path }) {
+            tracing::error!(target: "shellext::context_menu", error = %e, "Failed to send ViewOnline command");
+        }
+    }
+}
+
+impl IObjectWithSite_Impl for ViewOnlineCommandHandler_Impl {
+    fn SetSite(&self, punksite: Option<&IUnknown>) -> Result<()> {
+        *self.site.lock().unwrap() = punksite.cloned();
+        Ok(())
+    }
+
+    fn GetSite(&self, riid: *const GUID, ppvsite: *mut *mut core::ffi::c_void) -> Result<()> {
+        let site = self.site.lock().unwrap();
+        if let Some(site) = site.as_ref() {
+            unsafe { site.query(riid, ppvsite) }.ok()
+        } else {
+            Err(Error::from(E_FAIL))
         }
     }
 }
@@ -82,17 +107,26 @@ impl IExplorerCommand_Impl for ViewOnlineCommandHandler_Impl {
                 // Get the first item
                 let item = items.GetItemAt(0)?;
                 let display_name = item.GetDisplayName(SIGDN_FILESYSPATH)?;
-                let path_str = display_name.to_string()?;
-                let path = PathBuf::from(path_str.clone());
+                let path = PathBuf::from(display_name.to_string()?);
 
-                tracing::debug!(target: "shellext::context_menu", path = %path_str, "View online requested");
+                self.send_view_online(path);
+            }
+        } else {
+            // Folder-background invoke carries no selection; resolve the
+            // current folder through the site Explorer gave us in SetSite.
+            let site = self.site.lock().unwrap().clone();
+            let Some(site) = site else {
+                return Ok(());
+            };
+            unsafe {
+                let service_provider: IServiceProvider = site.cast()?;
+                let folder_view: IFolderView =
+                    service_provider.QueryService(&SID_S_FOLDER_VIEW)?;
+                let item: IShellItem = folder_view.GetFolder()?;
+                let display_name = item.GetDisplayName(SIGDN_FILESYSPATH)?;
+                let path = PathBuf::from(display_name.to_string()?);
 
-                // Send command through channel to async processor
-                let command_tx = self.drive_manager.get_command_sender();
-
-                if let Err(e) = command_tx.send(ManagerCommand::ViewOnline { path: path.clone() }) {
-                    tracing::error!(target: "shellext::context_menu", error = %e, "Failed to send ViewOnline command");
-                }
+                self.send_view_online(path);
             }
         }
 

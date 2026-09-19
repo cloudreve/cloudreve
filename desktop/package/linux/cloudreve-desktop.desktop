@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Cloudreve
+Comment=Cloudreve Desktop Sync Client
+Exec=cloudreve-desktop
+Icon=cloudreve
+Terminal=false
+Categories=Network;FileTransfer;
+StartupNotify=false

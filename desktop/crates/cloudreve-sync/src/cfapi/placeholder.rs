@@ -1,4 +1,4 @@
-use anyhow::{Result};
+use anyhow::Result;
 use std::{
     fmt::Debug,
     fs::File,
@@ -22,14 +22,16 @@ use windows::{
                 CF_PIN_STATE, CF_PLACEHOLDER_RANGE_INFO_CLASS, CF_PLACEHOLDER_STANDARD_INFO,
                 CF_PLACEHOLDER_STATE, CF_SET_PIN_FLAGS, CF_UPDATE_FLAGS, CfCloseHandle,
                 CfConvertToPlaceholder, CfDehydratePlaceholder, CfGetPlaceholderInfo,
-                CfGetPlaceholderRangeInfo,
-                CfGetPlaceholderStateFromFindData, CfGetWin32HandleFromProtectedHandle,
-                CfHydratePlaceholder, CfOpenFileWithOplock, CfReferenceProtectedHandle,
-                CfReleaseProtectedHandle, CfRevertPlaceholder, CfSetInSyncState, CfSetPinState,
-                CfUpdatePlaceholder,
+                CfGetPlaceholderRangeInfo, CfGetPlaceholderStateFromFindData,
+                CfGetWin32HandleFromProtectedHandle, CfHydratePlaceholder, CfOpenFileWithOplock,
+                CfReferenceProtectedHandle, CfReleaseProtectedHandle, CfRevertPlaceholder,
+                CfSetInSyncState, CfSetPinState, CfUpdatePlaceholder,
             },
             FileSystem::{
-                CreateFileW, FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_PINNED, FILE_ATTRIBUTE_UNPINNED, FILE_FLAGS_AND_ATTRIBUTES, FILE_SHARE_MODE, FILE_SHARE_READ, FIND_FIRST_EX_FLAGS, FindClose, FindExInfoBasic, FindExSearchNameMatch, FindFirstFileExW, OPEN_EXISTING, WIN32_FIND_DATAW
+                CreateFileW, FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_PINNED,
+                FILE_ATTRIBUTE_UNPINNED, FILE_FLAGS_AND_ATTRIBUTES, FILE_SHARE_MODE,
+                FILE_SHARE_READ, FIND_FIRST_EX_FLAGS, FindClose, FindExInfoBasic,
+                FindExSearchNameMatch, FindFirstFileExW, OPEN_EXISTING, WIN32_FIND_DATAW,
             },
         },
     },
@@ -377,8 +379,7 @@ impl OpenOptions {
                 tokio::time::sleep(delay).await;
             }
 
-            let result =
-                unsafe { CfOpenFileWithOplock(PCWSTR(u16_path.as_ptr()), self.flags) };
+            let result = unsafe { CfOpenFileWithOplock(PCWSTR(u16_path.as_ptr()), self.flags) };
 
             match result {
                 Ok(handle) => {
@@ -677,7 +678,9 @@ impl LocalFileInfo {
         };
 
         // Close the handle after use
-        unsafe { let _ = FindClose(handle); };
+        unsafe {
+            let _ = FindClose(handle);
+        };
 
         let pin_state = if find_data.dwFileAttributes & FILE_ATTRIBUTE_PINNED.0 != 0 {
             PinState::Pinned

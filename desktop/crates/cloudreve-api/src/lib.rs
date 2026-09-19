@@ -13,6 +13,7 @@
 //!
 //! ```no_run
 //! use cloudreve_api::{Client, ClientConfig};
+//! use cloudreve_api::api::user::UserApi;
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -43,5 +44,5 @@ pub mod error;
 pub mod models;
 
 pub use boolset::Boolset;
-pub use client::{Client, ClientConfig};
+pub use client::{Client, ClientConfig, normalize_site_url};
 pub use error::{ApiError, ApiResult};
