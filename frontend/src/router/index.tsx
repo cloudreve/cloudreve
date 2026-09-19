@@ -4,6 +4,7 @@ import ErrorBoundary from "../component/Common/ErrorBoundary.tsx";
 import HeadlessFrame from "../component/Frame/HeadlessFrame.tsx";
 import { HomeRedirect } from "../component/Pages/HomeRedirect.tsx";
 import Activate from "../component/Pages/Login/Activate.tsx";
+import ActivateEmailChange from "../component/Pages/Login/ActivateEmailChange.tsx";
 import Authorize from "../component/Pages/Login/Authorize.tsx";
 import Reset from "../component/Pages/Login/Reset.tsx";
 import SessionIntro from "../component/Pages/Login/SessionIntro.tsx";
@@ -40,6 +41,10 @@ export const router = createBrowserRouter([
               {
                 path: "activate",
                 element: <Activate />,
+              },
+              {
+                path: "activate_email",
+                element: <ActivateEmailChange />,
               },
               {
                 path: "reset",

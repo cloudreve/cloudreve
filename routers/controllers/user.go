@@ -170,6 +170,30 @@ func UserActivate(c *gin.Context) {
 	c.JSON(200, user.ActivateUser(c))
 }
 
+// UserRequestEmailChange starts the self-service email change flow.
+func UserRequestEmailChange(c *gin.Context) {
+	service := ParametersFromContext[*user.RequestEmailChangeService](c, user.RequestEmailChangeParamCtx{})
+	if err := service.Request(c); err != nil {
+		c.JSON(200, serializer.Err(c, err))
+		c.Abort()
+		return
+	}
+
+	c.JSON(200, serializer.Response{})
+}
+
+// UserActivateEmailChange applies the pending email change from the signed
+// confirmation link.
+func UserActivateEmailChange(c *gin.Context) {
+	if err := user.ActivateEmailChange(c); err != nil {
+		c.JSON(200, serializer.Err(c, err))
+		c.Abort()
+		return
+	}
+
+	c.JSON(200, serializer.Response{})
+}
+
 // UserSignOut 用户退出登录
 func UserSignOut(c *gin.Context) {
 	service := ParametersFromContext[*user.RefreshTokenService](c, user.RefreshTokenParameterCtx{})

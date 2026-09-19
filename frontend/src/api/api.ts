@@ -1352,6 +1352,40 @@ export function sendEmailActivate(id: string, sign: string): ThunkResponse<User>
   };
 }
 
+export function sendRequestEmailChange(newEmail: string, password: string): ThunkResponse {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/user/setting/email`,
+        {
+          method: "POST",
+          data: { new_email: newEmail, password },
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function sendEmailChangeActivate(id: string, sign: string): ThunkResponse {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/user/activate_email/${id}?sign=${encodeURIComponent(sign)}`,
+        {
+          method: "GET",
+        },
+        {
+          ...defaultOpts,
+          noCredential: true,
+        },
+      ),
+    );
+  };
+}
+
 export function sendResetEmail(req: SendResetEmailService): ThunkResponse<User> {
   return async (dispatch, _getState) => {
     return await dispatch(

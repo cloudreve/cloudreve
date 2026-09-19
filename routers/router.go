@@ -431,6 +431,12 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				middleware.HashID(hashid.UserID),
 				controllers.UserActivate,
 			)
+			// 邮箱更换确认 Done
+			user.GET("activate_email/:id",
+				middleware.SignRequired(dep.GeneralAuth()),
+				middleware.HashID(hashid.UserID),
+				controllers.UserActivateEmailChange,
+			)
 			// 获取用户头像
 			user.GET("avatar/:id",
 				middleware.HashID(hashid.UserID),
@@ -1346,6 +1352,13 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 					// 获得二步验证初始化信息
 					setting.GET("2fa", controllers.UserInit2FA)
+					// 请求更换邮箱（向新地址发送确认链接）
+					setting.POST("email",
+						middleware.RequiredScopes(types.ScopeUserSecurityInfoWrite),
+						middleware.RateLimitByIP("email_change", 5, time.Hour),
+						controllers.FromJSON[usersvc.RequestEmailChangeService](usersvc.RequestEmailChangeParamCtx{}),
+						controllers.UserRequestEmailChange,
+					)
 				}
 			}
 

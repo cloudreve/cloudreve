@@ -8,6 +8,7 @@ import { useAppDispatch, useAppSelector } from "../../../redux/hooks.ts";
 import { confirmOperation } from "../../../redux/thunks/dialog.ts";
 import { getEntityContent } from "../../../redux/thunks/file.ts";
 import { saveCode } from "../../../redux/thunks/viewer.ts";
+import SessionManager, { UserSettings } from "../../../session/index.ts";
 import { fileExtension } from "../../../util";
 import { CascadingSubmenu } from "../../FileManager/ContextMenu/CascadingMenu.tsx";
 import { DenseDivider, SquareMenuItem } from "../../FileManager/ContextMenu/ContextMenu.tsx";
@@ -107,6 +108,7 @@ const CodeViewer = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [optionAnchorEl, setOptionAnchorEl] = useState<null | HTMLElement>(null);
   const [language, setLng] = useState<string | null>(null);
+  const [charsetState, setCharsetState] = useState<string | undefined>(undefined);
   const [wordWrap, setWordWrap] = useState<"off" | "on" | "wordWrapColumn" | "bounded">("off");
   const [eol, setEol] = useState<"LF" | "CRLF">("LF");
   const saveFunction = useRef<() => void>(() => {});
@@ -138,6 +140,7 @@ const CodeViewer = () => {
         return;
       }
 
+      setCharsetState(charset);
       setLoaded(false);
       setOptionAnchorEl(null);
       dispatch(getEntityContent(viewerState.file, viewerState.version))
@@ -156,15 +159,37 @@ const CodeViewer = () => {
     [viewerState, closeViewer],
   );
 
+  // Remember charset/language picks per extension (#2249).
+  const currentExt = fileExtension(viewerState?.file?.name ?? "") ?? "";
+
+  const pickCharset = useCallback(
+    (charset: string) => {
+      SessionManager.set(UserSettings.CodeCharsetPrefix + currentExt, charset);
+      loadContent(charset);
+    },
+    [currentExt, loadContent],
+  );
+
+  const pickLanguage = useCallback(
+    (l: string) => {
+      SessionManager.set(UserSettings.CodeLanguagePrefix + currentExt, l);
+      setLng(l);
+    },
+    [currentExt],
+  );
+
   useEffect(() => {
     if (!viewerState || !viewerState.open) {
       return;
     }
 
+    const ext = fileExtension(viewerState.file.name) ?? "";
+    const rememberedCharset = SessionManager.get(UserSettings.CodeCharsetPrefix + ext);
+    const rememberedLng = SessionManager.get(UserSettings.CodeLanguagePrefix + ext);
     setLng(null);
     setSaved(true);
-    setLng(codePreviewSuffix[fileExtension(viewerState.file.name) ?? ""] ?? "");
-    loadContent();
+    setLng(rememberedLng ?? codePreviewSuffix[ext] ?? "");
+    loadContent(rememberedCharset);
   }, [viewerState?.open]);
 
   const openMore = useCallback(
@@ -286,14 +311,19 @@ const CodeViewer = () => {
       >
         <CascadingSubmenu popupId={"lng"} title={t("application:fileManager.charset")}>
           {allCharsets.map((charset) => (
-            <SquareMenuItem key={charset} onClick={() => loadContent(charset)}>
+            <SquareMenuItem key={charset} onClick={() => pickCharset(charset)}>
               <ListItemText>{charset}</ListItemText>
+              {charset == (charsetState ?? "UTF-8") && (
+                <ListItemIcon>
+                  <Checkmark />
+                </ListItemIcon>
+              )}
             </SquareMenuItem>
           ))}
         </CascadingSubmenu>
         <CascadingSubmenu popupId={"lng"} title={t("application:fileManager.textType")}>
           {allLng.map((l) => (
-            <SquareMenuItem key={l} onClick={() => setLng(l)}>
+            <SquareMenuItem key={l} onClick={() => pickLanguage(l)}>
               <ListItemText>{l}</ListItemText>
               {l == language && (
                 <ListItemIcon>
