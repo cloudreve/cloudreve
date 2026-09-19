@@ -5,6 +5,7 @@ import (
 	rawsql "database/sql"
 	"database/sql/driver"
 	"fmt"
+	"strings"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -74,7 +75,7 @@ func NewRawEntClient(l logging.Logger, config conf.ConfigProvider) (*ent.Client,
 	// If Database connection string provided, use it directly.
 	if dbConfig.DatabaseURL != "" {
 		l.Info("Connect to database with connection string")
-		client, err = sql.Open(string(confDBType), dbConfig.DatabaseURL)
+		client, err = sql.Open(string(confDBType), ensureMySQLParseTime(confDBType, dbConfig.DatabaseURL))
 	} else {
 
 		switch confDBType {
@@ -140,6 +141,25 @@ func NewRawEntClient(l logging.Logger, config conf.ConfigProvider) (*ent.Client,
 	}
 
 	return ent.NewClient(driverOpt), nil
+}
+
+// ensureMySQLParseTime appends parseTime=True to a user-provided MySQL DSN
+// when absent. Without it the driver returns DATETIME columns as strings,
+// which fail to scan into time.Time fields (cloudreve/cloudreve#2872).
+func ensureMySQLParseTime(dbType conf.DBType, dsn string) string {
+	if dbType != conf.MySqlDB {
+		return dsn
+	}
+	idx := strings.IndexByte(dsn, '?')
+	if idx < 0 {
+		return dsn + "?parseTime=True"
+	}
+	for _, p := range strings.Split(dsn[idx+1:], "&") {
+		if strings.HasPrefix(strings.ToLower(p), "parsetime=") {
+			return dsn
+		}
+	}
+	return dsn + "&parseTime=True"
 }
 
 type sqlite3Driver struct {
