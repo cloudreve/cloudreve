@@ -474,6 +474,7 @@ pub fn run() {
             commands::set_log_to_file,
             commands::set_log_level,
             commands::set_log_max_files,
+            commands::set_sync_delay_seconds,
             commands::set_language,
             commands::open_log_folder,
         ])

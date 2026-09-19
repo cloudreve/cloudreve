@@ -60,6 +60,8 @@ pub struct AppConfig {
     pub log_level: LogLevel,
     /// Maximum number of log files to keep
     pub log_max_files: usize,
+    /// Delay before starting upload after file stops changing (seconds). 0 disables the delay.
+    pub sync_delay_seconds: u64,
     /// Language/locale setting (e.g., "en-US", "zh-CN"). None means use system default.
     pub language: Option<String>,
 }
@@ -74,6 +76,7 @@ impl Default for AppConfig {
             log_to_file: true,
             log_level: LogLevel::Debug,
             log_max_files: 5,
+            sync_delay_seconds: 0,
             language: None,
         }
     }
@@ -278,6 +281,21 @@ impl ConfigManager {
     pub fn set_log_max_files(&self, max_files: usize) -> Result<()> {
         self.update(|config| {
             config.log_max_files = max_files;
+        })
+    }
+
+    /// Get the sync delay in seconds
+    pub fn sync_delay_seconds(&self) -> u64 {
+        self.config
+            .read()
+            .map(|c| c.sync_delay_seconds)
+            .unwrap_or(0)
+    }
+
+    /// Set the sync delay in seconds
+    pub fn set_sync_delay_seconds(&self, seconds: u64) -> Result<()> {
+        self.update(|config| {
+            config.sync_delay_seconds = seconds;
         })
     }
 

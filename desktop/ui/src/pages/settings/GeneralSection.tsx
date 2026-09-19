@@ -171,15 +171,16 @@ function SettingActionItem({
 
 interface SettingsGroupProps {
   title: string;
+  titleColor?: string;
   children: React.ReactNode;
 }
 
-function SettingsGroup({ title, children }: SettingsGroupProps) {
+function SettingsGroup({ title, titleColor = "text.secondary", children }: SettingsGroupProps) {
   return (
     <Box sx={{ mb: 3 }}>
       <Typography
         variant="caption"
-        color="text.secondary"
+        color={titleColor}
         sx={{ mb: 1, display: "block", px: 0.5 }}
       >
         {title}
@@ -209,6 +210,7 @@ interface GeneralSettings {
   log_to_file: boolean;
   log_level: string;
   log_max_files: number;
+  sync_delay_seconds: number;
   log_dir: string;
   language: string | null;
 }
@@ -228,6 +230,15 @@ const MAX_FILES_OPTIONS = [
   { value: "10", label: "10" },
 ];
 
+const DELAY_SYNC_OPTIONS = [
+  { value: "0", label: "off" },
+  { value: "10", label: "10s" },
+  { value: "30", label: "30s" },
+  { value: "60", label: "1min" },
+  { value: "120", label: "2min" },
+  { value: "300", label: "5min" },
+];
+
 export default function GeneralSection() {
   const { t, i18n } = useTranslation();
   const [autoStart, setAutoStart] = useState(true);
@@ -237,6 +248,7 @@ export default function GeneralSection() {
   const [logToFile, setLogToFile] = useState(true);
   const [logLevel, setLogLevel] = useState("info");
   const [logMaxFiles, setLogMaxFiles] = useState(5);
+  const [syncDelaySeconds, setSyncDelaySeconds] = useState(0);
   const [logDir, setLogDir] = useState("");
   const [language, setLanguage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -255,6 +267,7 @@ export default function GeneralSection() {
         setLogToFile(settings.log_to_file);
         setLogLevel(settings.log_level);
         setLogMaxFiles(settings.log_max_files);
+        setSyncDelaySeconds(settings.sync_delay_seconds);
         setLogDir(settings.log_dir);
         setLanguage(settings.language);
       } catch (error) {
@@ -344,6 +357,18 @@ export default function GeneralSection() {
     } catch (error) {
       console.error("Failed to change max log files:", error);
       setLogMaxFiles(previousValue);
+    }
+  };
+
+  const handleSyncDelayChange = async (value: string) => {
+    const seconds = parseInt(value, 10);
+    const previousValue = syncDelaySeconds;
+    setSyncDelaySeconds(seconds);
+    try {
+      await invoke("set_sync_delay_seconds", { seconds });
+    } catch (error) {
+      console.error("Failed to change sync delay:", error);
+      setSyncDelaySeconds(previousValue);
     }
   };
 
@@ -465,6 +490,21 @@ export default function GeneralSection() {
           value={logMaxFiles.toString()}
           options={MAX_FILES_OPTIONS}
           onChange={handleLogMaxFilesChange}
+          disabled={loading}
+          isLast={true}
+        />
+      </SettingsGroup>
+
+      <SettingsGroup
+        title={t("settings.experimentalFeatures")}
+        titleColor="error.main"
+      >
+        <SettingSelectItem
+          title={t("settings.delaySync")}
+          description={t("settings.delaySyncDescription")}
+          value={syncDelaySeconds.toString()}
+          options={DELAY_SYNC_OPTIONS}
+          onChange={handleSyncDelayChange}
           disabled={loading}
           isLast={true}
         />

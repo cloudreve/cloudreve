@@ -1187,6 +1187,7 @@ pub async fn get_general_settings() -> CommandResult<GeneralSettings> {
         log_to_file: config.log_to_file,
         log_level: config.log_level.as_str().to_string(),
         log_max_files: config.log_max_files,
+        sync_delay_seconds: config.sync_delay_seconds,
         log_dir: ConfigManager::get_log_dir().display().to_string(),
         language: config.language,
     })
@@ -1200,6 +1201,7 @@ pub struct GeneralSettings {
     pub log_to_file: bool,
     pub log_level: String,
     pub log_max_files: usize,
+    pub sync_delay_seconds: u64,
     pub log_dir: String,
     pub language: Option<String>,
 }
@@ -1228,6 +1230,14 @@ pub async fn set_log_level(level: String) -> CommandResult<()> {
 pub async fn set_log_max_files(max_files: usize) -> CommandResult<()> {
     ConfigManager::get()
         .set_log_max_files(max_files)
+        .map_err(|e| e.to_string())
+}
+
+/// Set sync delay in seconds
+#[tauri::command]
+pub async fn set_sync_delay_seconds(seconds: u64) -> CommandResult<()> {
+    ConfigManager::get()
+        .set_sync_delay_seconds(seconds)
         .map_err(|e| e.to_string())
 }
 
