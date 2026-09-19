@@ -42,6 +42,52 @@ The community repo contains **zero Pro code** — Pro ships as a separate licens
 
 Backend gaps are concrete: `ShareProps` = `{share_view, show_read_me}` only; `group.storage_policy_id` is single; no order/product/credit entities at all. `NavigatorCapability_CommunityPlaceholder1–9` in `pkg/filemanager/fs/dbfs/navigator.go` are the reserved capability slots Pro fills.
 
+#### 1.3a Pro UI reference — extracted from `cloudreve.org/imgs/features/en_*.png`
+
+All 22 reference shots vendored to `output/playwright/pro-features/`. What each actually shows (implementation-level detail, not marketing text):
+
+**Sharing & collaboration**
+| Feature | What the UI reveals | Implementation shape |
+|---|---|---|
+| Modify/delete via share | "Create share link" dialog embeds the ACL picker itself | Share entity carries a capability set; already landed (#140) |
+| File permissions | Context menu → More actions → **Permissions**: "Explicit access" list (users by email, groups like "Same group with me") each with a dot-joined capability dropdown + ×; "General access" rows: **Anonymous visitors**, **Everyone else**; search box "Search for emails or groups…" | ACL entity: `(file_id|dir, subject_type, subject_id)` → bitmask of **Read·Create·Update·Delete**. Create = folder-only (upload/move/copy into); Update = rename/metadata/log-view; atoms documented per-atom in the dialog |
+| Paid share links | "Pay to download" section in share dialog: **points price** field + "Gain N points to you per purchasing" hint (take-rate visible: 50 → 40, i.e. ~80% to sharer). Buyer flow: gate page "You need to pay N Points" → dialog: *Pay with points* (login req.) / *Pay with cash* (¥0.50 equiv ⇒ **1 pt = ¥0.01**) / **Restore purchase** via "Resume ticket" from order email | `share.price_points`; purchase record + resume-ticket token; credits ledger (B.4) funds both sides; take-rate = admin setting |
+| Anonymous upload | Same ACL dialog — anonymous grant of Create/Update/Delete on a folder share | Covered by ACL anonymous tier + existing `allow_upload` |
+| Default shares | Admin "Default share shortcuts": chip-input of share IDs with search; new users get share-shortcut objects (folder icon + share badge) in home root | `setting.default_shares` = share ID list; on user create → insert share-shortcut fs entries |
+
+**Storage policy management**
+| Feature | What the UI reveals | Implementation shape |
+|---|---|---|
+| Multiple policies per group | Group editor "Available storage policies" — multi-select chips of all policies; "Modifying will not affect uploaded files" | `group_storage_policies` join table replaces `storage_policy_id` single |
+| Per-directory policies | FM toolbar policy button (battery icon) → dropdown of group-allowed policies, check = current dir's policy | `file.metadata.policy_id` or per-dir row; upload session resolves dir→policy |
+| Load balancer | "Load Balance" appears in the **provider type grid** beside Local/Remote/S3…; editor = name + child-policy list with **Weight** number per child + Add/Remove | New `StoragePolicyTypeLB`; driver picks weighted child per upload session |
+| File migration | **User-facing**: context menu → More actions → "Relocate storage policy" → policy dropdown → background task "Queue → Index files → Transfer → Commit changes" | We have admin variant (#175); extend to user scope limited to group-allowed policies |
+
+**User & auth**
+| Feature | What the UI reveals | Implementation shape |
+|---|---|---|
+| Multi-account | "Select an account" page: remembered sessions, avatar+email+trash, "Signed out" badges, "Use another account"; avatar menu = inline switcher | Frontend session store holds N token sets; swap active credential; sign-out revokes one |
+| OIDC SSO | Admin "Third-party sign-in": ClientID/secret/Scope, **"OIDC Wellknown Config — Import from URL"**, "Sign-in method name" (i18n-capable), **"Login without registration"** (auto-provision, locks user to that IdP) | Mostly landed (#141) — verify wellknown import + display-name parity |
+| Logto SSO | Same panel, Logto-flavored preset | Falls out of generic OIDC — needs no extra backend; document Logto setup |
+| QQ Connect | Separate OAuth (non-OIDC) provider button | Own small provider; low priority outside CN audience |
+| Email filtering | "Filter email provider" (Whitelist/Blacklist) + domain list textarea + **"Disable sub-address email"** (blocks `+` aliases); registration-only, SSO exempt; toast "This email provider is forbidden" | Landed (#141) |
+
+**Monetization (VAS)**
+| Feature | What the UI reveals | Implementation shape |
+|---|---|---|
+| Storage SKUs | "Edit SKU": name, size+unit, **duration seconds** (packs expire!), price in min currency unit (700=¥7), optional Label badge, "Allow paying with points"+points price | `sku` entity; purchase → capacity grant with expiry |
+| Membership SKUs | "Edit group product": name, **Group ID dropdown** (upgrade target), duration, price, label, description (one bullet per line), points toggle | Same SKU entity, `type=group`, grants group for duration then reverts |
+| Credits | Settings gets **Finance tab**: balance + Recharge; ledger table (±Change, Time, Reason: Shop purchase/Manual adjustment/Share link purchased) | `credit_account` + `credit_txn` ledger; admin manual adjust endpoint |
+| Redemption | Shop→Redeem: code field (UUID fmt). Admin Gift Codes table: product type (Points/VIP/Storage), qty, code, Used/Available, × revoke. "Generate": count + product type + SKU + units-per-code | `gift_code` entity → redeem applies SKU/points atomically |
+
+**System extensions**
+| Feature | What the UI reveals | Implementation shape |
+|---|---|---|
+| Activity log | Per-file "Activity" dialog (context menu): actor avatar+time, typed actions ("Updated file content → Look for this version", "Moved from Trash to My Files", "Triggered thumbnail generation", "Was copied from X to His files") — **cross-actor** (collaborators' ops on shared files). Admin "Event details": ID/Type/IP/Time/**Correlation ID**/linked user+file+blob+share/UA/raw JSON | `activity_event` entity: type enum, actor, correlation_id, subject edges (user/file/blob/share), ip+ua, json payload; per-file feed + admin feed |
+| Site announcements | Post-login modal: title+body, "Don't show anymore" + OK | `setting.announcement` (markdown); per-user dismissal bit |
+| Node selection | Group "Allowed nodes" chips (empty = all); task dialogs get "Target node" dropdown — **Auto dispatch** default + allowed nodes; covers remote-download + compress/decompress; other tasks → master | `group.allowed_nodes`; task-create accepts `target_node`, scheduler validates against group list |
+| Report abuse | Dialog on shares/users: target chip, Reason dropdown ("Copyright infringement"…), description, **CAPTCHA** | `abuse_report` entity + admin review queue (resolve/dismiss/block share) |
+
 ### 1.4 Org repo decisions — **monorepo**
 
 Everything ships from `Dvorinka/cloudreve`. No submodules, no sibling repos.
@@ -123,16 +169,26 @@ cloudreve/           Go backend (existing code, repo root)
 
 Order = user-visible value first; each ships with backend + UI + tests.
 
-1. **Share collaboration** — write/upload/delete via share link, anonymous upload, share ACL (users/groups), preview-only mode (fixes #3555, #3390, #3340, #3517, #3578; uses `NavigatorCapability` placeholder slots + `ShareProps` extension + `share` entity fields)
+1. **Share collaboration** — write/upload/delete via share link, anonymous upload, share ACL (users/groups), preview-only mode (fixes #3555, #3390, #3340, #3517, #3578; uses `NavigatorCapability` placeholder slots + `ShareProps` extension + `share` entity fields). See §1.3a for the extracted UI spec.
    - [x] PR #140 — `allow_upload`/`allow_edit`/`preview_only`/`upload_only` props, props-derived capability sets enforced server-side (`writePermitted`), same-share move/copy, anonymous upload, drop-box listing suppression, download denial via `IsDownloadCtxKey` hooks (fixes #3555 preview-only, #3340 drop-box)
-   - [ ] Share ACL — per-user/group grants on shares (#3517); paid share links deferred to VAS phase; default shares for new users (#3390) open
-2. **Storage policy advanced** — multiple policies per group (group→policies join table), per-directory binding, load-balancer policy, file migration between policies (fixes #3518, #2961, #2262)
-3. **SSO** — generic OIDC provider (PR #3472 base), Logto connector, multi-account switching, sign-up email filtering (fixes #3464, #3056, #3505)
+   - [ ] File/dir ACL entity — `(subject_type ∈ user|group, subject_id)` → R/C/U/D bitmask + anonymous/everyone tiers; Permissions dialog under More actions; enforced in navigator capability checks (#3517)
+   - [ ] Default shares — `setting.default_shares` chip-input of share IDs; materialize as share-shortcut entries on user create (#3390)
+   - [ ] Paid shares — `share.price_points` + gate page + purchase/resume-ticket flow; needs B.4 credits first
+2. **Storage policy advanced** — multiple policies per group, per-directory binding, load-balancer policy, file migration (fixes #3518, #2961, #2262). See §1.3a.
+   - [x] PR #175 — resumable admin relocation task (entities or whole-policy scope), encryption-aware re-wrap, admin UI + per-policy migrate action (#9, #125, #136)
+   - [ ] Group→policies M:N join + group-editor multi-select; per-directory policy picker in FM toolbar; `StoragePolicyTypeLB` weighted children
+   - [ ] User-facing relocate — extend #175 path to FM context menu, restricted to group-allowed policies
+3. **SSO** — generic OIDC, Logto, multi-account switching, sign-up email filtering (fixes #3464, #3056, #3505). See §1.3a.
    - [x] PR #141 — inbound OIDC consumer (auth-code + nonce, JWKS-verified RS256 id_tokens, userinfo fallback, auto-provisioning, one-time ticket handoff, SSRF-validated endpoints, redacted secret); covers Keycloak/Authentik/Logto/generic IdPs; sign-up email domain filtering (whitelist/blacklist + sub-address block) enforced at registration and SSO provisioning; multi-account lands via existing session `upsert` (fixes #3464, #3056)
+   - [ ] Multi-account switcher UI — N-token session store, avatar-menu switch + signed-out badges (frontend-only, backend already supports)
    - [ ] QQ Connect (non-OIDC protocol, separate integration), account linking UI for existing local accounts, group/role claim mapping
-4. **VAS/monetization-free** — credits + redemption codes as *free* features (gift codes for admin use), storage/membership plan definitions; skip payment processor integration initially — YAGNI until a real user asks (fixes #3231)
-5. **System extensions** — activity/audit log surfaced in admin, site announcements, report-abuse queue (fixes #3480, #3479 IP whitelist)
+4. **VAS/monetization-free** — credits + redemption codes as *free* features (gift codes for admin use), storage/membership SKU definitions; payment processors stay out of scope (fixes #3231). See §1.3a for the SKU/credits/gift-code spec.
+   - [ ] `sku` entity (storage-capacity + group-upgrade types, duration, cash+points price, label, bullets); Shop page (Memberships/Storage/Redeem tabs)
+   - [ ] `credit_account` + `credit_txn` ledger; Finance settings tab (balance + Recharge + ledger); admin manual adjust
+   - [ ] `gift_code` entity + admin generate/list/revoke + user redeem; then paid-share price_points wired to the ledger
+5. **System extensions** — activity/audit log, site announcements, node selection, report-abuse queue (fixes #3480, #3479 IP whitelist). See §1.3a.
    - [x] PR #144 — task `creator_ip` capture with CIDR-capable admin filter (#115 OSS half), group remote-download quotas per count + per volume (#16), yt-dlp downloader provider (#88), progressive image preview (#113), v3 migrator `DatabaseURL` passthrough (#42)
+   - [ ] `activity_event` entity + per-file Activity dialog + admin event feed/detail; site announcement modal + dismissal; group `allowed_nodes` + task `target_node`; `abuse_report` + admin queue + share context-menu Report entry
 
 ## 5. Phase C — security + quality
 

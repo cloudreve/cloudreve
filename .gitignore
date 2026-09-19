@@ -40,6 +40,8 @@ tmp/
 .DS_Store
 # Playwright MCP snapshots
 .playwright-mcp/
+.playwright-cli/
+output/
 # Monorepo staging dir for asset packaging (transient)
 /assets/
 pkg/util/test/
