@@ -29,7 +29,7 @@ impl ClientConfig {
     /// Create a new configuration with the given base URL
     pub fn new(base_url: impl Into<String>) -> Self {
         Self {
-            base_url: base_url.into(),
+            base_url: normalize_site_url(&base_url.into()),
             timeout_seconds: 60,
             client_id: "".to_string(),
             user_agent: None,
@@ -53,6 +53,20 @@ impl ClientConfig {
         self.user_agent = Some(user_agent.into());
         self
     }
+}
+
+/// Normalize a user-provided site URL into a form `build_url` can safely
+/// concatenate: trims whitespace, prepends `https://` when no scheme is
+/// given (so `host:8443` is not parsed as `host` scheme `8443` path), and
+/// strips trailing slashes so `base + /api/v3` never yields `//api/v3`.
+pub fn normalize_site_url(url: &str) -> String {
+    let trimmed = url.trim();
+    let with_scheme = if trimmed.contains("://") {
+        trimmed.to_string()
+    } else {
+        format!("https://{}", trimmed)
+    };
+    with_scheme.trim_end_matches('/').to_string()
 }
 
 /// Token storage with expiration tracking
@@ -588,5 +602,30 @@ impl Client {
         R: DeserializeOwned + Default,
     {
         self.send(path, Method::PATCH, Some(body), options).await
+    }
+}
+
+#[cfg(test)]
+mod site_url_tests {
+    use super::normalize_site_url;
+
+    #[test]
+    fn normalizes_schemeless_and_trailing_slash() {
+        assert_eq!(
+            normalize_site_url("example.com:8443"),
+            "https://example.com:8443"
+        );
+        assert_eq!(
+            normalize_site_url("https://host.example.com/"),
+            "https://host.example.com"
+        );
+        assert_eq!(
+            normalize_site_url(" https://host/sub/path// "),
+            "https://host/sub/path"
+        );
+        assert_eq!(
+            normalize_site_url("http://192.168.1.10:5212"),
+            "http://192.168.1.10:5212"
+        );
     }
 }

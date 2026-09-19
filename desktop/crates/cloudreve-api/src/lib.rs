@@ -44,5 +44,5 @@ pub mod error;
 pub mod models;
 
 pub use boolset::Boolset;
-pub use client::{Client, ClientConfig};
+pub use client::{Client, ClientConfig, normalize_site_url};
 pub use error::{ApiError, ApiResult};

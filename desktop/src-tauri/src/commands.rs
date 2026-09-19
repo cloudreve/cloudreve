@@ -101,6 +101,10 @@ pub async fn add_drive(
         return Err(t!("localPathCannotBeRootDrive").to_string());
     }
 
+    // Normalize the site URL once so every consumer (API client, reauthorize
+    // window, view-online links) sees the same canonical form.
+    let site_url = cloudreve_sync::normalize_site_url(&config.site_url);
+
     // Convert relative expiry times (seconds) to absolute RFC3339 timestamps
     let now = Utc::now();
     let access_expires = (now + Duration::seconds(config.access_token_expires as i64)).to_rfc3339();
@@ -121,7 +125,7 @@ pub async fn add_drive(
             .update_drive_credentials(
                 &drive_id,
                 config.drive_name,
-                config.site_url,
+                site_url.clone(),
                 credentials,
                 &config.user_id,
             )
@@ -144,7 +148,7 @@ pub async fn add_drive(
     let drive_config = DriveConfig {
         id: drive_id,
         name: config.drive_name,
-        instance_url: config.site_url,
+        instance_url: site_url,
         remote_path: config.remote_path,
         credentials,
         sync_path: config.local_path.into(),
