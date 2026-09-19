@@ -353,6 +353,57 @@ func PatchMetadata(c *gin.Context) {
 	c.JSON(200, serializer.Response{})
 }
 
+// ListAcl lists ACL entries of a file.
+func ListAcl(c *gin.Context) {
+	service := ParametersFromContext[*explorer.AclListService](c, explorer.AclListParamCtx{})
+	resp, err := service.Get(c)
+	if respondErr(c, err) {
+		return
+	}
+
+	c.JSON(200, serializer.Response{
+		Data: resp,
+	})
+}
+
+// UpsertAcl creates or updates an ACL entry.
+func UpsertAcl(c *gin.Context) {
+	service := ParametersFromContext[*explorer.AclUpsertService](c, explorer.AclUpsertParamCtx{})
+	resp, err := service.Update(c)
+	if respondErr(c, err) {
+		return
+	}
+
+	c.JSON(200, serializer.Response{
+		Data: resp,
+	})
+}
+
+// DeleteAcl removes an ACL entry.
+func DeleteAcl(c *gin.Context) {
+	service := ParametersFromContext[*explorer.AclDeleteService](c, explorer.AclDeleteParamCtx{})
+	err := service.Delete(c)
+	if respondErr(c, err) {
+		return
+	}
+
+	c.JSON(200, serializer.Response{})
+}
+
+// SearchAclSubjects resolves selectable ACL subjects (users by exact email,
+// groups by name).
+func SearchAclSubjects(c *gin.Context) {
+	service := ParametersFromContext[*explorer.AclSubjectSearchService](c, explorer.AclSubjectSearchParamCtx{})
+	resp, err := service.Get(c)
+	if respondErr(c, err) {
+		return
+	}
+
+	c.JSON(200, serializer.Response{
+		Data: resp,
+	})
+}
+
 // GetFileInfo gets file info
 func GetFileInfo(c *gin.Context) {
 	service := ParametersFromContext[*explorer.GetFileInfoService](c, explorer.GetFileInfoParameterCtx{})

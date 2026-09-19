@@ -641,6 +641,29 @@ func HasSharesWith(preds ...predicate.Share) predicate.File {
 	})
 }
 
+// HasACLEntries applies the HasEdge predicate on the "acl_entries" edge.
+func HasACLEntries() predicate.File {
+	return predicate.File(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ACLEntriesTable, ACLEntriesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasACLEntriesWith applies the HasEdge predicate on the "acl_entries" edge with a given conditions (other predicates).
+func HasACLEntriesWith(preds ...predicate.AclEntry) predicate.File {
+	return predicate.File(func(s *sql.Selector) {
+		step := newACLEntriesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasDirectLinks applies the HasEdge predicate on the "direct_links" edge.
 func HasDirectLinks() predicate.File {
 	return predicate.File(func(s *sql.Selector) {

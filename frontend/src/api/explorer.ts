@@ -287,6 +287,31 @@ export const NavigatorCapability = {
   enter_folder: 23,
 };
 
+export type AclPermissionKey = "read" | "create" | "update" | "delete";
+
+export type AclSubjectType = "user" | "group" | "anonymous" | "everyone";
+
+export interface AclEntry {
+  id: number;
+  subject_type: AclSubjectType;
+  subject_id: number;
+  subject_name?: string;
+  permissions: AclPermissionKey[];
+}
+
+export interface AclSubject {
+  type: "user" | "group";
+  id: number;
+  name: string;
+}
+
+export interface AclUpsertService {
+  uri: string;
+  subject_type: AclSubjectType;
+  subject_id?: number;
+  permissions: AclPermissionKey[];
+}
+
 export interface PinFileService {
   uri: string;
   name?: string;

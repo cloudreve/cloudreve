@@ -51,6 +51,8 @@ const (
 	EdgeEntities = "entities"
 	// EdgeShares holds the string denoting the shares edge name in mutations.
 	EdgeShares = "shares"
+	// EdgeACLEntries holds the string denoting the acl_entries edge name in mutations.
+	EdgeACLEntries = "acl_entries"
 	// EdgeDirectLinks holds the string denoting the direct_links edge name in mutations.
 	EdgeDirectLinks = "direct_links"
 	// Table holds the table name of the file in the database.
@@ -96,6 +98,13 @@ const (
 	SharesInverseTable = "shares"
 	// SharesColumn is the table column denoting the shares relation/edge.
 	SharesColumn = "file_shares"
+	// ACLEntriesTable is the table that holds the acl_entries relation/edge.
+	ACLEntriesTable = "acl_entries"
+	// ACLEntriesInverseTable is the table name for the AclEntry entity.
+	// It exists in this package in order to avoid circular dependency with the "aclentry" package.
+	ACLEntriesInverseTable = "acl_entries"
+	// ACLEntriesColumn is the table column denoting the acl_entries relation/edge.
+	ACLEntriesColumn = "file_id"
 	// DirectLinksTable is the table that holds the direct_links relation/edge.
 	DirectLinksTable = "direct_links"
 	// DirectLinksInverseTable is the table name for the DirectLink entity.
@@ -289,6 +298,20 @@ func ByShares(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByACLEntriesCount orders the results by acl_entries count.
+func ByACLEntriesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newACLEntriesStep(), opts...)
+	}
+}
+
+// ByACLEntries orders the results by acl_entries terms.
+func ByACLEntries(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newACLEntriesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByDirectLinksCount orders the results by direct_links count.
 func ByDirectLinksCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -349,6 +372,13 @@ func newSharesStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(SharesInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, SharesTable, SharesColumn),
+	)
+}
+func newACLEntriesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ACLEntriesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ACLEntriesTable, ACLEntriesColumn),
 	)
 }
 func newDirectLinksStep() *sqlgraph.Step {

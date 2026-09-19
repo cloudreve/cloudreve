@@ -1345,6 +1345,8 @@
     "allNodes": "All nodes",
     "esclateAnonymity": "Escalate anonymity",
     "esclateAnonymityDes": "When enabled, users can assign higher permissions for anonymous users (write/delete/create). When disabled, users can only assign read-only permission for anonymous users. Changing this setting will not affect existing sharing links or files.",
+    "setExplicitUser": "Set file permissions",
+    "setExplicitUserDes": "Members can set granular read/create/update/delete permissions on files and folders they own, for specific users, groups, anonymous visitors, or everyone else.",
     "defaultPinned": "Default pinned shares",
     "defaultPinnedDes": "Users of this group will always see these shared links pinned at the top of their sidebar. Users cannot unpin them. Search shared links by their numeric ID, which can be found in the leftmost column of the <0>share list</0>.",
     "pinnedShare": "Share",

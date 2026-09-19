@@ -156,6 +156,10 @@ export interface GlobalStateSlice {
   manageShareDialogOpen?: boolean;
   manageShareDialogFile?: FileResponse;
 
+  // File permission (ACL) dialog
+  aclDialogOpen?: boolean;
+  aclDialogFile?: FileResponse;
+
   // Stale version action dialog
   staleVersionDialogOpen?: boolean;
   staleVersionUri?: string;
@@ -426,6 +430,7 @@ export const globalStateSlice = createSlice({
       state.shareLinkDialogOpen = state.shareLinkDialogOpen ? false : undefined;
       state.versionControlDialogOpen = state.versionControlDialogOpen ? false : undefined;
       state.manageShareDialogOpen = state.manageShareDialogOpen ? false : undefined;
+      state.aclDialogOpen = state.aclDialogOpen ? false : undefined;
       state.createNewDialogOpen = state.createNewDialogOpen ? false : undefined;
       state.selectOptionDialogOpen = state.selectOptionDialogOpen ? false : undefined;
       state.batchDownloadLogDialogOpen = state.batchDownloadLogDialogOpen ? false : undefined;
@@ -801,6 +806,13 @@ export const globalStateSlice = createSlice({
     closeManageShareDialog: (state) => {
       state.manageShareDialogOpen = false;
     },
+    setAclDialog: (state, action: PayloadAction<{ open: boolean; file: FileResponse }>) => {
+      state.aclDialogOpen = action.payload.open;
+      state.aclDialogFile = action.payload.file;
+    },
+    closeAclDialog: (state) => {
+      state.aclDialogOpen = false;
+    },
     setImageViewer: (state, action: PayloadAction<ImageViewerState>) => {
       state.imageViewer = action.payload;
     },
@@ -930,6 +942,8 @@ export const {
   closeImageViewer,
   setManageShareDialog,
   closeManageShareDialog,
+  setAclDialog,
+  closeAclDialog,
   setVersionControlDialog,
   closeVersionControlDialog,
   closeSidebar,

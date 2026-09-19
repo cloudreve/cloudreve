@@ -168,6 +168,7 @@ func NewFileManager(dep dependency.Dep, u *ent.User) FileManager {
 		fs: dbfs.NewDatabaseFS(u, dbfs.DBFSDependencies{
 			FileClient:          dep.FileClient(),
 			ShareClient:         dep.ShareClient(),
+			AclClient:           dep.AclClient(),
 			UserClient:          dep.UserClient(),
 			StoragePolicyClient: dep.StoragePolicyClient(),
 			DirectLinkClient:    dep.DirectLinkClient(),

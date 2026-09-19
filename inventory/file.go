@@ -9,6 +9,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/cloudreve/Cloudreve/v4/ent"
+	"github.com/cloudreve/Cloudreve/v4/ent/aclentry"
 	"github.com/cloudreve/Cloudreve/v4/ent/directlink"
 	"github.com/cloudreve/Cloudreve/v4/ent/entity"
 	"github.com/cloudreve/Cloudreve/v4/ent/file"
@@ -635,6 +636,10 @@ func (f *fileClient) Delete(ctx context.Context, files []*ent.File, options *typ
 
 		if _, err := f.client.DirectLink.Delete().Where(directlink.FileIDIn(chunks[i]...)).Exec(hardDeleteCtx); err != nil {
 			return nil, nil, fmt.Errorf("failed to delete direct links of files %v: %w", group, err)
+		}
+
+		if _, err := f.client.AclEntry.Delete().Where(aclentry.FileIDIn(chunks[i]...)).Exec(hardDeleteCtx); err != nil {
+			return nil, nil, fmt.Errorf("failed to delete ACL entries of files %v: %w", group, err)
 		}
 
 		// 5. Delete files.

@@ -6,6 +6,9 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// AclEntry is the predicate function for aclentry builders.
+type AclEntry func(*sql.Selector)
+
 // DavAccount is the predicate function for davaccount builders.
 type DavAccount func(*sql.Selector)
 

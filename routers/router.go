@@ -804,6 +804,28 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				controllers.FromQuery[explorer.GetFileInfoService](explorer.GetFileInfoParameterCtx{}),
 				controllers.GetFileInfo,
 			)
+			// Per-file ACL entries (Permissions dialog)
+			acl := file.Group("acl")
+			{
+				acl.GET("",
+					controllers.FromQuery[explorer.AclListService](explorer.AclListParamCtx{}),
+					controllers.ListAcl,
+				)
+				acl.GET("subjects",
+					controllers.FromQuery[explorer.AclSubjectSearchService](explorer.AclSubjectSearchParamCtx{}),
+					controllers.SearchAclSubjects,
+				)
+				acl.PUT("",
+					middleware.RequiredScopes(types.ScopeFilesWrite),
+					controllers.FromJSON[explorer.AclUpsertService](explorer.AclUpsertParamCtx{}),
+					controllers.UpsertAcl,
+				)
+				acl.DELETE("",
+					middleware.RequiredScopes(types.ScopeFilesWrite),
+					controllers.FromQuery[explorer.AclDeleteService](explorer.AclDeleteParamCtx{}),
+					controllers.DeleteAcl,
+				)
+			}
 			// Version management
 			version := file.Group("version", middleware.RequiredScopes(types.ScopeFilesWrite))
 			{

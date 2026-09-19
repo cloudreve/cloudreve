@@ -44,6 +44,9 @@ import {
   User as UserEnt,
 } from "./dashboard.ts";
 import {
+  AclEntry,
+  AclSubject,
+  AclUpsertService,
   ArchiveListFilesResponse,
   ArchiveListFilesService,
   CreateFileService,
@@ -725,6 +728,75 @@ export function getFileEntityUrl(req: FileURLService): ThunkResponse<FileURLResp
         {
           ...defaultOpts,
           skipBatchError: req.uris.length == 1,
+        },
+      ),
+    );
+  };
+}
+
+export function getAclEntries(uri: string): ThunkResponse<AclEntry[]> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/file/acl",
+        {
+          method: "GET",
+          params: { uri },
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function upsertAclEntry(req: AclUpsertService): ThunkResponse<AclEntry> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/file/acl",
+        {
+          method: "PUT",
+          data: req,
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function deleteAclEntry(uri: string, id: number): ThunkResponse<void> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/file/acl",
+        {
+          method: "DELETE",
+          params: { uri, id },
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function searchAclSubjects(keyword: string): ThunkResponse<AclSubject[]> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/file/acl/subjects",
+        {
+          method: "GET",
+          params: { keyword },
+        },
+        {
+          ...defaultOpts,
+          bypassSnackbar: () => true,
         },
       ),
     );

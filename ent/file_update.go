@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/cloudreve/Cloudreve/v4/ent/aclentry"
 	"github.com/cloudreve/Cloudreve/v4/ent/directlink"
 	"github.com/cloudreve/Cloudreve/v4/ent/entity"
 	"github.com/cloudreve/Cloudreve/v4/ent/file"
@@ -315,6 +316,21 @@ func (fu *FileUpdate) AddShares(s ...*Share) *FileUpdate {
 	return fu.AddShareIDs(ids...)
 }
 
+// AddACLEntryIDs adds the "acl_entries" edge to the AclEntry entity by IDs.
+func (fu *FileUpdate) AddACLEntryIDs(ids ...int) *FileUpdate {
+	fu.mutation.AddACLEntryIDs(ids...)
+	return fu
+}
+
+// AddACLEntries adds the "acl_entries" edges to the AclEntry entity.
+func (fu *FileUpdate) AddACLEntries(a ...*AclEntry) *FileUpdate {
+	ids := make([]int, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return fu.AddACLEntryIDs(ids...)
+}
+
 // AddDirectLinkIDs adds the "direct_links" edge to the DirectLink entity by IDs.
 func (fu *FileUpdate) AddDirectLinkIDs(ids ...int) *FileUpdate {
 	fu.mutation.AddDirectLinkIDs(ids...)
@@ -435,6 +451,27 @@ func (fu *FileUpdate) RemoveShares(s ...*Share) *FileUpdate {
 		ids[i] = s[i].ID
 	}
 	return fu.RemoveShareIDs(ids...)
+}
+
+// ClearACLEntries clears all "acl_entries" edges to the AclEntry entity.
+func (fu *FileUpdate) ClearACLEntries() *FileUpdate {
+	fu.mutation.ClearACLEntries()
+	return fu
+}
+
+// RemoveACLEntryIDs removes the "acl_entries" edge to AclEntry entities by IDs.
+func (fu *FileUpdate) RemoveACLEntryIDs(ids ...int) *FileUpdate {
+	fu.mutation.RemoveACLEntryIDs(ids...)
+	return fu
+}
+
+// RemoveACLEntries removes "acl_entries" edges to AclEntry entities.
+func (fu *FileUpdate) RemoveACLEntries(a ...*AclEntry) *FileUpdate {
+	ids := make([]int, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return fu.RemoveACLEntryIDs(ids...)
 }
 
 // ClearDirectLinks clears all "direct_links" edges to the DirectLink entity.
@@ -808,6 +845,51 @@ func (fu *FileUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if fu.mutation.ACLEntriesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   file.ACLEntriesTable,
+			Columns: []string{file.ACLEntriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(aclentry.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := fu.mutation.RemovedACLEntriesIDs(); len(nodes) > 0 && !fu.mutation.ACLEntriesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   file.ACLEntriesTable,
+			Columns: []string{file.ACLEntriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(aclentry.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := fu.mutation.ACLEntriesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   file.ACLEntriesTable,
+			Columns: []string{file.ACLEntriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(aclentry.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if fu.mutation.DirectLinksCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -1153,6 +1235,21 @@ func (fuo *FileUpdateOne) AddShares(s ...*Share) *FileUpdateOne {
 	return fuo.AddShareIDs(ids...)
 }
 
+// AddACLEntryIDs adds the "acl_entries" edge to the AclEntry entity by IDs.
+func (fuo *FileUpdateOne) AddACLEntryIDs(ids ...int) *FileUpdateOne {
+	fuo.mutation.AddACLEntryIDs(ids...)
+	return fuo
+}
+
+// AddACLEntries adds the "acl_entries" edges to the AclEntry entity.
+func (fuo *FileUpdateOne) AddACLEntries(a ...*AclEntry) *FileUpdateOne {
+	ids := make([]int, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return fuo.AddACLEntryIDs(ids...)
+}
+
 // AddDirectLinkIDs adds the "direct_links" edge to the DirectLink entity by IDs.
 func (fuo *FileUpdateOne) AddDirectLinkIDs(ids ...int) *FileUpdateOne {
 	fuo.mutation.AddDirectLinkIDs(ids...)
@@ -1273,6 +1370,27 @@ func (fuo *FileUpdateOne) RemoveShares(s ...*Share) *FileUpdateOne {
 		ids[i] = s[i].ID
 	}
 	return fuo.RemoveShareIDs(ids...)
+}
+
+// ClearACLEntries clears all "acl_entries" edges to the AclEntry entity.
+func (fuo *FileUpdateOne) ClearACLEntries() *FileUpdateOne {
+	fuo.mutation.ClearACLEntries()
+	return fuo
+}
+
+// RemoveACLEntryIDs removes the "acl_entries" edge to AclEntry entities by IDs.
+func (fuo *FileUpdateOne) RemoveACLEntryIDs(ids ...int) *FileUpdateOne {
+	fuo.mutation.RemoveACLEntryIDs(ids...)
+	return fuo
+}
+
+// RemoveACLEntries removes "acl_entries" edges to AclEntry entities.
+func (fuo *FileUpdateOne) RemoveACLEntries(a ...*AclEntry) *FileUpdateOne {
+	ids := make([]int, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return fuo.RemoveACLEntryIDs(ids...)
 }
 
 // ClearDirectLinks clears all "direct_links" edges to the DirectLink entity.
@@ -1669,6 +1787,51 @@ func (fuo *FileUpdateOne) sqlSave(ctx context.Context) (_node *File, err error) 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(share.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if fuo.mutation.ACLEntriesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   file.ACLEntriesTable,
+			Columns: []string{file.ACLEntriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(aclentry.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := fuo.mutation.RemovedACLEntriesIDs(); len(nodes) > 0 && !fuo.mutation.ACLEntriesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   file.ACLEntriesTable,
+			Columns: []string{file.ACLEntriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(aclentry.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := fuo.mutation.ACLEntriesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   file.ACLEntriesTable,
+			Columns: []string{file.ACLEntriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(aclentry.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
