@@ -58,9 +58,9 @@ type (
 		Aria2TaskLimit int `json:"aria2_task_limit,omitempty"`
 		// Aria2MaxFileSize caps the total byte size of a single download task.
 		Aria2MaxFileSize int64 `json:"aria2_max_file_size,omitempty"`
-		MaxWalkedFiles        int                    `json:"max_walked_files,omitempty"`
-		TrashRetention        int                    `json:"trash_retention,omitempty"`
-		RedirectedSource      bool                   `json:"redirected_source,omitempty"`
+		MaxWalkedFiles   int   `json:"max_walked_files,omitempty"`
+		TrashRetention   int   `json:"trash_retention,omitempty"`
+		RedirectedSource bool  `json:"redirected_source,omitempty"`
 		// LoginIPWhitelist restricts sign-in to the given IPs/CIDR ranges.
 		// Empty means no restriction.
 		LoginIPWhitelist []string `json:"login_ip_whitelist,omitempty"`

@@ -27,7 +27,7 @@ type StoragePolicyBrief struct {
 
 type (
 	// AllowedPolicyService lists the storage policies the caller's group may use.
-	AllowedPolicyService struct{}
+	AllowedPolicyService  struct{}
 	AllowedPolicyParamCtx struct{}
 
 	// PreferredPolicyService sets or clears a directory's preferred storage
