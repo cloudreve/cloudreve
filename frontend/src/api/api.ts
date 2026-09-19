@@ -3,6 +3,9 @@ import { EncryptedBlob } from "../component/Uploader/core/uploader/encrypt/blob.
 import i18n from "../i18n.ts";
 import {
   ActivityEventListResponse,
+  AbuseReportListResponse,
+  ReportAbuseService,
+  UpdateAbuseReportService,
   AdjustCreditService,
   AdminListGroupResponse,
   AdminListService,
@@ -2718,6 +2721,56 @@ export function getFileActivity(uri: string, page: number, pageSize: number): Th
       send(
         `/file/activity?uri=${encodeURIComponent(uri)}&page=${page}&page_size=${pageSize}`,
         { method: "GET" },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function sendReportAbuse(args: ReportAbuseService): ThunkResponse<void> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/abuse/report",
+        { method: "POST", data: args },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function adminListAbuseReports(args: {
+  page: number;
+  pageSize: number;
+  status?: string;
+}): ThunkResponse<AbuseReportListResponse> {
+  return async (dispatch, _getState) => {
+    const params = new URLSearchParams({ page: String(args.page), page_size: String(args.pageSize) });
+    if (args.status) {
+      params.set("status", args.status);
+    }
+    return await dispatch(
+      send(
+        `/admin/abuse?${params.toString()}`,
+        { method: "GET" },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function adminUpdateAbuseReport(id: string, args: UpdateAbuseReportService): ThunkResponse<void> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/admin/abuse/${id}`,
+        { method: "PATCH", data: args },
         {
           ...defaultOpts,
         },

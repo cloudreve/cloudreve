@@ -112,6 +112,8 @@ type Dep interface {
 	VasClient() inventory.VasClient
 	// ActivityClient Get a singleton inventory.ActivityClient instance for the audit event store.
 	ActivityClient() inventory.ActivityClient
+	// AbuseReportClient Get a singleton inventory.AbuseReportClient instance for the abuse review queue.
+	AbuseReportClient() inventory.AbuseReportClient
 	// TaskClient Get a singleton inventory.TaskClient instance for access DB task store.
 	TaskClient() inventory.TaskClient
 	// ForkWithLogger create a shallow copy of dependency with a new correlated logger, used as per-request dep.
@@ -171,6 +173,7 @@ type dependency struct {
 	aclClient             inventory.AclClient
 	vasClient             inventory.VasClient
 	activityClient        inventory.ActivityClient
+	abuseReportClient     inventory.AbuseReportClient
 	settingProvider       setting.Provider
 	userClient            inventory.UserClient
 	groupClient           inventory.GroupClient
@@ -856,6 +859,15 @@ func (d *dependency) ActivityClient() inventory.ActivityClient {
 
 	d.activityClient = inventory.NewActivityClient(d.DBClient(), d.ConfigProvider().Database().Type)
 	return d.activityClient
+}
+
+func (d *dependency) AbuseReportClient() inventory.AbuseReportClient {
+	if d.abuseReportClient != nil {
+		return d.abuseReportClient
+	}
+
+	d.abuseReportClient = inventory.NewAbuseReportClient(d.DBClient())
+	return d.abuseReportClient
 }
 
 func (d *dependency) TaskClient() inventory.TaskClient {

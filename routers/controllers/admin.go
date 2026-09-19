@@ -342,6 +342,26 @@ func AdminListEvents(c *gin.Context) {
 	c.JSON(200, serializer.Response{Data: res})
 }
 
+// AdminListAbuseReports lists the abuse report queue.
+func AdminListAbuseReports(c *gin.Context) {
+	service := ParametersFromContext[*admin.AbuseListService](c, admin.AbuseListParamCtx{})
+	res, err := service.List(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
+
+// AdminUpdateAbuseReport updates a report and optionally blocks the share.
+func AdminUpdateAbuseReport(c *gin.Context) {
+	service := ParametersFromContext[*admin.AbuseUpdateService](c, admin.AbuseUpdateParamCtx{})
+	res, err := service.Update(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
+
 //	func AdminHashIDEncode(c *gin.Context) {
 //		service := ParametersFromContext[*admin.HashIDService](c, admin.HashIDParamCtx{})
 //		resp, err := service.Encode(c)

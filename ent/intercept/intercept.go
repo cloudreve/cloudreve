@@ -8,6 +8,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/cloudreve/Cloudreve/v4/ent"
+	"github.com/cloudreve/Cloudreve/v4/ent/abusereport"
 	"github.com/cloudreve/Cloudreve/v4/ent/aclentry"
 	"github.com/cloudreve/Cloudreve/v4/ent/activityevent"
 	"github.com/cloudreve/Cloudreve/v4/ent/credittxn"
@@ -87,6 +88,33 @@ func (f TraverseFunc) Traverse(ctx context.Context, q ent.Query) error {
 		return err
 	}
 	return f(ctx, query)
+}
+
+// The AbuseReportFunc type is an adapter to allow the use of ordinary function as a Querier.
+type AbuseReportFunc func(context.Context, *ent.AbuseReportQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f AbuseReportFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.AbuseReportQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.AbuseReportQuery", q)
+}
+
+// The TraverseAbuseReport type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseAbuseReport func(context.Context, *ent.AbuseReportQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseAbuseReport) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseAbuseReport) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.AbuseReportQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.AbuseReportQuery", q)
 }
 
 // The AclEntryFunc type is an adapter to allow the use of ordinary function as a Querier.
@@ -686,6 +714,8 @@ func (f TraverseUserGrant) Traverse(ctx context.Context, q ent.Query) error {
 // NewQuery returns the generic Query interface for the given typed query.
 func NewQuery(q ent.Query) (Query, error) {
 	switch q := q.(type) {
+	case *ent.AbuseReportQuery:
+		return &query[*ent.AbuseReportQuery, predicate.AbuseReport, abusereport.OrderOption]{typ: ent.TypeAbuseReport, tq: q}, nil
 	case *ent.AclEntryQuery:
 		return &query[*ent.AclEntryQuery, predicate.AclEntry, aclentry.OrderOption]{typ: ent.TypeAclEntry, tq: q}, nil
 	case *ent.ActivityEventQuery:

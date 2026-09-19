@@ -35,6 +35,8 @@ type (
 		LoginCaptchaEnabled(ctx context.Context) bool
 		// ForgotPasswordCaptchaEnabled returns true if forgot password captcha is enabled.
 		ForgotPasswordCaptchaEnabled(ctx context.Context) bool
+		// AbuseCaptchaEnabled returns true if abuse reports require captcha.
+		AbuseCaptchaEnabled(ctx context.Context) bool
 		// CaptchaType returns the type of captcha used.
 		CaptchaType(ctx context.Context) CaptchaType
 		// ReCaptcha returns the Google reCaptcha settings.
@@ -924,6 +926,10 @@ func (s *settingProvider) LoginCaptchaEnabled(ctx context.Context) bool {
 
 func (s *settingProvider) ForgotPasswordCaptchaEnabled(ctx context.Context) bool {
 	return s.getBoolean(ctx, "forget_captcha", false)
+}
+
+func (s *settingProvider) AbuseCaptchaEnabled(ctx context.Context) bool {
+	return s.getBoolean(ctx, "abuse_captcha", true)
 }
 
 func (s *settingProvider) AuthnEnabled(ctx context.Context) bool {

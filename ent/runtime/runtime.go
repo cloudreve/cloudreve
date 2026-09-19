@@ -5,6 +5,7 @@ package runtime
 import (
 	"time"
 
+	"github.com/cloudreve/Cloudreve/v4/ent/abusereport"
 	"github.com/cloudreve/Cloudreve/v4/ent/aclentry"
 	"github.com/cloudreve/Cloudreve/v4/ent/activityevent"
 	"github.com/cloudreve/Cloudreve/v4/ent/credittxn"
@@ -35,6 +36,29 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	abusereportMixin := schema.AbuseReport{}.Mixin()
+	abusereportMixinHooks0 := abusereportMixin[0].Hooks()
+	abusereport.Hooks[0] = abusereportMixinHooks0[0]
+	abusereportMixinInters0 := abusereportMixin[0].Interceptors()
+	abusereport.Interceptors[0] = abusereportMixinInters0[0]
+	abusereportMixinFields0 := abusereportMixin[0].Fields()
+	_ = abusereportMixinFields0
+	abusereportFields := schema.AbuseReport{}.Fields()
+	_ = abusereportFields
+	// abusereportDescCreatedAt is the schema descriptor for created_at field.
+	abusereportDescCreatedAt := abusereportMixinFields0[0].Descriptor()
+	// abusereport.DefaultCreatedAt holds the default value on creation for the created_at field.
+	abusereport.DefaultCreatedAt = abusereportDescCreatedAt.Default.(func() time.Time)
+	// abusereportDescUpdatedAt is the schema descriptor for updated_at field.
+	abusereportDescUpdatedAt := abusereportMixinFields0[1].Descriptor()
+	// abusereport.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	abusereport.DefaultUpdatedAt = abusereportDescUpdatedAt.Default.(func() time.Time)
+	// abusereport.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	abusereport.UpdateDefaultUpdatedAt = abusereportDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// abusereportDescStatus is the schema descriptor for status field.
+	abusereportDescStatus := abusereportFields[6].Descriptor()
+	// abusereport.DefaultStatus holds the default value on creation for the status field.
+	abusereport.DefaultStatus = abusereportDescStatus.Default.(string)
 	aclentryMixin := schema.AclEntry{}.Mixin()
 	aclentryMixinHooks0 := aclentryMixin[0].Hooks()
 	aclentry.Hooks[0] = aclentryMixinHooks0[0]

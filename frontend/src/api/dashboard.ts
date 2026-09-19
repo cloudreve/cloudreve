@@ -685,3 +685,38 @@ export interface AdjustCreditService {
   delta: number;
   des?: string;
 }
+
+export type AbuseTargetType = "share" | "user";
+export type AbuseReportStatus = "open" | "resolved" | "dismissed";
+
+export interface AbuseReport {
+  id: string;
+  reporter_id?: string;
+  reporter_email?: string;
+  target_type: AbuseTargetType;
+  target_id: string;
+  reason: number;
+  description: string;
+  status: AbuseReportStatus;
+  admin_note: string;
+  created_at: number;
+}
+
+export interface AbuseReportListResponse {
+  reports: AbuseReport[];
+  total: number;
+}
+
+export interface ReportAbuseService {
+  target_type: AbuseTargetType;
+  target: string;
+  reason: number;
+  description?: string;
+  [x: string]: unknown;
+}
+
+export interface UpdateAbuseReportService {
+  status: AbuseReportStatus;
+  admin_note?: string;
+  block_share?: boolean;
+}

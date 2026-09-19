@@ -164,6 +164,11 @@ export interface GlobalStateSlice {
   activityDialogOpen?: boolean;
   activityDialogFile?: FileResponse;
 
+  // Report abuse dialog
+  reportAbuseDialogOpen?: boolean;
+  reportAbuseTargetType?: string;
+  reportAbuseTarget?: string;
+
   // Stale version action dialog
   staleVersionDialogOpen?: boolean;
   staleVersionUri?: string;
@@ -824,6 +829,17 @@ export const globalStateSlice = createSlice({
     closeActivityDialog: (state) => {
       state.activityDialogOpen = false;
     },
+    setReportAbuseDialog: (
+      state,
+      action: PayloadAction<{ open: boolean; targetType: string; target: string }>,
+    ) => {
+      state.reportAbuseDialogOpen = action.payload.open;
+      state.reportAbuseTargetType = action.payload.targetType;
+      state.reportAbuseTarget = action.payload.target;
+    },
+    closeReportAbuseDialog: (state) => {
+      state.reportAbuseDialogOpen = false;
+    },
     setImageViewer: (state, action: PayloadAction<ImageViewerState>) => {
       state.imageViewer = action.payload;
     },
@@ -957,6 +973,8 @@ export const {
   closeAclDialog,
   setActivityDialog,
   closeActivityDialog,
+  setReportAbuseDialog,
+  closeReportAbuseDialog,
   setVersionControlDialog,
   closeVersionControlDialog,
   closeSidebar,

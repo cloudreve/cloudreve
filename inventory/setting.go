@@ -542,6 +542,7 @@ var DefaultSettings = map[string]string{
 	"reg_captcha":                                `0`,
 	"email_active":                               `0`,
 	"forget_captcha":                             `0`,
+	"abuse_captcha":                              `1`,
 	"gravatar_server":                            `https://www.gravatar.com/`,
 	"defaultTheme":                               `#1976d2`,
 	"theme_options":                              `{"#1976d2":{"light":{"palette":{"primary":{"main":"#1976d2","light":"#42a5f5","dark":"#1565c0"},"secondary":{"main":"#9c27b0","light":"#ba68c8","dark":"#7b1fa2"}}},"dark":{"palette":{"primary":{"main":"#90caf9","light":"#e3f2fd","dark":"#42a5f5"},"secondary":{"main":"#ce93d8","light":"#f3e5f5","dark":"#ab47bc"}}}},"#3f51b5":{"light":{"palette":{"primary":{"main":"#3f51b5"},"secondary":{"main":"#f50057"}}},"dark":{"palette":{"primary":{"main":"#9fa8da"},"secondary":{"main":"#ff4081"}}}}}`,

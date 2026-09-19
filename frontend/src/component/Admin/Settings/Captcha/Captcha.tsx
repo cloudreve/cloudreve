@@ -79,6 +79,24 @@ const Captcha = () => {
                 <NoMarginHelperText>{t("settings.captchaForResetDes")}</NoMarginHelperText>
               </FormControl>
             </SettingForm>
+            <SettingForm lgWidth={5}>
+              <FormControl fullWidth>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={isTrueVal(values.abuse_captcha)}
+                      onChange={(e) =>
+                        setSettings({
+                          abuse_captcha: e.target.checked ? "1" : "0",
+                        })
+                      }
+                    />
+                  }
+                  label={t("settings.captchaForAbuseReport")}
+                />
+                <NoMarginHelperText>{t("settings.captchaForAbuseReportDes")}</NoMarginHelperText>
+              </FormControl>
+            </SettingForm>
           </SettingSectionContent>
         </SettingSection>
         <SettingSection>

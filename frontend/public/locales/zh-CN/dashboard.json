@@ -1891,6 +1891,27 @@
     "reporterID": "举报者用户 ID",
     "reportedUserID": "举报对象用户 ID",
     "shareID": "分享 ID",
-    "reason": "原因"
+    "reason": "原因",
+    "target": "举报对象",
+    "statusLabel": "状态",
+    "reportedAt": "举报时间",
+    "actions": "操作",
+    "resolve": "标记已处理",
+    "dismiss": "忽略",
+    "adminNote": "管理员备注",
+    "blockShare": "封禁此分享链接",
+    "noReports": "没有举报记录",
+    "reviewSuccess": "举报已更新。",
+    "status": {
+      "open": "待处理",
+      "resolved": "已处理",
+      "dismissed": "已忽略",
+      "all": "全部"
+    },
+    "markAs": {
+      "resolved": "标记为已处理",
+      "dismissed": "忽略此举报",
+      "open": "重新打开举报"
+    }
   }
 }

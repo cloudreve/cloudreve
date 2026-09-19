@@ -16,6 +16,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 	"github.com/cloudreve/Cloudreve/v4/pkg/webdav"
 	"github.com/cloudreve/Cloudreve/v4/routers/controllers"
+	abusesvc "github.com/cloudreve/Cloudreve/v4/service/abuse"
 	adminsvc "github.com/cloudreve/Cloudreve/v4/service/admin"
 	"github.com/cloudreve/Cloudreve/v4/service/basic"
 	"github.com/cloudreve/Cloudreve/v4/service/explorer"
@@ -962,11 +963,19 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 			//	middleware.CheckShareUnlocked(),
 			//	controllers.PreviewShareReadme,
 			//)
-			//// 举报分享
-			//share.POST("report/:id",
-			//	middleware.CheckShareUnlocked(),
-			//	controllers.ReportShare,
-			//)
+		}
+
+		// 举报滥用
+		abuse := v4.Group("abuse")
+		{
+			abuse.POST("report",
+				middleware.RateLimitByIP("abuse_report", 10, time.Hour),
+				middleware.CaptchaRequired(func(c *gin.Context) bool {
+					return dep.SettingProvider().AbuseCaptchaEnabled(c)
+				}),
+				controllers.FromJSON[abusesvc.ReportService](abusesvc.ReportParamCtx{}),
+				controllers.ReportAbuse,
+			)
 		}
 
 		// 需要登录保护的
@@ -1321,6 +1330,21 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					event.GET("",
 						controllers.FromQuery[adminsvc.EventListService](adminsvc.EventListParamCtx{}),
 						controllers.AdminListEvents,
+					)
+				}
+
+				abuse := admin.Group("abuse", middleware.AdminSection(types.GroupPermissionAdminReports))
+				{
+					// 列出举报
+					abuse.GET("",
+						controllers.FromQuery[adminsvc.AbuseListService](adminsvc.AbuseListParamCtx{}),
+						controllers.AdminListAbuseReports,
+					)
+					// 更新举报状态
+					abuse.PATCH(":id",
+						middleware.HashID(hashid.AuditLogID),
+						controllers.FromJSON[adminsvc.AbuseUpdateService](adminsvc.AbuseUpdateParamCtx{}),
+						controllers.AdminUpdateAbuseReport,
 					)
 				}
 

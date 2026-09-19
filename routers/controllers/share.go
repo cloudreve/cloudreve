@@ -3,6 +3,7 @@ package controllers
 import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
+	"github.com/cloudreve/Cloudreve/v4/service/abuse"
 	"github.com/cloudreve/Cloudreve/v4/service/share"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -79,4 +80,13 @@ func BatchDeleteShare(c *gin.Context) {
 func ShareRedirect(c *gin.Context) {
 	service := ParametersFromContext[*share.ShortLinkRedirectService](c, share.ShortLinkRedirectParamCtx{})
 	c.Redirect(http.StatusFound, service.RedirectTo(c))
+}
+
+// ReportAbuse accepts an abuse report against a share or user.
+func ReportAbuse(c *gin.Context) {
+	service := ParametersFromContext[*abuse.ReportService](c, abuse.ReportParamCtx{})
+	if err := service.Create(c); respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{})
 }

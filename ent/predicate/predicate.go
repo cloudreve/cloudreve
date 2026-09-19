@@ -6,6 +6,9 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// AbuseReport is the predicate function for abusereport builders.
+type AbuseReport func(*sql.Selector)
+
 // AclEntry is the predicate function for aclentry builders.
 type AclEntry func(*sql.Selector)
 

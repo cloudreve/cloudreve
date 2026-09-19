@@ -33,6 +33,7 @@ export interface SiteConfig {
   sso_display_name?: string;
   sso_auto_redirect?: boolean;
   download_cdn_routes?: { name: string; url: string }[];
+  abuse_captcha?: boolean;
   logo?: string;
   logo_light?: string;
   tos_url?: string;

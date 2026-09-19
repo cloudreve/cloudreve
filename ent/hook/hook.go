@@ -9,6 +9,18 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 )
 
+// The AbuseReportFunc type is an adapter to allow the use of ordinary
+// function as AbuseReport mutator.
+type AbuseReportFunc func(context.Context, *ent.AbuseReportMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AbuseReportFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AbuseReportMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AbuseReportMutation", m)
+}
+
 // The AclEntryFunc type is an adapter to allow the use of ordinary
 // function as AclEntry mutator.
 type AclEntryFunc func(context.Context, *ent.AclEntryMutation) (ent.Value, error)

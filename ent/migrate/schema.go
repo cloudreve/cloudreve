@@ -8,6 +8,39 @@ import (
 )
 
 var (
+	// AbuseReportsColumns holds the columns for the "abuse_reports" table.
+	AbuseReportsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "reporter_id", Type: field.TypeInt, Nullable: true},
+		{Name: "reporter_email", Type: field.TypeString, Nullable: true},
+		{Name: "target_type", Type: field.TypeString},
+		{Name: "target_id", Type: field.TypeInt},
+		{Name: "reason", Type: field.TypeInt},
+		{Name: "description", Type: field.TypeString, Nullable: true},
+		{Name: "status", Type: field.TypeString, Default: "open"},
+		{Name: "admin_note", Type: field.TypeString, Nullable: true},
+	}
+	// AbuseReportsTable holds the schema information for the "abuse_reports" table.
+	AbuseReportsTable = &schema.Table{
+		Name:       "abuse_reports",
+		Columns:    AbuseReportsColumns,
+		PrimaryKey: []*schema.Column{AbuseReportsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "abusereport_status_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{AbuseReportsColumns[10], AbuseReportsColumns[1]},
+			},
+			{
+				Name:    "abusereport_target_type_target_id",
+				Unique:  false,
+				Columns: []*schema.Column{AbuseReportsColumns[6], AbuseReportsColumns[7]},
+			},
+		},
+	}
 	// ACLEntriesColumns holds the columns for the "acl_entries" table.
 	ACLEntriesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -756,6 +789,7 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		AbuseReportsTable,
 		ACLEntriesTable,
 		ActivityEventsTable,
 		CreditTxnsTable,

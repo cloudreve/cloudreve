@@ -3,6 +3,7 @@ import { usePopupState } from "material-ui-popup-state/hooks";
 import { useCallback, useContext } from "react";
 import { useTranslation } from "react-i18next";
 import { clearSelected } from "../../../redux/fileManagerSlice.ts";
+import { setReportAbuseDialog } from "../../../redux/globalStateSlice.ts";
 import { useAppDispatch, useAppSelector } from "../../../redux/hooks.ts";
 import { NavigatorCapability } from "../../../api/explorer.ts";
 import { downloadAll } from "../../../redux/thunks/download.ts";
@@ -10,7 +11,7 @@ import { createShareShortcut, isMacbook } from "../../../redux/thunks/file.ts";
 import { inverseSelection, pinCurrentView, refreshFileList, selectAll } from "../../../redux/thunks/filemanager.ts";
 import SessionManager from "../../../session";
 import Boolset from "../../../util/boolset.ts";
-import { Filesystem } from "../../../util/uri.ts";
+import CrUri, { Filesystem } from "../../../util/uri.ts";
 import { KeyIndicator } from "../../Frame/NavBar/SearchBar.tsx";
 import ArrowSync from "../../Icons/ArrowSync.tsx";
 import Border from "../../Icons/Border.tsx";
@@ -19,6 +20,7 @@ import BorderInside from "../../Icons/BorderInside.tsx";
 import CloudDownloadOutlined from "../../Icons/CloudDownloadOutlined.tsx";
 import FolderLink from "../../Icons/FolderLink.tsx";
 import PinOutlined from "../../Icons/PinOutlined.tsx";
+import WarningOutlined from "../../Icons/WarningOutlined.tsx";
 import { DenseDivider, SquareMenu, SquareMenuItem } from "../ContextMenu/ContextMenu.tsx";
 import { FmIndexContext } from "../FmIndexContext.tsx";
 
@@ -26,6 +28,7 @@ const MoreActionMenu = ({ onClose, ...rest }: MenuProps) => {
   const { t } = useTranslation();
   const fmIndex = useContext(FmIndexContext);
   const fs = useAppSelector((state) => state.fileManager[fmIndex].current_fs);
+  const path = useAppSelector((state) => state.fileManager[fmIndex].path);
   const parentCapability = useAppSelector((state) => state.fileManager[fmIndex].list?.parent?.capability);
   const canDownloadAll = new Boolset(parentCapability).enabled(NavigatorCapability.download_file);
   const dispatch = useAppDispatch();
@@ -72,6 +75,17 @@ const MoreActionMenu = ({ onClose, ...rest }: MenuProps) => {
     onClose && onClose({}, "escapeKeyDown");
     dispatch(downloadAll(fmIndex));
   }, [dispatch, onClose, fmIndex]);
+
+  const onReportClicked = useCallback(() => {
+    onClose && onClose({}, "escapeKeyDown");
+    if (!path) {
+      return;
+    }
+    const shareId = new CrUri(path).id();
+    if (shareId) {
+      dispatch(setReportAbuseDialog({ open: true, targetType: "share", target: shareId }));
+    }
+  }, [dispatch, onClose, path]);
 
   return (
     <SquareMenu
@@ -121,6 +135,14 @@ const MoreActionMenu = ({ onClose, ...rest }: MenuProps) => {
             <CloudDownloadOutlined fontSize="small" />
           </ListItemIcon>
           <ListItemText>{t("application:fileManager.downloadAll")}</ListItemText>
+        </SquareMenuItem>
+      )}
+      {fs == Filesystem.share && (
+        <SquareMenuItem onClick={onReportClicked}>
+          <ListItemIcon>
+            <WarningOutlined fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t("application:vas.report")}</ListItemText>
         </SquareMenuItem>
       )}
       {isLogin && <DenseDivider />}

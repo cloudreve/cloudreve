@@ -57,6 +57,8 @@ type (
 		List(ctx context.Context, args *ListShareArgs) (*ListShareResult, error)
 		// CountByTimeRange counts the number of shares created in the given time range.
 		CountByTimeRange(ctx context.Context, start, end *time.Time) (int, error)
+		// Expire marks the share expired immediately (admin moderation block).
+		Expire(ctx context.Context, id int) error
 	}
 
 	CreateShareParams struct {
@@ -204,6 +206,11 @@ func (c *shareClient) DeleteBatchByUserID(ctx context.Context, uid int, shareIds
 
 func (c *shareClient) Delete(ctx context.Context, shareId int) error {
 	return c.client.Share.DeleteOneID(shareId).Exec(ctx)
+}
+
+// Expire marks the share expired immediately (admin moderation block).
+func (c *shareClient) Expire(ctx context.Context, id int) error {
+	return c.client.Share.UpdateOneID(id).SetExpires(time.Now()).Exec(ctx)
 }
 
 // Viewed increments the view count of the share.

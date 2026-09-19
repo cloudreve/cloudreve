@@ -4,6 +4,12 @@ package ent
 
 // SetUpdatedAt sets the "updated_at" field.
 
+func (m *AbuseReportMutation) SetRawID(t int) {
+	m.id = &t
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+
 func (m *AclEntryMutation) SetRawID(t int) {
 	m.id = &t
 }

@@ -1892,6 +1892,27 @@
     "reporterID": "Reporter user ID",
     "reportedUserID": "Reported user ID",
     "shareID": "Shared ID",
-    "reason": "Reason"
+    "reason": "Reason",
+    "target": "Target",
+    "statusLabel": "Status",
+    "reportedAt": "Reported at",
+    "actions": "Actions",
+    "resolve": "Resolve",
+    "dismiss": "Dismiss",
+    "adminNote": "Admin note",
+    "blockShare": "Block the shared link",
+    "noReports": "No abuse reports",
+    "reviewSuccess": "Report updated.",
+    "status": {
+      "open": "Open",
+      "resolved": "Resolved",
+      "dismissed": "Dismissed",
+      "all": "All"
+    },
+    "markAs": {
+      "resolved": "Resolve report",
+      "dismissed": "Dismiss report",
+      "open": "Reopen report"
+    }
   }
 }
