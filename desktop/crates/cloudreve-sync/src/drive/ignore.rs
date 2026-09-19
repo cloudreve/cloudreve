@@ -8,6 +8,27 @@ use anyhow::{Context, Result};
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use std::path::{Path, PathBuf};
 
+/// Filenames in the sync root that hold additional ignore patterns,
+/// one gitignore-style pattern per line.
+pub const IGNORE_FILE_NAMES: &[&str] = &[".cloudreveignore", ".ignore"];
+
+/// Returns true if `filename` is an ignore-pattern filename.
+pub fn is_ignore_file_name(filename: &str) -> bool {
+    IGNORE_FILE_NAMES.contains(&filename)
+}
+
+/// Read ignore patterns from ignore files at the sync root.
+/// Missing or unreadable files are skipped silently.
+pub fn read_ignore_files(sync_root: &Path) -> Vec<String> {
+    let mut patterns = Vec::new();
+    for name in IGNORE_FILE_NAMES {
+        if let Ok(content) = std::fs::read_to_string(sync_root.join(name)) {
+            patterns.extend(content.lines().map(str::to_string));
+        }
+    }
+    patterns
+}
+
 /// A wrapper around `GlobSet` for matching ignore patterns (gitignore-style).
 ///
 /// The matcher stores the sync root path and automatically strips it from
@@ -267,6 +288,26 @@ mod tests {
 
         // Path outside sync root should never match
         assert!(!matcher.is_match(outside_sync_root_path()));
+    }
+
+    #[test]
+    fn test_read_ignore_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+
+        // No files -> no patterns
+        assert!(read_ignore_files(root).is_empty());
+
+        std::fs::write(root.join(".cloudreveignore"), "*.log\n# comment\nbuild/\n").unwrap();
+        std::fs::write(root.join(".ignore"), "secret.txt\n").unwrap();
+        let patterns = read_ignore_files(root);
+        assert_eq!(patterns, vec!["*.log", "# comment", "build/", "secret.txt"]);
+
+        // Patterns feed into a working matcher
+        let matcher = IgnoreMatcher::new(&patterns, root.to_path_buf()).unwrap();
+        assert!(matcher.is_match(root.join("debug.log")));
+        assert!(matcher.is_match(root.join("secret.txt")));
+        assert!(!matcher.is_match(root.join("readme.md")));
     }
 
     #[test]

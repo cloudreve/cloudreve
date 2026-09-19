@@ -8,7 +8,7 @@ use crate::drive::callback::CallbackHandler;
 use crate::drive::commands::ManagerCommand;
 use crate::drive::commands::MountCommand;
 use crate::drive::event_blocker::EventBlocker;
-use crate::drive::ignore::IgnoreMatcher;
+use crate::drive::ignore::{self, IgnoreMatcher};
 use crate::drive::sync::{SyncMode, group_fs_events};
 #[cfg(windows)]
 use crate::drive::utils::recycle_bin_url;
@@ -226,9 +226,9 @@ impl Mount {
         )
         .await;
 
-        // Parse ignore patterns from config
+        // Parse ignore patterns from config and sync-root ignore files
         let sync_path = config.sync_path.clone();
-        let ignore_matcher = match IgnoreMatcher::new(&config.ignore_patterns, sync_path.clone()) {
+        let ignore_matcher = match build_ignore_matcher(&config.ignore_patterns, &sync_path) {
             Ok(matcher) => {
                 if !matcher.is_empty() {
                     tracing::info!(
@@ -327,9 +327,20 @@ impl Mount {
     /// Returns an error if any pattern is invalid
     pub async fn update_ignore_patterns(&self, patterns: Vec<String>) -> Result<()> {
         let sync_path = self.config.read().await.sync_path.clone();
-        let new_matcher = IgnoreMatcher::new(&patterns, sync_path)?;
+        let new_matcher = build_ignore_matcher(&patterns, &sync_path)?;
         self.config.write().await.ignore_patterns = patterns;
         *self.ignore_matcher.write().await = new_matcher;
+        Ok(())
+    }
+
+    /// Rebuild the ignore matcher from config patterns plus any ignore files
+    /// present at the sync root (`.cloudreveignore` / `.ignore`).
+    pub async fn reload_ignore_patterns(&self) -> Result<()> {
+        let (patterns, sync_path) = {
+            let config = self.config.read().await;
+            (config.ignore_patterns.clone(), config.sync_path.clone())
+        };
+        *self.ignore_matcher.write().await = build_ignore_matcher(&patterns, &sync_path)?;
         Ok(())
     }
 
@@ -904,6 +915,14 @@ fn resolve_task_queue_config(config: &DriveConfig) -> TaskQueueConfig {
     TaskQueueConfig {
         max_concurrent: concurrency,
     }
+}
+
+/// Build an ignore matcher from config patterns merged with any ignore files
+/// (`.cloudreveignore` / `.ignore`) present at the sync root.
+fn build_ignore_matcher(patterns: &[String], sync_root: &Path) -> Result<IgnoreMatcher> {
+    let mut all = patterns.to_vec();
+    all.extend(ignore::read_ignore_files(sync_root));
+    IgnoreMatcher::new(&all, sync_root.to_path_buf())
 }
 
 #[cfg(test)]

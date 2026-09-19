@@ -4,6 +4,7 @@ use crate::{
         placeholder::{LocalFileInfo, OpenOptions, PinState},
     },
     drive::{
+        ignore,
         mounts::Mount,
         placeholder::CrPlaceholder,
         sync::{GroupedFsEvents, SyncMode, local_snapshot_differs},
@@ -613,6 +614,25 @@ impl Mount {
     }
 
     pub async fn process_fs_events(&self, events: GroupedFsEvents) -> Result<()> {
+        // Hot-reload ignore rules when an ignore file was touched in this
+        // batch, so the new rules apply to the events that follow.
+        let ignore_file_touched = events.values().flatten().any(|event| {
+            event.paths.iter().any(|path| {
+                path.file_name()
+                    .and_then(|name| name.to_str())
+                    .is_some_and(ignore::is_ignore_file_name)
+            })
+        });
+        if ignore_file_touched {
+            if let Err(err) = self.reload_ignore_patterns().await {
+                tracing::warn!(
+                    target: "drive::commands",
+                    error = %err,
+                    "Failed to reload ignore patterns"
+                );
+            }
+        }
+
         // Process groups in a deterministic order: renames/moves first, then
         // creates and modifications, removes last. A directory move can emit
         // per-descendant remove events in the same batch; committing the move
