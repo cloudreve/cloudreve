@@ -5,6 +5,7 @@ package runtime
 import (
 	"time"
 
+	"github.com/cloudreve/Cloudreve/v4/ent/aclentry"
 	"github.com/cloudreve/Cloudreve/v4/ent/davaccount"
 	"github.com/cloudreve/Cloudreve/v4/ent/directlink"
 	"github.com/cloudreve/Cloudreve/v4/ent/entity"
@@ -30,6 +31,25 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	aclentryMixin := schema.AclEntry{}.Mixin()
+	aclentryMixinHooks0 := aclentryMixin[0].Hooks()
+	aclentry.Hooks[0] = aclentryMixinHooks0[0]
+	aclentryMixinInters0 := aclentryMixin[0].Interceptors()
+	aclentry.Interceptors[0] = aclentryMixinInters0[0]
+	aclentryMixinFields0 := aclentryMixin[0].Fields()
+	_ = aclentryMixinFields0
+	aclentryFields := schema.AclEntry{}.Fields()
+	_ = aclentryFields
+	// aclentryDescCreatedAt is the schema descriptor for created_at field.
+	aclentryDescCreatedAt := aclentryMixinFields0[0].Descriptor()
+	// aclentry.DefaultCreatedAt holds the default value on creation for the created_at field.
+	aclentry.DefaultCreatedAt = aclentryDescCreatedAt.Default.(func() time.Time)
+	// aclentryDescUpdatedAt is the schema descriptor for updated_at field.
+	aclentryDescUpdatedAt := aclentryMixinFields0[1].Descriptor()
+	// aclentry.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	aclentry.DefaultUpdatedAt = aclentryDescUpdatedAt.Default.(func() time.Time)
+	// aclentry.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	aclentry.UpdateDefaultUpdatedAt = aclentryDescUpdatedAt.UpdateDefault.(func() time.Time)
 	davaccountMixin := schema.DavAccount{}.Mixin()
 	davaccountMixinHooks0 := davaccountMixin[0].Hooks()
 	davaccount.Hooks[0] = davaccountMixinHooks0[0]

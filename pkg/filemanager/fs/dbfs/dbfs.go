@@ -97,6 +97,7 @@ func (f *DBFS) writePermitted(file *File, capability NavigatorCapability) bool {
 type DBFSDependencies struct {
 	FileClient          inventory.FileClient
 	ShareClient         inventory.ShareClient
+	AclClient           inventory.AclClient
 	UserClient          inventory.UserClient
 	StoragePolicyClient inventory.StoragePolicyClient
 	DirectLinkClient    inventory.DirectLinkClient
@@ -116,6 +117,7 @@ func NewDatabaseFS(u *ent.User, deps DBFSDependencies) fs.FileSystem {
 		navigators:          make(map[string]Navigator),
 		fileClient:          deps.FileClient,
 		shareClient:         deps.ShareClient,
+		aclClient:           deps.AclClient,
 		l:                   deps.Logger,
 		ls:                  deps.LockSystem,
 		settingClient:       deps.SettingProvider,
@@ -137,6 +139,7 @@ type DBFS struct {
 	userClient          inventory.UserClient
 	storagePolicyClient inventory.StoragePolicyClient
 	shareClient         inventory.ShareClient
+	aclClient           inventory.AclClient
 	directLinkClient    inventory.DirectLinkClient
 	l                   logging.Logger
 	ls                  lock.LockSystem
@@ -797,7 +800,7 @@ func (f *DBFS) getNavigator(ctx context.Context, path *fs.URI, requiredCapabilit
 		case constants.FileSystemMy:
 			n = NewMyNavigator(f.user, f.fileClient, f.userClient, f.l, config, f.hasher)
 		case constants.FileSystemShare:
-			n = NewShareNavigator(f.user, f.fileClient, f.shareClient, f.l, config, f.hasher)
+			n = NewShareNavigator(f.user, f.fileClient, f.shareClient, f.aclClient, f.l, config, f.hasher)
 		case constants.FileSystemTrash:
 			n = NewTrashNavigator(f.user, f.fileClient, f.l, config, f.hasher)
 		case constants.FileSystemSharedWithMe:

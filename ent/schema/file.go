@@ -68,6 +68,7 @@ func (File) Edges() []ent.Edge {
 		edge.To("metadata", Metadata.Type),
 		edge.To("entities", Entity.Type),
 		edge.To("shares", Share.Type),
+		edge.To("acl_entries", AclEntry.Type),
 		edge.To("direct_links", DirectLink.Type),
 	}
 }

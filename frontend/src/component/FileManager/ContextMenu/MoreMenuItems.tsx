@@ -3,6 +3,7 @@ import { useCallback, useContext } from "react";
 import { useTranslation } from "react-i18next";
 import { closeContextMenu } from "../../../redux/fileManagerSlice.ts";
 import {
+  setAclDialog,
   setCreateArchiveDialog,
   setDirectLinkManagementDialog,
   setManageShareDialog,
@@ -15,6 +16,7 @@ import BranchForkLink from "../../Icons/BranchForkLink.tsx";
 import HistoryOutlined from "../../Icons/HistoryOutlined.tsx";
 import ImageArrowCounterclockwise from "../../Icons/ImageAarowCounterclockwise.tsx";
 import LinkSetting from "../../Icons/LinkSetting.tsx";
+import PersonLock from "../../Icons/PersonLock.tsx";
 import { CascadingContext, CascadingMenuItem } from "./CascadingMenu.tsx";
 import { SubMenuItemsProps } from "./OrganizeMenuItems.tsx";
 
@@ -71,6 +73,23 @@ const MoreMenuItems = ({ displayOpt, targets }: SubMenuItemsProps) => {
             <BranchForkLink fontSize="small" />
           </ListItemIcon>
           <ListItemText>{t("application:fileManager.manageShares")}</ListItemText>
+        </CascadingMenuItem>
+      )}
+      {displayOpt.showAcl && (
+        <CascadingMenuItem
+          onClick={onClick(() =>
+            dispatch(
+              setAclDialog({
+                open: true,
+                file: targets[0],
+              }),
+            ),
+          )}
+        >
+          <ListItemIcon>
+            <PersonLock fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t("application:fileManager.permissions")}</ListItemText>
         </CascadingMenuItem>
       )}
       {displayOpt.showDirectLinkManagement && (

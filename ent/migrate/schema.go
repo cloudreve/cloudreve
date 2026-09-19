@@ -8,6 +8,38 @@ import (
 )
 
 var (
+	// ACLEntriesColumns holds the columns for the "acl_entries" table.
+	ACLEntriesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "subject_type", Type: field.TypeEnum, Enums: []string{"user", "group", "anonymous", "everyone"}},
+		{Name: "subject_id", Type: field.TypeInt, Nullable: true},
+		{Name: "permissions", Type: field.TypeBytes},
+		{Name: "file_id", Type: field.TypeInt},
+	}
+	// ACLEntriesTable holds the schema information for the "acl_entries" table.
+	ACLEntriesTable = &schema.Table{
+		Name:       "acl_entries",
+		Columns:    ACLEntriesColumns,
+		PrimaryKey: []*schema.Column{ACLEntriesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "acl_entries_files_acl_entries",
+				Columns:    []*schema.Column{ACLEntriesColumns[7]},
+				RefColumns: []*schema.Column{FilesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "aclentry_file_id_subject_type_subject_id",
+				Unique:  true,
+				Columns: []*schema.Column{ACLEntriesColumns[7], ACLEntriesColumns[4], ACLEntriesColumns[5]},
+			},
+		},
+	}
 	// DavAccountsColumns holds the columns for the "dav_accounts" table.
 	DavAccountsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -552,6 +584,7 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		ACLEntriesTable,
 		DavAccountsTable,
 		DirectLinksTable,
 		EntitiesTable,
@@ -574,6 +607,7 @@ var (
 )
 
 func init() {
+	ACLEntriesTable.ForeignKeys[0].RefTable = FilesTable
 	DavAccountsTable.ForeignKeys[0].RefTable = UsersTable
 	DirectLinksTable.ForeignKeys[0].RefTable = FilesTable
 	EntitiesTable.ForeignKeys[0].RefTable = StoragePoliciesTable

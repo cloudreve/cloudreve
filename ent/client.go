@@ -15,6 +15,7 @@ import (
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/cloudreve/Cloudreve/v4/ent/aclentry"
 	"github.com/cloudreve/Cloudreve/v4/ent/davaccount"
 	"github.com/cloudreve/Cloudreve/v4/ent/directlink"
 	"github.com/cloudreve/Cloudreve/v4/ent/entity"
@@ -41,6 +42,8 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// AclEntry is the client for interacting with the AclEntry builders.
+	AclEntry *AclEntryClient
 	// DavAccount is the client for interacting with the DavAccount builders.
 	DavAccount *DavAccountClient
 	// DirectLink is the client for interacting with the DirectLink builders.
@@ -86,6 +89,7 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.AclEntry = NewAclEntryClient(c.config)
 	c.DavAccount = NewDavAccountClient(c.config)
 	c.DirectLink = NewDirectLinkClient(c.config)
 	c.Entity = NewEntityClient(c.config)
@@ -195,6 +199,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	return &Tx{
 		ctx:            ctx,
 		config:         cfg,
+		AclEntry:       NewAclEntryClient(cfg),
 		DavAccount:     NewDavAccountClient(cfg),
 		DirectLink:     NewDirectLinkClient(cfg),
 		Entity:         NewEntityClient(cfg),
@@ -231,6 +236,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	return &Tx{
 		ctx:            ctx,
 		config:         cfg,
+		AclEntry:       NewAclEntryClient(cfg),
 		DavAccount:     NewDavAccountClient(cfg),
 		DirectLink:     NewDirectLinkClient(cfg),
 		Entity:         NewEntityClient(cfg),
@@ -254,7 +260,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		DavAccount.
+//		AclEntry.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -277,7 +283,7 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.DavAccount, c.DirectLink, c.Entity, c.File, c.FsEvent, c.Group,
+		c.AclEntry, c.DavAccount, c.DirectLink, c.Entity, c.File, c.FsEvent, c.Group,
 		c.InvitationCode, c.Metadata, c.Node, c.OAuthClient, c.OAuthGrant, c.Passkey,
 		c.Setting, c.Share, c.StoragePolicy, c.Task, c.User,
 	} {
@@ -289,7 +295,7 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.DavAccount, c.DirectLink, c.Entity, c.File, c.FsEvent, c.Group,
+		c.AclEntry, c.DavAccount, c.DirectLink, c.Entity, c.File, c.FsEvent, c.Group,
 		c.InvitationCode, c.Metadata, c.Node, c.OAuthClient, c.OAuthGrant, c.Passkey,
 		c.Setting, c.Share, c.StoragePolicy, c.Task, c.User,
 	} {
@@ -300,6 +306,8 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
+	case *AclEntryMutation:
+		return c.AclEntry.mutate(ctx, m)
 	case *DavAccountMutation:
 		return c.DavAccount.mutate(ctx, m)
 	case *DirectLinkMutation:
@@ -336,6 +344,157 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.User.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
+	}
+}
+
+// AclEntryClient is a client for the AclEntry schema.
+type AclEntryClient struct {
+	config
+}
+
+// NewAclEntryClient returns a client for the AclEntry from the given config.
+func NewAclEntryClient(c config) *AclEntryClient {
+	return &AclEntryClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `aclentry.Hooks(f(g(h())))`.
+func (c *AclEntryClient) Use(hooks ...Hook) {
+	c.hooks.AclEntry = append(c.hooks.AclEntry, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `aclentry.Intercept(f(g(h())))`.
+func (c *AclEntryClient) Intercept(interceptors ...Interceptor) {
+	c.inters.AclEntry = append(c.inters.AclEntry, interceptors...)
+}
+
+// Create returns a builder for creating a AclEntry entity.
+func (c *AclEntryClient) Create() *AclEntryCreate {
+	mutation := newAclEntryMutation(c.config, OpCreate)
+	return &AclEntryCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of AclEntry entities.
+func (c *AclEntryClient) CreateBulk(builders ...*AclEntryCreate) *AclEntryCreateBulk {
+	return &AclEntryCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *AclEntryClient) MapCreateBulk(slice any, setFunc func(*AclEntryCreate, int)) *AclEntryCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &AclEntryCreateBulk{err: fmt.Errorf("calling to AclEntryClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*AclEntryCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &AclEntryCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for AclEntry.
+func (c *AclEntryClient) Update() *AclEntryUpdate {
+	mutation := newAclEntryMutation(c.config, OpUpdate)
+	return &AclEntryUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AclEntryClient) UpdateOne(ae *AclEntry) *AclEntryUpdateOne {
+	mutation := newAclEntryMutation(c.config, OpUpdateOne, withAclEntry(ae))
+	return &AclEntryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AclEntryClient) UpdateOneID(id int) *AclEntryUpdateOne {
+	mutation := newAclEntryMutation(c.config, OpUpdateOne, withAclEntryID(id))
+	return &AclEntryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for AclEntry.
+func (c *AclEntryClient) Delete() *AclEntryDelete {
+	mutation := newAclEntryMutation(c.config, OpDelete)
+	return &AclEntryDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *AclEntryClient) DeleteOne(ae *AclEntry) *AclEntryDeleteOne {
+	return c.DeleteOneID(ae.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *AclEntryClient) DeleteOneID(id int) *AclEntryDeleteOne {
+	builder := c.Delete().Where(aclentry.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AclEntryDeleteOne{builder}
+}
+
+// Query returns a query builder for AclEntry.
+func (c *AclEntryClient) Query() *AclEntryQuery {
+	return &AclEntryQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeAclEntry},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a AclEntry entity by its id.
+func (c *AclEntryClient) Get(ctx context.Context, id int) (*AclEntry, error) {
+	return c.Query().Where(aclentry.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AclEntryClient) GetX(ctx context.Context, id int) *AclEntry {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryFile queries the file edge of a AclEntry.
+func (c *AclEntryClient) QueryFile(ae *AclEntry) *FileQuery {
+	query := (&FileClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := ae.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(aclentry.Table, aclentry.FieldID, id),
+			sqlgraph.To(file.Table, file.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, aclentry.FileTable, aclentry.FileColumn),
+		)
+		fromV = sqlgraph.Neighbors(ae.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *AclEntryClient) Hooks() []Hook {
+	hooks := c.hooks.AclEntry
+	return append(hooks[:len(hooks):len(hooks)], aclentry.Hooks[:]...)
+}
+
+// Interceptors returns the client interceptors.
+func (c *AclEntryClient) Interceptors() []Interceptor {
+	inters := c.inters.AclEntry
+	return append(inters[:len(inters):len(inters)], aclentry.Interceptors[:]...)
+}
+
+func (c *AclEntryClient) mutate(ctx context.Context, m *AclEntryMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&AclEntryCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&AclEntryUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&AclEntryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&AclEntryDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown AclEntry mutation op: %q", m.Op())
 	}
 }
 
@@ -1037,6 +1196,22 @@ func (c *FileClient) QueryShares(f *File) *ShareQuery {
 			sqlgraph.From(file.Table, file.FieldID, id),
 			sqlgraph.To(share.Table, share.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, file.SharesTable, file.SharesColumn),
+		)
+		fromV = sqlgraph.Neighbors(f.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryACLEntries queries the acl_entries edge of a File.
+func (c *FileClient) QueryACLEntries(f *File) *AclEntryQuery {
+	query := (&AclEntryClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := f.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(file.Table, file.FieldID, id),
+			sqlgraph.To(aclentry.Table, aclentry.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, file.ACLEntriesTable, file.ACLEntriesColumn),
 		)
 		fromV = sqlgraph.Neighbors(f.driver.Dialect(), step)
 		return fromV, nil
@@ -3244,14 +3419,14 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		DavAccount, DirectLink, Entity, File, FsEvent, Group, InvitationCode, Metadata,
-		Node, OAuthClient, OAuthGrant, Passkey, Setting, Share, StoragePolicy, Task,
-		User []ent.Hook
+		AclEntry, DavAccount, DirectLink, Entity, File, FsEvent, Group, InvitationCode,
+		Metadata, Node, OAuthClient, OAuthGrant, Passkey, Setting, Share,
+		StoragePolicy, Task, User []ent.Hook
 	}
 	inters struct {
-		DavAccount, DirectLink, Entity, File, FsEvent, Group, InvitationCode, Metadata,
-		Node, OAuthClient, OAuthGrant, Passkey, Setting, Share, StoragePolicy, Task,
-		User []ent.Interceptor
+		AclEntry, DavAccount, DirectLink, Entity, File, FsEvent, Group, InvitationCode,
+		Metadata, Node, OAuthClient, OAuthGrant, Passkey, Setting, Share,
+		StoragePolicy, Task, User []ent.Interceptor
 	}
 )
 

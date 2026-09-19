@@ -106,6 +106,8 @@ type Dep interface {
 	RequestClient(opts ...request.Option) request.Client
 	// ShareClient Get a singleton inventory.ShareClient instance for access DB share store.
 	ShareClient() inventory.ShareClient
+	// AclClient Get a singleton inventory.AclClient instance for access DB ACL entry store.
+	AclClient() inventory.AclClient
 	// TaskClient Get a singleton inventory.TaskClient instance for access DB task store.
 	TaskClient() inventory.TaskClient
 	// ForkWithLogger create a shallow copy of dependency with a new correlated logger, used as per-request dep.
@@ -162,6 +164,7 @@ type dependency struct {
 	settingClient         inventory.SettingClient
 	fileClient            inventory.FileClient
 	shareClient           inventory.ShareClient
+	aclClient             inventory.AclClient
 	settingProvider       setting.Provider
 	userClient            inventory.UserClient
 	groupClient           inventory.GroupClient
@@ -820,6 +823,15 @@ func (d *dependency) ShareClient() inventory.ShareClient {
 
 	d.shareClient = inventory.NewShareClient(d.DBClient(), d.ConfigProvider().Database().Type, d.HashIDEncoder())
 	return d.shareClient
+}
+
+func (d *dependency) AclClient() inventory.AclClient {
+	if d.aclClient != nil {
+		return d.aclClient
+	}
+
+	d.aclClient = inventory.NewAclClient(d.DBClient(), d.ConfigProvider().Database().Type)
+	return d.aclClient
 }
 
 func (d *dependency) TaskClient() inventory.TaskClient {

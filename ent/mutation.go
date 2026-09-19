@@ -11,6 +11,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/cloudreve/Cloudreve/v4/ent/aclentry"
 	"github.com/cloudreve/Cloudreve/v4/ent/davaccount"
 	"github.com/cloudreve/Cloudreve/v4/ent/directlink"
 	"github.com/cloudreve/Cloudreve/v4/ent/entity"
@@ -44,6 +45,7 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
+	TypeAclEntry       = "AclEntry"
 	TypeDavAccount     = "DavAccount"
 	TypeDirectLink     = "DirectLink"
 	TypeEntity         = "Entity"
@@ -62,6 +64,788 @@ const (
 	TypeTask           = "Task"
 	TypeUser           = "User"
 )
+
+// AclEntryMutation represents an operation that mutates the AclEntry nodes in the graph.
+type AclEntryMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *int
+	created_at    *time.Time
+	updated_at    *time.Time
+	deleted_at    *time.Time
+	subject_type  *aclentry.SubjectType
+	subject_id    *int
+	addsubject_id *int
+	permissions   **boolset.BooleanSet
+	clearedFields map[string]struct{}
+	file          *int
+	clearedfile   bool
+	done          bool
+	oldValue      func(context.Context) (*AclEntry, error)
+	predicates    []predicate.AclEntry
+}
+
+var _ ent.Mutation = (*AclEntryMutation)(nil)
+
+// aclentryOption allows management of the mutation configuration using functional options.
+type aclentryOption func(*AclEntryMutation)
+
+// newAclEntryMutation creates new mutation for the AclEntry entity.
+func newAclEntryMutation(c config, op Op, opts ...aclentryOption) *AclEntryMutation {
+	m := &AclEntryMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeAclEntry,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withAclEntryID sets the ID field of the mutation.
+func withAclEntryID(id int) aclentryOption {
+	return func(m *AclEntryMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *AclEntry
+		)
+		m.oldValue = func(ctx context.Context) (*AclEntry, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().AclEntry.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withAclEntry sets the old AclEntry of the mutation.
+func withAclEntry(node *AclEntry) aclentryOption {
+	return func(m *AclEntryMutation) {
+		m.oldValue = func(context.Context) (*AclEntry, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m AclEntryMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m AclEntryMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *AclEntryMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *AclEntryMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().AclEntry.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *AclEntryMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *AclEntryMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the AclEntry entity.
+// If the AclEntry object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AclEntryMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *AclEntryMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *AclEntryMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *AclEntryMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the AclEntry entity.
+// If the AclEntry object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AclEntryMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *AclEntryMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (m *AclEntryMutation) SetDeletedAt(t time.Time) {
+	m.deleted_at = &t
+}
+
+// DeletedAt returns the value of the "deleted_at" field in the mutation.
+func (m *AclEntryMutation) DeletedAt() (r time.Time, exists bool) {
+	v := m.deleted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeletedAt returns the old "deleted_at" field's value of the AclEntry entity.
+// If the AclEntry object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AclEntryMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
+	}
+	return oldValue.DeletedAt, nil
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (m *AclEntryMutation) ClearDeletedAt() {
+	m.deleted_at = nil
+	m.clearedFields[aclentry.FieldDeletedAt] = struct{}{}
+}
+
+// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
+func (m *AclEntryMutation) DeletedAtCleared() bool {
+	_, ok := m.clearedFields[aclentry.FieldDeletedAt]
+	return ok
+}
+
+// ResetDeletedAt resets all changes to the "deleted_at" field.
+func (m *AclEntryMutation) ResetDeletedAt() {
+	m.deleted_at = nil
+	delete(m.clearedFields, aclentry.FieldDeletedAt)
+}
+
+// SetFileID sets the "file_id" field.
+func (m *AclEntryMutation) SetFileID(i int) {
+	m.file = &i
+}
+
+// FileID returns the value of the "file_id" field in the mutation.
+func (m *AclEntryMutation) FileID() (r int, exists bool) {
+	v := m.file
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFileID returns the old "file_id" field's value of the AclEntry entity.
+// If the AclEntry object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AclEntryMutation) OldFileID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFileID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFileID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFileID: %w", err)
+	}
+	return oldValue.FileID, nil
+}
+
+// ResetFileID resets all changes to the "file_id" field.
+func (m *AclEntryMutation) ResetFileID() {
+	m.file = nil
+}
+
+// SetSubjectType sets the "subject_type" field.
+func (m *AclEntryMutation) SetSubjectType(at aclentry.SubjectType) {
+	m.subject_type = &at
+}
+
+// SubjectType returns the value of the "subject_type" field in the mutation.
+func (m *AclEntryMutation) SubjectType() (r aclentry.SubjectType, exists bool) {
+	v := m.subject_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubjectType returns the old "subject_type" field's value of the AclEntry entity.
+// If the AclEntry object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AclEntryMutation) OldSubjectType(ctx context.Context) (v aclentry.SubjectType, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubjectType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubjectType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubjectType: %w", err)
+	}
+	return oldValue.SubjectType, nil
+}
+
+// ResetSubjectType resets all changes to the "subject_type" field.
+func (m *AclEntryMutation) ResetSubjectType() {
+	m.subject_type = nil
+}
+
+// SetSubjectID sets the "subject_id" field.
+func (m *AclEntryMutation) SetSubjectID(i int) {
+	m.subject_id = &i
+	m.addsubject_id = nil
+}
+
+// SubjectID returns the value of the "subject_id" field in the mutation.
+func (m *AclEntryMutation) SubjectID() (r int, exists bool) {
+	v := m.subject_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubjectID returns the old "subject_id" field's value of the AclEntry entity.
+// If the AclEntry object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AclEntryMutation) OldSubjectID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubjectID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubjectID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubjectID: %w", err)
+	}
+	return oldValue.SubjectID, nil
+}
+
+// AddSubjectID adds i to the "subject_id" field.
+func (m *AclEntryMutation) AddSubjectID(i int) {
+	if m.addsubject_id != nil {
+		*m.addsubject_id += i
+	} else {
+		m.addsubject_id = &i
+	}
+}
+
+// AddedSubjectID returns the value that was added to the "subject_id" field in this mutation.
+func (m *AclEntryMutation) AddedSubjectID() (r int, exists bool) {
+	v := m.addsubject_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearSubjectID clears the value of the "subject_id" field.
+func (m *AclEntryMutation) ClearSubjectID() {
+	m.subject_id = nil
+	m.addsubject_id = nil
+	m.clearedFields[aclentry.FieldSubjectID] = struct{}{}
+}
+
+// SubjectIDCleared returns if the "subject_id" field was cleared in this mutation.
+func (m *AclEntryMutation) SubjectIDCleared() bool {
+	_, ok := m.clearedFields[aclentry.FieldSubjectID]
+	return ok
+}
+
+// ResetSubjectID resets all changes to the "subject_id" field.
+func (m *AclEntryMutation) ResetSubjectID() {
+	m.subject_id = nil
+	m.addsubject_id = nil
+	delete(m.clearedFields, aclentry.FieldSubjectID)
+}
+
+// SetPermissions sets the "permissions" field.
+func (m *AclEntryMutation) SetPermissions(bs *boolset.BooleanSet) {
+	m.permissions = &bs
+}
+
+// Permissions returns the value of the "permissions" field in the mutation.
+func (m *AclEntryMutation) Permissions() (r *boolset.BooleanSet, exists bool) {
+	v := m.permissions
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPermissions returns the old "permissions" field's value of the AclEntry entity.
+// If the AclEntry object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AclEntryMutation) OldPermissions(ctx context.Context) (v *boolset.BooleanSet, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPermissions is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPermissions requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPermissions: %w", err)
+	}
+	return oldValue.Permissions, nil
+}
+
+// ResetPermissions resets all changes to the "permissions" field.
+func (m *AclEntryMutation) ResetPermissions() {
+	m.permissions = nil
+}
+
+// ClearFile clears the "file" edge to the File entity.
+func (m *AclEntryMutation) ClearFile() {
+	m.clearedfile = true
+	m.clearedFields[aclentry.FieldFileID] = struct{}{}
+}
+
+// FileCleared reports if the "file" edge to the File entity was cleared.
+func (m *AclEntryMutation) FileCleared() bool {
+	return m.clearedfile
+}
+
+// FileIDs returns the "file" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// FileID instead. It exists only for internal usage by the builders.
+func (m *AclEntryMutation) FileIDs() (ids []int) {
+	if id := m.file; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetFile resets all changes to the "file" edge.
+func (m *AclEntryMutation) ResetFile() {
+	m.file = nil
+	m.clearedfile = false
+}
+
+// Where appends a list predicates to the AclEntryMutation builder.
+func (m *AclEntryMutation) Where(ps ...predicate.AclEntry) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the AclEntryMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *AclEntryMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.AclEntry, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *AclEntryMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *AclEntryMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (AclEntry).
+func (m *AclEntryMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *AclEntryMutation) Fields() []string {
+	fields := make([]string, 0, 7)
+	if m.created_at != nil {
+		fields = append(fields, aclentry.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, aclentry.FieldUpdatedAt)
+	}
+	if m.deleted_at != nil {
+		fields = append(fields, aclentry.FieldDeletedAt)
+	}
+	if m.file != nil {
+		fields = append(fields, aclentry.FieldFileID)
+	}
+	if m.subject_type != nil {
+		fields = append(fields, aclentry.FieldSubjectType)
+	}
+	if m.subject_id != nil {
+		fields = append(fields, aclentry.FieldSubjectID)
+	}
+	if m.permissions != nil {
+		fields = append(fields, aclentry.FieldPermissions)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *AclEntryMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case aclentry.FieldCreatedAt:
+		return m.CreatedAt()
+	case aclentry.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case aclentry.FieldDeletedAt:
+		return m.DeletedAt()
+	case aclentry.FieldFileID:
+		return m.FileID()
+	case aclentry.FieldSubjectType:
+		return m.SubjectType()
+	case aclentry.FieldSubjectID:
+		return m.SubjectID()
+	case aclentry.FieldPermissions:
+		return m.Permissions()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *AclEntryMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case aclentry.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case aclentry.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case aclentry.FieldDeletedAt:
+		return m.OldDeletedAt(ctx)
+	case aclentry.FieldFileID:
+		return m.OldFileID(ctx)
+	case aclentry.FieldSubjectType:
+		return m.OldSubjectType(ctx)
+	case aclentry.FieldSubjectID:
+		return m.OldSubjectID(ctx)
+	case aclentry.FieldPermissions:
+		return m.OldPermissions(ctx)
+	}
+	return nil, fmt.Errorf("unknown AclEntry field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AclEntryMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case aclentry.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case aclentry.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case aclentry.FieldDeletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeletedAt(v)
+		return nil
+	case aclentry.FieldFileID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFileID(v)
+		return nil
+	case aclentry.FieldSubjectType:
+		v, ok := value.(aclentry.SubjectType)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubjectType(v)
+		return nil
+	case aclentry.FieldSubjectID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubjectID(v)
+		return nil
+	case aclentry.FieldPermissions:
+		v, ok := value.(*boolset.BooleanSet)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPermissions(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AclEntry field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *AclEntryMutation) AddedFields() []string {
+	var fields []string
+	if m.addsubject_id != nil {
+		fields = append(fields, aclentry.FieldSubjectID)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *AclEntryMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case aclentry.FieldSubjectID:
+		return m.AddedSubjectID()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AclEntryMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case aclentry.FieldSubjectID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddSubjectID(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AclEntry numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *AclEntryMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(aclentry.FieldDeletedAt) {
+		fields = append(fields, aclentry.FieldDeletedAt)
+	}
+	if m.FieldCleared(aclentry.FieldSubjectID) {
+		fields = append(fields, aclentry.FieldSubjectID)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *AclEntryMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *AclEntryMutation) ClearField(name string) error {
+	switch name {
+	case aclentry.FieldDeletedAt:
+		m.ClearDeletedAt()
+		return nil
+	case aclentry.FieldSubjectID:
+		m.ClearSubjectID()
+		return nil
+	}
+	return fmt.Errorf("unknown AclEntry nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *AclEntryMutation) ResetField(name string) error {
+	switch name {
+	case aclentry.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case aclentry.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case aclentry.FieldDeletedAt:
+		m.ResetDeletedAt()
+		return nil
+	case aclentry.FieldFileID:
+		m.ResetFileID()
+		return nil
+	case aclentry.FieldSubjectType:
+		m.ResetSubjectType()
+		return nil
+	case aclentry.FieldSubjectID:
+		m.ResetSubjectID()
+		return nil
+	case aclentry.FieldPermissions:
+		m.ResetPermissions()
+		return nil
+	}
+	return fmt.Errorf("unknown AclEntry field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *AclEntryMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.file != nil {
+		edges = append(edges, aclentry.EdgeFile)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *AclEntryMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case aclentry.EdgeFile:
+		if id := m.file; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *AclEntryMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *AclEntryMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *AclEntryMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedfile {
+		edges = append(edges, aclentry.EdgeFile)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *AclEntryMutation) EdgeCleared(name string) bool {
+	switch name {
+	case aclentry.EdgeFile:
+		return m.clearedfile
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *AclEntryMutation) ClearEdge(name string) error {
+	switch name {
+	case aclentry.EdgeFile:
+		m.ClearFile()
+		return nil
+	}
+	return fmt.Errorf("unknown AclEntry unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *AclEntryMutation) ResetEdge(name string) error {
+	switch name {
+	case aclentry.EdgeFile:
+		m.ResetFile()
+		return nil
+	}
+	return fmt.Errorf("unknown AclEntry edge %s", name)
+}
 
 // DavAccountMutation represents an operation that mutates the DavAccount nodes in the graph.
 type DavAccountMutation struct {
@@ -3008,6 +3792,9 @@ type FileMutation struct {
 	shares                  map[int]struct{}
 	removedshares           map[int]struct{}
 	clearedshares           bool
+	acl_entries             map[int]struct{}
+	removedacl_entries      map[int]struct{}
+	clearedacl_entries      bool
 	direct_links            map[int]struct{}
 	removeddirect_links     map[int]struct{}
 	cleareddirect_links     bool
@@ -3946,6 +4733,60 @@ func (m *FileMutation) ResetShares() {
 	m.removedshares = nil
 }
 
+// AddACLEntryIDs adds the "acl_entries" edge to the AclEntry entity by ids.
+func (m *FileMutation) AddACLEntryIDs(ids ...int) {
+	if m.acl_entries == nil {
+		m.acl_entries = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.acl_entries[ids[i]] = struct{}{}
+	}
+}
+
+// ClearACLEntries clears the "acl_entries" edge to the AclEntry entity.
+func (m *FileMutation) ClearACLEntries() {
+	m.clearedacl_entries = true
+}
+
+// ACLEntriesCleared reports if the "acl_entries" edge to the AclEntry entity was cleared.
+func (m *FileMutation) ACLEntriesCleared() bool {
+	return m.clearedacl_entries
+}
+
+// RemoveACLEntryIDs removes the "acl_entries" edge to the AclEntry entity by IDs.
+func (m *FileMutation) RemoveACLEntryIDs(ids ...int) {
+	if m.removedacl_entries == nil {
+		m.removedacl_entries = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.acl_entries, ids[i])
+		m.removedacl_entries[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedACLEntries returns the removed IDs of the "acl_entries" edge to the AclEntry entity.
+func (m *FileMutation) RemovedACLEntriesIDs() (ids []int) {
+	for id := range m.removedacl_entries {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ACLEntriesIDs returns the "acl_entries" edge IDs in the mutation.
+func (m *FileMutation) ACLEntriesIDs() (ids []int) {
+	for id := range m.acl_entries {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetACLEntries resets all changes to the "acl_entries" edge.
+func (m *FileMutation) ResetACLEntries() {
+	m.acl_entries = nil
+	m.clearedacl_entries = false
+	m.removedacl_entries = nil
+}
+
 // AddDirectLinkIDs adds the "direct_links" edge to the DirectLink entity by ids.
 func (m *FileMutation) AddDirectLinkIDs(ids ...int) {
 	if m.direct_links == nil {
@@ -4369,7 +5210,7 @@ func (m *FileMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *FileMutation) AddedEdges() []string {
-	edges := make([]string, 0, 8)
+	edges := make([]string, 0, 9)
 	if m.owner != nil {
 		edges = append(edges, file.EdgeOwner)
 	}
@@ -4390,6 +5231,9 @@ func (m *FileMutation) AddedEdges() []string {
 	}
 	if m.shares != nil {
 		edges = append(edges, file.EdgeShares)
+	}
+	if m.acl_entries != nil {
+		edges = append(edges, file.EdgeACLEntries)
 	}
 	if m.direct_links != nil {
 		edges = append(edges, file.EdgeDirectLinks)
@@ -4437,6 +5281,12 @@ func (m *FileMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case file.EdgeACLEntries:
+		ids := make([]ent.Value, 0, len(m.acl_entries))
+		for id := range m.acl_entries {
+			ids = append(ids, id)
+		}
+		return ids
 	case file.EdgeDirectLinks:
 		ids := make([]ent.Value, 0, len(m.direct_links))
 		for id := range m.direct_links {
@@ -4449,7 +5299,7 @@ func (m *FileMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *FileMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 8)
+	edges := make([]string, 0, 9)
 	if m.removedchildren != nil {
 		edges = append(edges, file.EdgeChildren)
 	}
@@ -4461,6 +5311,9 @@ func (m *FileMutation) RemovedEdges() []string {
 	}
 	if m.removedshares != nil {
 		edges = append(edges, file.EdgeShares)
+	}
+	if m.removedacl_entries != nil {
+		edges = append(edges, file.EdgeACLEntries)
 	}
 	if m.removeddirect_links != nil {
 		edges = append(edges, file.EdgeDirectLinks)
@@ -4496,6 +5349,12 @@ func (m *FileMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case file.EdgeACLEntries:
+		ids := make([]ent.Value, 0, len(m.removedacl_entries))
+		for id := range m.removedacl_entries {
+			ids = append(ids, id)
+		}
+		return ids
 	case file.EdgeDirectLinks:
 		ids := make([]ent.Value, 0, len(m.removeddirect_links))
 		for id := range m.removeddirect_links {
@@ -4508,7 +5367,7 @@ func (m *FileMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *FileMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 8)
+	edges := make([]string, 0, 9)
 	if m.clearedowner {
 		edges = append(edges, file.EdgeOwner)
 	}
@@ -4529,6 +5388,9 @@ func (m *FileMutation) ClearedEdges() []string {
 	}
 	if m.clearedshares {
 		edges = append(edges, file.EdgeShares)
+	}
+	if m.clearedacl_entries {
+		edges = append(edges, file.EdgeACLEntries)
 	}
 	if m.cleareddirect_links {
 		edges = append(edges, file.EdgeDirectLinks)
@@ -4554,6 +5416,8 @@ func (m *FileMutation) EdgeCleared(name string) bool {
 		return m.clearedentities
 	case file.EdgeShares:
 		return m.clearedshares
+	case file.EdgeACLEntries:
+		return m.clearedacl_entries
 	case file.EdgeDirectLinks:
 		return m.cleareddirect_links
 	}
@@ -4601,6 +5465,9 @@ func (m *FileMutation) ResetEdge(name string) error {
 		return nil
 	case file.EdgeShares:
 		m.ResetShares()
+		return nil
+	case file.EdgeACLEntries:
+		m.ResetACLEntries()
 		return nil
 	case file.EdgeDirectLinks:
 		m.ResetDirectLinks()

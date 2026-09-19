@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/cloudreve/Cloudreve/v4/ent/aclentry"
 	"github.com/cloudreve/Cloudreve/v4/ent/directlink"
 	"github.com/cloudreve/Cloudreve/v4/ent/entity"
 	"github.com/cloudreve/Cloudreve/v4/ent/file"
@@ -252,6 +253,21 @@ func (fc *FileCreate) AddShares(s ...*Share) *FileCreate {
 		ids[i] = s[i].ID
 	}
 	return fc.AddShareIDs(ids...)
+}
+
+// AddACLEntryIDs adds the "acl_entries" edge to the AclEntry entity by IDs.
+func (fc *FileCreate) AddACLEntryIDs(ids ...int) *FileCreate {
+	fc.mutation.AddACLEntryIDs(ids...)
+	return fc
+}
+
+// AddACLEntries adds the "acl_entries" edges to the AclEntry entity.
+func (fc *FileCreate) AddACLEntries(a ...*AclEntry) *FileCreate {
+	ids := make([]int, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return fc.AddACLEntryIDs(ids...)
 }
 
 // AddDirectLinkIDs adds the "direct_links" edge to the DirectLink entity by IDs.
@@ -531,6 +547,22 @@ func (fc *FileCreate) createSpec() (*File, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(share.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := fc.mutation.ACLEntriesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   file.ACLEntriesTable,
+			Columns: []string{file.ACLEntriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(aclentry.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

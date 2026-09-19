@@ -37,6 +37,18 @@ const ShareSection = () => {
     [setGroup],
   );
 
+  const onSetExplicitUserChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setGroup((p: GroupEnt) => ({
+        ...p,
+        permissions: new Boolset(p.permissions)
+          .set(GroupPermission.set_explicit_user, e.target.checked)
+          .toString(),
+      }));
+    },
+    [setGroup],
+  );
+
   return (
     <SettingSection>
       <Typography variant="h6" gutterBottom>
@@ -84,14 +96,19 @@ const ShareSection = () => {
           <SettingForm lgWidth={5}>
             <FormControl fullWidth>
               <FormControlLabel
-                control={<Switch checked={false} />}
+                control={
+                  <Switch
+                    checked={permission.enabled(GroupPermission.set_explicit_user)}
+                    onChange={onSetExplicitUserChange}
+                  />
+                }
                 label={
                   <Box sx={{ display: "flex", alignItems: "center" }}>
-                    {t("group.esclateAnonymity")}
+                    {t("group.setExplicitUser")}
                   </Box>
                 }
               />
-              <NoMarginHelperText>{t("group.esclateAnonymityDes")}</NoMarginHelperText>
+              <NoMarginHelperText>{t("group.setExplicitUserDes")}</NoMarginHelperText>
             </FormControl>
           </SettingForm>
         )}
