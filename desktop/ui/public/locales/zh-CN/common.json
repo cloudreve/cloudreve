@@ -17,6 +17,7 @@
     "browse": "浏览",
     "selectFolder": "选择文件夹",
     "folderNotEmpty": "所选文件夹不为空，请选择一个空文件夹。",
+    "folderNotEmptyWillSync": "此文件夹已有文件。本地已有内容将合并到远程网盘；同名且哈希匹配的文件会被视为已同步。",
     "finish": "完成",
     "settingUp": "正在配置中...",
     "successTitle": "设置完成！",
@@ -46,7 +47,17 @@
     "syncingStatus": "正在同步 {{count}} 个文件...",
     "upToDate": "文件已是最新。",
     "waiting": "等待中...",
-    "processing": "处理中..."
+    "processing": "处理中...",
+    "conflicts": "冲突",
+    "conflictStatus": "{{count}} 个冲突需要处理",
+    "conflictDescription": "本地文件与远程版本冲突",
+    "resolveConflict": "解决冲突",
+    "resolving": "正在处理...",
+    "keepRemote": "保留远程版本",
+    "overwriteRemote": "覆盖远程版本",
+    "saveAsNew": "另存为新文件",
+    "keepAllRemote": "全部保留远程",
+    "overwriteAllRemote": "全部覆盖远程"
   },
   "settings": {
     "title": "设置",

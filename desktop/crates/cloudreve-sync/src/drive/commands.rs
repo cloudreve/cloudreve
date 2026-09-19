@@ -2,12 +2,11 @@ use crate::{
     cfapi::{
         filter::ticket,
         placeholder::{LocalFileInfo, OpenOptions, PinState},
-        utility::WriteAt,
     },
     drive::{
         mounts::Mount,
         placeholder::CrPlaceholder,
-        sync::{GroupedFsEvents, SyncMode},
+        sync::{GroupedFsEvents, SyncMode, local_snapshot_differs},
         utils::{local_path_to_cr_uri, notify_shell_change},
     },
     inventory::ConflictState,
@@ -39,7 +38,10 @@ use std::{
 };
 use tokio::sync::oneshot::Sender;
 use uuid::Uuid;
+#[cfg(windows)]
 use windows::Win32::UI::Shell::SHCNE_ATTRIBUTES;
+#[cfg(not(windows))]
+const SHCNE_ATTRIBUTES: u32 = 0;
 const PAGE_SIZE: i32 = 1000;
 
 /// Generate a unique filename by appending a counter suffix before the extension.
@@ -780,6 +782,35 @@ impl Mount {
         Ok(())
     }
 
+    pub async fn resolve_all_conflicts(&self, action: ConflictAction) -> Result<(usize, usize)> {
+        let pending = self
+            .inventory
+            .query_pending_conflicts(Some(&self.id))
+            .context("failed to query pending conflicts")?;
+
+        let mut success = 0usize;
+        let mut failed = 0usize;
+
+        for conflict in pending {
+            let path = conflict.local_path.clone();
+            let file_id = conflict.id;
+            if let Err(e) = self.resolve_conflict(action, file_id, path).await {
+                tracing::error!(
+                    target: "drive::commands",
+                    id = %self.id,
+                    path = %conflict.local_path,
+                    error = %e,
+                    "Failed to resolve conflict during batch operation"
+                );
+                failed += 1;
+            } else {
+                success += 1;
+            }
+        }
+
+        Ok((success, failed))
+    }
+
     async fn process_fs_modify_name_event(&self, events: Vec<Event>) -> Result<()> {
         tracing::trace!(target: "drive::commands", count=events.len(), "Processing filesystem modify name event");
         for event in events {
@@ -849,6 +880,30 @@ impl Mount {
                 }
             };
             if placeholder_info.is_directory() {
+                #[cfg(not(windows))]
+                {
+                    // Windows receives richer CFAPI callbacks for directory
+                    // hydration and placeholder population. Non-Windows full
+                    // sync only has filesystem watcher events, so a directory
+                    // modify event must rescan the directory's first layer to
+                    // discover newly-created children.
+                    tracing::debug!(
+                        target: "drive::commands",
+                        path = %path.display(),
+                        "Syncing directory after filesystem modify event"
+                    );
+                    if let Err(err) = self
+                        .sync_paths(vec![path.clone()], SyncMode::PathAndFirstLayer)
+                        .await
+                    {
+                        tracing::error!(
+                            target: "drive::commands",
+                            path = %path.display(),
+                            error = %err,
+                            "Failed to sync directory after filesystem modify event"
+                        );
+                    }
+                }
                 continue;
             }
 
@@ -906,8 +961,22 @@ impl Mount {
                 continue;
             }
 
-            // General modification, quque a upload task if not exist
-            if !placeholder_info.in_sync() {
+            // General modification, queue an upload task if not exist.
+            // Also queue when the recorded local snapshot no longer matches
+            // the on-disk state even though the IN_SYNC flag looks set - the
+            // flag may be stale after a race with a metadata refresh.
+            let snapshot_differs = match path.to_str() {
+                Some(path_str) => self
+                    .inventory
+                    .query_by_path(path_str)
+                    .map(|entry| {
+                        entry.is_some_and(|meta| local_snapshot_differs(&meta, &placeholder_info))
+                    })
+                    .unwrap_or(false),
+                None => false,
+            };
+
+            if !placeholder_info.in_sync() || snapshot_differs {
                 tracing::debug!(target: "drive::commands", path = %path.display(), "Queuing upload task for modified file");
                 let payload = TaskPayload::upload(path.clone());
                 let result = self

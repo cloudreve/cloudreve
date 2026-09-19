@@ -119,7 +119,10 @@ impl DriveManager {
                         }
                     });
                 }
-                ManagerCommand::GetDriveStatusUI { syncroot_id, response } => {
+                ManagerCommand::GetDriveStatusUI {
+                    syncroot_id,
+                    response,
+                } => {
                     spawn(async move {
                         let result = manager.get_drive_status_by_syncroot_id(&syncroot_id).await;
                         let _ = response.send(result);

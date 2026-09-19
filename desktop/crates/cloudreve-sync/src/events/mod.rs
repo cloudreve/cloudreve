@@ -10,8 +10,7 @@ pub enum Event {
     ConnectionStatusChanged {
         connected: bool,
     },
-    NoDrive {
-    },
+    NoDrive {},
     /// Request to open the sync status window
     OpenSyncStatusWindow,
     /// Request to open the settings window
@@ -22,7 +21,7 @@ impl Event {
     pub fn name(&self) -> &'static str {
         match self {
             Event::ConnectionStatusChanged { .. } => "ConnectionStatusChanged",
-            Event::NoDrive {  } => "NoDrive",
+            Event::NoDrive {} => "NoDrive",
             Event::OpenSyncStatusWindow => "OpenSyncStatusWindow",
             Event::OpenSettingsWindow => "OpenSettingsWindow",
         }
@@ -75,7 +74,7 @@ impl EventBroadcaster {
 
     /// Helper: Broadcast no drive event
     pub fn no_drive(&self) {
-        self.broadcast(Event::NoDrive {  });
+        self.broadcast(Event::NoDrive {});
     }
 
     /// Helper: Broadcast connection status changed event

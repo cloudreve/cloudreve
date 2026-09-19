@@ -1,5 +1,5 @@
-use crate::{drive::commands::ManagerCommand, utils::app::AppRoot};
 use crate::drive::manager::DriveManager;
+use crate::{drive::commands::ManagerCommand, utils::app::AppRoot};
 use rust_i18n::t;
 use std::path::PathBuf;
 use std::sync::Arc;

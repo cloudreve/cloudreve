@@ -1,7 +1,9 @@
 use cloudreve_sync::events::Event;
 use tauri::{AppHandle, Emitter};
 
-use crate::commands::{show_add_drive_window_impl, show_main_window_center, show_settings_window_impl};
+use crate::commands::{
+    show_add_drive_window_impl, show_main_window_center, show_settings_window_impl,
+};
 
 /// Handle incoming events from the event broadcaster.
 /// Returns true if the event was handled, false otherwise.

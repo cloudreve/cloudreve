@@ -23,7 +23,7 @@ serde = { version = "1.0", features = ["derive"] }
 uuid = { version = "1", features = ["v4"] }
 chrono = "0.4"
 log = "0.4"
-tauri = { version = "2.9.5", features = ["protocol-asset", "tray-icon"] }
+tauri = { version = "2.11.0", features = ["protocol-asset", "tray-icon"] }
 tauri-plugin-log = "2"
 tokio = { version = "1.35", features = ["full"] }
 tracing = "0.1"
@@ -38,15 +38,15 @@ urlencoding = "2.1"
 # Main sync service crate
 cloudreve-sync = { path = "../crates/cloudreve-sync" }
 
-tauri-plugin-frame = "1.1.6"
 tauri-plugin-http = "2"
 tauri-plugin-opener = "2"
-tauri-plugin-deep-link = "2.0.0"
-tauri-plugin-dialog = "2.6.0"
+tauri-plugin-deep-link = "2.4.9"
+tauri-plugin-dialog = "2.7.1"
 tauri-plugin-prevent-default = "4"
 tauri-plugin-os = "2"
+tauri-plugin-frame = "1.1.6"
 
-[dependencies.windows]
+[target.'cfg(windows)'.dependencies.windows]
 version = "0.58.0"
 features = ["Foundation", "ApplicationModel"]
 
@@ -54,4 +54,7 @@ features = ["Foundation", "ApplicationModel"]
 tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
-tauri-plugin-positioner = { version = "2.3.1", features = ["tray-icon"] }
+tauri-plugin-positioner = { version = "2.3.2", features = ["tray-icon"] }
+
+[dev-dependencies]
+serial_test = "3"

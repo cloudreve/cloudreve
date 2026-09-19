@@ -17,6 +17,7 @@
     "browse": "Browse",
     "selectFolder": "Select Folder",
     "folderNotEmpty": "The selected folder is not empty. Please choose an empty folder.",
+    "folderNotEmptyWillSync": "This folder already has files. Existing local content will be merged into the remote drive; same-name files with matching hashes will be treated as already synced.",
     "finish": "Finish",
     "settingUp": "We're setting things up...",
     "successTitle": "You're all set!",
@@ -46,7 +47,17 @@
     "syncingStatus": "Syncing {{count}} file(s)...",
     "upToDate": "Your files are up to date.",
     "waiting": "Waiting...",
-    "processing": "Processing..."
+    "processing": "Processing...",
+    "conflicts": "Conflicts",
+    "conflictStatus": "{{count}} conflict(s) need attention",
+    "conflictDescription": "Local file conflicts with the remote version",
+    "resolveConflict": "Resolve conflict",
+    "resolving": "Resolving...",
+    "keepRemote": "Keep remote",
+    "overwriteRemote": "Overwrite remote",
+    "saveAsNew": "Save as new",
+    "keepAllRemote": "Keep all remote",
+    "overwriteAllRemote": "Overwrite all remote"
   },
   "settings": {
     "title": "Settings",

@@ -3,13 +3,13 @@ use crate::drive::manager::{DriveManager, DriveStatusUI, SyncStatus};
 use crate::shellext::vector::create_vector;
 use crate::utils::app::{AppRoot, get_app_root};
 use std::sync::Arc;
+use tokio::sync::mpsc;
 use windows::Foundation::{EventRegistrationToken, TypedEventHandler, Uri};
 use windows::{
     Storage::Provider::*,
     Win32::{Foundation::*, System::Com::*},
     core::*,
 };
-use tokio::sync::mpsc;
 
 // UUID for our custom state handler - matches the C++ implementation
 pub const CLSID_STATUS_UI_HANDLER: GUID = GUID::from_u128(0xb1d8ef74_822d_401a_a14a_25f45b1f70b7);
@@ -29,7 +29,7 @@ pub enum StatusUIAction {
 
 #[implement(IStorageProviderUICommand)]
 pub struct SyncStatusUICommand {
-     #[allow(dead_code)]
+    #[allow(dead_code)]
     app_root: AppRoot,
     label: HSTRING,
     description: HSTRING,
@@ -81,11 +81,15 @@ impl IStorageProviderUICommand_Impl for SyncStatusUICommand_Impl {
             }
             StatusUIAction::OpenProfile { syncroot_id } => {
                 tracing::debug!(target: "shellext::status_ui", syncroot_id = %syncroot_id, "OpenProfile action");
-                ManagerCommand::OpenProfileUrl { syncroot_id: syncroot_id.clone() }
+                ManagerCommand::OpenProfileUrl {
+                    syncroot_id: syncroot_id.clone(),
+                }
             }
             StatusUIAction::OpenStorageDetails { syncroot_id } => {
                 tracing::debug!(target: "shellext::status_ui", syncroot_id = %syncroot_id, "OpenStorageDetails action");
-                ManagerCommand::OpenStorageDetailsUrl { syncroot_id: syncroot_id.clone() }
+                ManagerCommand::OpenStorageDetailsUrl {
+                    syncroot_id: syncroot_id.clone(),
+                }
             }
             StatusUIAction::OpenSettings => {
                 tracing::debug!(target: "shellext::status_ui", "OpenSettings action - opening settings window");
@@ -156,9 +160,9 @@ impl IStorageProviderStatusUISource_Impl for StatusUIHandler_Impl {
         let drive_status = self.get_drive_status();
 
         // Set provider state based on sync status
-        let (provider_state, _state_label, sync_icon, sync_label, sync_description) = match &drive_status {
-            Some(status) => {
-                match status.sync_status {
+        let (provider_state, _state_label, sync_icon, sync_label, sync_description) =
+            match &drive_status {
+                Some(status) => match status.sync_status {
                     SyncStatus::Syncing => (
                         StorageProviderState::Syncing,
                         status.name.clone(),
@@ -187,16 +191,15 @@ impl IStorageProviderStatusUISource_Impl for StatusUIHandler_Impl {
                         t!("error").to_string(),
                         t!("errorDescription").to_string(),
                     ),
-                }
-            }
-            None => (
-                StorageProviderState::InSync,
-                "Cloudreve".to_string(),
-                format!("{}\\CloudIconSynced.svg", image_path),
-                t!("synced").to_string(),
-                t!("syncedDescription").to_string(),
-            ),
-        };
+                },
+                None => (
+                    StorageProviderState::InSync,
+                    "Cloudreve".to_string(),
+                    format!("{}\\CloudIconSynced.svg", image_path),
+                    t!("synced").to_string(),
+                    t!("syncedDescription").to_string(),
+                ),
+            };
 
         ui.SetProviderState(provider_state)?;
 
@@ -229,7 +232,9 @@ impl IStorageProviderStatusUISource_Impl for StatusUIHandler_Impl {
                         "{}\\CloudIconSynced.svg",
                         image_path
                     )))?,
-                    StatusUIAction::OpenStorageDetails { syncroot_id: self.syncroot_id.clone() },
+                    StatusUIAction::OpenStorageDetails {
+                        syncroot_id: self.syncroot_id.clone(),
+                    },
                     command_tx.clone(),
                 )
                 .into();
@@ -244,7 +249,9 @@ impl IStorageProviderStatusUISource_Impl for StatusUIHandler_Impl {
                 HSTRING::from(t!("profile").to_string()),
                 HSTRING::from(&status.profile_url),
                 Uri::CreateUri(&HSTRING::from(format!("{}\\ProfileIcon.svg", image_path)))?,
-                StatusUIAction::OpenProfile { syncroot_id: self.syncroot_id.clone() },
+                StatusUIAction::OpenProfile {
+                    syncroot_id: self.syncroot_id.clone(),
+                },
                 command_tx.clone(),
             )
             .into();

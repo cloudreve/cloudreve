@@ -13,7 +13,7 @@ export const applyThemeWithOverrides = (themeConfig: ThemeOptions): ThemeOptions
         styleOverrides: {
           body: {
             overscrollBehavior: "none",
-            backgroundColor: "initial",
+            backgroundColor: themeConfig.palette?.mode === "dark" ? "#121212" : "#fff",
           },
           img: {
             userSelect: "none",

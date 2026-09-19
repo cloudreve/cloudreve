@@ -1,4 +1,5 @@
-import { Alert, Box, Button, CircularProgress, Container, InputAdornment, Snackbar, Typography } from "@mui/material";
+import { Alert, Box, Button, CircularProgress, Container, IconButton, InputAdornment, Snackbar, Typography } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 import { openUrl, openPath } from "@tauri-apps/plugin-opener";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { invoke } from '@tauri-apps/api/core';
@@ -365,7 +366,7 @@ export default function AddDrive({ mode = "add" }: AddDriveProps) {
   }
 
   return (
-    <Container maxWidth="sm" sx={{ backgroundColor: isWindows10 ? "#fff" : undefined, minHeight: "100vh" }}>
+    <Container maxWidth="sm" sx={{ backgroundColor: isWindows10 ? "#fff" : undefined, minHeight: "100vh", position: "relative" }}>
       <Box
         sx={{
           minHeight: "100vh",
@@ -376,6 +377,34 @@ export default function AddDrive({ mode = "add" }: AddDriveProps) {
           py: 4,
         }}
       >
+        {/* Drag region with close button */}
+        <Box
+          data-tauri-drag-region
+          sx={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 32,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            px: 0.5,
+            zIndex: 1,
+          }}
+        >
+          <IconButton
+            size="small"
+            onClick={() => getCurrentWindow().close()}
+            sx={{
+              // Keep the button itself draggable-region-free so clicks work.
+              WebkitAppRegion: "no-drag",
+              appRegion: "no-drag",
+            }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Box>
         <Box
           sx={{
             p: 4,
@@ -535,8 +564,11 @@ export default function AddDrive({ mode = "add" }: AddDriveProps) {
                       }}
                     />
                     {folderNotEmpty && (
-                      <Alert severity="error" sx={{ mt: -1 }}>
-                        {t("addDrive.folderNotEmpty")}
+                      <Alert severity="info" sx={{ mt: -1 }}>
+                        {t(
+                          "addDrive.folderNotEmptyWillSync",
+                          "This folder already has files. Existing local content will be merged into the remote drive; same-name files with matching hashes will be treated as already synced."
+                        )}
                       </Alert>
                     )}
                   </>
@@ -547,7 +579,6 @@ export default function AddDrive({ mode = "add" }: AddDriveProps) {
                   variant="contained"
                   size="large"
                   fullWidth
-                  disabled={folderNotEmpty}
                 >
                   {isReauthorize ? t("addDrive.reauthorizeConfirm") : t("addDrive.finish")}
                 </Button>

@@ -803,7 +803,9 @@ pub trait FileEventsApi {
     ///     while let Some(event) = subscription.next_event().await? {
     ///         match event {
     ///             cloudreve_api::models::explorer::FileEvent::Event(data) => {
-    ///                 println!("File event: {:?} on {}", data.event_type, data.from);
+    ///                 for item in data {
+    ///                     println!("File event: {:?} on {}", item.event_type, item.from);
+    ///                 }
     ///             }
     ///             _ => {}
     ///         }

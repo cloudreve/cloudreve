@@ -17,7 +17,7 @@ pub const CLSID_CUSTOM_STATE_HANDLER: GUID =
 
 #[implement(IStorageProviderItemPropertySource)]
 pub struct CustomStateHandler {
-     #[allow(dead_code)]
+    #[allow(dead_code)]
     drive_manager: Arc<DriveManager>,
     inventory: Arc<InventoryDb>,
     app_root: AppRoot,

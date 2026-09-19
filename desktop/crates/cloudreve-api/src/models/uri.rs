@@ -332,10 +332,8 @@ impl CrUri {
 
     /// Set the path of the URI
     pub fn set_path(&mut self, path: &str) -> &mut Self {
-        let encoded_segments: Vec<String> = path
-            .split('/')
-            .map(|p| encode_uri_component(p))
-            .collect();
+        let encoded_segments: Vec<String> =
+            path.split('/').map(|p| encode_uri_component(p)).collect();
         let encoded_path = encoded_segments.join("/");
         self.url.set_path(&encoded_path);
         self

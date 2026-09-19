@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use anyhow::Result;
+use std::sync::Arc;
 use windows::Win32::Storage::CloudFilters::{CF_CONNECTION_KEY, CfDisconnectSyncRoot};
 
 use crate::cfapi::filter::{Callbacks, RawConnectionKey};

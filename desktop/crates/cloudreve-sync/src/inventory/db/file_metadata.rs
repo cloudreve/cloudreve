@@ -1,7 +1,5 @@
 use super::InventoryDb;
-use crate::inventory::{
-    ConflictState, FileMetadata, MetadataEntry,
-};
+use crate::inventory::{ConflictState, FileMetadata, MetadataEntry};
 use anyhow::{Context, Result};
 use diesel::prelude::*;
 use diesel::sql_types::Text;
@@ -100,6 +98,42 @@ impl InventoryDb {
             .context("Failed to query inventory metadata by id")?;
 
         row.map(FileMetadata::try_from).transpose()
+    }
+
+    /// List all distinct drive IDs present in the inventory.
+    pub fn list_drive_ids(&self) -> Result<Vec<String>> {
+        let mut conn = self.connection()?;
+        file_metadata_dsl::file_metadata
+            .select(file_metadata_dsl::drive_id)
+            .distinct()
+            .load::<String>(&mut conn)
+            .context("Failed to list inventory drive IDs")
+    }
+
+    /// Query files that are waiting for manual conflict resolution.
+    ///
+    /// `drive_id` is optional because the popup can show either a single drive
+    /// or the aggregate status across all configured drives.
+    pub fn query_pending_conflicts(&self, drive_id: Option<&str>) -> Result<Vec<FileMetadata>> {
+        let mut conn = self.connection()?;
+        let mut query = file_metadata_dsl::file_metadata
+            .filter(
+                file_metadata_dsl::conflict_state
+                    .eq(Some(ConflictState::Pending.as_str().to_string())),
+            )
+            .into_boxed();
+
+        if let Some(drive_id) = drive_id {
+            query = query.filter(file_metadata_dsl::drive_id.eq(drive_id));
+        }
+
+        query
+            .order(file_metadata_dsl::updated_at.desc())
+            .load::<FileMetadataRow>(&mut conn)
+            .context("Failed to query pending conflict metadata")?
+            .into_iter()
+            .map(FileMetadata::try_from)
+            .collect()
     }
 
     /// Batch delete file metadata by local path
@@ -232,6 +266,8 @@ struct FileMetadataRow {
     shared: bool,
     size: i64,
     conflict_state: Option<String>,
+    local_updated_at: Option<i64>,
+    local_size: Option<i64>,
 }
 
 #[derive(Insertable)]
@@ -249,6 +285,8 @@ struct NewFileMetadata {
     shared: bool,
     size: i64,
     conflict_state: Option<String>,
+    local_updated_at: Option<i64>,
+    local_size: Option<i64>,
 }
 
 #[derive(AsChangeset)]
@@ -267,6 +305,10 @@ struct FileMetadataChangeset {
     /// - Some(None) explicitly sets conflict_state to NULL
     /// - Some(Some(value)) sets it to a value
     conflict_state: Option<Option<String>>,
+    /// Local snapshots are only overwritten when the new entry carries one;
+    /// entries built without snapshot info leave the stored value untouched.
+    local_updated_at: Option<Option<i64>>,
+    local_size: Option<Option<i64>>,
 }
 
 impl TryFrom<FileMetadataRow> for FileMetadata {
@@ -300,6 +342,8 @@ impl TryFrom<FileMetadataRow> for FileMetadata {
             shared: row.shared,
             size: row.size,
             conflict_state,
+            local_updated_at: row.local_updated_at,
+            local_size: row.local_size,
         })
     }
 }
@@ -327,6 +371,8 @@ impl TryFrom<&MetadataEntry> for NewFileMetadata {
             shared: entry.shared,
             size: entry.size,
             conflict_state: entry.conflict_state.map(|s| s.as_str().to_string()),
+            local_updated_at: entry.local_updated_at,
+            local_size: entry.local_size,
         })
     }
 }
@@ -351,6 +397,9 @@ impl FileMetadataChangeset {
             size: entry.size,
             // Use Some(...) to always update the column, even when clearing to NULL
             conflict_state: Some(entry.conflict_state.map(|s| s.as_str().to_string())),
+            // Keep the stored snapshot when the entry carries none
+            local_updated_at: entry.local_updated_at.map(Some),
+            local_size: entry.local_size.map(Some),
         })
     }
 }

@@ -18,11 +18,12 @@ tracing-appender = "0.2"
 tower-http = { version = "0.5", features = ["trace", "cors"] }
 futures = "0.3"
 reqwest = { version = "0.12", features = ["json", "stream", "multipart"] }
+md-5 = "0.10"
+sha1 = "0.10"
 sha2 = "0.10"
 image = "0.24"
 url = "2.5"
 cloudreve-api = { path = "../cloudreve-api" }
-windows-core = "0.58.0"
 nt-time = "0.8.0"
 widestring = "1.0.2"
 flagset = "0.4.5"
@@ -43,9 +44,18 @@ aes = "0.8"
 ctr = "0.9"
 tokio-util = { version = "0.7", features = ["io"] }
 globset = "0.4"
+
+[target.'cfg(windows)'.dependencies]
+windows-core = "0.58.0"
 win32_notif = { path = "../win32_notif" }
 
-[dependencies.windows]
+[target.'cfg(target_os = "linux")'.dependencies]
+notify-rust = "4.11"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+mac-notification-sys = "0.6"
+
+[target.'cfg(windows)'.dependencies.windows]
 version = "0.58.0"
 features = [
     "implement",
@@ -78,9 +88,6 @@ features = [
     "Win32_Storage_EnhancedStorage",
     "Win32_UI_Notifications",
 ]
-
-[build-dependencies]
-windows = { version = "0.58.0", features = ["Win32_Foundation"] }
 
 [dependencies.uuid]
 version = "1.6"

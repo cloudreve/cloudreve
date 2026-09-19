@@ -1,5 +1,5 @@
 use crate::drive::mounts::DriveConfig;
-use crate::inventory::TaskRecord;
+use crate::inventory::{FileMetadata, TaskRecord};
 use crate::tasks::TaskProgress;
 use serde::{Deserialize, Serialize};
 
@@ -17,6 +17,8 @@ pub struct StatusSummary {
     pub active_tasks: Vec<TaskWithProgress>,
     /// Recently finished tasks (completed/failed/cancelled)
     pub finished_tasks: Vec<TaskRecord>,
+    /// Files that require manual conflict resolution before syncing can continue.
+    pub pending_conflicts: Vec<PendingConflict>,
 }
 
 /// A task record with optional live progress information
@@ -27,6 +29,36 @@ pub struct TaskWithProgress {
     pub task: TaskRecord,
     /// Live progress information for running tasks (None if task is not currently running)
     pub live_progress: Option<TaskProgress>,
+}
+
+/// A pending local-vs-remote conflict shown in the desktop popup.
+#[derive(Debug, Clone, Serialize)]
+pub struct PendingConflict {
+    /// Inventory row ID used by the conflict resolver.
+    pub id: i64,
+    /// Drive ID that owns this local path.
+    pub drive_id: String,
+    /// Local filesystem path of the conflicted file.
+    pub local_path: String,
+    /// Whether the conflicted entry is a folder.
+    pub is_folder: bool,
+    /// Last metadata update timestamp.
+    pub updated_at: i64,
+    /// File size in bytes.
+    pub size: i64,
+}
+
+impl From<FileMetadata> for PendingConflict {
+    fn from(metadata: FileMetadata) -> Self {
+        Self {
+            id: metadata.id,
+            drive_id: metadata.drive_id.to_string(),
+            local_path: metadata.local_path,
+            is_folder: metadata.is_folder,
+            updated_at: metadata.updated_at,
+            size: metadata.size,
+        }
+    }
 }
 
 /// Capacity summary for UI display

@@ -46,6 +46,10 @@ pub struct FileMetadata {
     pub shared: bool,
     pub size: i64,
     pub conflict_state: Option<ConflictState>,
+    /// Local file mtime in unix milliseconds recorded at the last sync point
+    pub local_updated_at: Option<i64>,
+    /// Local file size in bytes recorded at the last sync point
+    pub local_size: Option<i64>,
 }
 
 /// Entry for inserting or updating file metadata
@@ -63,6 +67,10 @@ pub struct MetadataEntry {
     pub metadata: HashMap<String, String>,
     pub props: Option<serde_json::Value>,
     pub conflict_state: Option<ConflictState>,
+    /// Local file mtime in unix milliseconds recorded at the last sync point
+    pub local_updated_at: Option<i64>,
+    /// Local file size in bytes recorded at the last sync point
+    pub local_size: Option<i64>,
 }
 
 impl MetadataEntry {
@@ -80,6 +88,8 @@ impl MetadataEntry {
             shared: false,
             size: 0,
             conflict_state: None,
+            local_updated_at: None,
+            local_size: None,
         }
     }
 
@@ -122,6 +132,12 @@ impl MetadataEntry {
         self.props = Some(props);
         self
     }
+
+    pub fn with_local_snapshot(mut self, local_updated_at: i64, local_size: i64) -> Self {
+        self.local_updated_at = Some(local_updated_at);
+        self.local_size = Some(local_size);
+        self
+    }
 }
 
 impl From<&FileMetadata> for MetadataEntry {
@@ -139,6 +155,8 @@ impl From<&FileMetadata> for MetadataEntry {
             props: file_metadata.props.clone(),
             size: file_metadata.size,
             conflict_state: file_metadata.conflict_state,
+            local_updated_at: file_metadata.local_updated_at,
+            local_size: file_metadata.local_size,
         }
     }
 }

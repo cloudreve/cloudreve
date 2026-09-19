@@ -17,6 +17,7 @@
     "browse": "Parcourir",
     "selectFolder": "Sélectionner un dossier",
     "folderNotEmpty": "Le dossier sélectionné n'est pas vide. Veuillez choisir un dossier vide.",
+    "folderNotEmptyWillSync": "Ce dossier contient déjà des fichiers. Le contenu local existant sera fusionné avec le lecteur distant ; les fichiers de même nom dont le hachage correspond seront considérés comme déjà synchronisés.",
     "finish": "Terminer",
     "settingUp": "Configuration en cours...",
     "successTitle": "Terminé !",
@@ -46,7 +47,17 @@
     "syncingStatus": "Synchronisation de {{count}} fichier(s)...",
     "upToDate": "Vos fichiers sont à jour.",
     "waiting": "En attente...",
-    "processing": "Traitement..."
+    "processing": "Traitement...",
+    "conflicts": "Conflits",
+    "conflictStatus": "{{count}} conflit(s) nécessitent votre attention",
+    "conflictDescription": "Le fichier local est en conflit avec la version distante",
+    "resolveConflict": "Résoudre le conflit",
+    "resolving": "Résolution...",
+    "keepRemote": "Conserver la version distante",
+    "overwriteRemote": "Écraser la version distante",
+    "saveAsNew": "Enregistrer comme nouveau fichier",
+    "keepAllRemote": "Conserver toutes les versions distantes",
+    "overwriteAllRemote": "Écraser toutes les versions distantes"
   },
   "settings": {
     "title": "Paramètres",

@@ -17,6 +17,7 @@
     "browse": "Examinar",
     "selectFolder": "Seleccionar carpeta",
     "folderNotEmpty": "La carpeta seleccionada no está vacía. Por favor, elija una carpeta vacía.",
+    "folderNotEmptyWillSync": "Esta carpeta ya contiene archivos. El contenido local existente se fusionará con la unidad remota; los archivos con el mismo nombre y hashes coincidentes se tratarán como ya sincronizados.",
     "finish": "Finalizar",
     "settingUp": "Configurando...",
     "successTitle": "¡Listo!",
@@ -46,7 +47,17 @@
     "syncingStatus": "Sincronizando {{count}} archivo(s)...",
     "upToDate": "Sus archivos están actualizados.",
     "waiting": "Esperando...",
-    "processing": "Procesando..."
+    "processing": "Procesando...",
+    "conflicts": "Conflictos",
+    "conflictStatus": "{{count}} conflicto(s) requieren atención",
+    "conflictDescription": "El archivo local entra en conflicto con la versión remota",
+    "resolveConflict": "Resolver conflicto",
+    "resolving": "Resolviendo...",
+    "keepRemote": "Conservar remoto",
+    "overwriteRemote": "Sobrescribir remoto",
+    "saveAsNew": "Guardar como nuevo",
+    "keepAllRemote": "Conservar todas las remotas",
+    "overwriteAllRemote": "Sobrescribir todas las remotas"
   },
   "settings": {
     "title": "Configuración",

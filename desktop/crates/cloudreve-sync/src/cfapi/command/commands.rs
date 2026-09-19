@@ -36,9 +36,9 @@ impl Command for Read<'_> {
     type Result = u64;
     type Field = CF_OPERATION_PARAMETERS_0_5;
 
-    unsafe fn result(info: CF_OPERATION_PARAMETERS_0) -> Self::Result { unsafe {
-        info.RetrieveData.ReturnedLength as u64
-    }}
+    unsafe fn result(info: CF_OPERATION_PARAMETERS_0) -> Self::Result {
+        unsafe { info.RetrieveData.ReturnedLength as u64 }
+    }
 
     fn build(&self) -> CF_OPERATION_PARAMETERS_0 {
         CF_OPERATION_PARAMETERS_0 {

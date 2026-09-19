@@ -17,6 +17,7 @@
     "browse": "찾아보기",
     "selectFolder": "폴더 선택",
     "folderNotEmpty": "선택한 폴더가 비어 있지 않습니다. 빈 폴더를 선택해 주세요.",
+    "folderNotEmptyWillSync": "이 폴더에는 이미 파일이 있습니다. 기존 로컬 콘텐츠가 원격 드라이브에 병합되며, 이름이 같고 해시가 일치하는 파일은 이미 동기화된 것으로 처리됩니다.",
     "finish": "완료",
     "settingUp": "설정 중...",
     "successTitle": "설정 완료!",
@@ -46,7 +47,17 @@
     "syncingStatus": "{{count}}개 파일 동기화 중...",
     "upToDate": "파일이 최신 상태입니다.",
     "waiting": "대기 중...",
-    "processing": "처리 중..."
+    "processing": "처리 중...",
+    "conflicts": "충돌",
+    "conflictStatus": "{{count}}개 충돌을 확인해야 합니다",
+    "conflictDescription": "로컬 파일이 원격 버전과 충돌합니다",
+    "resolveConflict": "충돌 해결",
+    "resolving": "해결 중...",
+    "keepRemote": "원격 버전 유지",
+    "overwriteRemote": "원격 버전 덮어쓰기",
+    "saveAsNew": "새 파일로 저장",
+    "keepAllRemote": "모두 원격 버전 유지",
+    "overwriteAllRemote": "모두 원격 버전으로 덮어쓰기"
   },
   "settings": {
     "title": "설정",

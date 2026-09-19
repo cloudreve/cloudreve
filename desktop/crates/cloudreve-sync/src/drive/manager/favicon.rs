@@ -111,10 +111,7 @@ async fn download_icon(client: &reqwest::Client, url: &str) -> Result<bytes::Byt
         anyhow::bail!("Failed to download icon: HTTP {}", status);
     }
 
-    response
-        .bytes()
-        .await
-        .context("Failed to read icon bytes")
+    response.bytes().await.context("Failed to read icon bytes")
 }
 
 /// Get fallback icon bytes for the given icon type
@@ -126,11 +123,17 @@ fn get_fallback_icon(icon_type: IconType) -> Result<Vec<u8>> {
     };
 
     tracing::info!(target: "drive::favicon", path = %fallback_path, icon_type = ?icon_type, "Using fallback icon");
-    std::fs::read(&fallback_path).with_context(|| format!("Failed to read fallback icon: {}", fallback_path))
+    std::fs::read(&fallback_path)
+        .with_context(|| format!("Failed to read fallback icon: {}", fallback_path))
 }
 
 /// Save icon bytes to destination, converting to ICO if needed
-fn save_icon(bytes: &[u8], dest_path: &PathBuf, convert_to_ico: bool, is_already_ico: bool) -> Result<()> {
+fn save_icon(
+    bytes: &[u8],
+    dest_path: &PathBuf,
+    convert_to_ico: bool,
+    is_already_ico: bool,
+) -> Result<()> {
     if convert_to_ico && !is_already_ico {
         // Convert image to ICO format
         let img = image::load_from_memory(bytes).context("Failed to load image")?;
@@ -201,7 +204,11 @@ pub async fn fetch_and_save_favicon(instance_url: &str) -> Result<FaviconResult>
 }
 
 /// Fetch icons from remote server
-async fn fetch_icons_from_remote(instance_url: &str, icons_dir: &PathBuf, hash: &str) -> Result<FaviconResult> {
+async fn fetch_icons_from_remote(
+    instance_url: &str,
+    icons_dir: &PathBuf,
+    hash: &str,
+) -> Result<FaviconResult> {
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(10))
         .build()

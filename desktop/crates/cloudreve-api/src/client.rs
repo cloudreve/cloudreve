@@ -7,7 +7,7 @@ use serde::Serialize;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock};
 
 const API_PREFIX: &str = "/api/v4";
 pub const CR_HEADER_PREFIX: &str = "X-Cr-";
@@ -143,6 +143,7 @@ pub struct Client {
     pub(crate) config: ClientConfig,
     pub(crate) http_client: HttpClient,
     pub(crate) tokens: Arc<RwLock<TokenStore>>,
+    refresh_lock: Arc<Mutex<()>>,
     pub(crate) purchase_ticket: Arc<RwLock<Option<String>>>,
     on_credential_refreshed: Option<OnCredentialRefreshed>,
     on_credential_invalid: Option<OnCredentialInvalid>,
@@ -164,6 +165,7 @@ impl Client {
             config,
             http_client,
             tokens: Arc::new(RwLock::new(TokenStore::new())),
+            refresh_lock: Arc::new(Mutex::new(())),
             purchase_ticket: Arc::new(RwLock::new(None)),
             on_credential_refreshed: None,
             on_credential_invalid: None,
@@ -180,7 +182,9 @@ impl Client {
     /// use std::sync::Arc;
     /// use std::pin::Pin;
     /// use std::future::Future;
+    /// use cloudreve_api::{Client, ClientConfig};
     ///
+    /// let mut client = Client::new(ClientConfig::new("https://example.com".to_string()));
     /// client.set_on_credential_refreshed(Arc::new(|token| {
     ///     Box::pin(async move {
     ///         // Save token to storage
@@ -246,13 +250,15 @@ impl Client {
         store.access_token = Some(token.access_token.clone());
         store.refresh_token = Some(token.refresh_token.clone());
 
-        // Parse RFC3339 timestamps
-        if let Ok(exp) = DateTime::parse_from_rfc3339(&token.access_expires) {
-            store.access_token_expires = Some(exp.with_timezone(&Utc));
-        }
-        if let Ok(exp) = DateTime::parse_from_rfc3339(&token.refresh_expires) {
-            store.refresh_token_expires = Some(exp.with_timezone(&Utc));
-        }
+        let access_expires = DateTime::parse_from_rfc3339(&token.access_expires)
+            .map_err(|e| ApiError::InvalidToken(format!("Invalid access expiry: {}", e)))?
+            .with_timezone(&Utc);
+        let refresh_expires = DateTime::parse_from_rfc3339(&token.refresh_expires)
+            .map_err(|e| ApiError::InvalidToken(format!("Invalid refresh expiry: {}", e)))?
+            .with_timezone(&Utc);
+
+        store.access_token_expires = Some(access_expires);
+        store.refresh_token_expires = Some(refresh_expires);
 
         Ok(())
     }
@@ -340,13 +346,34 @@ impl Client {
         // Access token expired, need to refresh
         drop(store); // Release read lock before calling refresh
 
-        self.refresh_access_token().await
+        self.refresh_access_token(false).await
     }
 
-    /// Refresh the access token using the refresh token
-    async fn refresh_access_token(&self) -> ApiResult<String> {
+    /// Refresh the access token using the refresh token.
+    /// Cloudreve V4 uses `/session/token/refresh` for all refresh tokens,
+    /// including tokens originally obtained via OAuth. The OAuth token endpoint
+    /// `/session/oauth/token` only supports `authorization_code` grant and is
+    /// not used here.
+    async fn refresh_access_token(&self, force: bool) -> ApiResult<String> {
+        let _guard = self.refresh_lock.lock().await;
+
         let refresh_token = {
             let store = self.tokens.read().await;
+
+            if !store.has_tokens() {
+                self.notify_credential_invalid().await;
+                return Err(ApiError::NoTokensAvailable);
+            }
+
+            if store.is_refresh_token_expired() {
+                self.notify_credential_invalid().await;
+                return Err(ApiError::RefreshTokenExpired);
+            }
+
+            if !force && !store.is_access_token_expired() {
+                return Ok(store.access_token.clone().unwrap());
+            }
+
             store
                 .refresh_token
                 .clone()
@@ -357,7 +384,13 @@ impl Client {
         let url = self.build_url("/session/token/refresh");
         let request = RefreshTokenRequest { refresh_token };
 
-        let response = self.http_client.post(&url).json(&request).send().await?;
+        let response = self
+            .http_client
+            .post(&url)
+            .timeout(std::time::Duration::from_secs(self.config.timeout_seconds))
+            .json(&request)
+            .send()
+            .await?;
 
         let api_response: ApiResponse<Token> = response.json().await?;
 
@@ -403,7 +436,10 @@ impl Client {
         R: DeserializeOwned + Default,
     {
         let url = self.build_url(path);
-        let mut request = self.http_client.request(method, &url);
+        let mut request = self
+            .http_client
+            .request(method, &url)
+            .timeout(std::time::Duration::from_secs(self.config.timeout_seconds));
 
         // Add authentication header if needed
         if !options.no_credential {
@@ -462,12 +498,6 @@ impl Client {
 
         // Check response code
         if api_response.code != ErrorCode::Success as i32 {
-            // Check if this is a credential error and invoke callback
-            if let Some(error_code) = ErrorCode::from_code(api_response.code) {
-                if error_code.is_credential_error() {
-                    self.notify_credential_invalid().await;
-                }
-            }
             return Err(ApiError::from_response(api_response));
         }
 
@@ -492,9 +522,10 @@ impl Client {
             .await
         {
             Ok(result) => Ok(result),
-            Err(ApiError::AccessTokenExpired) => {
-                // Token expired, refresh and retry
-                self.refresh_access_token().await?;
+            Err(e) if e.is_token_expired() || e.requires_login() => {
+                // Server-side token state can be ahead of the local expiry timestamp.
+                // Force a refresh once before treating the credentials as invalid.
+                self.refresh_access_token(true).await?;
                 self.send_internal(path, method, body, options).await
             }
             Err(e) => Err(e),

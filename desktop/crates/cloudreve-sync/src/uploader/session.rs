@@ -60,9 +60,14 @@ impl UploadSession {
             .unwrap_or(PolicyType::Local);
 
         let now = Utc::now().timestamp();
-        let chunk_progress: Vec<ChunkProgress> =
-            (0..num_chunks).map(|i: usize| ChunkProgress::new(i)).collect();
-        let relay = credential.storage_policy.as_ref().and_then(|p| p.relay).unwrap_or(false);
+        let chunk_progress: Vec<ChunkProgress> = (0..num_chunks)
+            .map(|i: usize| ChunkProgress::new(i))
+            .collect();
+        let relay = credential
+            .storage_policy
+            .as_ref()
+            .and_then(|p| p.relay)
+            .unwrap_or(false);
 
         Self {
             id: credential.session_id.clone(),

@@ -100,8 +100,8 @@ pub fn init_logging(config: LogConfig) -> Result<LogGuard> {
     FILE_LOGGING_ENABLED.get_or_init(|| std::sync::RwLock::new(config.log_to_file));
 
     // Configure environment filter with defaults
-    let env_filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new(&config.log_level));
+    let env_filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(&config.log_level));
 
     // Initialize the subscriber based on whether file logging is enabled
     // We need separate branches due to tracing-subscriber's type system
