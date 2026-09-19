@@ -13,6 +13,8 @@ use crate::{
     tasks::TaskPayload,
     utils::toast,
 };
+#[cfg(windows)]
+use crate::cfapi::utility::WriteAt;
 use anyhow::{Context, Result};
 use bytes::Bytes;
 use cloudreve_api::{
