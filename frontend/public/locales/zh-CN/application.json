@@ -1112,5 +1112,9 @@
     ],
     "reportDescription": "补充说明",
     "reportAbuseSuccess": "举报已提交"
+  },
+  "announcement": {
+    "title": "公告",
+    "dontShowAgain": "不再显示"
   }
 }

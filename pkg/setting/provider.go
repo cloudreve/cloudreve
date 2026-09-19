@@ -263,6 +263,9 @@ type (
 		// AuditLogRetentionDays returns the audit retention window in days;
 		// 0 keeps events forever.
 		AuditLogRetentionDays(ctx context.Context) int
+		// Announcement returns the site-wide markdown announcement shown to
+		// logged-in users. "" disables the announcement modal.
+		Announcement(ctx context.Context) string
 	}
 	UseFirstSiteUrlCtxKey = struct{}
 )
@@ -740,6 +743,10 @@ func (s *settingProvider) AuditLogEnabled(ctx context.Context, eventType int) bo
 
 func (s *settingProvider) AuditLogRetentionDays(ctx context.Context) int {
 	return s.getInt(ctx, "audit_log_retention_days", 0)
+}
+
+func (s *settingProvider) Announcement(ctx context.Context) string {
+	return s.getString(ctx, "announcement", "")
 }
 
 func (s *settingProvider) DefaultShares(ctx context.Context) []int {

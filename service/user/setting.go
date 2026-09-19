@@ -225,6 +225,29 @@ func updateAvatarFile(ctx context.Context, u *ent.User, contentType string, file
 	return nil
 }
 
+// AnnouncementService serves the current site announcement to logged-in
+// users, filtered by their dismissal record.
+type AnnouncementService struct{}
+
+type AnnouncementParamCtx struct{}
+
+// Get returns the announcement content, or "" when unset or dismissed.
+func (s *AnnouncementService) Get(c *gin.Context) (*AnnouncementResponse, error) {
+	dep := dependency.FromContext(c)
+	u := inventory.UserFromContext(c)
+
+	current := dep.SettingProvider().Announcement(c)
+	if current == "" || current == u.Settings.DismissedAnnouncement {
+		return &AnnouncementResponse{}, nil
+	}
+
+	return &AnnouncementResponse{Content: current}, nil
+}
+
+type AnnouncementResponse struct {
+	Content string `json:"content,omitempty"`
+}
+
 type (
 	PatchUserSetting struct {
 		Nick                    *string   `json:"nick" binding:"omitempty,min=1,max=255"`
@@ -250,6 +273,9 @@ type (
 		// PreferredPolicy selects the user's default storage policy from the
 		// group's allowed set, hashid-encoded. "" clears the preference.
 		PreferredPolicy *string `json:"preferred_policy" binding:"omitempty"`
+		// DismissAnnouncement records the current site announcement as seen
+		// so the modal does not show again until the content changes.
+		DismissAnnouncement *bool `json:"dismiss_announcement" binding:"omitempty"`
 	}
 	PatchUserSettingParamsCtx struct{}
 )
@@ -371,6 +397,11 @@ func (s *PatchUserSetting) Patch(c *gin.Context) error {
 			}
 			u.Settings.PreferredPolicy = pid
 		}
+		saveSetting = true
+	}
+
+	if s.DismissAnnouncement != nil && *s.DismissAnnouncement {
+		u.Settings.DismissedAnnouncement = dep.SettingProvider().Announcement(c)
 		saveSetting = true
 	}
 

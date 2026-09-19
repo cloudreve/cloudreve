@@ -1112,5 +1112,9 @@
     ],
     "reportDescription": "Additional description",
     "reportAbuseSuccess": "Report submitted."
+  },
+  "announcement": {
+    "title": "Announcement",
+    "dontShowAgain": "Don't show this again"
   }
 }

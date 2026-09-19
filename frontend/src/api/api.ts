@@ -1333,6 +1333,22 @@ export function sendUploadAvatar(avatar?: Blob, contentType?: string): ThunkResp
   };
 }
 
+export function getAnnouncement(): ThunkResponse<{ content?: string }> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/user/setting/announcement`,
+        {
+          method: "GET",
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
 export function sendUpdateUserSetting(settings: PatchUserSetting): ThunkResponse {
   return async (dispatch, _getState) => {
     return await dispatch(

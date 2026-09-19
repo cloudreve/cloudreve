@@ -1445,6 +1445,11 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				{
 					// 获取当前用户设定
 					setting.GET("", controllers.UserSetting)
+					// 当前公告（已忽略时为空）
+					setting.GET("announcement",
+						controllers.FromQuery[usersvc.AnnouncementService](usersvc.AnnouncementParamCtx{}),
+						controllers.UserAnnouncement,
+					)
 					// 从文件上传头像
 					setting.PUT("avatar", middleware.RequiredScopes(types.ScopeUserInfoWrite), controllers.UploadAvatar)
 					// 更改用户设定

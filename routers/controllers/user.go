@@ -251,6 +251,16 @@ func UpdateOption(c *gin.Context) {
 	c.JSON(200, serializer.Response{})
 }
 
+// UserAnnouncement returns the current site announcement unless dismissed.
+func UserAnnouncement(c *gin.Context) {
+	service := ParametersFromContext[*user.AnnouncementService](c, user.AnnouncementParamCtx{})
+	res, err := service.Get(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
+
 // UserCredit returns the caller's credit balance and active grants.
 func UserCredit(c *gin.Context) {
 	service := ParametersFromContext[*user.CreditService](c, user.CreditParamCtx{})

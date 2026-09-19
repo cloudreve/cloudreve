@@ -12,6 +12,7 @@ import ManageShares from "./Share/ManageShares.tsx";
 import StoragePolicy from "./StoragePolicy.tsx";
 import AclDialog from "./Acl/AclDialog.tsx";
 import ActivityDialog from "./Activity/ActivityDialog.tsx";
+import AnnouncementDialog from "./AnnouncementDialog.tsx";
 import StaleVersionConfirm from "./StaleVersionConfirm.tsx";
 import SaveAs from "./SaveAs.tsx";
 import Photopea from "../../Viewers/Photopea/Photopea.tsx";
@@ -88,6 +89,7 @@ const Dialogs = () => {
       <StoragePolicy />
       {archivePreview != undefined && <ArchivePreview />}
       {desktopMountSetup != undefined && <DesktopMountSetup />}
+      <AnnouncementDialog />
     </>
   );
 };
