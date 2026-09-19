@@ -10,7 +10,7 @@ import { GroupSettingContext } from "./GroupSettingWrapper";
 
 const DefaultPinnedSection = () => {
   const { t } = useTranslation("dashboard");
-  const { values } = useContext(GroupSettingContext);
+  const { values, setGroup } = useContext(GroupSettingContext);
 
   if (values?.id == AnonymousGroupID) {
     return null;
@@ -24,7 +24,15 @@ const DefaultPinnedSection = () => {
       <SettingSectionContent>
         <SettingForm lgWidth={5}>
           <FormControl fullWidth>
-            <SharesInput />
+            <SharesInput
+              value={values?.settings?.default_pinned ?? []}
+              onChange={(ids) =>
+                setGroup((p) => ({
+                  ...p,
+                  settings: { ...p.settings, default_pinned: ids.length > 0 ? ids : undefined },
+                }))
+              }
+            />
             <NoMarginHelperText>
               <Trans
                 i18nKey="group.defaultPinnedDes"

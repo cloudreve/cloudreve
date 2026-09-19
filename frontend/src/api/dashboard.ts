@@ -64,6 +64,7 @@ export interface GroupSetting {
   trash_retention?: number;
   redirected_source?: boolean;
   login_ip_whitelist?: string[];
+  default_pinned?: number[];
 }
 
 export interface AdminListGroupResponse {
