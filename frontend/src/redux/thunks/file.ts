@@ -1246,10 +1246,10 @@ export function walkAll(files: FileResponse[]): AppThunk<Promise<FileResponseWal
   };
 }
 
-export function extractArchive(index: number, file: FileResponse): AppThunk {
+export function extractArchive(index: number, files: FileResponse[]): AppThunk {
   return async (dispatch, _getState) => {
     dispatch(closeContextMenu({ index, value: undefined }));
-    dispatch(setExtractArchiveDialog({ open: true, file }));
+    dispatch(setExtractArchiveDialog({ open: true, file: files[0], files }));
   };
 }
 

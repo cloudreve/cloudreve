@@ -124,3 +124,29 @@ pub fn notify_shell_change(path: &PathBuf, event: SHCNE_ID) -> Result<()> {
 pub fn notify_shell_change(_path: &PathBuf, _event: u32) -> Result<()> {
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn local_path_to_cr_uri_encodes_spaces() {
+        let uri = local_path_to_cr_uri(
+            PathBuf::from("/sync/dir with spaces/file name.txt"),
+            PathBuf::from("/sync"),
+            "cloudreve://my".to_string(),
+        )
+        .unwrap();
+
+        // The wire URI must carry percent-encoded segments, never raw spaces.
+        assert!(
+            uri.to_string()
+                .contains("dir%20with%20spaces/file%20name.txt"),
+            "uri: {}",
+            uri.to_string()
+        );
+        assert!(!uri.to_string().contains(' '));
+        // The decoded path round-trips to the original names.
+        assert_eq!(uri.path(), "/dir with spaces/file name.txt");
+    }
+}

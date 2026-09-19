@@ -41,6 +41,15 @@ impl DriveManager {
                         tracing::debug!(target: "drive::manager", path = %path.display(), result = ?result, "ViewOnline command result");
                     });
                 }
+                ManagerCommand::CopyShareLink { path } => {
+                    let path = path.clone();
+                    spawn(async move {
+                        let result = manager.handle_copy_share_link(path.clone()).await;
+                        if let Err(e) = result {
+                            tracing::error!(target: "drive::manager", path = %path.display(), error = %e, "CopyShareLink command failed");
+                        }
+                    });
+                }
                 ManagerCommand::PersistConfig => {
                     let result = manager.persist().await;
                     if let Err(e) = result {
@@ -191,6 +200,36 @@ impl DriveManager {
         };
 
         open::that(url)?;
+        Ok(())
+    }
+
+    /// Handle CopyShareLink command - creates a share link for the file or
+    /// folder, copies it to the clipboard and notifies the user.
+    pub(super) async fn handle_copy_share_link(&self, path: PathBuf) -> Result<()> {
+        tracing::debug!(target: "drive::manager", path = %path.display(), "CopyShareLink command");
+
+        let mount = self
+            .search_drive_by_child_path(path.to_str().unwrap_or(""))
+            .await
+            .ok_or_else(|| anyhow::anyhow!("No drive found for path: {:?}", path))?;
+
+        match mount.create_share_link(path.clone()).await {
+            Ok(url) => {
+                crate::utils::clipboard::set_text(&url)?;
+                crate::utils::toast::send_general_text_toast(
+                    &rust_i18n::t!("shareLinkCopied"),
+                    &url,
+                );
+            }
+            Err(e) => {
+                crate::utils::toast::send_general_text_toast(
+                    &rust_i18n::t!("shareLinkFailed"),
+                    &e.to_string(),
+                );
+                return Err(e);
+            }
+        }
+
         Ok(())
     }
 

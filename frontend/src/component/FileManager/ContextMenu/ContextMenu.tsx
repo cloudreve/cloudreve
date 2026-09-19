@@ -228,7 +228,7 @@ const ContextMenu = ({ fmIndex = 0 }: ContextMenuProps) => {
         </SquareMenuItem>
       )}
       {displayOpt.showExtractArchive && (
-        <SquareMenuItem onClick={() => dispatch(extractArchive(fmIndex, targets[0]))}>
+        <SquareMenuItem onClick={() => dispatch(extractArchive(fmIndex, targets))}>
           <ListItemIcon>
             <ArchiveArrow fontSize="small" />
           </ListItemIcon>

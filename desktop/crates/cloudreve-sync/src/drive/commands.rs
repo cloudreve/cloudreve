@@ -20,12 +20,13 @@ use anyhow::{Context, Result};
 use bytes::Bytes;
 use cloudreve_api::{
     ApiError,
-    api::{ExplorerApi, explorer::ExplorerApiExt},
+    api::{ExplorerApi, ShareApi, explorer::ExplorerApiExt},
     models::{
         explorer::{
             DeleteFileService, FileResponse, FileURLService, MoveFileService, RenameFileService,
             metadata,
         },
+        share::ShareCreateService,
         uri::CrUri,
         user::Token,
     },
@@ -151,6 +152,10 @@ pub enum ManagerCommand {
     ViewOnline {
         path: PathBuf,
     },
+    /// Create a public share link for a file or folder and copy it to the clipboard
+    CopyShareLink {
+        path: PathBuf,
+    },
     PersistConfig,
     GenerateThumbnail {
         path: PathBuf,
@@ -234,11 +239,21 @@ impl Mount {
                 request.entity = Some(meta.etag.clone());
             }
         }
-        let entity_url_res = self
-            .cr_client
-            .get_file_url(&request)
-            .await
-            .context("failed to get file url")?;
+        let entity_url_res = match self.cr_client.get_file_url(&request).await {
+            Err(e) if e.is_entity_not_exist() && request.entity.is_some() => {
+                // The entity id cached in local inventory can go stale when the
+                // remote file is re-uploaded or migrated; retry letting the
+                // server pick the primary entity.
+                tracing::info!(target: "drive::commands", path = %path.display(), "Preferred entity no longer exists, retrying without it");
+                let mut retry = request.clone();
+                retry.entity = None;
+                self.cr_client
+                    .get_file_url(&retry)
+                    .await
+                    .context("failed to get file url")?
+            }
+            res => res.context("failed to get file url")?,
+        };
 
         // Get the download URL from the response
         let download_url = entity_url_res
@@ -430,6 +445,22 @@ impl Mount {
             ));
         }
         Ok(thumb_response.bytes().await?)
+    }
+
+    /// Create a public share link for the file or folder at `path`,
+    /// returning the share URL.
+    pub async fn create_share_link(&self, path: PathBuf) -> Result<String> {
+        let (sync_path, remote_base) = {
+            let config = self.config.read().await;
+            (config.sync_path.clone(), config.remote_path.to_string())
+        };
+        let uri = local_path_to_cr_uri(path.clone(), sync_path, remote_base)
+            .context("failed to convert local path to cloudreve uri")?
+            .to_string();
+        Ok(self
+            .cr_client
+            .create_share(&ShareCreateService { uri })
+            .await?)
     }
 
     pub async fn rename_completed(&self, source: PathBuf, destination: PathBuf) -> Result<()> {

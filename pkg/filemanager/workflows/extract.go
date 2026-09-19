@@ -21,6 +21,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs/dbfs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/manager/entitysource"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 	"github.com/cloudreve/Cloudreve/v4/pkg/queue"
@@ -42,6 +43,7 @@ type (
 	ExtractArchiveTaskState struct {
 		Uri             string   `json:"uri,omitempty"`
 		Encoding        string   `json:"encoding,omitempty"`
+		VolumeUris      []string `json:"volume_uris,omitempty"`
 		Dst             string   `json:"dst,omitempty"`
 		TempPath        string   `json:"temp_path,omitempty"`
 		TempZipFilePath string   `json:"temp_zip_file_path,omitempty"`
@@ -72,15 +74,17 @@ func init() {
 	queue.RegisterResumableTaskFactory(queue.ExtractArchiveTaskType, NewExtractArchiveTaskFromModel)
 }
 
-// NewExtractArchiveTask creates a new ExtractArchiveTask
-func NewExtractArchiveTask(ctx context.Context, src, dst, encoding, password string, mask []string) (queue.Task, error) {
+// NewExtractArchiveTask creates a new ExtractArchiveTask. volumes optionally
+// lists the URIs of all volumes of a multi-volume archive selected together.
+func NewExtractArchiveTask(ctx context.Context, src, dst, encoding, password string, mask []string, volumes []string) (queue.Task, error) {
 	state := &ExtractArchiveTaskState{
-		Uri:       src,
-		Dst:       dst,
-		Encoding:  encoding,
-		NodeState: NodeState{},
-		Password:  password,
-		FileMask:  mask,
+		Uri:        src,
+		Dst:        dst,
+		Encoding:   encoding,
+		NodeState:  NodeState{},
+		Password:   password,
+		FileMask:   mask,
+		VolumeUris: volumes,
 	}
 	stateBytes, err := json.Marshal(state)
 	if err != nil {
@@ -178,6 +182,10 @@ func (m *ExtractArchiveTask) createSlaveExtractTask(ctx context.Context, dep dep
 	user := inventory.UserFromContext(ctx)
 	fm := manager.NewFileManager(dep, user)
 
+	// A later volume may have been selected directly; extract from the first
+	// volume of the set when it exists.
+	uri = m.resolveFirstVolumeURI(ctx, fm, uri)
+
 	// Get entity source to extract
 	archiveFile, err := fm.Get(ctx, uri, dbfs.WithFileEntities(), dbfs.WithRequiredCapabilities(dbfs.NavigatorCapabilityDownloadFile), dbfs.WithNotRoot())
 	if err != nil {
@@ -212,6 +220,7 @@ func (m *ExtractArchiveTask) createSlaveExtractTask(ctx context.Context, dep dep
 		UserID:   user.ID,
 		Password: m.state.Password,
 		FileMask: m.state.FileMask,
+		Volumes:  m.resolveVolumeEntities(ctx, fm, uri.DirUri(), archiveFile.DisplayName(), entityModel),
 	}
 
 	payloadStr, err := json.Marshal(payload)
@@ -270,6 +279,10 @@ func (m *ExtractArchiveTask) masterExtractArchive(ctx context.Context, dep depen
 
 	user := inventory.UserFromContext(ctx)
 	fm := manager.NewFileManager(dep, user)
+
+	// A later volume may have been selected directly; extract from the first
+	// volume of the set when it exists.
+	uri = m.resolveFirstVolumeURI(ctx, fm, uri)
 
 	// Get entity source to extract
 	archiveFile, err := fm.Get(ctx, uri, dbfs.WithFileEntities(), dbfs.WithRequiredCapabilities(dbfs.NavigatorCapabilityDownloadFile), dbfs.WithNotRoot())
@@ -344,8 +357,22 @@ func (m *ExtractArchiveTask) masterExtractArchive(ctx context.Context, dep depen
 				extractor = zipExtractor
 			}
 		}
-	} else if rarExtractor, ok := extractor.(archives.Rar); ok && m.state.Password != "" {
+	} else if rarExtractor, ok := extractor.(archives.Rar); ok {
 		rarExtractor.Password = m.state.Password
+		// Route volume reads through a resolver on the archive's folder so
+		// multi-volume archives (.partN.rar / .rNN) are followed across files.
+		rarExtractor.Name = archiveFile.DisplayName()
+		dir := uri.DirUri()
+		rarExtractor.FS = &archiveVolumeFS{open: func(name string) (entitysource.EntitySource, error) {
+			sibling, err := fm.Get(ctx, dir.Join(name), dbfs.WithFileEntities(), dbfs.WithRequiredCapabilities(dbfs.NavigatorCapabilityDownloadFile), dbfs.WithNotRoot())
+			if err != nil {
+				return nil, err
+			}
+			if sibling.PrimaryEntity() == nil {
+				return nil, fmt.Errorf("volume %q has no entity", name)
+			}
+			return fm.GetEntitySource(ctx, 0, fs.WithEntity(sibling.PrimaryEntity()))
+		}}
 		extractor = rarExtractor
 	} else if sevenZipExtractor, ok := extractor.(archives.SevenZip); ok && m.state.Password != "" {
 		sevenZipExtractor.Password = m.state.Password
@@ -555,6 +582,67 @@ func (m *ExtractArchiveTask) Cleanup(ctx context.Context) error {
 	return nil
 }
 
+// resolveFirstVolumeURI returns the URI of the first volume of the archive
+// set the given URI belongs to. When the selected file already is the first
+// volume, or the first volume is not found in the same folder, uri is
+// returned unchanged.
+func (m *ExtractArchiveTask) resolveFirstVolumeURI(ctx context.Context, fm manager.FileManager, uri *fs.URI) *fs.URI {
+	first := firstVolumeName(uri.Name())
+	if first == "" {
+		return uri
+	}
+	candidate := uri.DirUri().Join(first)
+	if _, err := fm.Get(ctx, candidate, dbfs.WithRequiredCapabilities(dbfs.NavigatorCapabilityDownloadFile), dbfs.WithNotRoot()); err != nil {
+		m.l.Info("Archive %q is a later volume but first volume %q is unavailable: %s", uri.Name(), first, err)
+		return uri
+	}
+	m.l.Info("Selected file %q is a later volume, extracting from first volume %q", uri.Name(), first)
+	return candidate
+}
+
+// resolveVolumeEntities collects the entities of all sibling files in the
+// same archive volume set, so a slave node can resolve later volumes without
+// accessing the filesystem. The first volume entity is always included.
+func (m *ExtractArchiveTask) resolveVolumeEntities(ctx context.Context, fm manager.FileManager, dir *fs.URI, archiveName string, archiveEntity *ent.Entity) map[string]*ent.Entity {
+	volumes := map[string]*ent.Entity{archiveName: archiveEntity}
+	key, _, isVolume := volumeInfo(archiveName)
+
+	// Volumes explicitly selected with the archive.
+	for _, v := range m.state.VolumeUris {
+		vuri, err := fs.NewUriFromString(v)
+		if err != nil || volumes[vuri.Name()] != nil {
+			continue
+		}
+		volumeFile, err := fm.Get(ctx, vuri, dbfs.WithFileEntities(), dbfs.WithRequiredCapabilities(dbfs.NavigatorCapabilityDownloadFile), dbfs.WithNotRoot())
+		if err != nil || volumeFile.PrimaryEntity() == nil {
+			continue
+		}
+		volumes[volumeFile.DisplayName()] = volumeFile.PrimaryEntity().Model()
+	}
+
+	// Sibling volumes present in the folder but not selected.
+	if isVolume {
+		if _, listed, err := fm.List(ctx, dir, &manager.ListArgs{PageSize: 1000}); err == nil {
+			for _, child := range listed.Files {
+				if volumes[child.DisplayName()] != nil {
+					continue
+				}
+				childKey, _, ok := volumeInfo(child.DisplayName())
+				if !ok || childKey != key {
+					continue
+				}
+				volumeFile, err := fm.Get(ctx, dir.Join(child.DisplayName()), dbfs.WithFileEntities(), dbfs.WithRequiredCapabilities(dbfs.NavigatorCapabilityDownloadFile), dbfs.WithNotRoot())
+				if err != nil || volumeFile.PrimaryEntity() == nil {
+					continue
+				}
+				volumes[child.DisplayName()] = volumeFile.PrimaryEntity().Model()
+			}
+		}
+	}
+
+	return volumes
+}
+
 type (
 	SlaveExtractArchiveTask struct {
 		*queue.InMemoryTask
@@ -566,17 +654,18 @@ type (
 	}
 
 	SlaveExtractArchiveTaskState struct {
-		FileName        string             `json:"file_name"`
-		Entity          *ent.Entity        `json:"entity"`
-		Policy          *ent.StoragePolicy `json:"policy"`
-		Encoding        string             `json:"encoding,omitempty"`
-		Dst             string             `json:"dst,omitempty"`
-		UserID          int                `json:"user_id"`
-		TempPath        string             `json:"temp_path,omitempty"`
-		TempZipFilePath string             `json:"temp_zip_file_path,omitempty"`
-		ProcessedCursor string             `json:"processed_cursor,omitempty"`
-		Password        string             `json:"password,omitempty"`
-		FileMask        []string           `json:"file_mask,omitempty"`
+		FileName        string                `json:"file_name"`
+		Entity          *ent.Entity           `json:"entity"`
+		Policy          *ent.StoragePolicy    `json:"policy"`
+		Encoding        string                `json:"encoding,omitempty"`
+		Dst             string                `json:"dst,omitempty"`
+		UserID          int                   `json:"user_id"`
+		TempPath        string                `json:"temp_path,omitempty"`
+		TempZipFilePath string                `json:"temp_zip_file_path,omitempty"`
+		ProcessedCursor string                `json:"processed_cursor,omitempty"`
+		Password        string                `json:"password,omitempty"`
+		FileMask        []string              `json:"file_mask,omitempty"`
+		Volumes         map[string]*ent.Entity `json:"volumes,omitempty"`
 	}
 )
 
@@ -724,8 +813,18 @@ func (m *SlaveExtractArchiveTask) Do(ctx context.Context) (task.Status, error) {
 				extractor = zipExtractor
 			}
 		}
-	} else if rarExtractor, ok := extractor.(archives.Rar); ok && m.state.Password != "" {
+	} else if rarExtractor, ok := extractor.(archives.Rar); ok {
 		rarExtractor.Password = m.state.Password
+		// Resolve sibling volumes from the entities shipped with the task
+		// payload so multi-volume archives are followed across files.
+		rarExtractor.Name = m.state.FileName
+		rarExtractor.FS = &archiveVolumeFS{open: func(name string) (entitysource.EntitySource, error) {
+			model, ok := m.state.Volumes[name]
+			if !ok {
+				return nil, fmt.Errorf("volume %q not provided", name)
+			}
+			return fm.GetEntitySource(ctx, 0, fs.WithEntity(fs.NewEntity(model)), fs.WithPolicy(fm.CastStoragePolicyOnSlave(ctx, m.state.Policy)))
+		}}
 		extractor = rarExtractor
 	} else if sevenZipExtractor, ok := extractor.(archives.SevenZip); ok && m.state.Password != "" {
 		sevenZipExtractor.Password = m.state.Password

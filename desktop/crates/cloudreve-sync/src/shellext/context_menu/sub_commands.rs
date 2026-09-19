@@ -1,4 +1,7 @@
-use super::{ResolveConflictCommandHandler, SyncNowCommandHandler, ViewOnlineCommandHandler};
+use super::{
+    ResolveConflictCommandHandler, ShareLinkCommandHandler, SyncNowCommandHandler,
+    ViewOnlineCommandHandler,
+};
 use crate::{drive::manager::DriveManager, utils::app::AppRoot};
 use std::sync::{Arc, Mutex};
 use windows::{
@@ -109,14 +112,16 @@ macro_rules! sub_command_factory {
 }
 
 sub_command_factory!(create_view_online_command, ViewOnlineCommandHandler);
+sub_command_factory!(create_share_link_command, ShareLinkCommandHandler);
 sub_command_factory!(create_sync_now_command, SyncNowCommandHandler);
 sub_command_factory!(
     create_resolve_conflict_command,
     ResolveConflictCommandHandler
 );
 
-const SUB_COMMAND_FACTORIES: [SubCommandFactory; 3] = [
+const SUB_COMMAND_FACTORIES: [SubCommandFactory; 4] = [
     create_view_online_command,
+    create_share_link_command,
     create_sync_now_command,
     create_resolve_conflict_command,
 ];
