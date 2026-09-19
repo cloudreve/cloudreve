@@ -26,9 +26,7 @@ func OpenIDJWKS(c *gin.Context) {
 func GetAppRegistration(c *gin.Context) {
 	service := ParametersFromContext[*oauth.GetAppRegistrationService](c, oauth.GetAppRegistrationParamCtx{})
 	app, err := service.Get(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -38,9 +36,7 @@ func GetAppRegistration(c *gin.Context) {
 func GrantAppConsent(c *gin.Context) {
 	service := ParametersFromContext[*oauth.GrantService](c, oauth.GrantParamCtx{})
 	res, err := service.Issue(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -75,9 +71,7 @@ func ExchangeToken(c *gin.Context) {
 func OpenIDUserInfo(c *gin.Context) {
 	service := ParametersFromContext[*oauth.UserInfoService](c, oauth.UserInfoParamCtx{})
 	res, err := service.GetUserInfo(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -87,9 +81,7 @@ func OpenIDUserInfo(c *gin.Context) {
 func DeleteOAuthGrant(c *gin.Context) {
 	service := ParametersFromContext[*oauth.DeleteOAuthGrantService](c, oauth.DeleteOAuthGrantParamCtx{})
 	err := service.Delete(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 

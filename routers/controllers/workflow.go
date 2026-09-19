@@ -11,9 +11,7 @@ import (
 func ListTasks(c *gin.Context) {
 	service := ParametersFromContext[*explorer.ListTaskService](c, explorer.ListTaskParamCtx{})
 	resp, err := service.ListTasks(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -27,9 +25,7 @@ func ListTasks(c *gin.Context) {
 func GetTaskPhaseProgress(c *gin.Context) {
 	taskId := hashid.FromContext(c)
 	resp, err := explorer.TaskPhaseProgress(c, taskId)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -46,9 +42,7 @@ func SetDownloadTaskTarget(c *gin.Context) {
 	taskId := hashid.FromContext(c)
 	service := ParametersFromContext[*explorer.SetDownloadFilesService](c, explorer.SetDownloadFilesParamCtx{})
 	err := service.SetDownloadFiles(c, taskId)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -58,9 +52,7 @@ func SetDownloadTaskTarget(c *gin.Context) {
 func CancelDownloadTask(c *gin.Context) {
 	taskId := hashid.FromContext(c)
 	err := explorer.CancelDownloadTask(c, taskId)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -71,9 +63,7 @@ func CancelDownloadTask(c *gin.Context) {
 func CancelTask(c *gin.Context) {
 	taskId := hashid.FromContext(c)
 	err := explorer.CancelTask(c, taskId)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -84,9 +74,7 @@ func CancelTask(c *gin.Context) {
 func DeleteTask(c *gin.Context) {
 	taskId := hashid.FromContext(c)
 	err := explorer.DeleteTask(c, taskId)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -97,9 +85,7 @@ func DeleteTask(c *gin.Context) {
 func RetryTask(c *gin.Context) {
 	taskId := hashid.FromContext(c)
 	err := explorer.RetryTask(c, taskId)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 

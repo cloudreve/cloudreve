@@ -9,6 +9,25 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+// respondErr writes the standard serialized error body and aborts the chain
+// when err is non-nil. Handlers use it as `if respondErr(c, err) { return }`.
+func respondErr(c *gin.Context, err error) bool {
+	if err == nil {
+		return false
+	}
+	c.JSON(200, serializer.Err(c, err))
+	c.Abort()
+	return true
+}
+
+// respond writes err as an error body, or ok as the success body.
+func respond(c *gin.Context, err error, ok any) {
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, ok)
+}
+
 // ParamErrorMsg 根据Validator返回的错误信息给出错误提示
 func ParamErrorMsg(filed string, tag string) string {
 	// 未通过验证的表单域与中文对应

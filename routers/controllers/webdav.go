@@ -10,9 +10,7 @@ import (
 func ListDavAccounts(c *gin.Context) {
 	service := ParametersFromContext[*setting.ListDavAccountsService](c, setting.ListDavAccountParamCtx{})
 	resp, err := service.List(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -27,9 +25,7 @@ func ListDavAccounts(c *gin.Context) {
 func CreateDAVAccounts(c *gin.Context) {
 	service := ParametersFromContext[*setting.CreateDavAccountService](c, setting.CreateDavAccountParamCtx{})
 	resp, err := service.Create(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -42,9 +38,7 @@ func CreateDAVAccounts(c *gin.Context) {
 func UpdateDAVAccounts(c *gin.Context) {
 	service := ParametersFromContext[*setting.CreateDavAccountService](c, setting.CreateDavAccountParamCtx{})
 	resp, err := service.Update(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
@@ -56,9 +50,7 @@ func UpdateDAVAccounts(c *gin.Context) {
 // DeleteDAVAccounts deletes WebDAV accounts.
 func DeleteDAVAccounts(c *gin.Context) {
 	err := setting.DeleteDavAccount(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 

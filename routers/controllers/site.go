@@ -13,9 +13,7 @@ func SiteConfig(c *gin.Context) {
 	service := ParametersFromContext[*basic.GetSettingService](c, basic.GetSettingParamCtx{})
 
 	resp, err := service.GetSiteConfig(c)
-	if err != nil {
-		c.JSON(200, serializer.Err(c, err))
-		c.Abort()
+	if respondErr(c, err) {
 		return
 	}
 
