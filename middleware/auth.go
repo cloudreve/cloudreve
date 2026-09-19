@@ -362,7 +362,8 @@ func IsAdminOrDelegated() gin.HandlerFunc {
 }
 
 // AdminSection requires the full admin permission or at least one of the
-// given delegated admin section permissions.
+// given delegated admin section permissions. Delegated-admin passes are
+// audit-logged since they exercise elevated permissions without full admin.
 func AdminSection(sections ...types.GroupPermission) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user := inventory.UserFromContext(c)
@@ -381,6 +382,11 @@ func AdminSection(sections ...types.GroupPermission) gin.HandlerFunc {
 				c.Abort()
 				return
 			}
+
+			dependency.FromContext(c).Logger().Info(
+				"Delegated admin %q (uid=%d) accessed %s %s",
+				user.Email, user.ID, c.Request.Method, c.FullPath(),
+			)
 		}
 
 		c.Next()

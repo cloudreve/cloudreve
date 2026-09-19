@@ -1,13 +1,16 @@
 package middleware
 
 import (
+	"context"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/boolset"
+	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 	"github.com/gin-gonic/gin"
 )
@@ -25,6 +28,10 @@ func newAdminRequest(t *testing.T, permissions *boolset.BooleanSet) *gin.Context
 	w := httptest.NewRecorder()
 	c := gin.CreateTestContextOnly(w, testEngine)
 	c.Request = httptest.NewRequest("GET", "/api/v4/admin/summary", nil)
+	dep := dependency.NewDependency(
+		dependency.WithLogger(logging.NewConsoleLogger(logging.LevelDebug)),
+	)
+	c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), dependency.DepCtx{}, dep))
 	u := &ent.User{
 		ID: 2,
 		Edges: ent.UserEdges{
