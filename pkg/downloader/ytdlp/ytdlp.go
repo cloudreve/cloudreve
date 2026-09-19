@@ -208,8 +208,10 @@ func (p *ytdlpProcess) run(stdout, stderr io.Reader) {
 		p.scanErrors(stderr)
 	}()
 
-	err := p.cmd.Wait()
+	// Drain the readers to EOF before Wait: Wait closes the pipes on
+	// process exit and would discard any buffered output still unread.
 	wg.Wait()
+	err := p.cmd.Wait()
 
 	p.mu.Lock()
 	defer p.mu.Unlock()
