@@ -3,6 +3,8 @@ package inventory
 import (
 	"context"
 	"fmt"
+	"net/netip"
+	"strings"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -62,7 +64,8 @@ type (
 		Status        []task.Status
 		UserID        int
 		CorrelationID *uuid.UUID
-		// CreatorIP filters tasks created from a matching client IP (substring).
+		// CreatorIP filters tasks created from a matching client IP: CIDR
+		// notation ("10.0.0.0/8"), exact IP, or substring match.
 		CreatorIP string
 		// ExcludeHidden filters out tasks hidden by their owner.
 		ExcludeHidden bool
@@ -248,7 +251,30 @@ func (c *taskClient) List(ctx context.Context, args *ListTaskArgs) (*ListTaskRes
 	}
 
 	if args.CreatorIP != "" {
-		q.Where(task.CreatorIPContainsFold(args.CreatorIP))
+		filter := strings.TrimSpace(args.CreatorIP)
+		if prefix, err := netip.ParsePrefix(filter); err == nil {
+			// CIDR filter: creator_ip is a string column and portable SQL has
+			// no INET functions, so resolve matching IPs first. The task table
+			// is bounded by periodic cleanup, keeping the IN list small.
+			ips, err := q.Clone().Select(task.FieldCreatorIP).Strings(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to resolve creator IPs: %w", err)
+			}
+			matched := make([]string, 0, len(ips))
+			for _, ip := range ips {
+				if addr, aerr := netip.ParseAddr(ip); aerr == nil && prefix.Contains(addr) {
+					matched = append(matched, ip)
+				}
+			}
+			if len(matched) > c.maxSQlParam {
+				return nil, fmt.Errorf("IP range %q matches too many addresses, narrow the range", args.CreatorIP)
+			}
+			q.Where(task.CreatorIPIn(matched...))
+		} else if addr, err := netip.ParseAddr(filter); err == nil {
+			q.Where(task.CreatorIPEQ(addr.String()))
+		} else {
+			q.Where(task.CreatorIPContainsFold(args.CreatorIP))
+		}
 	}
 
 	if args.ExcludeHidden {
