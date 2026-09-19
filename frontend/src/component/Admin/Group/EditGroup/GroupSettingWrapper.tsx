@@ -1,7 +1,6 @@
 import { Box } from "@mui/material";
 import * as React from "react";
 import { createContext, useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { CSSTransition, SwitchTransition } from "react-transition-group";
 import { getGroupDetail, upsertGroup } from "../../../../api/api.ts";
 import { GroupEnt, StoragePolicy } from "../../../../api/dashboard.ts";
@@ -46,7 +45,6 @@ const groupValueFilter = (group: GroupEnt): GroupEnt => {
 
 const GroupSettingWrapper = ({ groupID, children, onGroupChange }: GroupSettingWrapperProps) => {
   const dispatch = useAppDispatch();
-  const { t } = useTranslation("dashboard");
   const [values, setValues] = useState<GroupEnt>({
     ...defaultGroup,
   });

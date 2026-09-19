@@ -32,7 +32,6 @@ import CreateArchive from "./CreateArchive.tsx";
 import ExtractArchive from "./ExtractArchive.tsx";
 import CreateRemoteDownload from "./CreateRemoteDownload.tsx";
 import AdvanceSearch from "../Search/AdvanceSearch/AdvanceSearch.tsx";
-import React from "react";
 import ColumnSetting from "../Explorer/ListView/ColumnSetting.tsx";
 import DirectLinks from "./DirectLinks/DirectLinks.tsx";
 import DirectLinksControl from "./DirectLinksControl.tsx";
