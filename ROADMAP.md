@@ -171,7 +171,7 @@ Order = user-visible value first; each ships with backend + UI + tests.
 
 1. **Share collaboration** — write/upload/delete via share link, anonymous upload, share ACL (users/groups), preview-only mode (fixes #3555, #3390, #3340, #3517, #3578; uses `NavigatorCapability` placeholder slots + `ShareProps` extension + `share` entity fields). See §1.3a for the extracted UI spec.
    - [x] PR #140 — `allow_upload`/`allow_edit`/`preview_only`/`upload_only` props, props-derived capability sets enforced server-side (`writePermitted`), same-share move/copy, anonymous upload, drop-box listing suppression, download denial via `IsDownloadCtxKey` hooks (fixes #3555 preview-only, #3340 drop-box)
-   - [ ] File/dir ACL entity — `(subject_type ∈ user|group, subject_id)` → R/C/U/D bitmask + anonymous/everyone tiers; Permissions dialog under More actions; enforced in navigator capability checks (#3517)
+   - [x] File/dir ACL entity — `(subject_type ∈ user|group|anonymous|everyone, subject_id)` → R/C/U/D bitmask; Permissions dialog under More actions; enforced in share-navigator capability checks; group bit 15 gate (#181, fixes #3517)
    - [ ] Default shares — `setting.default_shares` chip-input of share IDs; materialize as share-shortcut entries on user create (#3390)
    - [ ] Paid shares — `share.price_points` + gate page + purchase/resume-ticket flow; needs B.4 credits first
 2. **Storage policy advanced** — multiple policies per group, per-directory binding, load-balancer policy, file migration (fixes #3518, #2961, #2262). See §1.3a.
