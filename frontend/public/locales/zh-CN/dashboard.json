@@ -1518,7 +1518,14 @@
     "confirmBatchDelete": "确认要删除 {{num}} 个 Blob？",
     "deleteXEntities": "删除 {{num}} 个 Blob",
     "forceDelete": "强制删除",
-    "forceDeleteDes": "无论物理文件是否删除成功，都会删除 Blob 记录。"
+    "forceDeleteDes": "无论物理文件是否删除成功，都会删除 Blob 记录。",
+    "relocateXEntities": "迁移 {{num}} 个 Blob",
+    "relocateTitle": "迁移 Blob",
+    "relocateEntitiesDes": "将选中的 {{num}} 个 Blob 的数据迁移到另一个存储策略。任务将在后台运行，可断点续传。",
+    "relocatePolicyDes": "将存储在“{{name}}”上的所有 Blob 迁移到另一个存储策略。任务将在后台运行，可断点续传。",
+    "relocatePolicy": "将 {{name}} 上的所有 Blob 迁移到其他策略",
+    "relocateStart": "开始迁移",
+    "relocateSubmitted": "迁移任务已提交"
   },
   "event": {
     "cleanup": "清理",

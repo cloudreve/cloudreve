@@ -1,4 +1,4 @@
-import { Delete } from "@mui/icons-material";
+import { Delete, DriveFileMove } from "@mui/icons-material";
 import {
   Badge,
   Box,
@@ -36,6 +36,7 @@ import EntityDeleteDialog from "./EntityDeleteDialog";
 import EntityDialog from "./EntityDialog/EntityDialog";
 import EntityFilterPopover from "./EntityFilterPopover";
 import EntityRow from "./EntityRow";
+import RelocateDialog from "./RelocateDialog";
 export const StoragePolicyQuery = "storage_policy";
 export const UserQuery = "user";
 export const TypeQuery = "type";
@@ -73,6 +74,7 @@ const EntitySetting = () => {
   const [entityDialogID, setEntityDialogID] = useState<number | undefined>(undefined);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteDialogID, setDeleteDialogID] = useState<number[] | undefined>(undefined);
+  const [relocateDialogOpen, setRelocateDialogOpen] = useState(false);
 
   const pageInt = parseInt(page) ?? 1;
   const pageSizeInt = parseInt(pageSize) ?? 10;
@@ -198,6 +200,11 @@ const EntitySetting = () => {
         entityID={deleteDialogID}
         onDelete={fetchEntities}
       />
+      <RelocateDialog
+        open={relocateDialogOpen}
+        onClose={() => setRelocateDialogOpen(false)}
+        entityIDs={Array.from(selected)}
+      />
       <Container maxWidth="xl">
         <PageHeader title={t("dashboard:nav.entities")} />
         <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
@@ -227,6 +234,14 @@ const EntitySetting = () => {
           {selected.length > 0 && !isMobile && (
             <>
               <Divider orientation="vertical" flexItem />
+              <Button
+                startIcon={<DriveFileMove />}
+                variant="contained"
+                color="primary"
+                onClick={() => setRelocateDialogOpen(true)}
+              >
+                {t("entity.relocateXEntities", { num: selected.length })}
+              </Button>
               <Button startIcon={<Delete />} variant="contained" color="error" onClick={handleDelete}>
                 {t("entity.deleteXEntities", { num: selected.length })}
               </Button>
@@ -235,6 +250,14 @@ const EntitySetting = () => {
         </Stack>
         {isMobile && selected.length > 0 && (
           <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+            <Button
+              startIcon={<DriveFileMove />}
+              variant="contained"
+              color="primary"
+              onClick={() => setRelocateDialogOpen(true)}
+            >
+              {t("entity.relocateXEntities", { num: selected.length })}
+            </Button>
             <Button startIcon={<Delete />} variant="contained" color="error" onClick={handleDelete}>
               {t("entity.deleteXEntities", { num: selected.length })}
             </Button>

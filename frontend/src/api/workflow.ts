@@ -182,3 +182,9 @@ export interface BlobAuditWorkflowService {
   policy_id: number;
   delete?: boolean;
 }
+
+export interface RelocateEntityService {
+  entity_ids?: number[];
+  src_policy_id?: number;
+  dst_policy_id: number;
+}

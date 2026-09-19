@@ -108,6 +108,7 @@ import {
   ListTaskService,
   BlobAuditWorkflowService,
   RebuildFTSIndexWorkflowService,
+  RelocateEntityService,
   SetDownloadFilesService,
   TaskListResponse,
   TaskProgresses,
@@ -2327,6 +2328,23 @@ export function sendBlobAuditTask(req: BlobAuditWorkflowService): ThunkResponse<
     return await dispatch(
       send(
         "/workflow/blobAudit",
+        {
+          data: req,
+          method: "POST",
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function relocateEntities(req: RelocateEntityService): ThunkResponse<TaskResponse> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/admin/entity/relocate",
         {
           data: req,
           method: "POST",

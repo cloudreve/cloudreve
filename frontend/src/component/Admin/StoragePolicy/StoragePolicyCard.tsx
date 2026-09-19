@@ -1,4 +1,4 @@
-import { FindInPage } from "@mui/icons-material";
+import { DriveFileMove, FindInPage } from "@mui/icons-material";
 import { Box, Divider, IconButton, Link, Skeleton, Tooltip, Typography } from "@mui/material";
 import Grid from "@mui/material/Grid2";
 import { useCallback, useState } from "react";
@@ -13,6 +13,7 @@ import { NoWrapBox, SquareChip } from "../../Common/StyledComponents";
 import Delete from "../../Icons/Delete";
 import Info from "../../Icons/Info";
 import { BorderedCardClickableBaImg } from "../Common/AdminCard";
+import RelocateDialog from "../Entity/RelocateDialog";
 import BlobAuditDialog from "./BlobAuditDialog";
 import { PolicyPropsMap } from "./StoragePolicySetting";
 
@@ -29,11 +30,17 @@ const StoragePolicyCard = ({ policy, onRefresh, loading }: StoragePolicyCardProp
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
+  const [relocateOpen, setRelocateOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleAuditOpen = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     setAuditOpen(true);
+  }, []);
+
+  const handleRelocateOpen = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    setRelocateOpen(true);
   }, []);
 
   const loadDetail = useCallback(
@@ -178,6 +185,11 @@ const StoragePolicyCard = ({ policy, onRefresh, loading }: StoragePolicyCardProp
           </Typography>
 
           <Box sx={{ display: "flex", alignItems: "center" }}>
+            <Tooltip title={t("entity.relocatePolicy", { name: policy?.name ?? "" })}>
+              <IconButton size="small" onClick={handleRelocateOpen} disabled={deleteLoading}>
+                <DriveFileMove fontSize="small" />
+              </IconButton>
+            </Tooltip>
             <Tooltip title={t("policy.blobAudit", { name: policy?.name ?? "" })}>
               <IconButton size="small" onClick={handleAuditOpen} disabled={deleteLoading}>
                 <FindInPage fontSize="small" />
@@ -190,6 +202,12 @@ const StoragePolicyCard = ({ policy, onRefresh, loading }: StoragePolicyCardProp
         </Box>
       </BorderedCardClickableBaImg>
       <BlobAuditDialog open={auditOpen} onClose={() => setAuditOpen(false)} policy={policy} />
+      <RelocateDialog
+        open={relocateOpen}
+        onClose={() => setRelocateOpen(false)}
+        srcPolicyID={policy?.id}
+        srcPolicyName={policy?.name}
+      />
     </Grid>
   );
 };
