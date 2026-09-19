@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -131,45 +130,17 @@ func unmarshalError(resp string, originErr error) error {
 }
 
 func parseGpsInfo(imageInfo ImageInfo) []driver.MediaMeta {
-	latitude := imageInfo["GPSLatitude"]   // 31, 16.2680820,  0
-	longitude := imageInfo["GPSLongitude"] // 120, 42.9103939,  0
-	latRef := imageInfo["GPSLatitudeRef"]  // N
-	lonRef := imageInfo["GPSLongitudeRef"] // E
-
-	// Make sure all value exist in map
-	if latitude.Value == "" || longitude.Value == "" || latRef.Value == "" || lonRef.Value == "" {
-		return nil
-	}
-
-	lat := parseRawGPS(latitude.Value, latRef.Value)
-	lon := parseRawGPS(longitude.Value, lonRef.Value)
-	if !math.IsNaN(lat) && !math.IsNaN(lon) {
-		lat, lng := mediameta.NormalizeGPS(lat, lon)
-		return []driver.MediaMeta{{
-			Key:   mediameta.GpsLat,
-			Value: fmt.Sprintf("%f", lat),
-		}, {
-			Key:   mediameta.GpsLng,
-			Value: fmt.Sprintf("%f", lng),
-		}}
-	}
-
-	return nil
+	return mediameta.GpsMeta(imageInfo["GPSLatitude"].Value, imageInfo["GPSLongitude"].Value,
+		imageInfo["GPSLatitudeRef"].Value, imageInfo["GPSLongitudeRef"].Value, parseRawGPS)
 }
 
 func parseRawGPS(gpsStr string, ref string) float64 {
 	elem := strings.Split(gpsStr, ", ")
-	if len(elem) < 1 {
-		return 0
+
+	var deg, minutes, seconds float64
+	if len(elem) >= 1 {
+		deg, _ = strconv.ParseFloat(elem[0], 64)
 	}
-
-	var (
-		deg     float64
-		minutes float64
-		seconds float64
-	)
-
-	deg, _ = strconv.ParseFloat(elem[0], 64)
 	if len(elem) >= 2 {
 		minutes, _ = strconv.ParseFloat(elem[1], 64)
 	}
@@ -177,11 +148,5 @@ func parseRawGPS(gpsStr string, ref string) float64 {
 		seconds, _ = strconv.ParseFloat(elem[2], 64)
 	}
 
-	decimal := deg + minutes/60.0 + seconds/3600.0
-
-	if ref == "S" || ref == "W" {
-		return -decimal
-	}
-
-	return decimal
+	return mediameta.DMSDecimal(deg, minutes, seconds, ref == "S" || ref == "W")
 }

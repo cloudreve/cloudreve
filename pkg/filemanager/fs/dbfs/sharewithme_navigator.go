@@ -120,23 +120,17 @@ func (t *sharedWithMeNavigator) Walk(ctx context.Context, levelFiles []*File, li
 }
 
 func (n *sharedWithMeNavigator) FollowTx(ctx context.Context) (func(), error) {
-	if _, ok := ctx.Value(inventory.TxCtx{}).(*inventory.Tx); !ok {
-		return nil, fmt.Errorf("navigator: no inherited transaction found in context")
-	}
-	newFileClient, _, _, err := inventory.WithTx(ctx, n.fileClient)
+	oldBase := n.baseNavigator.fileClient
+	revert, err := followTxClients(ctx, &n.fileClient)
 	if err != nil {
 		return nil, err
 	}
 
-	oldFileClient := n.fileClient
-	revert := func() {
-		n.fileClient = oldFileClient
-		n.baseNavigator.fileClient = oldFileClient
-	}
-
-	n.fileClient = newFileClient
-	n.baseNavigator.fileClient = newFileClient
-	return revert, nil
+	n.baseNavigator.fileClient = n.fileClient
+	return func() {
+		revert()
+		n.baseNavigator.fileClient = oldBase
+	}, nil
 }
 
 func (n *sharedWithMeNavigator) ExecuteHook(ctx context.Context, hookType fs.HookType, file *File) error {

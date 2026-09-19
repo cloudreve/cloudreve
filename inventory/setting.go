@@ -26,7 +26,7 @@ type (
 		Get(ctx context.Context, name string) (string, error)
 		// Set sets a setting value to DB.
 		Set(ctx context.Context, settings map[string]string) error
-		// Gets gets multiple setting values from DB, returns error if any setting cannot be found.
+		// Gets gets multiple setting values from DB, returns a map of found settings; names with no matching setting are omitted.
 		Gets(ctx context.Context, names []string) (map[string]string, error)
 	}
 )

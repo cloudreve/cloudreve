@@ -93,26 +93,41 @@ func (f *DBFS) writePermitted(file *File, capability NavigatorCapability) bool {
 	return caps != nil && caps.Enabled(int(capability))
 }
 
-func NewDatabaseFS(u *ent.User, fileClient inventory.FileClient, shareClient inventory.ShareClient,
-	l logging.Logger, ls lock.LockSystem, settingClient setting.Provider,
-	storagePolicyClient inventory.StoragePolicyClient, hasher hashid.Encoder, userClient inventory.UserClient,
-	cache, stateKv cache.Driver, directLinkClient inventory.DirectLinkClient, encryptorFactory encrypt.CryptorFactory, eventHub eventhub.EventHub) fs.FileSystem {
+// DBFSDependencies groups the collaborators wired into a DBFS instance so the
+// constructor call site names each dependency.
+type DBFSDependencies struct {
+	FileClient          inventory.FileClient
+	ShareClient         inventory.ShareClient
+	UserClient          inventory.UserClient
+	StoragePolicyClient inventory.StoragePolicyClient
+	DirectLinkClient    inventory.DirectLinkClient
+	Logger              logging.Logger
+	LockSystem          lock.LockSystem
+	SettingProvider     setting.Provider
+	Hasher              hashid.Encoder
+	Cache               cache.Driver
+	StateKV             cache.Driver
+	EncryptorFactory    encrypt.CryptorFactory
+	EventHub            eventhub.EventHub
+}
+
+func NewDatabaseFS(u *ent.User, deps DBFSDependencies) fs.FileSystem {
 	return &DBFS{
 		user:                u,
 		navigators:          make(map[string]Navigator),
-		fileClient:          fileClient,
-		shareClient:         shareClient,
-		l:                   l,
-		ls:                  ls,
-		settingClient:       settingClient,
-		storagePolicyClient: storagePolicyClient,
-		hasher:              hasher,
-		userClient:          userClient,
-		cache:               cache,
-		stateKv:             stateKv,
-		directLinkClient:    directLinkClient,
-		encryptorFactory:    encryptorFactory,
-		eventHub:            eventHub,
+		fileClient:          deps.FileClient,
+		shareClient:         deps.ShareClient,
+		l:                   deps.Logger,
+		ls:                  deps.LockSystem,
+		settingClient:       deps.SettingProvider,
+		storagePolicyClient: deps.StoragePolicyClient,
+		hasher:              deps.Hasher,
+		userClient:          deps.UserClient,
+		cache:               deps.Cache,
+		stateKv:             deps.StateKV,
+		directLinkClient:    deps.DirectLinkClient,
+		encryptorFactory:    deps.EncryptorFactory,
+		eventHub:            deps.EventHub,
 	}
 }
 

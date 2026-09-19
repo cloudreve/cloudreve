@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
-	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -292,45 +291,17 @@ func (handler *Driver) extractMediaInfo(ctx context.Context, path string, catego
 }
 
 func parseGpsInfo(imageInfo ImageInfo) []driver.MediaMeta {
-	latitude := imageInfo["GPSLatitude"]   // 31deg 16.26808'
-	longitude := imageInfo["GPSLongitude"] // 120deg 42.91039'
-	latRef := imageInfo["GPSLatitudeRef"]  // North
-	lonRef := imageInfo["GPSLongitudeRef"] // East
-
-	// Make sure all value exist in map
-	if latitude.Value == "" || longitude.Value == "" || latRef.Value == "" || lonRef.Value == "" {
-		return nil
-	}
-
-	lat := parseRawGPS(latitude.Value, latRef.Value)
-	lon := parseRawGPS(longitude.Value, lonRef.Value)
-	if !math.IsNaN(lat) && !math.IsNaN(lon) {
-		lat, lng := mediameta.NormalizeGPS(lat, lon)
-		return []driver.MediaMeta{{
-			Key:   mediameta.GpsLat,
-			Value: fmt.Sprintf("%f", lat),
-		}, {
-			Key:   mediameta.GpsLng,
-			Value: fmt.Sprintf("%f", lng),
-		}}
-	}
-
-	return nil
+	return mediameta.GpsMeta(imageInfo["GPSLatitude"].Value, imageInfo["GPSLongitude"].Value,
+		imageInfo["GPSLatitudeRef"].Value, imageInfo["GPSLongitudeRef"].Value, parseRawGPS)
 }
 
 func parseRawGPS(gpsStr string, ref string) float64 {
 	elem := strings.Split(gpsStr, " ")
-	if len(elem) < 1 {
-		return 0
+
+	var deg, minutes, seconds float64
+	if len(elem) >= 1 {
+		deg, _ = strconv.ParseFloat(strings.TrimSuffix(elem[0], "deg"), 64)
 	}
-
-	var (
-		deg     float64
-		minutes float64
-		seconds float64
-	)
-
-	deg, _ = strconv.ParseFloat(strings.TrimSuffix(elem[0], "deg"), 64)
 	if len(elem) >= 2 {
 		minutes, _ = strconv.ParseFloat(strings.TrimSuffix(elem[1], "'"), 64)
 	}
@@ -338,13 +309,7 @@ func parseRawGPS(gpsStr string, ref string) float64 {
 		seconds, _ = strconv.ParseFloat(strings.TrimSuffix(elem[2], "\""), 64)
 	}
 
-	decimal := deg + minutes/60.0 + seconds/3600.0
-
-	if ref == "South" || ref == "West" {
-		return -decimal
-	}
-
-	return decimal
+	return mediameta.DMSDecimal(deg, minutes, seconds, ref == "South" || ref == "West")
 }
 
 func handleOssError(resp string, originErr error) error {

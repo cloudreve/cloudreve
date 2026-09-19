@@ -9,9 +9,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/mediameta"
 	"github.com/cloudreve/Cloudreve/v4/pkg/request"
 	"github.com/samber/lo"
-	"math"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -206,78 +204,25 @@ func (handler *Driver) extractMediaInfo(ctx context.Context, path string, opt *u
 }
 
 func parseGpsInfo(imageInfo ImageInfo) []driver.MediaMeta {
-	latitude := imageInfo["GPSLatitude"]   // 31deg 16.26808'
-	longitude := imageInfo["GPSLongitude"] // 120deg 42.91039'
-	latRef := imageInfo["GPSLatitudeRef"]  // North
-	lonRef := imageInfo["GPSLongitudeRef"] // East
-
-	// Make sure all value exist in map
-	if latitude.Value == "" || longitude.Value == "" || latRef.Value == "" || lonRef.Value == "" {
-		return nil
-	}
-
-	lat := parseRawGPS(latitude.Value, latRef.Value)
-	lon := parseRawGPS(longitude.Value, lonRef.Value)
-	if !math.IsNaN(lat) && !math.IsNaN(lon) {
-		lat, lng := mediameta.NormalizeGPS(lat, lon)
-		return []driver.MediaMeta{{
-			Key:   mediameta.GpsLat,
-			Value: fmt.Sprintf("%f", lat),
-		}, {
-			Key:   mediameta.GpsLng,
-			Value: fmt.Sprintf("%f", lng),
-		}}
-	}
-
-	return nil
+	return mediameta.GpsMeta(imageInfo["GPSLatitude"].Value, imageInfo["GPSLongitude"].Value,
+		imageInfo["GPSLatitudeRef"].Value, imageInfo["GPSLongitudeRef"].Value, parseRawGPS)
 }
 
 func parseRawGPS(gpsStr string, ref string) float64 {
 	elem := strings.Split(gpsStr, " ")
-	if len(elem) < 1 {
-		return 0
+
+	var deg, minutes, seconds float64
+	if len(elem) >= 1 {
+		deg = mediameta.GpsRationalElem(elem[0])
 	}
-
-	var (
-		deg     float64
-		minutes float64
-		seconds float64
-	)
-
-	deg = getGpsElemValue(elem[0])
 	if len(elem) >= 2 {
-		minutes = getGpsElemValue(elem[1])
+		minutes = mediameta.GpsRationalElem(elem[1])
 	}
 	if len(elem) >= 3 {
-		seconds = getGpsElemValue(elem[2])
+		seconds = mediameta.GpsRationalElem(elem[2])
 	}
 
-	decimal := deg + minutes/60.0 + seconds/3600.0
-
-	if ref == "S" || ref == "W" {
-		return -decimal
-	}
-
-	return decimal
-}
-
-func getGpsElemValue(elm string) float64 {
-	elements := strings.Split(elm, "/")
-	if len(elements) != 2 {
-		return 0
-	}
-
-	numerator, err := strconv.ParseFloat(elements[0], 64)
-	if err != nil {
-		return 0
-	}
-
-	denominator, err := strconv.ParseFloat(elements[1], 64)
-	if err != nil || denominator == 0 {
-		return 0
-	}
-
-	return numerator / denominator
+	return mediameta.DMSDecimal(deg, minutes, seconds, ref == "S" || ref == "W")
 }
 
 func handleCosError(resp string, originErr error) error {
