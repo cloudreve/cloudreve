@@ -20,3 +20,10 @@ pub struct ListShareResponse {
     pub shares: Vec<Share>,
     pub pagination: PaginationResults,
 }
+
+/// Share create service. Only the target URI is required; the server applies
+/// public-link defaults for all other fields.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShareCreateService {
+    pub uri: String,
+}

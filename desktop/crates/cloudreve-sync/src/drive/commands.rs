@@ -20,12 +20,13 @@ use anyhow::{Context, Result};
 use bytes::Bytes;
 use cloudreve_api::{
     ApiError,
-    api::{ExplorerApi, explorer::ExplorerApiExt},
+    api::{ExplorerApi, ShareApi, explorer::ExplorerApiExt},
     models::{
         explorer::{
             DeleteFileService, FileResponse, FileURLService, MoveFileService, RenameFileService,
             metadata,
         },
+        share::ShareCreateService,
         uri::CrUri,
         user::Token,
     },
@@ -149,6 +150,10 @@ unsafe impl Send for MountCommand {}
 pub enum ManagerCommand {
     /// View a file or folder online in the web interface
     ViewOnline {
+        path: PathBuf,
+    },
+    /// Create a public share link for a file or folder and copy it to the clipboard
+    CopyShareLink {
         path: PathBuf,
     },
     PersistConfig,
@@ -430,6 +435,22 @@ impl Mount {
             ));
         }
         Ok(thumb_response.bytes().await?)
+    }
+
+    /// Create a public share link for the file or folder at `path`,
+    /// returning the share URL.
+    pub async fn create_share_link(&self, path: PathBuf) -> Result<String> {
+        let (sync_path, remote_base) = {
+            let config = self.config.read().await;
+            (config.sync_path.clone(), config.remote_path.to_string())
+        };
+        let uri = local_path_to_cr_uri(path.clone(), sync_path, remote_base)
+            .context("failed to convert local path to cloudreve uri")?
+            .to_string();
+        Ok(self
+            .cr_client
+            .create_share(&ShareCreateService { uri })
+            .await?)
     }
 
     pub async fn rename_completed(&self, source: PathBuf, destination: PathBuf) -> Result<()> {
