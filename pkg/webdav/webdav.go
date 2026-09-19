@@ -33,7 +33,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 	"github.com/gin-gonic/gin"
 	"github.com/samber/lo"
-	"golang.org/x/tools/container/intsets"
+	"math"
 )
 
 const (
@@ -1061,7 +1061,7 @@ func makePropstatResponse(href string, pstats []Propstat) *response {
 }
 
 const (
-	infiniteDepth = intsets.MaxInt
+	infiniteDepth = math.MaxInt
 	invalidDepth  = -2
 )
 

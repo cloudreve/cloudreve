@@ -25,7 +25,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 	"github.com/gofrs/uuid"
 	"github.com/samber/lo"
-	"golang.org/x/tools/container/intsets"
+	"math"
 )
 
 const (
@@ -521,7 +521,7 @@ func (f *DBFS) Get(ctx context.Context, path *fs.URI, opts ...fs.Option) (fs.Fil
 
 			// disable load metadata to speed up
 			ctxWalk := context.WithValue(ctx, inventory.LoadFilePublicMetadata{}, false)
-			if err := navigator.Walk(ctxWalk, []*File{target}, limit, intsets.MaxInt, func(files []*File, l int) error {
+			if err := navigator.Walk(ctxWalk, []*File{target}, limit, math.MaxInt, func(files []*File, l int) error {
 				for _, file := range files {
 					if file.ID() == target.ID() {
 						continue

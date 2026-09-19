@@ -21,7 +21,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 	"github.com/gofrs/uuid"
 	"github.com/samber/lo"
-	"golang.org/x/tools/container/intsets"
+	"math"
 )
 
 const (
@@ -438,7 +438,7 @@ func (f *fileClient) SoftDelete(ctx context.Context, file *ent.File) error {
 }
 
 func (f *fileClient) RemoveEntitiesByID(ctx context.Context, ids ...int) (map[int]int64, error) {
-	groups, _ := f.batchInConditionEntityID(intsets.MaxInt, 10, 1, ids)
+	groups, _ := f.batchInConditionEntityID(math.MaxInt, 10, 1, ids)
 	// storageReduced stores the relation between owner ID and storage reduced.
 	storageReduced := make(map[int]int64)
 
@@ -488,7 +488,7 @@ func (f *fileClient) StaleEntities(ctx context.Context, ids ...int) ([]*ent.Enti
 	res := make([]*ent.Entity, 0, len(ids))
 	if len(ids) > 0 {
 		// If explicit IDs are given, we can query them directly
-		groups, _ := f.batchInConditionEntityID(intsets.MaxInt, 10, 1, ids)
+		groups, _ := f.batchInConditionEntityID(math.MaxInt, 10, 1, ids)
 		for _, group := range groups {
 			entities, err := f.client.Entity.Query().
 				Where(group).
@@ -516,7 +516,7 @@ func (f *fileClient) StaleEntities(ctx context.Context, ids ...int) ([]*ent.Enti
 }
 
 func (f *fileClient) DeleteByUser(ctx context.Context, uid int) error {
-	batchSize := capPageSize(f.maxSQlParam, intsets.MaxInt, 10)
+	batchSize := capPageSize(f.maxSQlParam, math.MaxInt, 10)
 	for {
 		files, err := f.client.File.Query().
 			WithEntities().
@@ -564,7 +564,7 @@ func (f *fileClient) Delete(ctx context.Context, files []*ent.File, options *typ
 	})
 
 	for ref, entityGroup := range entitiesGrouped {
-		entityPageGroup, _ := f.batchInConditionEntityID(intsets.MaxInt, 10, 1, entityGroup)
+		entityPageGroup, _ := f.batchInConditionEntityID(math.MaxInt, 10, 1, entityGroup)
 		for _, group := range entityPageGroup {
 			if err := f.client.Entity.Update().
 				Where(group).
@@ -576,7 +576,7 @@ func (f *fileClient) Delete(ctx context.Context, files []*ent.File, options *typ
 	}
 
 	// 2. Filter out entities with <=0 reference count, Update recycle options for above entities;
-	entityGroup, _ := f.batchInConditionEntityID(intsets.MaxInt, 10, 1, uniqueEntities)
+	entityGroup, _ := f.batchInConditionEntityID(math.MaxInt, 10, 1, uniqueEntities)
 	toBeRecycled := make([]*ent.Entity, 0, len(entities))
 	for _, group := range entityGroup {
 		e, err := f.client.Entity.Query().Where(group).Where(entity.ReferenceCountLTE(0)).All(ctx)
@@ -588,7 +588,7 @@ func (f *fileClient) Delete(ctx context.Context, files []*ent.File, options *typ
 	}
 
 	// 3. Update recycle options for above entities;
-	pageSize := capPageSize(f.maxSQlParam, intsets.MaxInt, 10)
+	pageSize := capPageSize(f.maxSQlParam, math.MaxInt, 10)
 	chunks := lo.Chunk(lo.Map(toBeRecycled, func(item *ent.Entity, index int) int {
 		return item.ID
 	}), max(pageSize, 1))
@@ -602,7 +602,7 @@ func (f *fileClient) Delete(ctx context.Context, files []*ent.File, options *typ
 	}
 
 	hardDeleteCtx := schema.SkipSoftDelete(ctx)
-	fileGroups, chunks := f.batchInCondition(intsets.MaxInt, 10, 1,
+	fileGroups, chunks := f.batchInCondition(math.MaxInt, 10, 1,
 		lo.Map(files, func(file *ent.File, index int) int {
 			return file.ID
 		}),
@@ -634,7 +634,7 @@ func (f *fileClient) Delete(ctx context.Context, files []*ent.File, options *typ
 func (f *fileClient) Copy(ctx context.Context, args *CopyParameter) (map[int][]*ent.File, StorageDiff, error) {
 	files := args.Files
 	dstMap := args.DstMap
-	pageSize := capPageSize(f.maxSQlParam, intsets.MaxInt, 10)
+	pageSize := capPageSize(f.maxSQlParam, math.MaxInt, 10)
 	// 1. Copy files and metadata
 	copyFileStm := lo.Map(files, func(file *ent.File, index int) *ent.FileCreate {
 
@@ -698,7 +698,7 @@ func (f *fileClient) Copy(ctx context.Context, args *CopyParameter) (map[int][]*
 			return entity.ID, true
 		})
 
-		entityBatch, _ := f.batchInConditionEntityID(intsets.MaxInt, 10, 1, ids)
+		entityBatch, _ := f.batchInConditionEntityID(math.MaxInt, 10, 1, ids)
 		entityStm = append(entityStm, lo.Map(entityBatch, func(batch predicate.Entity, index int) *ent.EntityUpdate {
 			return f.client.Entity.Update().Where(batch).AddReferenceCount(1).AddFile(newFile)
 		})...)
@@ -766,7 +766,7 @@ func (f *fileClient) RemoveMetadata(ctx context.Context, file *ent.File, keys ..
 		return nil
 	}
 	ctx = schema.SkipSoftDelete(ctx)
-	groups, _ := f.batchInConditionMetadataName(intsets.MaxInt, 10, 1, keys)
+	groups, _ := f.batchInConditionMetadataName(math.MaxInt, 10, 1, keys)
 	for _, group := range groups {
 		if _, err := f.client.Metadata.Delete().Where(metadata.FileID(file.ID), group).Exec(ctx); err != nil {
 			return fmt.Errorf("failed to remove metadata: %v", err)
@@ -1008,7 +1008,7 @@ func (f *fileClient) CreateEntity(ctx context.Context, file *ent.File, args *Ent
 }
 
 func (f *fileClient) SetParent(ctx context.Context, files []*ent.File, parent *ent.File) error {
-	groups, _ := f.batchInCondition(intsets.MaxInt, 10, 1, lo.Map(files, func(file *ent.File, index int) int {
+	groups, _ := f.batchInCondition(math.MaxInt, 10, 1, lo.Map(files, func(file *ent.File, index int) int {
 		return file.ID
 	}))
 	for _, group := range groups {
@@ -1133,7 +1133,7 @@ func (f *fileClient) Rename(ctx context.Context, original *ent.File, newName str
 }
 
 func (f *fileClient) GetEntitiesByIDs(ctx context.Context, ids []int, page int) ([]*ent.Entity, int, error) {
-	groups, _ := f.batchInConditionEntityID(intsets.MaxInt, 10, 1, ids)
+	groups, _ := f.batchInConditionEntityID(math.MaxInt, 10, 1, ids)
 	if page >= len(groups) || page < 0 {
 		return nil, -1, fmt.Errorf("page out of range")
 	}
@@ -1159,7 +1159,7 @@ func (f *fileClient) GetByID(ctx context.Context, ids int) (*ent.File, error) {
 }
 
 func (f *fileClient) GetByIDs(ctx context.Context, ids []int, page int) ([]*ent.File, int, error) {
-	groups, _ := f.batchInCondition(intsets.MaxInt, 10, 1, ids)
+	groups, _ := f.batchInCondition(math.MaxInt, 10, 1, ids)
 	if page >= len(groups) || page < 0 {
 		return nil, -1, fmt.Errorf("page out of range")
 	}

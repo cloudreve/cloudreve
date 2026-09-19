@@ -23,7 +23,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gofrs/uuid"
 	"github.com/samber/lo"
-	"golang.org/x/tools/container/intsets"
+	"math"
 )
 
 // ItemMoveService 处理多文件/目录移动
@@ -380,7 +380,7 @@ func (service *ListTaskService) ListTasks(c *gin.Context) (*TaskListResponse, er
 	if service.Category != "general" {
 		args.Types = []string{queue.RemoteDownloadTaskType}
 		if service.Category == "downloading" {
-			args.PageSize = intsets.MaxInt
+			args.PageSize = math.MaxInt
 			args.Status = []task.Status{task.StatusSuspending, task.StatusProcessing, task.StatusQueued}
 		} else if service.Category == "downloaded" {
 			args.Status = []task.Status{task.StatusCanceled, task.StatusError, task.StatusCompleted}

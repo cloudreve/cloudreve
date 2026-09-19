@@ -29,7 +29,7 @@ import (
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/encoding/traditionalchinese"
 	"golang.org/x/text/encoding/unicode"
-	"golang.org/x/tools/container/intsets"
+	"math"
 )
 
 type (
@@ -186,7 +186,7 @@ func (m *manager) CreateArchive(ctx context.Context, uris []*fs.URI, writer io.W
 			continue
 		}
 
-		if err := m.Walk(ctx, file.Uri(false), intsets.MaxInt, func(f fs.File, level int) error {
+		if err := m.Walk(ctx, file.Uri(false), math.MaxInt, func(f fs.File, level int) error {
 			if f.Type() == types.FileTypeFolder || f.IsSymbolic() {
 				return nil
 			}

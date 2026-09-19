@@ -16,7 +16,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
 	"github.com/samber/lo"
-	"golang.org/x/tools/container/intsets"
+	"math"
 )
 
 func (f *DBFS) Create(ctx context.Context, path *fs.URI, fileType types.FileType, opts ...fs.Option) (fs.File, error) {
@@ -879,7 +879,7 @@ func (f *DBFS) deleteFiles(ctx context.Context, targets map[Navigator][]*File, f
 		// listing resolves via HasParentWith, so parent rows must stay
 		// alive until their level has been fetched.
 		folderModels := make([]*ent.File, 0, 64)
-		if err := n.Walk(ctx, files, intsets.MaxInt, intsets.MaxInt, func(targets []*File, level int) error {
+		if err := n.Walk(ctx, files, math.MaxInt, math.MaxInt, func(targets []*File, level int) error {
 			indexToDelete = append(indexToDelete, lo.Map(targets, func(item *File, index int) int {
 				return item.ID()
 			})...)
@@ -948,7 +948,7 @@ func (f *DBFS) copyFiles(ctx context.Context, targets map[Navigator][]*File, des
 			initialDstMap[file.Model.FileChildren] = dstAncestors
 		}
 
-		if err := n.Walk(ctx, files, limit, intsets.MaxInt, func(targets []*File, level int) error {
+		if err := n.Walk(ctx, files, limit, math.MaxInt, func(targets []*File, level int) error {
 			// check capacity for each file
 			sizeTotal := int64(0)
 			for _, file := range targets {
