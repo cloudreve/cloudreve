@@ -22,7 +22,6 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
 	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
-	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 	"github.com/gofrs/uuid"
 	"github.com/samber/lo"
 	"math"
@@ -855,7 +854,14 @@ func (f *DBFS) navigatorId(path *fs.URI) string {
 func generateSavePath(policy *ent.StoragePolicy, req *fs.UploadRequest, user *ent.User) string {
 	currentTime := time.Now()
 	dynamicReplace := func(rule string, pathAvailable bool) string {
-		return util.ReplaceMagicVar(rule, fs.Separator, pathAvailable, false, currentTime, user.ID, req.Props.Uri.Name(), req.Props.Uri.Dir(), "")
+		return fs.ReplaceMagicVar(rule, fs.MagicVarProps{
+			FsSeparator:   fs.Separator,
+			PathAvailable: pathAvailable,
+			Time:          currentTime,
+			UserID:        user.ID,
+			OriginName:    req.Props.Uri.Name(),
+			OriginPath:    req.Props.Uri.Dir(),
+		})
 	}
 
 	dirRule := policy.DirNameRule

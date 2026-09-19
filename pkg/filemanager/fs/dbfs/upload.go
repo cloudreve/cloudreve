@@ -178,7 +178,16 @@ func (f *DBFS) PrepareUpload(ctx context.Context, req *fs.UploadRequest, opts ..
 	if req.Props.SavePath == "" || isThumbnailAndPolicyNotAvailable {
 		req.Props.SavePath = generateSavePath(policy, req, f.user)
 		if isThumbnailAndPolicyNotAvailable {
-			req.Props.SavePath = path.Clean(util.ReplaceMagicVar(f.settingClient.ThumbEntitySuffix(ctx), fs.Separator, true, true, time.Now(), f.user.ID, req.Props.Uri.Name(), req.Props.Uri.Path(), req.Props.SavePath))
+			req.Props.SavePath = path.Clean(fs.ReplaceMagicVar(f.settingClient.ThumbEntitySuffix(ctx), fs.MagicVarProps{
+				FsSeparator:      fs.Separator,
+				PathAvailable:    true,
+				BlobAvailable:    true,
+				Time:             time.Now(),
+				UserID:           f.user.ID,
+				OriginName:       req.Props.Uri.Name(),
+				OriginPath:       req.Props.Uri.Path(),
+				CompleteBlobPath: req.Props.SavePath,
+			}))
 		}
 	}
 
