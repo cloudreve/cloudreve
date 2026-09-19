@@ -62,6 +62,9 @@ type (
 		HasMetadata     string
 		Shared          bool
 		HasDirectLink   bool
+		// Deleted filters by soft-delete state: nil lists everything (current
+		// behavior), true lists only trash, false only live files.
+		Deleted *bool
 	}
 
 	MetadataFilter struct {
@@ -1198,6 +1201,15 @@ func (f *fileClient) FlattenListFiles(ctx context.Context, args *FlattenListFile
 
 	if args.HasDirectLink {
 		query = query.Where(file.HasDirectLinksWith(directlink.DeletedAtIsNil()))
+	}
+
+	if args.Deleted != nil {
+		if *args.Deleted {
+			// Trash = files detached from their parent by soft-delete.
+			query = query.Where(file.Not(file.HasParent()))
+		} else {
+			query = query.Where(file.HasParent())
+		}
 	}
 
 	query.Order(getFileOrderOption(&ListFileParameters{

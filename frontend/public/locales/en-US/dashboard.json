@@ -1496,7 +1496,10 @@
     "otherConditions": "Other conditions",
     "shareLinkExisted": "Has share link",
     "directLinkExisted": "Has direct link",
-    "isUploading": "Is uploading"
+    "isUploading": "Is uploading",
+    "deletedState": "Deleted state",
+    "liveOnly": "Live files only",
+    "trashOnly": "Trash only"
   },
   "entity": {
     "refenenceCount": "Reference count",

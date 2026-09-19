@@ -157,6 +157,7 @@ const (
 	fileMetadataCondition   = "file_metadata"
 	fileSharedCondition     = "file_shared"
 	fileDirectLinkCondition = "file_direct_link"
+	fileDeletedCondition    = "file_deleted"
 )
 
 func (service *AdminListService) Files(c *gin.Context) (*ListFileResponse, error) {
@@ -177,6 +178,7 @@ func (service *AdminListService) Files(c *gin.Context) (*ListFileResponse, error
 		metadata   string
 		shared     bool
 		directLink bool
+		deleted    *bool
 	)
 
 	if service.Conditions[fileUserCondition] != "" {
@@ -205,6 +207,13 @@ func (service *AdminListService) Files(c *gin.Context) (*ListFileResponse, error
 		directLink = true
 	}
 
+	switch service.Conditions[fileDeletedCondition] {
+	case "true":
+		deleted = lo.ToPtr(true)
+	case "false":
+		deleted = lo.ToPtr(false)
+	}
+
 	res, err := fileClient.FlattenListFiles(ctx, &inventory.FlattenListFileParameters{
 		PaginationArgs: &inventory.PaginationArgs{
 			Page:     service.Page - 1,
@@ -218,6 +227,7 @@ func (service *AdminListService) Files(c *gin.Context) (*ListFileResponse, error
 		HasMetadata:     metadata,
 		Shared:          shared,
 		HasDirectLink:   directLink,
+		Deleted:         deleted,
 	})
 
 	if err != nil {

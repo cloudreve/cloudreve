@@ -46,6 +46,7 @@ export const NameQuery = "name";
 export const HasDirectLinkQuery = "has_direct_link";
 export const SharedQuery = "shared";
 export const UploadingQuery = "uploading";
+export const DeletedQuery = "deleted";
 
 const FileSetting = () => {
   const { t } = useTranslation("dashboard");
@@ -68,6 +69,7 @@ const FileSetting = () => {
   const [hasDirectLink, setHasDirectLink] = useQueryState(HasDirectLinkQuery, { defaultValue: "" });
   const [shared, setShared] = useQueryState(SharedQuery, { defaultValue: "" });
   const [uploading, setUploading] = useQueryState(UploadingQuery, { defaultValue: "" });
+  const [deleted, setDeleted] = useQueryState(DeletedQuery, { defaultValue: "" });
   const [count, setCount] = useState(0);
   const [selected, setSelected] = useState<readonly number[]>([]);
   const [createNewOpen, setCreateNewOpen] = useState(false);
@@ -93,11 +95,12 @@ const FileSetting = () => {
     setHasDirectLink("");
     setShared("");
     setUploading("");
-  }, [setStoragePolicy, setOwner, setName, setHasDirectLink, setShared, setUploading]);
+    setDeleted("");
+  }, [setStoragePolicy, setOwner, setName, setHasDirectLink, setShared, setUploading, setDeleted]);
 
   useEffect(() => {
     fetchFiles();
-  }, [page, pageSize, orderBy, orderDirection, storagePolicy, owner, name, hasDirectLink, shared, uploading]);
+  }, [page, pageSize, orderBy, orderDirection, storagePolicy, owner, name, hasDirectLink, shared, uploading, deleted]);
 
   const fetchFiles = () => {
     setLoading(true);
@@ -115,6 +118,7 @@ const FileSetting = () => {
           file_direct_link: hasDirectLink === "true" ? "true" : "",
           file_shared: shared === "true" ? "true" : "",
           file_metadata: uploading === "true" ? Metadata.upload_session_id : "",
+          file_deleted: deleted,
         },
       }),
     )
@@ -183,8 +187,8 @@ const FileSetting = () => {
   };
 
   const hasActiveFilters = useMemo(() => {
-    return !!(storagePolicy || owner || name || hasDirectLink || shared || uploading);
-  }, [storagePolicy, owner, name, hasDirectLink, shared, uploading]);
+    return !!(storagePolicy || owner || name || hasDirectLink || shared || uploading || deleted);
+  }, [storagePolicy, owner, name, hasDirectLink, shared, uploading, deleted]);
 
   const handleFileDialogOpen = (id: number) => {
     setFileDialogID(id);
@@ -239,6 +243,8 @@ const FileSetting = () => {
             setHasShareLink={(value: boolean) => setShared(value ? "true" : "")}
             isUploading={uploading === "true"}
             setIsUploading={(value: boolean) => setUploading(value ? "true" : "")}
+            deleted={deleted}
+            setDeleted={setDeleted}
           />
 
           <SecondaryButton onClick={fetchFiles} disabled={loading} variant={"contained"} startIcon={<ArrowSync />}>
