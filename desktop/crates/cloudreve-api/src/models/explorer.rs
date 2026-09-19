@@ -193,7 +193,7 @@ pub struct StoragePolicy {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub children: Option<Vec<StoragePolicy>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub chunk_concurrency: Option<i32>,
+    pub chunk_concurrency: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub encryption: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]

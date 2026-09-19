@@ -37,6 +37,7 @@ use std::{
     collections::HashMap,
     ops::Range,
     path::{Path, PathBuf},
+    time::Duration,
 };
 use tokio::sync::oneshot::Sender;
 use uuid::Uuid;
@@ -522,6 +523,19 @@ impl Mount {
             return Ok(());
         }
 
+        // If the source is a directory, the OS emits Remove/Create events for
+        // every descendant in addition to the directory's own events. Suppress
+        // the subtree for a short window — registered before the remote call so
+        // events racing the in-flight move are covered as well — so child
+        // events are not propagated as remote deletes/creates.
+        if source.is_dir() {
+            let ttl = Duration::from_secs(15);
+            self.event_blocker
+                .register_prefix(&EventKind::Remove(RemoveKind::Any), source.clone(), ttl);
+            self.event_blocker
+                .register_prefix(&EventKind::Create(CreateKind::Any), target.clone(), ttl);
+        }
+
         // if target and src under the same dir, trigger rename call
         let target_parent = target.parent().context("root cannot be moved")?;
         let source_parent = source.parent().context("root cannot be moved")?;
@@ -539,6 +553,7 @@ impl Mount {
                 .await
             {
                 Ok(_) => {
+
                     // Block the modify name events for rename (From for source, To for target)
                     self.event_blocker.register_once(
                         &EventKind::Modify(ModifyKind::Name(RenameMode::From)),
@@ -574,6 +589,7 @@ impl Mount {
             .await
         {
             Ok(_) => {
+
                 // Block remove event for source and create event for target
                 self.event_blocker
                     .register_once(&EventKind::Remove(RemoveKind::Any), source.clone());
@@ -589,7 +605,21 @@ impl Mount {
     }
 
     pub async fn process_fs_events(&self, events: GroupedFsEvents) -> Result<()> {
-        for (event_kind, events) in events {
+        // Process groups in a deterministic order: renames/moves first, then
+        // creates and modifications, removes last. A directory move can emit
+        // per-descendant remove events in the same batch; committing the move
+        // remotely before handling removes prevents child URIs from being
+        // deleted on the server.
+        let mut groups: Vec<(EventKind, Vec<Event>)> = events.into_iter().collect();
+        groups.sort_by_key(|(kind, _)| match kind {
+            EventKind::Modify(ModifyKind::Name(_)) => 0,
+            EventKind::Create(_) => 1,
+            EventKind::Modify(_) => 2,
+            EventKind::Remove(_) => 3,
+            _ => 4,
+        });
+
+        for (event_kind, events) in groups {
             // Filter out events that were pre-registered by rename operations
             let filtered_events = self.event_blocker.filter_events(events, &event_kind);
 
