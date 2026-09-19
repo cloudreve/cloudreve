@@ -58,6 +58,17 @@ var (
 	fullOrderDirectionOption   = []string{"asc", "desc"}
 )
 
+// baseNavigatorProps builds the shared NavigatorProps skeleton; navigators
+// adjust search options on top.
+func baseNavigatorProps(capability *boolset.BooleanSet, maxPageSize int) *fs.NavigatorProps {
+	return &fs.NavigatorProps{
+		Capability:            capability,
+		OrderDirectionOptions: fullOrderDirectionOption,
+		OrderByOptions:        fullOrderByOption,
+		MaxPageSize:           maxPageSize,
+	}
+}
+
 type (
 	// Navigator is a navigator for database file system.
 	Navigator interface {

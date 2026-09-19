@@ -134,12 +134,7 @@ func (n *myNavigator) walkNext(ctx context.Context, root *File, next string, isL
 }
 
 func (n *myNavigator) Capabilities(isSearching bool) *fs.NavigatorProps {
-	res := &fs.NavigatorProps{
-		Capability:            myNavigatorCapability,
-		OrderDirectionOptions: fullOrderDirectionOption,
-		OrderByOptions:        fullOrderByOption,
-		MaxPageSize:           n.config.MaxPageSize,
-	}
+	res := baseNavigatorProps(myNavigatorCapability, n.config.MaxPageSize)
 	if isSearching {
 		res.OrderByOptions = nil
 		res.OrderDirectionOptions = nil

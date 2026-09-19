@@ -101,13 +101,7 @@ func (t *sharedWithMeNavigator) Children(ctx context.Context, parent *File, args
 }
 
 func (t *sharedWithMeNavigator) Capabilities(isSearching bool) *fs.NavigatorProps {
-	res := &fs.NavigatorProps{
-		Capability:            sharedWithMeNavigatorCapability,
-		OrderDirectionOptions: fullOrderDirectionOption,
-		OrderByOptions:        fullOrderByOption,
-		MaxPageSize:           t.config.MaxPageSize,
-	}
-
+	res := baseNavigatorProps(sharedWithMeNavigatorCapability, t.config.MaxPageSize)
 	if isSearching {
 		res.OrderByOptions = searchLimitedOrderByOption
 	}

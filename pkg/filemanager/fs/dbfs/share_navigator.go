@@ -278,12 +278,7 @@ func (n *shareNavigator) latestSharedSingleFile(ctx context.Context) (*File, err
 }
 
 func (n *shareNavigator) Capabilities(isSearching bool) *fs.NavigatorProps {
-	res := &fs.NavigatorProps{
-		Capability:            shareNavigatorCapability,
-		OrderDirectionOptions: fullOrderDirectionOption,
-		OrderByOptions:        fullOrderByOption,
-		MaxPageSize:           n.config.MaxPageSize,
-	}
+	res := baseNavigatorProps(shareNavigatorCapability, n.config.MaxPageSize)
 
 	// Once the share is resolved, narrow capabilities to what its props grant.
 	// This set is stamped onto resolved files and consulted by writePermitted.
