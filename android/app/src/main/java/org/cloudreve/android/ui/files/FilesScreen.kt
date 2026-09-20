@@ -83,6 +83,7 @@ import org.cloudreve.android.data.CameraUploadSettings
 import org.cloudreve.android.data.FavoriteEntry
 import org.cloudreve.android.util.CrUri
 import org.cloudreve.android.work.CameraUploadWorker
+import org.cloudreve.android.work.TaskPollWorker
 import org.cloudreve.android.work.UploadWorker
 import java.text.DecimalFormat
 
@@ -559,10 +560,23 @@ private fun CameraUploadDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
     val app = context.applicationContext as CloudreveApp
     val settings = app.cameraUploadSettings
+    val notifySettings = app.taskNotifySettings
     val scope = rememberCoroutineScope()
     val snap by settings.snapshot.collectAsState(initial = null)
+    val notifyEnabled by notifySettings.enabled.collectAsState(initial = false)
     var folderText by remember(snap?.remoteFolder) {
         mutableStateOf(snap?.remoteFolder ?: CameraUploadSettings.DEFAULT_FOLDER)
+    }
+
+    val notifPermLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            scope.launch {
+                notifySettings.setEnabled(true)
+                TaskPollWorker.apply(context)
+            }
+        }
     }
 
     val permLauncher = rememberLauncherForActivityResult(
@@ -642,6 +656,33 @@ private fun CameraUploadDialog(onDismiss: () -> Unit) {
                         ).format(java.util.Date(it)),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                HorizontalDivider()
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Notify on finished tasks", Modifier.weight(1f))
+                    Switch(
+                        checked = notifyEnabled,
+                        onCheckedChange = { want ->
+                            if (want) {
+                                if (android.os.Build.VERSION.SDK_INT >= 33) {
+                                    notifPermLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                                } else {
+                                    scope.launch {
+                                        notifySettings.setEnabled(true)
+                                        TaskPollWorker.apply(context)
+                                    }
+                                }
+                            } else {
+                                scope.launch {
+                                    notifySettings.setEnabled(false)
+                                    TaskPollWorker.cancel(context)
+                                }
+                            }
+                        },
                     )
                 }
             }

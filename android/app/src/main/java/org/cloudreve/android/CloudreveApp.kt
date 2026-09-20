@@ -6,6 +6,7 @@ import org.cloudreve.android.data.CameraUploadSettings
 import org.cloudreve.android.data.FavoritesStore
 import org.cloudreve.android.data.FileRepository
 import org.cloudreve.android.data.SessionManager
+import org.cloudreve.android.data.TaskNotifySettings
 
 class CloudreveApp : Application() {
 
@@ -18,6 +19,8 @@ class CloudreveApp : Application() {
     lateinit var cameraUploadSettings: CameraUploadSettings
     lateinit var favoritesStore: FavoritesStore
         private set
+    lateinit var taskNotifySettings: TaskNotifySettings
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -26,5 +29,6 @@ class CloudreveApp : Application() {
         fileRepository = FileRepository(apiClient)
         cameraUploadSettings = CameraUploadSettings(this)
         favoritesStore = FavoritesStore(this)
+        taskNotifySettings = TaskNotifySettings(this)
     }
 }
