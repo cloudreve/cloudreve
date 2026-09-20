@@ -11,6 +11,7 @@ import Nothing from "../../Common/Nothing.tsx";
 import { DefaultCloseAction } from "../../Common/Snackbar/snackbar.tsx";
 import { setSelected } from "../../../redux/fileManagerSlice.ts";
 import ShareCard from "./ShareCard.tsx";
+import SaveShareLinkDialog from "./SaveShareLinkDialog.tsx";
 import { Share } from "../../../api/explorer.ts";
 import { DenseSelect } from "../../Common/StyledComponents.tsx";
 import { SquareMenuItem } from "../../FileManager/ContextMenu/ContextMenu.tsx";
@@ -28,6 +29,7 @@ const ShareList = () => {
   const [orderDirection, setOrderDirection] = useState("desc");
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelectedIds] = useState<Set<string>>(new Set());
+  const [saveLinkOpen, setSaveLinkOpen] = useState(false);
 
   const loadNextPage = useCallback(
     (originShares: Share[], token?: string, direction?: string) => () => {
@@ -136,6 +138,9 @@ const ShareList = () => {
                   </Button>
                 </>
               )}
+              <Button size="small" variant="text" onClick={() => setSaveLinkOpen(true)}>
+                {t("application:share.saveShareLink")}
+              </Button>
               <Button size="small" variant="text" onClick={selecting ? exitSelecting : () => setSelecting(true)}>
                 {selecting ? t("common:cancel") : t("common:select")}
               </Button>
@@ -198,6 +203,7 @@ const ShareList = () => {
             <Nothing size={0.8} top={63} primary={t("setting.listEmpty")} />
           </Box>
         )}
+        <SaveShareLinkDialog open={saveLinkOpen} onClose={() => setSaveLinkOpen(false)} />
       </Container>
     </PageContainer>
   );

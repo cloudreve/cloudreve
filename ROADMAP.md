@@ -205,9 +205,13 @@ Order = user-visible value first; each ships with backend + UI + tests.
 - Own security review on top of upstream fixes: session/token entropy audit, SSRF guard re-test (NAT64 class), rate limiting on auth endpoints
 - Fix upstream bug backlog by impact: ~~#3574 OOM~~ (done — paged tree walk + batched delete), ~~#3118/#3005 WebDAV large-file~~ (done — Content-Range assembly into one session; non-local policies get honest 501; single-PUT giant-file 500s are proxy/client timeouts, not fixable server-side), ~~#3375 SMTP auth discovery~~ (done — `smtp_auth` setting)
 - #3454 (PG FK on upload) is **Pro-only** — `audit_logs` doesn't exist in this codebase. When B.5 adds our own audit log: insert the audit row in the same tx *after* the file row, never before.
+- [ ] #199 (upstream #3584) — markdown editor lag: profile the MDX editor path; likely re-render-per-keystroke, evaluate debounce/virtualization or lighter editor before swapping libraries
+- [ ] #198 (upstream #3581) — "import files" task shows source storage policy "unknown": check task props → policy name resolution in admin import path (Pro report, likely same code path in CE)
+- [ ] #200 (upstream #3586) — Pro crash on SIGHUP; log shows a clean signal-driven shutdown, no stack trace — watch for a CE repro, likely not actionable yet
 - [x] `desloppify` pass — 73 review items dispositioned (46 fixed, 27 honestly skipped), strict score 77.1 (was 18.9); scorecard lives in README. `security-reviewer` pass done incrementally per batch (OAuth secrets, SSRF, process exec, path safety)
 - [x] Tag management page (upstream #2962) — owner-scoped `tag:` metadata stats/rename/recolor/delete in `inventory.FileClient`, `GET/PATCH/DELETE /file/tag` routes, Settings → Tags tab with merge-on-rename semantics
 - [x] Private space / vault (upstream #3447) — opt-in root folder flagged `sys:vault`; ancestry-based membership (zero flag maintenance; chain-less search results resolved lazily via `file_children`); `vaultNavigator` decorator gating `To`/`Children`/`Walk`/`ExecuteHook`; separate vault password (`salt:sha256`, sensitive) + 30-min cache-backed unlock session, unlock rate-limited 10/h; vault content never shareable and never direct-linkable; search filtered while locked; `vault_enabled`/`vault_unlocked` in user settings; unlock prompt in `ExplorerError`, Private space section in security settings, lock badge on vault folder (#195)
+- [x] Saved share links (#147) — `POST /file/create` accepts `type: share` + `share_id`/`share_password`, materializing a symbolic shortcut (`sys:shared_redirect`) that lists under My Files and Shared with me; "Save to my files" in the share popover + "Save share link" dialog on /shares
 
 ## 6. Phase D — desktop, all platforms
 

@@ -370,11 +370,15 @@ export interface ShareCreateService {
 
 export interface CreateFileService {
   uri: string;
-  type: "file" | "folder";
+  type: "file" | "folder" | "share";
   err_on_conflict?: boolean;
   metadata?: {
     [key: string]: string;
   };
+  // share_id + share_password create a symbolic share shortcut when
+  // type == "share", persisting a saved share link in the file list.
+  share_id?: string;
+  share_password?: string;
 }
 
 export interface FileURLService extends MultipleUriService {

@@ -838,7 +838,16 @@
     "paidShareDes": "This is a paid share. Purchasing costs {{price}} points and unlocks downloads.",
     "purchaseForPoints": "Purchase for {{price}} pts",
     "signInToPurchase": "Sign in to purchase",
-    "yourBalance": "Balance: {{credits}} points"
+    "yourBalance": "Balance: {{credits}} points",
+    "saveToMyFiles": "Save to my files",
+    "savedToMyFiles": "Share saved to your files.",
+    "saveShareLink": "Save share link",
+    "saveShareLinkHint": "Paste a share link like https://example.com/s/abc123",
+    "shareLink": "Share link",
+    "savedAs": "Saved as (optional)",
+    "sharePassword": "Share password (optional)",
+    "sharePasswordRequired": "This share requires a password.",
+    "invalidShareLink": "Cannot parse this share link."
   },
   "download": {
     "noFilesFound": "No files found",

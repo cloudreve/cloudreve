@@ -1,11 +1,18 @@
 import i18next from "i18next";
 import { closeSnackbar, enqueueSnackbar, SnackbarKey } from "notistack";
-import { getFileInfo, getFileList, getShareInfo, sendCreateShare, sendUpdateShare } from "../../api/api.ts";
+import {
+  getFileInfo,
+  getFileList,
+  getShareInfo,
+  sendCreateFile,
+  sendCreateShare,
+  sendUpdateShare,
+} from "../../api/api.ts";
 import { FileResponse, Share, ShareCreateService } from "../../api/explorer.ts";
 import { DefaultCloseAction, OpenReadMeAction } from "../../component/Common/Snackbar/snackbar.tsx";
 import { ShareSetting } from "../../component/FileManager/Dialogs/Share/ShareSetting.tsx";
 import { getPaginationState } from "../../component/FileManager/Pagination/PaginationFooter.tsx";
-import CrUri from "../../util/uri.ts";
+import CrUri, { Filesystem } from "../../util/uri.ts";
 import { fileUpdated } from "../fileManagerSlice.ts";
 import {
   addShareInfo,
@@ -118,6 +125,54 @@ export function queueLoadShareInfo(uri: CrUri, countViews: boolean = false): App
     }
 
     return p;
+  };
+}
+
+export interface ParsedShareLink {
+  id: string;
+  password?: string;
+}
+
+// parseShareLink accepts "https://host/s/<id>[/password]", "/s/<id>[/password]",
+// "cloudreve://<id>[:<password>]@share", or a bare share id.
+export function parseShareLink(input: string): ParsedShareLink | undefined {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  if (trimmed.startsWith("cloudreve://")) {
+    const uri = new CrUri(trimmed);
+    return uri.fs() == Filesystem.share && uri.id()
+      ? { id: uri.id(), password: uri.password() || undefined }
+      : undefined;
+  }
+  const match = trimmed.match(/\/s\/([A-Za-z0-9]+)(?:\/([^/?#]+))?/);
+  if (match) {
+    return { id: match[1], password: match[2] ? decodeURIComponent(match[2]) : undefined };
+  }
+  return /^[A-Za-z0-9]+$/.test(trimmed) ? { id: trimmed } : undefined;
+}
+
+export function saveShareToMyFiles(shareInfo: Share, password?: string, name?: string): AppThunk<Promise<void>> {
+  return async (dispatch) => {
+    const displayName =
+      name?.trim() ||
+      shareInfo.name ||
+      i18next.t("application:share.somebodyShare", { name: shareInfo.owner.nickname });
+    const uri = new CrUri("cloudreve://" + Filesystem.my).join(displayName);
+    await dispatch(
+      sendCreateFile({
+        uri: uri.toString(),
+        type: "share",
+        share_id: shareInfo.id,
+        share_password: password ?? shareInfo.password,
+      }),
+    );
+    enqueueSnackbar({
+      message: i18next.t("application:share.savedToMyFiles"),
+      variant: "success",
+      action: DefaultCloseAction,
+    });
   };
 }
 
