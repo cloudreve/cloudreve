@@ -18,7 +18,7 @@
     "@tauri-apps/api": "^2.11.0",
     "@tauri-apps/plugin-deep-link": "^2.4.9",
     "@tauri-apps/plugin-dialog": "^2.7.1",
-    "@tauri-apps/plugin-http": "^2.5.9",
+    "@tauri-apps/plugin-http": "^2.6.1",
     "@tauri-apps/plugin-opener": "^2.5.4",
     "@tauri-apps/plugin-os": "^2.3.2",
     "@tauri-apps/plugin-positioner": "^2.3.2",
