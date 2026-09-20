@@ -5,7 +5,10 @@ import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
+import retrofit2.http.Field
+import retrofit2.http.FormUrlEncoded
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.HTTP
 import retrofit2.http.POST
 import retrofit2.http.PUT
@@ -17,6 +20,22 @@ interface ApiService {
 
     @POST("api/v4/session/token")
     suspend fun login(@Body request: PasswordLoginRequest): Response<ApiResponse<LoginResponse>>
+
+    // OAuth token exchange returns raw OAuth JSON, not the ApiResponse envelope.
+    @FormUrlEncoded
+    @POST("api/v4/session/oauth/token")
+    suspend fun oauthToken(
+        @Field("client_id") clientId: String,
+        @Field("grant_type") grantType: String,
+        @Field("code") code: String,
+        @Field("redirect_uri") redirectUri: String,
+        @Field("code_verifier") codeVerifier: String,
+    ): Response<OAuthTokenResponse>
+
+    @GET("api/v4/session/oauth/userinfo")
+    suspend fun oauthUserInfo(
+        @Header("Authorization") bearer: String,
+    ): Response<UserInfoResponse>
 
     @POST("api/v4/session/token/refresh")
     suspend fun refreshToken(@Body request: RefreshTokenRequest): Response<ApiResponse<RefreshTokenResponse>>

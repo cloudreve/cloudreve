@@ -27,9 +27,19 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun LoginScreen(viewModel: LoginViewModel, onLoggedIn: () -> Unit) {
     val state by viewModel.state.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val app = context.applicationContext as org.cloudreve.android.CloudreveApp
+    val oauth by app.oauthCallback.collectAsState()
 
     LaunchedEffect(state.loggedIn) {
         if (state.loggedIn) onLoggedIn()
+    }
+
+    LaunchedEffect(oauth) {
+        oauth?.let {
+            app.oauthCallback.value = null
+            viewModel.completeOAuth(it.code, it.state)
+        }
     }
 
     Column(
@@ -93,6 +103,23 @@ fun LoginScreen(viewModel: LoginViewModel, onLoggedIn: () -> Unit) {
             } else {
                 Text("Sign in")
             }
+        }
+        Spacer(Modifier.height(12.dp))
+        androidx.compose.material3.OutlinedButton(
+            onClick = {
+                viewModel.startOAuth()?.let { url ->
+                    context.startActivity(
+                        android.content.Intent(
+                            android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse(url),
+                        )
+                    )
+                }
+            },
+            enabled = !state.loading,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Sign in with browser")
         }
     }
 }

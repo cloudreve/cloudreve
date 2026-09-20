@@ -206,3 +206,19 @@ data class TaskItem(
 data class TaskListResponse(
     val tasks: List<TaskItem> = emptyList(),
 )
+
+@Serializable
+data class OAuthTokenResponse(
+    @SerialName("access_token") val accessToken: String = "",
+    @SerialName("refresh_token") val refreshToken: String = "",
+    @SerialName("expires_in") val expiresIn: Long = 0,
+    @SerialName("token_type") val tokenType: String = "",
+)
+
+@Serializable
+data class UserInfoResponse(
+    val sub: String = "",
+    val name: String = "",
+    @SerialName("preferred_username") val preferredUsername: String = "",
+    val email: String = "",
+)

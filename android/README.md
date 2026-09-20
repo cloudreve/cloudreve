@@ -44,6 +44,9 @@ CI runs `assembleDebug` on every PR.
 - Task notifications: periodic `GET /workflow` poll posts a
   notification when a task completes/fails/cancels — toggle in the
   settings dialog, runtime POST_NOTIFICATIONS permission gated
+- OAuth sign-in: "Sign in with browser" opens the server's consent
+  page with PKCE; the `/callback/desktop` page deep-links the code
+  back through `cloudreve://mount`, exchanged at `/session/oauth/token`
 
 ## Planned next
 

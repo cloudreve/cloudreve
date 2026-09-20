@@ -25,6 +25,8 @@ class SessionManager(private val context: Context) {
         val accessExpiresAt = longPreferencesKey("access_expires_at")
         val userEmail = stringPreferencesKey("user_email")
         val userNick = stringPreferencesKey("user_nick")
+        val pendingOauthVerifier = stringPreferencesKey("pending_oauth_verifier")
+        val pendingOauthState = stringPreferencesKey("pending_oauth_state")
     }
 
     val serverUrl: Flow<String> = context.sessionStore.data.map { it[Keys.serverUrl] ?: "" }
@@ -44,6 +46,26 @@ class SessionManager(private val context: Context) {
 
     suspend fun saveServerUrl(url: String) {
         context.sessionStore.edit { it[Keys.serverUrl] = url.trimEnd('/') }
+    }
+
+    suspend fun savePendingOAuth(verifier: String, state: String) {
+        context.sessionStore.edit {
+            it[Keys.pendingOauthVerifier] = verifier
+            it[Keys.pendingOauthState] = state
+        }
+    }
+
+    /** Returns the pending verifier+state pair once, then clears it. */
+    suspend fun takePendingOAuth(): Pair<String, String>? {
+        val prefs = context.sessionStore.data.first()
+        val verifier = prefs[Keys.pendingOauthVerifier]
+        val state = prefs[Keys.pendingOauthState]
+        if (verifier.isNullOrEmpty() || state.isNullOrEmpty()) return null
+        context.sessionStore.edit {
+            it.remove(Keys.pendingOauthVerifier)
+            it.remove(Keys.pendingOauthState)
+        }
+        return verifier to state
     }
 
     suspend fun saveSession(
