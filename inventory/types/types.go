@@ -77,6 +77,12 @@ type (
 		// AllowSelectNode lets members pick a preferred node when creating
 		// tasks (remote download, archive create/extract).
 		AllowSelectNode bool `json:"allow_select_node,omitempty"`
+		// WeightedPolicies makes the default policy selection spread uploads
+		// across the group's allowed policies by free capacity: the member
+		// with the most remaining MaxTotalSize headroom that fits the file
+		// wins. Policies without a MaxTotalSize cap are excluded from the
+		// weighing; if none qualify the group default applies as before.
+		WeightedPolicies bool `json:"weighted_policies,omitempty"`
 	}
 
 	// PolicySetting 非公有的存储策略属性

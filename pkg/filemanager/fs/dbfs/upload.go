@@ -46,7 +46,7 @@ func (f *DBFS) PreValidateUpload(ctx context.Context, dst *fs.URI, files ...fs.P
 	}
 
 	// Get parent folder storage policy and performs validation
-	policy, err := f.getPreferredPolicy(ctx, dstFile)
+	policy, err := f.getPreferredPolicyForSize(ctx, dstFile, total)
 	if err != nil {
 		return err
 	}
@@ -146,7 +146,7 @@ func (f *DBFS) PrepareUpload(ctx context.Context, req *fs.UploadRequest, opts ..
 		// explicitly instead of inheriting the ancestor's preference.
 		policy, err = f.storagePolicyClient.GetPolicyByID(ctx, req.Props.PreferredStoragePolicy)
 	} else {
-		policy, err = f.getPreferredPolicy(ctx, ancestor)
+		policy, err = f.getPreferredPolicyForSize(ctx, ancestor, req.Props.Size)
 	}
 	if err != nil {
 		return nil, err

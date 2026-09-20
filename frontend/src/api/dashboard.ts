@@ -68,6 +68,7 @@ export interface GroupSetting {
   default_pinned?: number[];
   allowed_nodes?: number[];
   allow_select_node?: boolean;
+  weighted_policies?: boolean;
 }
 
 export interface AdminListGroupResponse {

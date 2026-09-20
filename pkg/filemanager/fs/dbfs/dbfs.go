@@ -11,6 +11,7 @@ import (
 
 	"github.com/cloudreve/Cloudreve/v4/application/constants"
 	"github.com/cloudreve/Cloudreve/v4/ent"
+	"github.com/cloudreve/Cloudreve/v4/ent/storagepolicy"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
@@ -759,6 +760,12 @@ func (f *DBFS) generateEncryptMetadata(ctx context.Context, uploadRequest *fs.Up
 
 // getPreferredPolicy tries to get the preferred storage policy for the given file.
 func (f *DBFS) getPreferredPolicy(ctx context.Context, file *File) (*ent.StoragePolicy, error) {
+	return f.getPreferredPolicyForSize(ctx, file, 0)
+}
+
+// getPreferredPolicyForSize is getPreferredPolicy with the incoming upload
+// size, so weighted-capacity selection can exclude policies without headroom.
+func (f *DBFS) getPreferredPolicyForSize(ctx context.Context, file *File, size int64) (*ent.StoragePolicy, error) {
 	owner := file.Owner()
 	ownerGroup := owner.Edges.Group
 	if ownerGroup == nil {
@@ -774,7 +781,7 @@ func (f *DBFS) getPreferredPolicy(ctx context.Context, file *File) (*ent.Storage
 		return nil, serializer.NewError(serializer.CodeDBError, "No active storage policy available for the group", nil)
 	}
 
-	candidate := f.pickPolicy(ctx, file, owner, allowed)
+	candidate := f.pickPolicy(ctx, file, owner, allowed, size)
 
 	// A load_balance policy resolves to one of its weighted children before
 	// any storage driver sees it.
@@ -791,9 +798,11 @@ func (f *DBFS) getPreferredPolicy(ctx context.Context, file *File) (*ent.Storage
 
 // pickPolicy chooses among the group's allowed policies: the nearest ancestor
 // directory carrying a preferred-policy marker wins; next the owner's own
-// preferred_policy setting (applied only in their own tree); finally the
-// group default, or the first allowed policy when none is configured.
-func (f *DBFS) pickPolicy(ctx context.Context, file *File, owner *ent.User, allowed []*ent.StoragePolicy) *ent.StoragePolicy {
+// preferred_policy setting (applied only in their own tree); with the group's
+// weighted_policies flag on, the allowed policy with the most free capacity
+// that fits the file; finally the group default, or the first allowed policy
+// when none is configured.
+func (f *DBFS) pickPolicy(ctx context.Context, file *File, owner *ent.User, allowed []*ent.StoragePolicy, size int64) *ent.StoragePolicy {
 	inAllowed := func(id int) *ent.StoragePolicy {
 		for _, p := range allowed {
 			if p.ID == id {
@@ -831,10 +840,39 @@ func (f *DBFS) pickPolicy(ctx context.Context, file *File, owner *ent.User, allo
 		}
 	}
 
+	if ownerGroup := owner.Edges.Group; ownerGroup != nil && ownerGroup.Settings != nil && ownerGroup.Settings.WeightedPolicies {
+		if p := f.pickByFreeCapacity(ctx, allowed, size); p != nil {
+			return p
+		}
+	}
+
 	if p := inAllowed(owner.Edges.Group.StoragePolicyID); p != nil {
 		return p
 	}
 	return allowed[0]
+}
+
+// pickByFreeCapacity returns the allowed policy with the most remaining
+// MaxTotalSize headroom that still fits size. Uncapped and suspended
+// policies are not weighed; nil is returned when nothing qualifies.
+func (f *DBFS) pickByFreeCapacity(ctx context.Context, allowed []*ent.StoragePolicy, size int64) *ent.StoragePolicy {
+	var best *ent.StoragePolicy
+	bestFree := int64(-1)
+	for _, p := range allowed {
+		if p.Settings == nil || p.Settings.MaxTotalSize <= 0 || p.Status == storagepolicy.StatusSuspended {
+			continue
+		}
+		_, used, err := f.fileClient.CountEntityByStoragePolicyID(ctx, p.ID)
+		if err != nil {
+			f.l.Warning("Failed to weigh storage policy %d usage: %s", p.ID, err)
+			continue
+		}
+		free := p.Settings.MaxTotalSize - int64(used)
+		if free >= size && free > bestFree {
+			best, bestFree = p, free
+		}
+	}
+	return best
 }
 
 func (f *DBFS) getFileByPath(ctx context.Context, navigator Navigator, path *fs.URI) (*File, error) {

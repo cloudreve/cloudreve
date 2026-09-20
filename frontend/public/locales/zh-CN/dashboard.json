@@ -1427,6 +1427,8 @@
     "editGroup": "编辑 {{group}}",
     "switchablePolicies": "可切换存储策略",
     "switchablePoliciesDes": "该组成员可以自由切换使用的存储策略。上方默认策略始终可用。",
+    "weightedPolicies": "按容量加权选择策略",
+    "weightedPoliciesDes": "启用后，未指定策略偏好的上传会被分配到剩余容量最多且可容纳该文件的可切换存储策略。仅参与设置了总容量限制的策略。",
     "sharePublicList": "公开分享目录",
     "sharePublicListDes": "开启后，用户可以将分享链接收录到公开目录（发现页）。带密码的分享无法被收录。"
   },

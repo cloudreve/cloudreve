@@ -126,6 +126,25 @@ const BasicInfoSection = () => {
               />
               <NoMarginHelperText>{t("group.switchablePoliciesDes")}</NoMarginHelperText>
             </SettingForm>
+            <SettingForm lgWidth={5}>
+              <FormControl fullWidth>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={!!values.settings?.weighted_policies}
+                      onChange={(e) =>
+                        setGroup((p: GroupEnt) => ({
+                          ...p,
+                          settings: { ...p.settings, weighted_policies: e.target.checked ? true : undefined },
+                        }))
+                      }
+                    />
+                  }
+                  label={t("group.weightedPolicies")}
+                />
+                <NoMarginHelperText>{t("group.weightedPoliciesDes")}</NoMarginHelperText>
+              </FormControl>
+            </SettingForm>
             <SettingForm title={t("group.initialStorageQuota")} lgWidth={5}>
               <FormControl fullWidth>
                 <SizeInput

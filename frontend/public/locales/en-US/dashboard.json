@@ -1427,6 +1427,8 @@
     "editGroup": "Edit {{group}}",
     "switchablePolicies": "Switchable storage policies",
     "switchablePoliciesDes": "Policies members of this group can freely switch to. The default policy above is always available.",
+    "weightedPolicies": "Weighted policy selection",
+    "weightedPoliciesDes": "When enabled, uploads without an explicit policy preference are routed to the allowed policy with the most free capacity that fits the file. Only policies with a total capacity limit are weighed.",
     "sharePublicList": "Public share directory",
     "sharePublicListDes": "When enabled, users can opt their share links into the public directory (Discover page). Password-protected shares cannot be listed."
   },
