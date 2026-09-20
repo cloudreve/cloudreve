@@ -1,19 +1,6 @@
-# Build stage
+# Runtime image: packages the goreleaser-built `cloudreve` binary that is
+# copied into the docker build context alongside this Dockerfile.
 
-FROM ghcr.io/goreleaser/goreleaser:v2.10.2 AS builder
-
-WORKDIR /src
-
-# Install goreleaser
-RUN apk add --no-cache bash curl git npm nodejs tar zip
-RUN npm install -g yarn
-
-# Perform the build
-COPY . .
-
-RUN goreleaser build --single-target --snapshot
-
-# Runtime stage
 FROM alpine:latest
 
 WORKDIR /cloudreve
@@ -33,7 +20,7 @@ ENV CR_ENABLE_ARIA2=1 \
     CR_SETTING_DEFAULT_thumb_libraw_enabled=1
 
 COPY .build/aria2.supervisor.conf .build/entrypoint.sh ./
-COPY --from=builder /src/dist/*/cloudreve ./cloudreve
+COPY cloudreve ./cloudreve
 
 RUN chmod +x ./cloudreve \
     && chmod +x ./entrypoint.sh
@@ -43,4 +30,3 @@ EXPOSE 5212 443 6888 6888/udp
 VOLUME ["/cloudreve/data"]
 
 ENTRYPOINT ["sh", "./entrypoint.sh"]
-
