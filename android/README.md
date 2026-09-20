@@ -38,8 +38,11 @@ CI runs `assembleDebug` on every PR.
   `filesDir/offline/` and registers the entry (DataStore JSON);
   star icon in the top bar opens the offline list — open via
   FileProvider, re-download to refresh, remove to delete
+- DocumentsProvider: the whole tree appears in the system Files app /
+  SAF pickers — browse, open (cached download), thumbnails, rename,
+  delete, and search all proxy to `api/v4`
 
 ## Planned next
 
-- DocumentsProvider
+- Quick-share tile, task/share notifications, local sync folder
 - No iOS. Ever.
