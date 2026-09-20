@@ -315,6 +315,18 @@ func (service *WopiService) GetFile(c *gin.Context) error {
 
 	defer entitySource.Close()
 
+	// Delegate content serving to the storage node: for entities stored
+	// off-master with no internal-proxy requirement, the WOPI client fetches
+	// bytes directly from the node's signed URL instead of relaying through
+	// master's reverse proxy.
+	if !entitySource.IsLocal() && !entitySource.ShouldInternalProxy() {
+		expire := time.Now().Add(time.Hour)
+		if u, err := entitySource.Url(c, entitysource.WithExpire(&expire)); err == nil {
+			c.Redirect(http.StatusFound, u.Url)
+			return nil
+		}
+	}
+
 	entitySource.Serve(c.Writer, c.Request,
 		entitysource.WithContext(c),
 	)
