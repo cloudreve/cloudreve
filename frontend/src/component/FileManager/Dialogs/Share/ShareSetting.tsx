@@ -85,6 +85,7 @@ export interface ShareSetting {
   password?: string;
   share_view?: boolean;
   show_readme?: boolean;
+  hide_readme?: boolean;
   allow_upload?: boolean;
   allow_edit?: boolean;
   preview_only?: boolean;
@@ -399,6 +400,16 @@ const ShareSettingContent = ({ setting, file, editing, onSettingChange }: ShareS
             </AccordionSummary>
             <AccordionDetails>
               <Trans i18nKey="application:modals.showReadmeDes" components={[<Code />]} />
+              <StyledListItemButton disabled={!setting.show_readme}>
+                <ListItemText primary={t("application:modals.hideReadme")} secondary={t("application:modals.hideReadmeDes")} />
+                <ListItemSecondaryAction>
+                  <Checkbox
+                    checked={setting.show_readme && setting.hide_readme}
+                    disabled={!setting.show_readme}
+                    onChange={() => onSettingChange({ ...setting, hide_readme: !setting.hide_readme })}
+                  />
+                </ListItemSecondaryAction>
+              </StyledListItemButton>
             </AccordionDetails>
           </Accordion>
         </>

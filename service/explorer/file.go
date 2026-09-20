@@ -518,7 +518,7 @@ func (s *FileURLService) GetArchiveDownloadSession(c *gin.Context) (*FileURLResp
 		return nil, serializer.NewError(serializer.CodeInternalSetting, "failed to create archive download session", err)
 	}
 
-	base := settings.SiteURL(c)
+	base := settings.DownloadURLBase(c)
 	downloadUrl := routes.MasterArchiveDownloadUrl(base, sessionId)
 	finalUrl, err := auth.SignURI(c, dep.GeneralAuth(), downloadUrl.String(), &expire)
 	if err != nil {

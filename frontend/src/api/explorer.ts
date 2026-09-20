@@ -90,6 +90,7 @@ export interface Share {
   source_uri?: string;
   password?: string;
   show_readme?: boolean;
+  hide_readme?: boolean;
   allow_upload?: boolean;
   allow_edit?: boolean;
   preview_only?: boolean;
@@ -360,6 +361,7 @@ export interface ShareCreateService {
   expire?: number;
   share_view?: boolean;
   show_readme?: boolean;
+  hide_readme?: boolean;
   allow_upload?: boolean;
   allow_edit?: boolean;
   preview_only?: boolean;

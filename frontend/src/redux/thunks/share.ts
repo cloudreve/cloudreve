@@ -2,7 +2,6 @@ import i18next from "i18next";
 import { closeSnackbar, enqueueSnackbar, SnackbarKey } from "notistack";
 import {
   getFileInfo,
-  getFileList,
   getShareInfo,
   sendCreateFile,
   sendCreateShare,
@@ -11,7 +10,6 @@ import {
 import { FileResponse, Share, ShareCreateService } from "../../api/explorer.ts";
 import { DefaultCloseAction, OpenReadMeAction } from "../../component/Common/Snackbar/snackbar.tsx";
 import { ShareSetting } from "../../component/FileManager/Dialogs/Share/ShareSetting.tsx";
-import { getPaginationState } from "../../component/FileManager/Pagination/PaginationFooter.tsx";
 import CrUri, { Filesystem } from "../../util/uri.ts";
 import { fileUpdated } from "../fileManagerSlice.ts";
 import {
@@ -39,6 +37,7 @@ export function createOrUpdateShareLink(
       password: setting.password,
       share_view: setting.share_view,
       show_readme: setting.show_readme,
+      hide_readme: setting.show_readme ? setting.hide_readme : false,
       allow_upload: setting.allow_upload || setting.allow_edit,
       allow_edit: setting.allow_edit,
       preview_only: setting.preview_only,
@@ -202,7 +201,7 @@ const supportedReadMeFiles = ["README.md", "README.txt"];
 
 export function detectReadMe(index: number, isTablet: boolean): AppThunk<Promise<void>> {
   return async (dispatch, getState) => {
-    const { files: list, pagination } = getState().fileManager[index]?.list ?? {};
+    const { files: list } = getState().fileManager[index]?.list ?? {};
     if (list) {
       // Find readme file from highest to lowest priority
       for (const readmeFile of supportedReadMeFiles) {
@@ -214,10 +213,11 @@ export function detectReadMe(index: number, isTablet: boolean): AppThunk<Promise
       }
     }
 
-    // Not found in current file list, try to get file directly
+    // Not found in current file list, try to get file directly. Always
+    // probe: the readme may be filtered out of the listing entirely
+    // (hide_readme) or live on a page we have not fetched yet.
     const path = getState().fileManager[index]?.pure_path;
-    const hasMorePages = getPaginationState(pagination).moreItems;
-    if (path && hasMorePages) {
+    if (path) {
       const uri = new CrUri(path);
       for (const readmeFile of supportedReadMeFiles) {
         try {

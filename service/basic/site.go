@@ -58,6 +58,11 @@ type SiteConfig struct {
 	// can offer a download-route picker (#2987).
 	DownloadCDNRoutes []setting.CDNRoute `json:"download_cdn_routes,omitempty"`
 
+	// DownloadCDNShuffle tells clients generated download URLs are already
+	// spread across the site URL and all CDN routes server-side (#173), so
+	// the manual route picker can be skipped.
+	DownloadCDNShuffle bool `json:"download_cdn_shuffle,omitempty"`
+
 	// AbuseCaptcha controls whether the report-abuse dialog shows captcha.
 	AbuseCaptcha bool `json:"abuse_captcha,omitempty"`
 
@@ -260,6 +265,7 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 		ShareDefaultPrivate:        shareDefaults.PrivateByDefault,
 		DefaultShareLinksInProfile: string(shareDefaults.LinksInProfile),
 		DownloadCDNRoutes:          settings.DownloadCDNRoutes(c),
+		DownloadCDNShuffle:         settings.DownloadCDNShuffle(c),
 		AbuseCaptcha:               settings.AbuseCaptchaEnabled(c),
 		UploadDedup:                settings.DBFS(c).DedupScope != "off",
 		TaskNodes:                  taskNodes,

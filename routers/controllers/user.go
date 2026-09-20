@@ -323,6 +323,20 @@ func UserInit2FA(c *gin.Context) {
 	})
 }
 
+// UserBackup2FA regenerates one-time 2FA recovery codes. Plaintext codes are
+// returned once; only digests are persisted.
+func UserBackup2FA(c *gin.Context) {
+	service := c.MustGet(user.Backup2FAParameterCtx{}).(*user.Backup2FAService)
+	codes, err := service.Process(c)
+	if respondErr(c, err) {
+		return
+	}
+
+	c.JSON(200, serializer.Response{
+		Data: codes,
+	})
+}
+
 // UserPerformCopySession copy to create new session or refresh current session
 func UserPerformCopySession(c *gin.Context) {
 	//var service user.CopySessionService

@@ -61,6 +61,7 @@ const shareToSetting = (share: ShareModel, t: TFunction): ShareSetting => {
     use_custom_password: true,
     share_view: share.share_view,
     show_readme: share.show_readme,
+    hide_readme: share.hide_readme,
     allow_upload: share.allow_upload,
     allow_edit: share.allow_edit,
     preview_only: share.preview_only,

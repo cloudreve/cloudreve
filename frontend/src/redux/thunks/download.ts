@@ -137,7 +137,14 @@ export function backendBatchDownload(files: FileResponse[]): AppThunk {
 // signature stays valid through the CDN. Cancel falls back to direct.
 export function pickDownloadRoute(url: string): AppThunk<Promise<string>> {
   return async (dispatch, getState) => {
-    const routes = getState().siteConfig.basic.config.download_cdn_routes;
+    const config = getState().siteConfig.basic.config;
+    // With server-side shuffling the URL already points at a random
+    // endpoint; the manual picker would only confuse (#173).
+    if (config.download_cdn_shuffle) {
+      return url;
+    }
+
+    const routes = config.download_cdn_routes;
     if (!routes || routes.length === 0) {
       return url;
     }

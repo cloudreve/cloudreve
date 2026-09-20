@@ -854,6 +854,8 @@
     "ssoRegisterEnabledDes": "用户首次通过 SSO 登录时自动创建本地账号。下方的注册邮箱过滤规则同样适用。",
     "downloadCdnRoutes": "下载 CDN 线路",
     "downloadCdnRoutesDes": "供用户选择的备用下载端点，每行一条，格式为 名称=URL（例如 线路1=https://cdn1.example.com）。线路需将完整的请求路径与查询串代理回本站以保证签名有效；浏览器内下载需要线路配置 CORS 头。",
+    "downloadCdnShuffle": "随机分发下载线路",
+    "downloadCdnShuffleDes": "启用后，每条生成的下载链接将随机分发到本站地址或任一已配置的 CDN 线路，批量导出到下载器时不同链接会命中不同端点。启用期间将隐藏手动选择线路。",
     "ssoAutoRedirect": "自动跳转至 SSO",
     "ssoAutoRedirectDes": "跳过登录表单，直接跳转至身份提供商。在登录地址后附加 <0>?nosso=1</0> 可进入密码登录表单（例如管理员账户恢复）。",
     "ssoCallbackUrl": "回调地址",

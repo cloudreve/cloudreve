@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"crypto/md5"
+	"crypto/rand"
 	"fmt"
 	"io"
 	"net/http"
@@ -33,6 +34,10 @@ import (
 
 const (
 	twoFaEnableSessionKey = "2fa_init_"
+	// backupCodeCount is the number of one-time recovery codes issued per batch.
+	backupCodeCount = 10
+	// backupCodeAlphabet excludes ambiguous glyphs (0/o, 1/l/i).
+	backupCodeAlphabet = "abcdefghjkmnpqrstuvwxyz23456789"
 )
 
 // Init2FA 初始化二步验证
@@ -53,6 +58,72 @@ func Init2FA(c *gin.Context) (string, error) {
 	}
 
 	return key.Secret(), nil
+}
+
+type (
+	// Backup2FAService regenerates one-time 2FA recovery codes.
+	Backup2FAService struct {
+		TwoFACode string `json:"two_fa_code" binding:"required"`
+	}
+	Backup2FAParameterCtx struct{}
+)
+
+// Process generates a fresh batch of recovery codes for the current user.
+// Requires 2FA to be enabled and a valid current TOTP code, the same trust
+// bar as disabling 2FA. Plaintext codes are returned once and only their
+// digests are persisted.
+func (service *Backup2FAService) Process(c *gin.Context) ([]string, error) {
+	dep := dependency.FromContext(c)
+	u := inventory.UserFromContext(c)
+
+	if err := auth.CheckScope(c, types.ScopeUserSecurityInfoWrite); err != nil {
+		return nil, err
+	}
+
+	if u.TwoFactorSecret == "" {
+		return nil, serializer.NewError(serializer.CodeFeatureNotEnabled, "2FA is not enabled", nil)
+	}
+
+	if !totp.Validate(service.TwoFACode, u.TwoFactorSecret) {
+		return nil, serializer.NewError(serializer.Code2FACodeErr, "Incorrect 2FA code", nil)
+	}
+
+	codes := make([]string, 0, backupCodeCount)
+	digests := make([]string, 0, backupCodeCount)
+	for i := 0; i < backupCodeCount; i++ {
+		code, err := generateBackupCode()
+		if err != nil {
+			return nil, serializer.NewError(serializer.CodeInternalSetting, "Failed to generate recovery codes", err)
+		}
+		digest, err := inventory.DigestPassword(code)
+		if err != nil {
+			return nil, serializer.NewError(serializer.CodeInternalSetting, "Failed to hash recovery codes", err)
+		}
+		codes = append(codes, code[:4]+"-"+code[4:])
+		digests = append(digests, digest)
+	}
+
+	if _, err := dep.UserClient().UpdateTwoFABackupCodes(c, u, digests); err != nil {
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to store recovery codes", err)
+	}
+	activity.Record(c, dep.SettingProvider(), dep.ActivityClient(), types.EventEnable2FA,
+		activity.Extra(map[string]any{"recovery_codes": true}))
+
+	return codes, nil
+}
+
+// generateBackupCode returns an 8-char code drawn from an unambiguous
+// alphabet (~41 bits of entropy per code).
+func generateBackupCode() (string, error) {
+	buf := make([]byte, 8)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	code := make([]byte, 8)
+	for i, b := range buf {
+		code[i] = backupCodeAlphabet[int(b)%len(backupCodeAlphabet)]
+	}
+	return string(code), nil
 }
 
 type (

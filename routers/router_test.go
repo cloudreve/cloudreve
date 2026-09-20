@@ -62,6 +62,7 @@ func TestMasterRouteWiring(t *testing.T) {
 		"PUT /api/v4/user/vault/unlock",
 		"DELETE /api/v4/user/vault/unlock",
 		"DELETE /api/v4/user/vault",
+		"PUT /api/v4/user/setting/2fa/backup",
 		"GET /f/:id/:name",
 	}
 	for _, e := range expected {

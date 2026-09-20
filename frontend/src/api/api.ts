@@ -1519,6 +1519,23 @@ export function get2FAInitSecret(): ThunkResponse<string> {
   };
 }
 
+export function regenerate2FABackupCodes(two_fa_code: string): ThunkResponse<string[]> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/user/setting/2fa/backup`,
+        {
+          method: "PUT",
+          data: { two_fa_code },
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
 export function sendPreparePasskeyRegistration(): ThunkResponse<PasskeyCredentialOption> {
   return async (dispatch, _getState) => {
     return await dispatch(

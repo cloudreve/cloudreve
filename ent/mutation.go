@@ -24343,74 +24343,76 @@ func (m *TaskMutation) ResetEdge(name string) error {
 // UserMutation represents an operation that mutates the User nodes in the graph.
 type UserMutation struct {
 	config
-	op                     Op
-	typ                    string
-	id                     *int
-	created_at             *time.Time
-	updated_at             *time.Time
-	deleted_at             *time.Time
-	email                  *string
-	nick                   *string
-	password               *string
-	status                 *user.Status
-	ban_expires            *time.Time
-	ban_reason             *string
-	last_login             *time.Time
-	storage                *int64
-	addstorage             *int64
-	credits                *int64
-	addcredits             *int64
-	two_factor_secret      *string
-	vault_password         *string
-	vault_folder           *int
-	addvault_folder        *int
-	avatar                 *string
-	settings               **types.UserSetting
-	clearedFields          map[string]struct{}
-	group                  *int
-	clearedgroup           bool
-	files                  map[int]struct{}
-	removedfiles           map[int]struct{}
-	clearedfiles           bool
-	dav_accounts           map[int]struct{}
-	removeddav_accounts    map[int]struct{}
-	cleareddav_accounts    bool
-	shares                 map[int]struct{}
-	removedshares          map[int]struct{}
-	clearedshares          bool
-	passkey                map[int]struct{}
-	removedpasskey         map[int]struct{}
-	clearedpasskey         bool
-	tasks                  map[int]struct{}
-	removedtasks           map[int]struct{}
-	clearedtasks           bool
-	fsevents               map[int]struct{}
-	removedfsevents        map[int]struct{}
-	clearedfsevents        bool
-	entities               map[int]struct{}
-	removedentities        map[int]struct{}
-	clearedentities        bool
-	oauth_grants           map[int]struct{}
-	removedoauth_grants    map[int]struct{}
-	clearedoauth_grants    bool
-	credit_txns            map[int]struct{}
-	removedcredit_txns     map[int]struct{}
-	clearedcredit_txns     bool
-	redeemed_codes         map[int]struct{}
-	removedredeemed_codes  map[int]struct{}
-	clearedredeemed_codes  bool
-	grants                 map[int]struct{}
-	removedgrants          map[int]struct{}
-	clearedgrants          bool
-	share_purchases        map[int]struct{}
-	removedshare_purchases map[int]struct{}
-	clearedshare_purchases bool
-	sso_bindings           map[int]struct{}
-	removedsso_bindings    map[int]struct{}
-	clearedsso_bindings    bool
-	done                   bool
-	oldValue               func(context.Context) (*User, error)
-	predicates             []predicate.User
+	op                            Op
+	typ                           string
+	id                            *int
+	created_at                    *time.Time
+	updated_at                    *time.Time
+	deleted_at                    *time.Time
+	email                         *string
+	nick                          *string
+	password                      *string
+	status                        *user.Status
+	ban_expires                   *time.Time
+	ban_reason                    *string
+	last_login                    *time.Time
+	storage                       *int64
+	addstorage                    *int64
+	credits                       *int64
+	addcredits                    *int64
+	two_factor_secret             *string
+	vault_password                *string
+	vault_folder                  *int
+	addvault_folder               *int
+	two_factor_backup_codes       *[]string
+	appendtwo_factor_backup_codes []string
+	avatar                        *string
+	settings                      **types.UserSetting
+	clearedFields                 map[string]struct{}
+	group                         *int
+	clearedgroup                  bool
+	files                         map[int]struct{}
+	removedfiles                  map[int]struct{}
+	clearedfiles                  bool
+	dav_accounts                  map[int]struct{}
+	removeddav_accounts           map[int]struct{}
+	cleareddav_accounts           bool
+	shares                        map[int]struct{}
+	removedshares                 map[int]struct{}
+	clearedshares                 bool
+	passkey                       map[int]struct{}
+	removedpasskey                map[int]struct{}
+	clearedpasskey                bool
+	tasks                         map[int]struct{}
+	removedtasks                  map[int]struct{}
+	clearedtasks                  bool
+	fsevents                      map[int]struct{}
+	removedfsevents               map[int]struct{}
+	clearedfsevents               bool
+	entities                      map[int]struct{}
+	removedentities               map[int]struct{}
+	clearedentities               bool
+	oauth_grants                  map[int]struct{}
+	removedoauth_grants           map[int]struct{}
+	clearedoauth_grants           bool
+	credit_txns                   map[int]struct{}
+	removedcredit_txns            map[int]struct{}
+	clearedcredit_txns            bool
+	redeemed_codes                map[int]struct{}
+	removedredeemed_codes         map[int]struct{}
+	clearedredeemed_codes         bool
+	grants                        map[int]struct{}
+	removedgrants                 map[int]struct{}
+	clearedgrants                 bool
+	share_purchases               map[int]struct{}
+	removedshare_purchases        map[int]struct{}
+	clearedshare_purchases        bool
+	sso_bindings                  map[int]struct{}
+	removedsso_bindings           map[int]struct{}
+	clearedsso_bindings           bool
+	done                          bool
+	oldValue                      func(context.Context) (*User, error)
+	predicates                    []predicate.User
 }
 
 var _ ent.Mutation = (*UserMutation)(nil)
@@ -25214,6 +25216,71 @@ func (m *UserMutation) ResetVaultFolder() {
 	m.vault_folder = nil
 	m.addvault_folder = nil
 	delete(m.clearedFields, user.FieldVaultFolder)
+}
+
+// SetTwoFactorBackupCodes sets the "two_factor_backup_codes" field.
+func (m *UserMutation) SetTwoFactorBackupCodes(s []string) {
+	m.two_factor_backup_codes = &s
+	m.appendtwo_factor_backup_codes = nil
+}
+
+// TwoFactorBackupCodes returns the value of the "two_factor_backup_codes" field in the mutation.
+func (m *UserMutation) TwoFactorBackupCodes() (r []string, exists bool) {
+	v := m.two_factor_backup_codes
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTwoFactorBackupCodes returns the old "two_factor_backup_codes" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldTwoFactorBackupCodes(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTwoFactorBackupCodes is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTwoFactorBackupCodes requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTwoFactorBackupCodes: %w", err)
+	}
+	return oldValue.TwoFactorBackupCodes, nil
+}
+
+// AppendTwoFactorBackupCodes adds s to the "two_factor_backup_codes" field.
+func (m *UserMutation) AppendTwoFactorBackupCodes(s []string) {
+	m.appendtwo_factor_backup_codes = append(m.appendtwo_factor_backup_codes, s...)
+}
+
+// AppendedTwoFactorBackupCodes returns the list of values that were appended to the "two_factor_backup_codes" field in this mutation.
+func (m *UserMutation) AppendedTwoFactorBackupCodes() ([]string, bool) {
+	if len(m.appendtwo_factor_backup_codes) == 0 {
+		return nil, false
+	}
+	return m.appendtwo_factor_backup_codes, true
+}
+
+// ClearTwoFactorBackupCodes clears the value of the "two_factor_backup_codes" field.
+func (m *UserMutation) ClearTwoFactorBackupCodes() {
+	m.two_factor_backup_codes = nil
+	m.appendtwo_factor_backup_codes = nil
+	m.clearedFields[user.FieldTwoFactorBackupCodes] = struct{}{}
+}
+
+// TwoFactorBackupCodesCleared returns if the "two_factor_backup_codes" field was cleared in this mutation.
+func (m *UserMutation) TwoFactorBackupCodesCleared() bool {
+	_, ok := m.clearedFields[user.FieldTwoFactorBackupCodes]
+	return ok
+}
+
+// ResetTwoFactorBackupCodes resets all changes to the "two_factor_backup_codes" field.
+func (m *UserMutation) ResetTwoFactorBackupCodes() {
+	m.two_factor_backup_codes = nil
+	m.appendtwo_factor_backup_codes = nil
+	delete(m.clearedFields, user.FieldTwoFactorBackupCodes)
 }
 
 // SetAvatar sets the "avatar" field.
@@ -26126,7 +26193,7 @@ func (m *UserMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 18)
+	fields := make([]string, 0, 19)
 	if m.created_at != nil {
 		fields = append(fields, user.FieldCreatedAt)
 	}
@@ -26171,6 +26238,9 @@ func (m *UserMutation) Fields() []string {
 	}
 	if m.vault_folder != nil {
 		fields = append(fields, user.FieldVaultFolder)
+	}
+	if m.two_factor_backup_codes != nil {
+		fields = append(fields, user.FieldTwoFactorBackupCodes)
 	}
 	if m.avatar != nil {
 		fields = append(fields, user.FieldAvatar)
@@ -26219,6 +26289,8 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 		return m.VaultPassword()
 	case user.FieldVaultFolder:
 		return m.VaultFolder()
+	case user.FieldTwoFactorBackupCodes:
+		return m.TwoFactorBackupCodes()
 	case user.FieldAvatar:
 		return m.Avatar()
 	case user.FieldSettings:
@@ -26264,6 +26336,8 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldVaultPassword(ctx)
 	case user.FieldVaultFolder:
 		return m.OldVaultFolder(ctx)
+	case user.FieldTwoFactorBackupCodes:
+		return m.OldTwoFactorBackupCodes(ctx)
 	case user.FieldAvatar:
 		return m.OldAvatar(ctx)
 	case user.FieldSettings:
@@ -26384,6 +26458,13 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetVaultFolder(v)
 		return nil
+	case user.FieldTwoFactorBackupCodes:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTwoFactorBackupCodes(v)
+		return nil
 	case user.FieldAvatar:
 		v, ok := value.(string)
 		if !ok {
@@ -26498,6 +26579,9 @@ func (m *UserMutation) ClearedFields() []string {
 	if m.FieldCleared(user.FieldVaultFolder) {
 		fields = append(fields, user.FieldVaultFolder)
 	}
+	if m.FieldCleared(user.FieldTwoFactorBackupCodes) {
+		fields = append(fields, user.FieldTwoFactorBackupCodes)
+	}
 	if m.FieldCleared(user.FieldAvatar) {
 		fields = append(fields, user.FieldAvatar)
 	}
@@ -26541,6 +26625,9 @@ func (m *UserMutation) ClearField(name string) error {
 		return nil
 	case user.FieldVaultFolder:
 		m.ClearVaultFolder()
+		return nil
+	case user.FieldTwoFactorBackupCodes:
+		m.ClearTwoFactorBackupCodes()
 		return nil
 	case user.FieldAvatar:
 		m.ClearAvatar()
@@ -26600,6 +26687,9 @@ func (m *UserMutation) ResetField(name string) error {
 		return nil
 	case user.FieldVaultFolder:
 		m.ResetVaultFolder()
+		return nil
+	case user.FieldTwoFactorBackupCodes:
+		m.ResetTwoFactorBackupCodes()
 		return nil
 	case user.FieldAvatar:
 		m.ResetAvatar()
