@@ -196,6 +196,21 @@ func (sc *ShareCreate) SetFile(f *File) *ShareCreate {
 	return sc.SetFileID(f.ID)
 }
 
+// AddFileIDs adds the "files" edge to the File entity by IDs.
+func (sc *ShareCreate) AddFileIDs(ids ...int) *ShareCreate {
+	sc.mutation.AddFileIDs(ids...)
+	return sc
+}
+
+// AddFiles adds the "files" edges to the File entity.
+func (sc *ShareCreate) AddFiles(f ...*File) *ShareCreate {
+	ids := make([]int, len(f))
+	for i := range f {
+		ids[i] = f[i].ID
+	}
+	return sc.AddFileIDs(ids...)
+}
+
 // AddPurchaseIDs adds the "purchases" edge to the SharePurchase entity by IDs.
 func (sc *ShareCreate) AddPurchaseIDs(ids ...int) *ShareCreate {
 	sc.mutation.AddPurchaseIDs(ids...)
@@ -405,6 +420,22 @@ func (sc *ShareCreate) createSpec() (*Share, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.file_shares = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := sc.mutation.FilesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   share.FilesTable,
+			Columns: share.FilesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := sc.mutation.PurchasesIDs(); len(nodes) > 0 {

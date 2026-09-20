@@ -65,13 +65,15 @@ type FileEdges struct {
 	Entities []*Entity `json:"entities,omitempty"`
 	// Shares holds the value of the shares edge.
 	Shares []*Share `json:"shares,omitempty"`
+	// MultiShares holds the value of the multi_shares edge.
+	MultiShares []*Share `json:"multi_shares,omitempty"`
 	// ACLEntries holds the value of the acl_entries edge.
 	ACLEntries []*AclEntry `json:"acl_entries,omitempty"`
 	// DirectLinks holds the value of the direct_links edge.
 	DirectLinks []*DirectLink `json:"direct_links,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [9]bool
+	loadedTypes [10]bool
 }
 
 // OwnerOrErr returns the Owner value or an error if the edge
@@ -149,10 +151,19 @@ func (e FileEdges) SharesOrErr() ([]*Share, error) {
 	return nil, &NotLoadedError{edge: "shares"}
 }
 
+// MultiSharesOrErr returns the MultiShares value or an error if the edge
+// was not loaded in eager-loading.
+func (e FileEdges) MultiSharesOrErr() ([]*Share, error) {
+	if e.loadedTypes[7] {
+		return e.MultiShares, nil
+	}
+	return nil, &NotLoadedError{edge: "multi_shares"}
+}
+
 // ACLEntriesOrErr returns the ACLEntries value or an error if the edge
 // was not loaded in eager-loading.
 func (e FileEdges) ACLEntriesOrErr() ([]*AclEntry, error) {
-	if e.loadedTypes[7] {
+	if e.loadedTypes[8] {
 		return e.ACLEntries, nil
 	}
 	return nil, &NotLoadedError{edge: "acl_entries"}
@@ -161,7 +172,7 @@ func (e FileEdges) ACLEntriesOrErr() ([]*AclEntry, error) {
 // DirectLinksOrErr returns the DirectLinks value or an error if the edge
 // was not loaded in eager-loading.
 func (e FileEdges) DirectLinksOrErr() ([]*DirectLink, error) {
-	if e.loadedTypes[8] {
+	if e.loadedTypes[9] {
 		return e.DirectLinks, nil
 	}
 	return nil, &NotLoadedError{edge: "direct_links"}
@@ -319,6 +330,11 @@ func (f *File) QueryShares() *ShareQuery {
 	return NewFileClient(f.config).QueryShares(f)
 }
 
+// QueryMultiShares queries the "multi_shares" edge of the File entity.
+func (f *File) QueryMultiShares() *ShareQuery {
+	return NewFileClient(f.config).QueryMultiShares(f)
+}
+
 // QueryACLEntries queries the "acl_entries" edge of the File entity.
 func (f *File) QueryACLEntries() *AclEntryQuery {
 	return NewFileClient(f.config).QueryACLEntries(f)
@@ -430,16 +446,22 @@ func (e *File) SetShares(v []*Share) {
 	e.Edges.loadedTypes[6] = true
 }
 
+// SetMultiShares manually set the edge as loaded state.
+func (e *File) SetMultiShares(v []*Share) {
+	e.Edges.MultiShares = v
+	e.Edges.loadedTypes[7] = true
+}
+
 // SetACLEntries manually set the edge as loaded state.
 func (e *File) SetACLEntries(v []*AclEntry) {
 	e.Edges.ACLEntries = v
-	e.Edges.loadedTypes[7] = true
+	e.Edges.loadedTypes[8] = true
 }
 
 // SetDirectLinks manually set the edge as loaded state.
 func (e *File) SetDirectLinks(v []*DirectLink) {
 	e.Edges.DirectLinks = v
-	e.Edges.loadedTypes[8] = true
+	e.Edges.loadedTypes[9] = true
 }
 
 // Files is a parsable slice of File.

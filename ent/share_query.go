@@ -27,6 +27,7 @@ type ShareQuery struct {
 	predicates    []predicate.Share
 	withUser      *UserQuery
 	withFile      *FileQuery
+	withFiles     *FileQuery
 	withPurchases *SharePurchaseQuery
 	withFKs       bool
 	// intermediate query (i.e. traversal path).
@@ -102,6 +103,28 @@ func (sq *ShareQuery) QueryFile() *FileQuery {
 			sqlgraph.From(share.Table, share.FieldID, selector),
 			sqlgraph.To(file.Table, file.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, share.FileTable, share.FileColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(sq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryFiles chains the current query on the "files" edge.
+func (sq *ShareQuery) QueryFiles() *FileQuery {
+	query := (&FileClient{config: sq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := sq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := sq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(share.Table, share.FieldID, selector),
+			sqlgraph.To(file.Table, file.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, share.FilesTable, share.FilesPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(sq.driver.Dialect(), step)
 		return fromU, nil
@@ -325,6 +348,7 @@ func (sq *ShareQuery) Clone() *ShareQuery {
 		predicates:    append([]predicate.Share{}, sq.predicates...),
 		withUser:      sq.withUser.Clone(),
 		withFile:      sq.withFile.Clone(),
+		withFiles:     sq.withFiles.Clone(),
 		withPurchases: sq.withPurchases.Clone(),
 		// clone intermediate query.
 		sql:  sq.sql.Clone(),
@@ -351,6 +375,17 @@ func (sq *ShareQuery) WithFile(opts ...func(*FileQuery)) *ShareQuery {
 		opt(query)
 	}
 	sq.withFile = query
+	return sq
+}
+
+// WithFiles tells the query-builder to eager-load the nodes that are connected to
+// the "files" edge. The optional arguments are used to configure the query builder of the edge.
+func (sq *ShareQuery) WithFiles(opts ...func(*FileQuery)) *ShareQuery {
+	query := (&FileClient{config: sq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	sq.withFiles = query
 	return sq
 }
 
@@ -444,9 +479,10 @@ func (sq *ShareQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Share,
 		nodes       = []*Share{}
 		withFKs     = sq.withFKs
 		_spec       = sq.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [4]bool{
 			sq.withUser != nil,
 			sq.withFile != nil,
+			sq.withFiles != nil,
 			sq.withPurchases != nil,
 		}
 	)
@@ -483,6 +519,13 @@ func (sq *ShareQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Share,
 	if query := sq.withFile; query != nil {
 		if err := sq.loadFile(ctx, query, nodes, nil,
 			func(n *Share, e *File) { n.Edges.File = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := sq.withFiles; query != nil {
+		if err := sq.loadFiles(ctx, query, nodes,
+			func(n *Share) { n.Edges.Files = []*File{} },
+			func(n *Share, e *File) { n.Edges.Files = append(n.Edges.Files, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -556,6 +599,67 @@ func (sq *ShareQuery) loadFile(ctx context.Context, query *FileQuery, nodes []*S
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (sq *ShareQuery) loadFiles(ctx context.Context, query *FileQuery, nodes []*Share, init func(*Share), assign func(*Share, *File)) error {
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[int]*Share)
+	nids := make(map[int]map[*Share]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
+		if init != nil {
+			init(node)
+		}
+	}
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(share.FilesTable)
+		s.Join(joinT).On(s.C(file.FieldID), joinT.C(share.FilesPrimaryKey[1]))
+		s.Where(sql.InValues(joinT.C(share.FilesPrimaryKey[0]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(share.FilesPrimaryKey[0]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
+	}
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(sql.NullInt64)}, values...), nil
+			}
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := int(values[0].(*sql.NullInt64).Int64)
+				inValue := int(values[1].(*sql.NullInt64).Int64)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*Share]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
+			}
+		})
+	})
+	neighbors, err := withInterceptors[[]*File](ctx, query, qr, query.inters)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected "files" node returned %v`, n.ID)
+		}
+		for kn := range nodes {
+			assign(kn, n)
 		}
 	}
 	return nil

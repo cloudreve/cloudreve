@@ -71,7 +71,7 @@ const Wopi = () => {
     }
 
     if (msg.MessageId === "UI_Sharing" || msg.MessageId === "UI_Share") {
-      dispatch(openShareDialog(FileManagerIndex.main, viewerState?.file));
+      dispatch(openShareDialog(FileManagerIndex.main, viewerState?.file ? [viewerState.file] : []));
     } else if (msg.MessageId == "UI_FileVersions") {
       dispatch(setVersionControlDialog({ open: true, file: viewerState.file }));
     }

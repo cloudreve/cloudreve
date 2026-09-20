@@ -248,15 +248,18 @@ export const getActionOpt = (
     display.orCapability.enabled(NavigatorCapability.download_file) &&
     (!inShare || display.orCapability.enabled(NavigatorCapability.create_file));
   display.showShare =
-    targets.length == 1 &&
+    targets.length >= 1 &&
     !!currentUser &&
     groupBs.enabled(GroupPermission.share) &&
     display.allUpdatable &&
-    (targets[0].owned || groupBs.enabled(GroupPermission.is_admin)) &&
+    targets.every((t) => t.owned || groupBs.enabled(GroupPermission.is_admin)) &&
     display.orCapability &&
     display.orCapability.enabled(NavigatorCapability.share) &&
-    (!targets[0].metadata ||
-      (!targets[0].metadata[Metadata.share_redirect] && !targets[0].metadata[Metadata.restore_uri]));
+    targets.every(
+      (t) =>
+        !t.metadata ||
+        (!t.metadata[Metadata.share_redirect] && !t.metadata[Metadata.restore_uri]),
+    );
   display.showMove =
     display.hasUpdatable &&
     display.orCapability &&

@@ -36,6 +36,7 @@ type FileQuery struct {
 	withMetadata        *MetadataQuery
 	withEntities        *EntityQuery
 	withShares          *ShareQuery
+	withMultiShares     *ShareQuery
 	withACLEntries      *AclEntryQuery
 	withDirectLinks     *DirectLinkQuery
 	// intermediate query (i.e. traversal path).
@@ -221,6 +222,28 @@ func (fq *FileQuery) QueryShares() *ShareQuery {
 			sqlgraph.From(file.Table, file.FieldID, selector),
 			sqlgraph.To(share.Table, share.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, file.SharesTable, file.SharesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(fq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryMultiShares chains the current query on the "multi_shares" edge.
+func (fq *FileQuery) QueryMultiShares() *ShareQuery {
+	query := (&ShareClient{config: fq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := fq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := fq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(file.Table, file.FieldID, selector),
+			sqlgraph.To(share.Table, share.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, file.MultiSharesTable, file.MultiSharesPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(fq.driver.Dialect(), step)
 		return fromU, nil
@@ -471,6 +494,7 @@ func (fq *FileQuery) Clone() *FileQuery {
 		withMetadata:        fq.withMetadata.Clone(),
 		withEntities:        fq.withEntities.Clone(),
 		withShares:          fq.withShares.Clone(),
+		withMultiShares:     fq.withMultiShares.Clone(),
 		withACLEntries:      fq.withACLEntries.Clone(),
 		withDirectLinks:     fq.withDirectLinks.Clone(),
 		// clone intermediate query.
@@ -553,6 +577,17 @@ func (fq *FileQuery) WithShares(opts ...func(*ShareQuery)) *FileQuery {
 		opt(query)
 	}
 	fq.withShares = query
+	return fq
+}
+
+// WithMultiShares tells the query-builder to eager-load the nodes that are connected to
+// the "multi_shares" edge. The optional arguments are used to configure the query builder of the edge.
+func (fq *FileQuery) WithMultiShares(opts ...func(*ShareQuery)) *FileQuery {
+	query := (&ShareClient{config: fq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	fq.withMultiShares = query
 	return fq
 }
 
@@ -656,7 +691,7 @@ func (fq *FileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*File, e
 	var (
 		nodes       = []*File{}
 		_spec       = fq.querySpec()
-		loadedTypes = [9]bool{
+		loadedTypes = [10]bool{
 			fq.withOwner != nil,
 			fq.withStoragePolicies != nil,
 			fq.withParent != nil,
@@ -664,6 +699,7 @@ func (fq *FileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*File, e
 			fq.withMetadata != nil,
 			fq.withEntities != nil,
 			fq.withShares != nil,
+			fq.withMultiShares != nil,
 			fq.withACLEntries != nil,
 			fq.withDirectLinks != nil,
 		}
@@ -729,6 +765,13 @@ func (fq *FileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*File, e
 		if err := fq.loadShares(ctx, query, nodes,
 			func(n *File) { n.Edges.Shares = []*Share{} },
 			func(n *File, e *Share) { n.Edges.Shares = append(n.Edges.Shares, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := fq.withMultiShares; query != nil {
+		if err := fq.loadMultiShares(ctx, query, nodes,
+			func(n *File) { n.Edges.MultiShares = []*Share{} },
+			func(n *File, e *Share) { n.Edges.MultiShares = append(n.Edges.MultiShares, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -985,6 +1028,67 @@ func (fq *FileQuery) loadShares(ctx context.Context, query *ShareQuery, nodes []
 			return fmt.Errorf(`unexpected referenced foreign-key "file_shares" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
+	}
+	return nil
+}
+func (fq *FileQuery) loadMultiShares(ctx context.Context, query *ShareQuery, nodes []*File, init func(*File), assign func(*File, *Share)) error {
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[int]*File)
+	nids := make(map[int]map[*File]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
+		if init != nil {
+			init(node)
+		}
+	}
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(file.MultiSharesTable)
+		s.Join(joinT).On(s.C(share.FieldID), joinT.C(file.MultiSharesPrimaryKey[0]))
+		s.Where(sql.InValues(joinT.C(file.MultiSharesPrimaryKey[1]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(file.MultiSharesPrimaryKey[1]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
+	}
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(sql.NullInt64)}, values...), nil
+			}
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := int(values[0].(*sql.NullInt64).Int64)
+				inValue := int(values[1].(*sql.NullInt64).Int64)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*File]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
+			}
+		})
+	})
+	neighbors, err := withInterceptors[[]*Share](ctx, query, qr, query.inters)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected "multi_shares" node returned %v`, n.ID)
+		}
+		for kn := range nodes {
+			assign(kn, n)
+		}
 	}
 	return nil
 }

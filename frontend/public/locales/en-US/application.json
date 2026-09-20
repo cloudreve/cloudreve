@@ -685,7 +685,10 @@
     "viewSetting": "View setting",
     "saved": "Saved",
     "notSet": "Not set",
-    "deleteViewSetting": "Delete view setting"
+    "deleteViewSetting": "Delete view setting",
+    "shareTargets": "Share targets",
+    "shareTargetsCount_one": "{{count}} file selected",
+    "shareTargetsCount_other": "{{count}} files selected"
   },
   "uploader": {
     "fileCopyName": "Copy of ",

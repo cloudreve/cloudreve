@@ -147,7 +147,7 @@ const FileSelectedActions = forwardRef(({ targets }: FileSelectedActionsProps, r
             )}
             {displayOpt.showShare && (
               <Tooltip title={t("application:fileManager.share")}>
-                <ActionButton onClick={() => dispatch(openShareDialog(0, targets[0]))}>
+                <ActionButton onClick={() => dispatch(openShareDialog(0, targets))}>
                   <ShareOutlined fontSize={"small"} />
                 </ActionButton>
               </Tooltip>

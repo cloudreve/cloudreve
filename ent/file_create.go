@@ -255,6 +255,21 @@ func (fc *FileCreate) AddShares(s ...*Share) *FileCreate {
 	return fc.AddShareIDs(ids...)
 }
 
+// AddMultiShareIDs adds the "multi_shares" edge to the Share entity by IDs.
+func (fc *FileCreate) AddMultiShareIDs(ids ...int) *FileCreate {
+	fc.mutation.AddMultiShareIDs(ids...)
+	return fc
+}
+
+// AddMultiShares adds the "multi_shares" edges to the Share entity.
+func (fc *FileCreate) AddMultiShares(s ...*Share) *FileCreate {
+	ids := make([]int, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return fc.AddMultiShareIDs(ids...)
+}
+
 // AddACLEntryIDs adds the "acl_entries" edge to the AclEntry entity by IDs.
 func (fc *FileCreate) AddACLEntryIDs(ids ...int) *FileCreate {
 	fc.mutation.AddACLEntryIDs(ids...)
@@ -544,6 +559,22 @@ func (fc *FileCreate) createSpec() (*File, *sqlgraph.CreateSpec) {
 			Inverse: false,
 			Table:   file.SharesTable,
 			Columns: []string{file.SharesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(share.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := fc.mutation.MultiSharesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   file.MultiSharesTable,
+			Columns: file.MultiSharesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(share.FieldID, field.TypeInt),

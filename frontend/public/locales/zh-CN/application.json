@@ -685,7 +685,10 @@
     "viewSetting": "视图设置",
     "saved": "已保存",
     "notSet": "未设置",
-    "deleteViewSetting": "删除视图设置"
+    "deleteViewSetting": "删除视图设置",
+    "shareTargets": "分享对象",
+    "shareTargetsCount_one": "已选择 {{count}} 个项目",
+    "shareTargetsCount_other": "已选择 {{count}} 个项目"
   },
   "uploader": {
     "fileCopyName": "副本_",

@@ -960,10 +960,10 @@ export function applyIcon(index: number, files: FileResponse[], icon?: string): 
   };
 }
 
-export function openShareDialog(index: number, src: FileResponse): AppThunk {
+export function openShareDialog(index: number, src: FileResponse[]): AppThunk {
   return async (dispatch, _getState) => {
     dispatch(closeContextMenu({ index, value: undefined }));
-    dispatch(setShareLinkDialog({ open: true, file: src }));
+    dispatch(setShareLinkDialog({ open: true, file: src[0], files: src }));
   };
 }
 

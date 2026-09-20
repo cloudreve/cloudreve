@@ -98,6 +98,7 @@ export interface Share {
   price?: number;
   paid?: boolean;
   purchase_ticket?: string;
+  file_count?: number;
 }
 
 export enum PolicyType {
@@ -338,7 +339,8 @@ export interface PatchMetadataService extends MultipleUriService {
 }
 
 export interface ShareCreateService {
-  uri: string;
+  uri?: string;
+  uris?: string[];
   downloads?: number;
   is_private?: boolean;
   password?: string;

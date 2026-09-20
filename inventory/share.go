@@ -20,8 +20,9 @@ import (
 
 type (
 	// Ctx keys for eager loading options.
-	LoadShareFile struct{}
-	LoadShareUser struct{}
+	LoadShareFile  struct{}
+	LoadShareUser  struct{}
+	LoadShareFiles struct{}
 )
 
 var (
@@ -68,8 +69,11 @@ type (
 		Expires         *time.Time
 		OwnerID         int
 		FileID          int
-		Props           *types.ShareProps
-		PricePoints     int
+		// FileIDs is the full set of a multi-file share, anchor included.
+		// Create-only: an existing share's file set never changes.
+		FileIDs     []int
+		Props       *types.ShareProps
+		PricePoints int
 	}
 
 	ListShareArgs struct {
@@ -156,6 +160,9 @@ func (c *shareClient) Upsert(ctx context.Context, params *CreateShareParams) (*e
 	}
 	if params.PricePoints > 0 {
 		query.SetPricePoints(params.PricePoints)
+	}
+	if len(params.FileIDs) > 1 {
+		query.AddFileIDs(params.FileIDs...)
 	}
 
 	return query.Save(ctx)
@@ -256,7 +263,22 @@ func IsValidShare(share *ent.Share) error {
 		return ErrSourceFileInvalid
 	}
 
-	// Check source file status
+	// Check source file status. Multi-file shares stay valid while at least
+	// one linked file is alive; single shares require the anchor file.
+	if len(share.Edges.Files) > 0 {
+		alive := false
+		for _, f := range share.Edges.Files {
+			if f.FileChildren > 0 && f.OwnerID == owner.ID {
+				alive = true
+				break
+			}
+		}
+		if !alive {
+			return ErrSourceFileInvalid
+		}
+		return nil
+	}
+
 	file, err := share.Edges.FileOrErr()
 	if err != nil || file.FileChildren == 0 || file.OwnerID != owner.ID {
 		// Source file already deleted
@@ -377,7 +399,10 @@ func (c *shareClient) listQuery(args *ListShareArgs) *ent.ShareQuery {
 	}
 
 	if args.FileID > 0 {
-		query.Where(share.HasFileWith(file.ID(args.FileID)))
+		query.Where(share.Or(
+			share.HasFileWith(file.ID(args.FileID)),
+			share.HasFilesWith(file.ID(args.FileID)),
+		))
 	}
 
 	if len(args.ShareIDs) > 0 {
@@ -440,6 +465,11 @@ func getShareOrderOption(args *ListShareArgs) []share.OrderOption {
 func withShareEagerLoading(ctx context.Context, q *ent.ShareQuery) *ent.ShareQuery {
 	if v, ok := ctx.Value(LoadShareFile{}).(bool); ok && v {
 		q.WithFile(func(q *ent.FileQuery) {
+			withFileEagerLoading(ctx, q)
+		})
+	}
+	if v, ok := ctx.Value(LoadShareFiles{}).(bool); ok && v {
+		q.WithFiles(func(q *ent.FileQuery) {
 			withFileEagerLoading(ctx, q)
 		})
 	}

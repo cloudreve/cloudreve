@@ -64,6 +64,7 @@ type (
 		*baseNavigator
 		shareRoot       *File
 		singleFileShare bool
+		multiFileShare  bool
 		ownerRoot       *File
 		share           *ent.Share
 		owner           *ent.User
@@ -83,6 +84,7 @@ type (
 		ShareRoot       *File
 		OwnerRoot       *File
 		SingleFileShare bool
+		MultiFileShare  bool
 		Share           *ent.Share
 		Owner           *ent.User
 		AclCaps         *boolset.BooleanSet
@@ -97,6 +99,7 @@ func (n *shareNavigator) PersistState(kv cache.Driver, key string) {
 			ShareRoot:       n.shareRoot,
 			OwnerRoot:       n.ownerRoot,
 			SingleFileShare: n.singleFileShare,
+			MultiFileShare:  n.multiFileShare,
 			Share:           n.share,
 			Owner:           n.owner,
 			AclCaps:         n.aclCaps,
@@ -111,6 +114,7 @@ func (n *shareNavigator) RestoreState(s State) error {
 		n.shareRoot = state.ShareRoot
 		n.ownerRoot = state.OwnerRoot
 		n.singleFileShare = state.SingleFileShare
+		n.multiFileShare = state.MultiFileShare
 		n.share = state.Share
 		n.aclCaps = state.AclCaps
 		n.owner = state.Owner
@@ -140,6 +144,7 @@ func (n *shareNavigator) Root(ctx context.Context, path *fs.URI) (*File, error) 
 	ctx = context.WithValue(ctx, inventory.LoadShareUser{}, true)
 	ctx = context.WithValue(ctx, inventory.LoadUserGroup{}, true)
 	ctx = context.WithValue(ctx, inventory.LoadShareFile{}, true)
+	ctx = context.WithValue(ctx, inventory.LoadShareFiles{}, true)
 	share, err := n.shareClient.GetByHashID(ctx, path.ID(hashid.EncodeUserID(n.hasher, n.user.ID)))
 	if err != nil {
 		return nil, ErrShareNotFound.WithError(err)
@@ -168,29 +173,65 @@ func (n *shareNavigator) Root(ctx context.Context, path *fs.URI) (*File, error) 
 		}
 	}
 
-	// Share permission setting should overwrite root folder's permission
-	n.shareRoot = newFile(nil, share.Edges.File)
+	var ownerRoot *File
+	if len(share.Edges.Files) > 0 {
+		// Multi-file share: a synthetic folder root unions every linked
+		// file. The anchor file edge still drives validity, ACL and the
+		// paid gate.
+		n.multiFileShare = true
+		n.shareRoot = newFile(nil, &ent.File{
+			Type: int(types.FileTypeFolder),
+			Name: share.Edges.File.Name,
+		})
+		n.shareRoot.Path[pathIndexUser] = path.Root()
+		n.shareRoot.OwnerModel = n.owner
+		n.shareRoot.IsUserRoot = true
+		n.shareRoot.disableView = (share.Props == nil || !share.Props.ShareView) && n.user.ID != n.owner.ID
+		n.shareRoot.CapabilitiesBs = n.Capabilities(false).Capability
 
-	// Find the user side root of the file.
-	ownerRoot, err := n.findRoot(ctx, n.shareRoot)
-	if err != nil {
-		return nil, err
-	}
+		for _, m := range share.Edges.Files {
+			if m.FileChildren == 0 {
+				// Deleted or trashed — excluded like IsValidShare.
+				continue
+			}
+			child, realRoot, err := n.linkSharedFile(ctx, m)
+			if err != nil || realRoot.Name() != inventory.RootFolderName {
+				delete(n.shareRoot.Children, m.Name)
+				continue
+			}
+			_ = child
+			if ownerRoot == nil {
+				ownerRoot = realRoot
+			}
+		}
+		if ownerRoot == nil {
+			return nil, ErrShareNotFound
+		}
+	} else {
+		// Share permission setting should overwrite root folder's permission
+		n.shareRoot = newFile(nil, share.Edges.File)
 
-	if n.shareRoot.Type() == types.FileTypeFile {
-		n.singleFileShare = true
-		n.shareRoot = n.shareRoot.Parent
-	}
+		// Find the user side root of the file.
+		ownerRoot, err = n.findRoot(ctx, n.shareRoot)
+		if err != nil {
+			return nil, err
+		}
 
-	n.shareRoot.Path[pathIndexUser] = path.Root()
-	n.shareRoot.OwnerModel = n.owner
-	n.shareRoot.IsUserRoot = true
-	n.shareRoot.disableView = (share.Props == nil || !share.Props.ShareView) && n.user.ID != n.owner.ID
-	n.shareRoot.CapabilitiesBs = n.Capabilities(false).Capability
+		if n.shareRoot.Type() == types.FileTypeFile {
+			n.singleFileShare = true
+			n.shareRoot = n.shareRoot.Parent
+		}
 
-	// Check if any ancestors is deleted
-	if ownerRoot.Name() != inventory.RootFolderName {
-		return nil, ErrShareNotFound
+		n.shareRoot.Path[pathIndexUser] = path.Root()
+		n.shareRoot.OwnerModel = n.owner
+		n.shareRoot.IsUserRoot = true
+		n.shareRoot.disableView = (share.Props == nil || !share.Props.ShareView) && n.user.ID != n.owner.ID
+		n.shareRoot.CapabilitiesBs = n.Capabilities(false).Capability
+
+		// Check if any ancestors is deleted
+		if ownerRoot.Name() != inventory.RootFolderName {
+			return nil, ErrShareNotFound
+		}
 	}
 
 	if n.user.ID != n.owner.ID && !n.user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionShareDownload)) {
@@ -226,6 +267,34 @@ func (n *shareNavigator) To(ctx context.Context, path *fs.URI) (*File, error) {
 
 	current, lastAncestor := n.shareRoot, n.shareRoot
 	elements := path.Elements()
+
+	// Multi-file share: the first path element must be one of the linked
+	// files; deeper elements walk into it like a normal folder share.
+	if n.multiFileShare && len(elements) > 0 {
+		first, ok := n.shareRoot.Children[elements[0]]
+		if !ok {
+			// Restored navigators may carry an empty child map — repopulate
+			// from the linked file set before failing.
+			if _, err := n.latestSharedFiles(ctx); err == nil {
+				first, ok = n.shareRoot.Children[elements[0]]
+			}
+		}
+		if !ok {
+			return nil, fs.ErrPathNotExist
+		}
+
+		current = first
+		var err error
+		for index := 1; index < len(elements); index++ {
+			lastAncestor = current
+			current, err = n.walkNext(ctx, current, elements[index], index == len(elements)-1)
+			if err != nil {
+				return lastAncestor, fmt.Errorf("failed to walk into %q: %w", elements[index], err)
+			}
+		}
+
+		return current, nil
+	}
 
 	// If target is root of single file share, the root itself is the target.
 	if len(elements) == 1 && n.singleFileShare {
@@ -284,7 +353,61 @@ func (n *shareNavigator) Children(ctx context.Context, parent *File, args *ListA
 		}, nil
 	}
 
+	// The synthetic root of a multi-file share lists the union of linked
+	// files instead of any real folder's children.
+	if n.multiFileShare && (parent == nil || parent.Model == nil || parent.Model.ID == 0) {
+		files, err := n.latestSharedFiles(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		return &ListResult{
+			Files:      files,
+			Pagination: &inventory.PaginationResults{},
+		}, nil
+	}
+
 	return n.baseNavigator.children(ctx, parent, args)
+}
+
+// linkSharedFile attaches a linked file of a multi-file share under the
+// synthetic root, then rebuilds its real parent chain so Uri(true)
+// resolves to the owner's filesystem. The returned root is the file's
+// user-side root; callers validate it against RootFolderName.
+func (n *shareNavigator) linkSharedFile(ctx context.Context, m *ent.File) (*File, *File, error) {
+	child := newFile(n.shareRoot, m)
+	child.OwnerModel = n.owner
+
+	realRoot, err := n.findRoot(ctx, child)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	realRoot.Path[pathIndexRoot] = newMyIDUri(hashid.EncodeUserID(n.hasher, n.owner.ID))
+	return child, realRoot, nil
+}
+
+// latestSharedFiles reloads every linked file of a multi-file share so
+// deleted entries drop out of the listing. Each result is also registered
+// under shareRoot.Children for To() resolution.
+func (n *shareNavigator) latestSharedFiles(ctx context.Context) ([]*File, error) {
+	files := make([]*File, 0, len(n.share.Edges.Files))
+	for _, m := range n.share.Edges.Files {
+		file, err := n.fileClient.GetByID(ctx, m.ID)
+		if err != nil {
+			continue
+		}
+
+		child, realRoot, err := n.linkSharedFile(ctx, file)
+		if err != nil || realRoot.Name() != inventory.RootFolderName {
+			delete(n.shareRoot.Children, file.Name)
+			continue
+		}
+
+		files = append(files, child)
+	}
+
+	return files, nil
 }
 
 func (n *shareNavigator) latestSharedSingleFile(ctx context.Context) (*File, error) {
@@ -322,14 +445,35 @@ func (n *shareNavigator) Capabilities(isSearching bool) *fs.NavigatorProps {
 
 // shareCapabilities derives the effective capability set from share props.
 func (n *shareNavigator) shareCapabilities() *boolset.BooleanSet {
+	var bs *boolset.BooleanSet
 	// Matched ACL entries fully define a non-owner visitor's capabilities;
 	// when no entry matched (nil) share props apply as the link default.
 	if n.aclCaps != nil && n.owner != nil && n.user.ID != n.owner.ID {
-		bs := aclPermsToCapabilities(n.aclCaps)
-		n.stripUnpaid(bs)
-		return bs
+		bs = aclPermsToCapabilities(n.aclCaps)
+	} else {
+		bs = n.propsCapabilities()
 	}
 
+	// Multi-file shares are a read/download union: write targets are
+	// ambiguous at the synthetic root, which owns no real folder row.
+	if n.multiFileShare {
+		boolset.Sets(map[NavigatorCapability]bool{
+			NavigatorCapabilityUploadFile:     false,
+			NavigatorCapabilityCreateFile:     false,
+			NavigatorCapabilityLockFile:       false,
+			NavigatorCapabilityRenameFile:     false,
+			NavigatorCapabilityDeleteFile:     false,
+			NavigatorCapabilitySoftDelete:     false,
+			NavigatorCapabilityUpdateMetadata: false,
+		}, bs)
+	}
+
+	n.stripUnpaid(bs)
+	return bs
+}
+
+// propsCapabilities maps share props to the default link capability set.
+func (n *shareNavigator) propsCapabilities() *boolset.BooleanSet {
 	bs := &boolset.BooleanSet{}
 	boolset.Sets(map[NavigatorCapability]bool{
 		NavigatorCapabilityListChildren:  true,
@@ -376,7 +520,6 @@ func (n *shareNavigator) shareCapabilities() *boolset.BooleanSet {
 		boolset.Set(int(NavigatorCapabilitySoftDelete), true, bs)
 	}
 
-	n.stripUnpaid(bs)
 	return bs
 }
 

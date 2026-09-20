@@ -55,11 +55,13 @@ type ShareEdges struct {
 	User *User `json:"user,omitempty"`
 	// File holds the value of the file edge.
 	File *File `json:"file,omitempty"`
+	// Files holds the value of the files edge.
+	Files []*File `json:"files,omitempty"`
 	// Purchases holds the value of the purchases edge.
 	Purchases []*SharePurchase `json:"purchases,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 }
 
 // UserOrErr returns the User value or an error if the edge
@@ -88,10 +90,19 @@ func (e ShareEdges) FileOrErr() (*File, error) {
 	return nil, &NotLoadedError{edge: "file"}
 }
 
+// FilesOrErr returns the Files value or an error if the edge
+// was not loaded in eager-loading.
+func (e ShareEdges) FilesOrErr() ([]*File, error) {
+	if e.loadedTypes[2] {
+		return e.Files, nil
+	}
+	return nil, &NotLoadedError{edge: "files"}
+}
+
 // PurchasesOrErr returns the Purchases value or an error if the edge
 // was not loaded in eager-loading.
 func (e ShareEdges) PurchasesOrErr() ([]*SharePurchase, error) {
-	if e.loadedTypes[2] {
+	if e.loadedTypes[3] {
 		return e.Purchases, nil
 	}
 	return nil, &NotLoadedError{edge: "purchases"}
@@ -237,6 +248,11 @@ func (s *Share) QueryFile() *FileQuery {
 	return NewShareClient(s.config).QueryFile(s)
 }
 
+// QueryFiles queries the "files" edge of the Share entity.
+func (s *Share) QueryFiles() *FileQuery {
+	return NewShareClient(s.config).QueryFiles(s)
+}
+
 // QueryPurchases queries the "purchases" edge of the Share entity.
 func (s *Share) QueryPurchases() *SharePurchaseQuery {
 	return NewShareClient(s.config).QueryPurchases(s)
@@ -316,10 +332,16 @@ func (e *Share) SetFile(v *File) {
 	e.Edges.loadedTypes[1] = true
 }
 
+// SetFiles manually set the edge as loaded state.
+func (e *Share) SetFiles(v []*File) {
+	e.Edges.Files = v
+	e.Edges.loadedTypes[2] = true
+}
+
 // SetPurchases manually set the edge as loaded state.
 func (e *Share) SetPurchases(v []*SharePurchase) {
 	e.Edges.Purchases = v
-	e.Edges.loadedTypes[2] = true
+	e.Edges.loadedTypes[3] = true
 }
 
 // Shares is a parsable slice of Share.
