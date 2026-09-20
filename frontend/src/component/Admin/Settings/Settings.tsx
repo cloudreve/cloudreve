@@ -165,6 +165,7 @@ const Settings = () => {
                     "siteDes",
                     "siteURL",
                     "download_cdn_routes",
+                    "download_cdn_shuffle",
                     "siteScript",
                     "pwa_small_icon",
                     "pwa_medium_icon",

@@ -65,6 +65,24 @@ const SiteInformation = () => {
                 <NoMarginHelperText>{t("settings.downloadCdnRoutesDes")}</NoMarginHelperText>
               </FormControl>
             </SettingForm>
+            <SettingForm lgWidth={5}>
+              <FormControl fullWidth>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={isTrueVal(values.download_cdn_shuffle)}
+                      onChange={(e) =>
+                        setSettings({
+                          download_cdn_shuffle: e.target.checked ? "1" : "0",
+                        })
+                      }
+                    />
+                  }
+                  label={t("settings.downloadCdnShuffle")}
+                />
+                <NoMarginHelperText>{t("settings.downloadCdnShuffleDes")}</NoMarginHelperText>
+              </FormControl>
+            </SettingForm>
             <SettingForm title={t("settings.customFooterHTML")} lgWidth={5}>
               <FormControl fullWidth>
                 <DenseFilledTextField

@@ -572,6 +572,7 @@ var DefaultSettings = map[string]string{
 	"qq_connect_register_enabled":                "1",
 	"upload_dedup_scope":                         "owner",
 	"download_cdn_routes":                        "",
+	"download_cdn_shuffle":                       "0",
 	"email_filter_mode":                          "0",
 	"email_filter_list":                          "",
 	"email_disable_subaddress":                   "0",

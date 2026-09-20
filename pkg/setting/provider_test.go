@@ -35,3 +35,52 @@ func TestDownloadCDNRoutes(t *testing.T) {
 		{Name: "cdn2", URL: "https://cdn2.example.com/base"},
 	}, routes)
 }
+
+func TestDownloadURLBase(t *testing.T) {
+	ctx := context.Background()
+
+	// Shuffle disabled: always the resolved site URL.
+	p := NewProvider(stubAdapter{
+		"siteURL":             "https://a.example.com,https://b.example.com",
+		"download_cdn_routes": "cdn1=https://cdn1.example.com",
+	})
+	require.Equal(t, "https://a.example.com", p.DownloadURLBase(ctx).String())
+
+	// Shuffle enabled without routes: still the site URL.
+	p = NewProvider(stubAdapter{
+		"siteURL":              "https://a.example.com",
+		"download_cdn_shuffle": "1",
+	})
+	require.Equal(t, "https://a.example.com", p.DownloadURLBase(ctx).String())
+
+	// Shuffle enabled: every draw lands on site URL or a configured route,
+	// and all endpoints are reached over enough draws.
+	p = NewProvider(stubAdapter{
+		"siteURL":              "https://a.example.com",
+		"download_cdn_shuffle": "1",
+		"download_cdn_routes":  "cdn1=https://cdn1.example.com\ncdn2=https://cdn2.example.com",
+	})
+	seen := map[string]bool{}
+	for i := 0; i < 300; i++ {
+		seen[p.DownloadURLBase(ctx).String()] = true
+	}
+	require.Equal(t, map[string]bool{
+		"https://a.example.com":    true,
+		"https://cdn1.example.com": true,
+		"https://cdn2.example.com": true,
+	}, seen)
+
+	// UseFirstSiteUrl pins the primary site URL even with shuffle on.
+	pinned := context.WithValue(ctx, UseFirstSiteUrlCtxKey{}, true)
+	require.Equal(t, "https://a.example.com", p.DownloadURLBase(pinned).String())
+
+	// Invalid route entries never leak into the pool.
+	p = NewProvider(stubAdapter{
+		"siteURL":              "https://a.example.com",
+		"download_cdn_shuffle": "1",
+		"download_cdn_routes":  "bad=ftp://x.example.com",
+	})
+	for i := 0; i < 50; i++ {
+		require.Equal(t, "https://a.example.com", p.DownloadURLBase(ctx).String())
+	}
+}
