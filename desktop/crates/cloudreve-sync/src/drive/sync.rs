@@ -804,7 +804,7 @@ impl Mount {
         // For sync root, directly walk to descendants
         let sync_root = {
             let config = self.config.read().await;
-            config.sync_path.clone()
+            config.data_root()
         };
         if paths.len() == 1 && paths[0] == sync_root {
             tracing::debug!(
@@ -904,7 +904,7 @@ impl Mount {
     ) -> Result<()> {
         let (drive_id, sync_root) = {
             let config = self.config.read().await;
-            (Uuid::parse_str(&config.id)?, config.sync_path.clone())
+            (Uuid::parse_str(&config.id)?, config.data_root())
         };
 
         for action in actions {
@@ -940,10 +940,13 @@ impl Mount {
                     aggregate_error.push(path.clone(), err);
                 } else {
                     #[cfg(not(windows))]
-                    if remote.file_type != file_type::FOLDER {
+                    if remote.file_type != file_type::FOLDER
+                        && !self.config.read().await.is_ondemand()
+                    {
                         // Non-Windows `CrPlaceholder` only records inventory metadata here.
                         // There is no CFAPI-style dehydrated placeholder, so queue a normal
-                        // download to create the real full-sync file on disk.
+                        // download to create the real full-sync file on disk. On-demand
+                        // (FUSE) drives skip this — bytes arrive on first open.
                         if let Err(err) = self
                             .task_queue
                             .enqueue(TaskPayload::download(path.clone()))
@@ -1024,10 +1027,12 @@ impl Mount {
                     aggregate_error.push(path.clone(), err);
                 } else {
                     #[cfg(not(windows))]
-                    if remote.file_type != file_type::FOLDER {
+                    if remote.file_type != file_type::FOLDER
+                        && !self.config.read().await.is_ondemand()
+                    {
                         // Non-Windows `CrPlaceholder` only refreshes inventory metadata here.
-                        // Since Linux has no on-demand placeholder backend, the real file
-                        // contents must be downloaded immediately through the task queue.
+                        // Full-sync drives fetch contents immediately through the task
+                        // queue; on-demand (FUSE) drives defer bytes to first open.
                         if let Err(err) = self
                             .task_queue
                             .enqueue(TaskPayload::download(path.clone()))
@@ -1072,6 +1077,46 @@ impl Mount {
 
                 // Cancel ongoing tasks
                 let _ = self.task_queue.cancel_by_path(path.clone()).await;
+
+                // On-demand drives never fetch eagerly: dropping the hydrated
+                // copy forces re-hydration on next open, which is the FUSE
+                // equivalent of re-downloading a changed remote file.
+                if self.config.read().await.is_ondemand() {
+                    if let Ok(md) = std::fs::symlink_metadata(path) {
+                        // Suppress the watcher Remove the eviction is about to
+                        // emit — otherwise it propagates as a remote delete of
+                        // the very file we want to re-fetch.
+                        if md.is_dir() {
+                            // A stale directory at a file's path must go too —
+                            // otherwise it permanently shadows re-hydration.
+                            self.event_blocker.register_prefix(
+                                &EventKind::Remove(RemoveKind::Any),
+                                path.clone(),
+                                std::time::Duration::from_secs(15),
+                            );
+                        } else {
+                            self.event_blocker.register_once(
+                                &EventKind::Remove(RemoveKind::Any),
+                                path.clone(),
+                            );
+                        }
+                        let res = if md.is_dir() {
+                            std::fs::remove_dir_all(path)
+                        } else {
+                            std::fs::remove_file(path)
+                        };
+                        if let Err(err) = res {
+                            tracing::warn!(
+                                target: "drive::sync",
+                                id = %self.id,
+                                path = %path.display(),
+                                error = %err,
+                                "Failed to evict hydrated copy for re-fetch"
+                            );
+                        }
+                    }
+                    return;
+                }
 
                 if let Err(err) = self
                     .task_queue
@@ -1210,7 +1255,7 @@ impl Mount {
 
         let (remote_base, sync_root) = {
             let config = self.config.read().await;
-            (config.remote_path.clone(), config.sync_path.clone())
+            (config.remote_path.clone(), config.data_root())
         };
 
         let mut target_remote_paths: HashMap<String, PathBuf> = HashMap::with_capacity(paths.len());
@@ -1963,7 +2008,7 @@ impl Mount {
     ) -> Result<(Vec<PathBuf>, HashMap<PathBuf, FileResponse>)> {
         let (remote_base, sync_root) = {
             let config = self.config.read().await;
-            (config.remote_path.clone(), config.sync_path.clone())
+            (config.remote_path.clone(), config.data_root())
         };
 
         let remote_dir_uri =

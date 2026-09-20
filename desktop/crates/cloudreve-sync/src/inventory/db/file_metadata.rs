@@ -110,6 +110,38 @@ impl InventoryDb {
         row.map(FileMetadata::try_from).transpose()
     }
 
+    /// Query direct children of a directory path for one drive.
+    ///
+    /// Rows are keyed by absolute `local_path`, so children of `parent` are the
+    /// `parent/%` rows whose remaining path segment contains no further
+    /// separator. Depth filtering happens in Rust because SQLite LIKE cannot
+    /// express "exactly one path level".
+    pub fn query_children(&self, drive_id: &str, parent: &str) -> Result<Vec<FileMetadata>> {
+        let mut conn = self.connection()?;
+        let prefix = format!("{}/%", parent.trim_end_matches('/'));
+        let rows = file_metadata_dsl::file_metadata
+            .filter(file_metadata_dsl::drive_id.eq(drive_id))
+            .filter(file_metadata_dsl::local_path.like(&prefix))
+            .load::<FileMetadataRow>(&mut conn)
+            .context("Failed to query inventory children")?;
+
+        let parent_len = parent.trim_end_matches('/').len() + 1;
+        let real_prefix = format!("{}/", parent.trim_end_matches('/'));
+        rows.into_iter()
+            .map(FileMetadata::try_from)
+            .filter(|meta| {
+                meta.as_ref()
+                    .map(|m| {
+                        // LIKE treats `_`/`%` in the parent path as wildcards,
+                        // so verify the textual prefix before the depth check.
+                        m.local_path.starts_with(&real_prefix)
+                            && !m.local_path[parent_len..].contains('/')
+                    })
+                    .unwrap_or(false)
+            })
+            .collect()
+    }
+
     /// Query file metadata by id
     pub fn query_by_id(&self, id: i64) -> Result<Option<FileMetadata>> {
         let mut conn = self.connection()?;
@@ -490,5 +522,55 @@ mod tests {
             1
         );
         assert!(db.has_drive_props(&drive_b).unwrap());
+    }
+
+    #[test]
+    fn query_children_returns_direct_children_only() {
+        let (_dir, db) = test_db();
+        let drive = Uuid::new_v4().to_string();
+        let root = "/store/dir";
+
+        for (path, folder) in [
+            ("/store/dir/a.txt", false),
+            ("/store/dir/sub", true),
+            ("/store/dir/sub/deep.txt", false),
+            ("/store/other.txt", false),
+        ] {
+            db.insert(&MetadataEntry::new(
+                Uuid::parse_str(&drive).unwrap(),
+                path.to_string(),
+                folder,
+            ))
+            .unwrap();
+        }
+
+        let children = db.query_children(&drive, root).unwrap();
+        let mut names: Vec<String> = children
+            .iter()
+            .map(|m| m.local_path.clone())
+            .collect();
+        names.sort();
+        assert_eq!(names, vec!["/store/dir/a.txt", "/store/dir/sub"]);
+    }
+
+    #[test]
+    fn query_children_does_not_confuse_like_wildcards() {
+        let (_dir, db) = test_db();
+        let drive = Uuid::new_v4().to_string();
+
+        // "a_b" contains a LIKE single-char wildcard; "aXb" must not be
+        // absorbed as a child of "a_b".
+        for path in ["/store/a_b/real.txt", "/store/aXb/phantom.txt"] {
+            db.insert(&MetadataEntry::new(
+                Uuid::parse_str(&drive).unwrap(),
+                path.to_string(),
+                false,
+            ))
+            .unwrap();
+        }
+
+        let children = db.query_children(&drive, "/store/a_b").unwrap();
+        assert_eq!(children.len(), 1);
+        assert_eq!(children[0].local_path, "/store/a_b/real.txt");
     }
 }

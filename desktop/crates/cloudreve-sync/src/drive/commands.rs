@@ -221,7 +221,7 @@ impl Mount {
     ) -> Result<()> {
         let config = self.config.read().await;
         let remote_base = config.remote_path.clone();
-        let sync_path = config.sync_path.clone();
+        let sync_path = config.data_root();
         drop(config);
 
         let uri = local_path_to_cr_uri(path.clone(), sync_path, remote_base)
@@ -354,7 +354,7 @@ impl Mount {
     pub async fn fetch_placeholders(&self, path: PathBuf) -> Result<GetPlacehodlerResult> {
         let config = self.config.read().await;
         let remote_base = config.remote_path.clone();
-        let sync_path = config.sync_path.clone();
+        let sync_path = config.data_root();
         drop(config);
 
         let uri = local_path_to_cr_uri(path.clone(), sync_path, remote_base)
@@ -409,9 +409,12 @@ impl Mount {
     }
 
     pub async fn generate_thumbnail(&self, path: PathBuf) -> Result<Bytes> {
+        // `path` arrives in mount space (user-facing); inventory rows are keyed
+        // by store path in on-demand mode.
+        let store_path = self.config.read().await.mount_to_store(&path);
         let file_meta = self
             .inventory
-            .query_by_path(path.to_str().unwrap_or(""))
+            .query_by_path(store_path.to_str().unwrap_or(""))
             .context("failed to query metadata by path")?
             .ok_or_else(|| anyhow::anyhow!("no metadata found for path: {:?}", path))?;
 
@@ -450,6 +453,8 @@ impl Mount {
     /// Create a public share link for the file or folder at `path`,
     /// returning the share URL.
     pub async fn create_share_link(&self, path: PathBuf) -> Result<String> {
+        // `path` arrives in mount space from the file manager, so the URI root
+        // is `sync_path` — mount and store share the same relative layout.
         let (sync_path, remote_base) = {
             let config = self.config.read().await;
             (config.sync_path.clone(), config.remote_path.to_string())
@@ -532,7 +537,7 @@ impl Mount {
     pub async fn rename(&self, source: PathBuf, target: PathBuf) -> Result<()> {
         let (sync_path, remote_path) = {
             let config = self.config.read().await;
-            (config.sync_path.clone(), config.remote_path.to_string())
+            (config.data_root(), config.remote_path.to_string())
         };
 
         // if target or source is not under sync root, do nothing
@@ -708,7 +713,7 @@ impl Mount {
             // Extract configuration once to avoid repeated lock acquisition
             let (sync_path, remote_base) = {
                 let config = self.config.read().await;
-                (config.sync_path.clone(), config.remote_path.to_string())
+                (config.data_root(), config.remote_path.to_string())
             };
 
             let path_uri_mappings =
@@ -766,7 +771,7 @@ impl Mount {
         let (sync_root, drive_id) = {
             let config = self.config.read().await;
             (
-                config.sync_path.clone(),
+                config.data_root(),
                 Uuid::parse_str(&config.id).context("invalid drive ID")?,
             )
         };
@@ -1056,18 +1061,22 @@ impl Mount {
             // Also queue when the recorded local snapshot no longer matches
             // the on-disk state even though the IN_SYNC flag looks set - the
             // flag may be stale after a race with a metadata refresh.
-            let snapshot_differs = match path.to_str() {
-                Some(path_str) => self
-                    .inventory
-                    .query_by_path(path_str)
-                    .map(|entry| {
-                        entry.is_some_and(|meta| local_snapshot_differs(&meta, &placeholder_info))
-                    })
-                    .unwrap_or(false),
-                None => false,
+            let meta = match path.to_str() {
+                Some(path_str) => self.inventory.query_by_path(path_str).ok().flatten(),
+                None => None,
             };
+            let snapshot_differs = meta
+                .as_ref()
+                .is_some_and(|m| local_snapshot_differs(m, &placeholder_info));
+            // in_sync() is always false off Windows, so a matching recorded
+            // snapshot is the authoritative "no local change" signal there —
+            // it keeps engine writes (downloads, FUSE hydration) from
+            // boomeranging back as uploads.
+            let snapshot_matches = meta.as_ref().is_some_and(|m| {
+                m.local_updated_at.is_some() && m.local_size.is_some()
+            }) && !snapshot_differs;
 
-            if !placeholder_info.in_sync() || snapshot_differs {
+            if snapshot_differs || (!placeholder_info.in_sync() && !snapshot_matches) {
                 tracing::debug!(target: "drive::commands", path = %path.display(), "Queuing upload task for modified file");
                 let payload = TaskPayload::upload(path.clone());
                 let result = self
@@ -1100,6 +1109,23 @@ impl Mount {
         );
 
         for (_remote_uri, path) in path_uri_mappings {
+            // Skip creates produced by engine IO (downloads, FUSE hydration
+            // moves a file in): an inventory snapshot matching the on-disk
+            // state means the content is already the synced version.
+            let already_synced = path
+                .to_str()
+                .and_then(|p| self.inventory.query_by_path(p).ok().flatten())
+                .filter(|meta| meta.local_updated_at.is_some() && meta.local_size.is_some())
+                .and_then(|meta| {
+                    LocalFileInfo::from_path(path.as_path())
+                        .ok()
+                        .map(|info| !local_snapshot_differs(&meta, &info))
+                })
+                .unwrap_or(false);
+            if already_synced {
+                continue;
+            }
+
             let payload = TaskPayload::upload(path.clone());
 
             self.task_queue

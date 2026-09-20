@@ -2,6 +2,8 @@
 pub mod callback;
 pub mod commands;
 pub mod event_blocker;
+#[cfg(target_os = "linux")]
+pub mod fuse_fs;
 pub mod ignore;
 pub mod manager;
 pub mod mounts;
