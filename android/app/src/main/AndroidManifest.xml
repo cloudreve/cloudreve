@@ -65,6 +65,11 @@
             </intent-filter>
         </service>
 
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
+
         <provider
             android:name=".provider.CloudreveDocumentsProvider"
             android:authorities="${applicationId}.documents"

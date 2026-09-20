@@ -39,6 +39,11 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "linux": {
+      "deb": {
+        "depends": ["fuse3"]
+      }
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

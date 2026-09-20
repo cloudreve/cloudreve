@@ -17,11 +17,30 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        // Optional real release key via env (CI secrets). Falls back to the
+        // debug cert so GitHub-release APKs are sideload-installable.
+        create("releaseEnv") {
+            val store = System.getenv("ANDROID_KEYSTORE_FILE")
+            if (store != null) {
+                storeFile = file(store)
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig =
+                if (System.getenv("ANDROID_KEYSTORE_FILE") != null)
+                    signingConfigs.getByName("releaseEnv")
+                else
+                    signingConfigs.getByName("debug")
         }
     }
 

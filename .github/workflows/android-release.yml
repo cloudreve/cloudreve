@@ -1,0 +1,64 @@
+name: Android Release
+
+# Tag `android-v*` builds the release APK + AAB and publishes them to a
+# GitHub release. If ANDROID_KEYSTORE_* secrets are configured the
+# artifacts are signed with the real release key; otherwise the debug
+# cert is used so APKs remain sideload-installable.
+on:
+  push:
+    tags: ['android-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    env:
+      KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Decode release keystore
+        if: ${{ env.KEYSTORE_B64 != '' }}
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          {
+            echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/release.keystore"
+            echo "ANDROID_KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
+            echo "ANDROID_KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}"
+            echo "ANDROID_KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}"
+          } >> "$GITHUB_ENV"
+
+      - name: Build release APK + AAB
+        run: ./gradlew :app:assembleRelease :app:bundleRelease --console=plain
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          APK=$(find app/build/outputs/apk/release -name 'app-release*.apk' | head -1)
+          AAB=$(find app/build/outputs/bundle/release -name 'app-release*.aab' | head -1)
+          cp "$APK" "cloudreve-${{ github.ref_name }}.apk"
+          cp "$AAB" "cloudreve-${{ github.ref_name }}.aab"
+          if [ -n "$ANDROID_KEYSTORE_FILE" ]; then
+            SIG_NOTE="Signed with the release key."
+          else
+            SIG_NOTE="Signed with the debug certificate — sideload-installable. Configure the ANDROID_KEYSTORE_* secrets to sign with a release key."
+          fi
+          gh release create "${{ github.ref_name }}" \
+            --title "Cloudreve Android ${{ github.ref_name }}" \
+            --notes "Cloudreve Android app. ${SIG_NOTE}" \
+            "cloudreve-${{ github.ref_name }}.apk" \
+            "cloudreve-${{ github.ref_name }}.aab"
