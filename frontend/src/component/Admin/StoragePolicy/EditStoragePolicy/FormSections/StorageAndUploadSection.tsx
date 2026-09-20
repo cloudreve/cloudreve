@@ -145,6 +145,27 @@ const StorageAndUploadSection = () => {
     [setPolicy],
   );
 
+  const onAuditEndpointChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const v = e.target.value.trim();
+      setPolicy((p: StoragePolicy) => ({
+        ...p,
+        settings: { ...p.settings, audit_endpoint: v === "" ? undefined : v },
+      }));
+    },
+    [setPolicy],
+  );
+
+  const onAuditMaxSizeChange = useCallback(
+    (e: number) => {
+      setPolicy((p: StoragePolicy) => ({
+        ...p,
+        settings: { ...p.settings, audit_max_size: e === 0 ? undefined : e },
+      }));
+    },
+    [setPolicy],
+  );
+
   const fileExts = useMemo(() => {
     return values.settings?.file_type?.join() ?? "";
   }, [values.settings?.file_type]);
@@ -333,6 +354,22 @@ const StorageAndUploadSection = () => {
               ))}
             </DenseSelect>
             <NoMarginHelperText>{t("policy.overflowPolicyDes")}</NoMarginHelperText>
+          </FormControl>
+        </SettingForm>
+        <SettingForm title={t("policy.auditEndpoint")} lgWidth={5}>
+          <FormControl fullWidth>
+            <DenseFilledTextField
+              placeholder="https://"
+              value={values.settings?.audit_endpoint ?? ""}
+              onChange={onAuditEndpointChange}
+            />
+            <NoMarginHelperText>{t("policy.auditEndpointDes")}</NoMarginHelperText>
+          </FormControl>
+        </SettingForm>
+        <SettingForm title={t("policy.auditMaxSize")} lgWidth={5}>
+          <FormControl fullWidth>
+            <SizeInput variant={"outlined"} value={values.settings?.audit_max_size ?? 0} onChange={onAuditMaxSizeChange} />
+            <NoMarginHelperText>{t("policy.auditMaxSizeDes")}</NoMarginHelperText>
           </FormControl>
         </SettingForm>
         <SettingForm title={t("policy.extList")} lgWidth={5}>

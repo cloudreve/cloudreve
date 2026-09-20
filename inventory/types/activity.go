@@ -65,4 +65,5 @@ const (
 	EventOAuthGrantCreate        = 59
 	EventOAuthTokenExchange      = 60
 	EventOAuthGrantRevoke        = 61
+	EventContentAuditBlocked     = 62
 )

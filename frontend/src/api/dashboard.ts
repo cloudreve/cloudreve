@@ -256,6 +256,8 @@ export interface PolicySetting {
   thumb_max_size?: number;
   max_total_size?: number;
   overflow_policy_id?: number;
+  audit_endpoint?: string;
+  audit_max_size?: number;
   relay?: boolean;
   pre_allocate?: boolean;
   media_meta_exts?: string[];

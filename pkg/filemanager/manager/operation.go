@@ -319,7 +319,7 @@ func (l *manager) CreateOrUpdateShare(ctx context.Context, paths []*fs.URI, args
 	files := make([]fs.File, 0, len(paths))
 	seen := make(map[int]struct{}, len(paths))
 	for _, path := range paths {
-		file, err := l.fs.Get(ctx, path, dbfs.WithRequiredCapabilities(dbfs.NavigatorCapabilityShare), dbfs.WithNotRoot())
+		file, err := l.fs.Get(ctx, path, dbfs.WithRequiredCapabilities(dbfs.NavigatorCapabilityShare), dbfs.WithNotRoot(), dbfs.WithFileEntities())
 		if err != nil {
 			return nil, serializer.NewError(serializer.CodeNotFound, "src file not found", err)
 		}
@@ -387,6 +387,12 @@ func (l *manager) CreateOrUpdateShare(ctx context.Context, paths []*fs.URI, args
 		PreviewOnly: args.PreviewOnly,
 		UploadOnly:  args.UploadOnly,
 		Note:        args.Note,
+	}
+
+	// Content audit: entities on policies with an audit endpoint are checked
+	// before the share record is created.
+	if err := l.auditShareEntities(ctx, files); err != nil {
+		return nil, err
 	}
 
 	fileIDs := lo.Map(files, func(f fs.File, _ int) int { return f.ID() })

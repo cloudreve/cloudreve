@@ -155,6 +155,12 @@ type (
 		// stored — they ignore the source file's policy and land here. 0 keeps
 		// thumbnails on the source policy.
 		ThumbStoragePolicyID int `json:"thumb_storage_policy_id,omitempty"`
+		// AuditEndpoint enables content audit: when a share is created over
+		// files on this policy, each image entity is POSTed to this URL and the
+		// share is rejected when the endpoint reports it flagged. Empty disables.
+		AuditEndpoint string `json:"audit_endpoint,omitempty"`
+		// AuditMaxSize caps the entity size sent for audit. 0 means no limit.
+		AuditMaxSize int64 `json:"audit_max_size,omitempty"`
 		// NativeMediaProcessing whether to use native media processing API from storage provider.
 		NativeMediaProcessing bool `json:"native_media_processing"`
 		// S3DeleteBatchSize the number of objects to delete in each batch.
