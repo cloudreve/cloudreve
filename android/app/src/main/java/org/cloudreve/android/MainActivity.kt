@@ -66,7 +66,7 @@ private class AppViewModelFactory(private val app: CloudreveApp) : ViewModelProv
         modelClass.isAssignableFrom(LoginViewModel::class.java) ->
             LoginViewModel(app.sessionManager, app.apiClient) as T
         modelClass.isAssignableFrom(FilesViewModel::class.java) ->
-            FilesViewModel(app.fileRepository) as T
+            FilesViewModel(app.fileRepository, app.favoritesStore) as T
         else -> throw IllegalArgumentException("Unknown ViewModel ${modelClass.name}")
     }
 }
