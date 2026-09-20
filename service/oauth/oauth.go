@@ -47,6 +47,7 @@ type (
 	GrantParamCtx struct{}
 	GrantService  struct {
 		ClientID            string `json:"client_id" binding:"required"`
+		Deny                bool   `json:"-"`
 		ResponseType        string `json:"response_type" binding:"required,eq=code"`
 		RedirectURI         string `json:"redirect_uri" binding:"required"`
 		State               string `json:"state" binding:"max=4096"`
@@ -74,13 +75,17 @@ func (s *GrantService) Get(c *gin.Context) (*GrantResponse, error) {
 	// 2. Validate redirect URL: must match one of the registered redirect URIs
 	redirectValid := false
 	for _, uri := range app.RedirectUris {
-		if uri == s.RedirectURI {
+		if redirectURIMatches(uri, s.RedirectURI) {
 			redirectValid = true
 			break
 		}
 	}
 	if !redirectValid {
 		return nil, serializer.NewError(serializer.CodeParamErr, "Invalid redirect URI", nil)
+	}
+
+	if s.Deny {
+		return &GrantResponse{Error: "access_denied", State: s.State}, nil
 	}
 
 	// Parse requested scopes (space-separated per OAuth 2.0 spec)
@@ -125,11 +130,12 @@ func (s *GrantService) Get(c *gin.Context) (*GrantResponse, error) {
 type (
 	ExchangeTokenParamCtx struct{}
 	ExchangeTokenService  struct {
-		ClientID     string `form:"client_id" binding:"required"`
-		ClientSecret string `form:"client_secret" binding:"required"`
-		GrantType    string `form:"grant_type" binding:"required,eq=authorization_code"`
-		Code         string `form:"code" binding:"required"`
-		CodeVerifier string `form:"code_verifier"`
+		ClientID     string  `form:"client_id" binding:"required"`
+		ClientSecret string  `form:"client_secret" binding:"required"`
+		GrantType    string  `form:"grant_type" binding:"required,eq=authorization_code"`
+		Code         string  `form:"code" binding:"required"`
+		CodeVerifier string  `form:"code_verifier"`
+		RedirectURI  *string `form:"redirect_uri"`
 	}
 )
 
@@ -160,8 +166,12 @@ func (s *ExchangeTokenService) Exchange(c *gin.Context) (*TokenResponse, error) 
 		return nil, serializer.NewError(serializer.CodeCredentialInvalid, "Client ID mismatch", nil)
 	}
 
-	// 3. Verify PKCE: SHA256(code_verifier) should match code_challenge
-	if authCode.CodeChallenge != "" {
+	if s.RedirectURI != nil && *s.RedirectURI != authCode.RedirectURI {
+		return nil, serializer.NewError(serializer.CodeCredentialInvalid, "Redirect URI mismatch", nil)
+	}
+
+	// 3. Verify PKCE, rejecting a verifier when the grant omitted its challenge.
+	if authCode.CodeChallenge != "" || s.CodeVerifier != "" {
 		verifierHash := sha256.Sum256([]byte(s.CodeVerifier))
 		expectedChallenge := base64.RawURLEncoding.EncodeToString(verifierHash[:])
 		if expectedChallenge != authCode.CodeChallenge {

@@ -30,6 +30,12 @@ func GrantAppConsent(c *gin.Context) {
 	c.JSON(200, serializer.Response{Data: res})
 }
 
+// DenyAppConsent validates the client redirect without granting access.
+func DenyAppConsent(c *gin.Context) {
+	ParametersFromContext[*oauth.GrantService](c, oauth.GrantParamCtx{}).Deny = true
+	GrantAppConsent(c)
+}
+
 type ExchangeErrorResponse struct {
 	Error            string `json:"error"`
 	ErrorDescription string `json:"error_description"`
