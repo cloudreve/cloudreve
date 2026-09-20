@@ -47,8 +47,12 @@ CI runs `assembleDebug` on every PR.
 - OAuth sign-in: "Sign in with browser" opens the server's consent
   page with PKCE; the `/callback/desktop` page deep-links the code
   back through `cloudreve://mount`, exchanged at `/session/oauth/token`
+- Local sync folder: pick a device folder (SAF, persisted permission)
+  and a remote folder — periodic WorkManager worker mirrors new/changed
+  files upstream, subdirectory structure preserved, unchanged files
+  skipped via mtime/size signatures, Wi-Fi-only option
 
 ## Planned next
 
-- Quick-share tile, local sync folder
+- Quick-share tile
 - No iOS. Ever.
