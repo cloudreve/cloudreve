@@ -353,6 +353,41 @@ func PatchMetadata(c *gin.Context) {
 	c.JSON(200, serializer.Response{})
 }
 
+// ListTags lists all tags used by the current user's files
+func ListTags(c *gin.Context) {
+	service := ParametersFromContext[*explorer.ListTagsService](c, explorer.ListTagsParameterCtx{})
+	resp, err := service.Get(c)
+	if respondErr(c, err) {
+		return
+	}
+
+	c.JSON(200, serializer.Response{
+		Data: resp,
+	})
+}
+
+// PatchTag renames and/or recolors a tag across the current user's files
+func PatchTag(c *gin.Context) {
+	service := ParametersFromContext[*explorer.PatchTagService](c, explorer.PatchTagParameterCtx{})
+	err := service.Patch(c)
+	if respondErr(c, err) {
+		return
+	}
+
+	c.JSON(200, serializer.Response{})
+}
+
+// DeleteTag removes a tag from all of the current user's files
+func DeleteTag(c *gin.Context) {
+	service := ParametersFromContext[*explorer.DeleteTagService](c, explorer.DeleteTagParameterCtx{})
+	err := service.Delete(c)
+	if respondErr(c, err) {
+		return
+	}
+
+	c.JSON(200, serializer.Response{})
+}
+
 // ListAcl lists ACL entries of a file.
 func ListAcl(c *gin.Context) {
 	service := ParametersFromContext[*explorer.AclListService](c, explorer.AclListParamCtx{})

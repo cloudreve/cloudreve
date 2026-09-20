@@ -76,6 +76,7 @@ import {
   MoveFileService,
   MultipleUriService,
   PatchMetadataService,
+  PatchTagService,
   PatchViewSyncService,
   PinFileService,
   PreferredPolicyService,
@@ -86,6 +87,7 @@ import {
   UnlockFileService,
   UploadCredential,
   UploadSessionRequest,
+  UserTag,
   VersionControlService,
   ViewerGroup,
   ViewerSessionResponse,
@@ -549,6 +551,56 @@ export function sendMetadataPatch(req: PatchMetadataService): ThunkResponse<void
         {
           ...defaultOpts,
           skipBatchError: req.uris.length == 1,
+        },
+      ),
+    );
+  };
+}
+
+export function getUserTags(): ThunkResponse<UserTag[]> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/file/tag",
+        {
+          method: "GET",
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function sendPatchTag(req: PatchTagService): ThunkResponse<void> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/file/tag",
+        {
+          data: req,
+          method: "PATCH",
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function sendDeleteTag(name: string): ThunkResponse<void> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/file/tag",
+        {
+          data: { name },
+          method: "DELETE",
+        },
+        {
+          ...defaultOpts,
         },
       ),
     );

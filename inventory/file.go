@@ -3,6 +3,7 @@ package inventory
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -162,6 +163,13 @@ type (
 		PrimaryEntityParentFiles []int
 	}
 
+	// MetadataNameStat aggregates usage of one metadata key for an owner.
+	MetadataNameStat struct {
+		Name  string `json:"name"`
+		Value string `json:"value"`
+		Count int    `json:"count"`
+	}
+
 	CopyParameter struct {
 		Files                []*ent.File
 		DstMap               map[int][]*ent.File
@@ -268,6 +276,17 @@ type FileClient interface {
 	UpdateModifiedAt(ctx context.Context, file *ent.File, modifiedAt time.Time) error
 	// DeleteAllMetadataByName deletes all metadata by a given name
 	DeleteAllMetadataByName(ctx context.Context, name string) error
+	// ListMetadataStats aggregates distinct metadata keys under namePrefix
+	// across all files owned by ownerID, with per-key usage counts.
+	ListMetadataStats(ctx context.Context, ownerID int, namePrefix string) ([]*MetadataNameStat, error)
+	// RenameMetadataName renames a metadata key across all files owned by
+	// ownerID. Where a file already carries newName its oldName row is
+	// dropped (merge). setValue, when non-nil, rewrites the stored value on
+	// all of the owner's rows under the final name.
+	RenameMetadataName(ctx context.Context, ownerID int, oldName, newName string, setValue *string) error
+	// DeleteMetadataByNameForOwner deletes a metadata key across all files
+	// owned by ownerID.
+	DeleteMetadataByNameForOwner(ctx context.Context, ownerID int, name string) error
 }
 
 func NewFileClient(client *ent.Client, dbType conf.DBType, hasher hashid.Encoder) FileClient {
@@ -355,6 +374,84 @@ func (f *fileClient) CountByTimeRange(ctx context.Context, start, end *time.Time
 
 func (f *fileClient) DeleteAllMetadataByName(ctx context.Context, name string) error {
 	_, err := f.client.Metadata.Delete().Where(metadata.Name(name)).Exec(schema.SkipSoftDelete(ctx))
+	if err != nil {
+		return fmt.Errorf("failed to delete metadata: %w", err)
+	}
+
+	return nil
+}
+
+func (f *fileClient) ListMetadataStats(ctx context.Context, ownerID int, namePrefix string) ([]*MetadataNameStat, error) {
+	rows, err := f.client.Metadata.Query().
+		Where(metadata.NameHasPrefix(namePrefix), metadata.HasFileWith(file.OwnerID(ownerID))).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list metadata stats: %w", err)
+	}
+
+	stats := make([]*MetadataNameStat, 0)
+	byName := make(map[string]*MetadataNameStat)
+	for _, row := range rows {
+		s, ok := byName[row.Name]
+		if !ok {
+			s = &MetadataNameStat{Name: row.Name, Value: row.Value}
+			byName[row.Name] = s
+			stats = append(stats, s)
+		}
+		s.Count++
+	}
+	slices.SortFunc(stats, func(a, b *MetadataNameStat) int {
+		return strings.Compare(a.Name, b.Name)
+	})
+
+	return stats, nil
+}
+
+func (f *fileClient) RenameMetadataName(ctx context.Context, ownerID int, oldName, newName string, setValue *string) error {
+	if oldName == newName && setValue == nil {
+		return nil
+	}
+
+	if oldName != newName {
+		// Files already carrying newName keep it — their oldName rows merge away.
+		collisionIDs, err := f.client.Metadata.Query().
+			Where(metadata.Name(newName), metadata.HasFileWith(file.OwnerID(ownerID))).
+			Select(metadata.FieldFileID).
+			Ints(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to query metadata collisions: %w", err)
+		}
+		for _, chunk := range lo.Chunk(collisionIDs, capPageSize(f.maxSQlParam, math.MaxInt, 10)) {
+			if _, err := f.client.Metadata.Delete().
+				Where(metadata.Name(oldName), metadata.FileIDIn(chunk...)).
+				Exec(schema.SkipSoftDelete(ctx)); err != nil {
+				return fmt.Errorf("failed to merge metadata rows: %w", err)
+			}
+		}
+		if _, err := f.client.Metadata.Update().
+			Where(metadata.Name(oldName), metadata.HasFileWith(file.OwnerID(ownerID))).
+			SetName(newName).
+			Save(ctx); err != nil {
+			return fmt.Errorf("failed to rename metadata: %w", err)
+		}
+	}
+
+	if setValue != nil {
+		if _, err := f.client.Metadata.Update().
+			Where(metadata.Name(newName), metadata.HasFileWith(file.OwnerID(ownerID))).
+			SetValue(*setValue).
+			Save(ctx); err != nil {
+			return fmt.Errorf("failed to update metadata value: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (f *fileClient) DeleteMetadataByNameForOwner(ctx context.Context, ownerID int, name string) error {
+	_, err := f.client.Metadata.Delete().
+		Where(metadata.Name(name), metadata.HasFileWith(file.OwnerID(ownerID))).
+		Exec(schema.SkipSoftDelete(ctx))
 	if err != nil {
 		return fmt.Errorf("failed to delete metadata: %w", err)
 	}

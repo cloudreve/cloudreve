@@ -206,6 +206,7 @@ Order = user-visible value first; each ships with backend + UI + tests.
 - Fix upstream bug backlog by impact: ~~#3574 OOM~~ (done — paged tree walk + batched delete), ~~#3118/#3005 WebDAV large-file~~ (done — Content-Range assembly into one session; non-local policies get honest 501; single-PUT giant-file 500s are proxy/client timeouts, not fixable server-side), ~~#3375 SMTP auth discovery~~ (done — `smtp_auth` setting)
 - #3454 (PG FK on upload) is **Pro-only** — `audit_logs` doesn't exist in this codebase. When B.5 adds our own audit log: insert the audit row in the same tx *after* the file row, never before.
 - [x] `desloppify` pass — 73 review items dispositioned (46 fixed, 27 honestly skipped), strict score 77.1 (was 18.9); scorecard lives in README. `security-reviewer` pass done incrementally per batch (OAuth secrets, SSRF, process exec, path safety)
+- [x] Tag management page (upstream #2962) — owner-scoped `tag:` metadata stats/rename/recolor/delete in `inventory.FileClient`, `GET/PATCH/DELETE /file/tag` routes, Settings → Tags tab with merge-on-rename semantics
 
 ## 6. Phase D — desktop, all platforms
 

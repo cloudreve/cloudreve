@@ -1113,7 +1113,19 @@
       "gift": "Gift code",
       "share_income": "Share link purchased",
       "adjust": "Manual adjustment"
-    }
+    },
+    "tags": "Tags",
+    "tagsDes": "Rename, recolor or delete a tag across all your files. Renaming onto an existing tag merges them.",
+    "tagName": "Tag",
+    "tagFiles": "Files",
+    "tagActions": "Actions",
+    "noTags": "No tags yet",
+    "editTag": "Edit tag",
+    "deleteTag": "Delete tag",
+    "deleteTagDes": "Remove tag \"{{name}}\" from {{count}} file(s)? The files themselves are kept.",
+    "tagUpdated": "Tag updated",
+    "tagDeleted": "Tag deleted",
+    "tagNameInvalid": "Tag name cannot be empty or contain \":\""
   },
   "vas": {
     "points": "Points",

@@ -18,12 +18,15 @@ import FinanceSetting from "./FinanceSetting.tsx";
 import PreferenceSetting from "./PreferenceSetting.tsx";
 import ProfileSetting from "./ProfileSetting.tsx";
 import SecuritySetting from "./Security/SecuritySetting.tsx";
+import Tag from "../../Icons/Tag.tsx";
+import TagSetting from "./TagSetting.tsx";
 
 export enum SettingPageTab {
   Profile = "profile",
   Preference = "preference",
   Security = "security",
   Finance = "finance",
+  Tags = "tags",
 }
 
 const Setting = () => {
@@ -68,6 +71,11 @@ const Setting = () => {
           label: t("application:setting.finance"),
           value: SettingPageTab.Finance,
           icon: <AccountBalanceWalletOutlined />,
+        },
+        {
+          label: t("application:setting.tags"),
+          value: SettingPageTab.Tags,
+          icon: <Tag />,
         },
       ],
     );
@@ -115,6 +123,7 @@ const Setting = () => {
                   {tab == SettingPageTab.Preference && <PreferenceSetting setting={setting} setSetting={setSetting} />}
                   {tab == SettingPageTab.Security && <SecuritySetting setting={setting} setSetting={setSetting} />}
                   {tab == SettingPageTab.Finance && <FinanceSetting />}
+                  {tab == SettingPageTab.Tags && <TagSetting />}
                 </Box>
               )}
             </Box>

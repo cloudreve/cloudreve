@@ -1113,7 +1113,19 @@
       "gift": "礼品码",
       "share_income": "分享售出",
       "adjust": "手动调整"
-    }
+    },
+    "tags": "标签",
+    "tagsDes": "在所有文件中重命名、换色或删除标签。重命名为已有标签时将合并两者。",
+    "tagName": "标签",
+    "tagFiles": "文件数",
+    "tagActions": "操作",
+    "noTags": "暂无标签",
+    "editTag": "编辑标签",
+    "deleteTag": "删除标签",
+    "deleteTagDes": "将标签「{{name}}」从 {{count}} 个文件中移除？文件本身不会被删除。",
+    "tagUpdated": "标签已更新",
+    "tagDeleted": "标签已删除",
+    "tagNameInvalid": "标签名不能为空或包含「:」"
   },
   "vas": {
     "points": "积分",
