@@ -200,6 +200,37 @@ func (service *DownloadWorkflowService) CreateDownloadTask(c *gin.Context) ([]*T
 		}
 	}
 
+	// Distinguish BitTorrent sources (magnet links, .torrent files) from
+	// plain URLs: they require a BT-capable provider, and src_file must
+	// actually name a .torrent.
+	if service.SrcFile != "" && !strings.HasSuffix(strings.ToLower(service.SrcFile), ".torrent") {
+		return nil, serializer.NewError(serializer.CodeParamErr, "Source file must be a .torrent", nil)
+	}
+	torrentSrc := service.SrcFile != ""
+	for _, s := range service.Src {
+		if strings.HasPrefix(strings.ToLower(s), "magnet:") {
+			torrentSrc = true
+			break
+		}
+	}
+	if torrentSrc {
+		if service.Provider == string(types.DownloaderProviderYtDlp) {
+			return nil, serializer.NewError(serializer.CodeParamErr, "Downloader does not support torrent sources", nil)
+		}
+		if service.Provider == "" {
+			// Auto-pick a BitTorrent-capable provider, preferring qBittorrent.
+			for _, p := range []types.DownloaderProvider{types.DownloaderProviderQBittorrent, types.DownloaderProviderAria2} {
+				if providerNodeAvailable(c, dep, string(p)) != 0 {
+					service.Provider = string(p)
+					break
+				}
+			}
+			if service.Provider == "" {
+				return nil, serializer.NewError(serializer.CodeParamErr, "No BitTorrent-capable downloader node available", nil)
+			}
+		}
+	}
+
 	// Validate a requested downloader provider against what the node pool
 	// actually offers.
 	if service.Provider != "" && providerNodeAvailable(c, dep, service.Provider) == 0 {

@@ -78,6 +78,11 @@ const (
 
 	GetTaskStatusMaxTries = 5
 
+	// maxDownloadFiles bounds the number of files a single download task
+	// may import, guarding against crafted torrents that declare absurd
+	// file counts.
+	maxDownloadFiles = 10_000
+
 	SummaryKeyDownloadStatus = "download"
 	SummaryKeySrcStr         = "src_str"
 
@@ -759,6 +764,12 @@ func (m *RemoteDownloadTask) validateFiles(ctx context.Context, dep dependency.D
 	})
 	if len(selectedFiles) == 0 {
 		return fmt.Errorf("no selected file found in download task")
+	}
+
+	// Bound the entity count a single task can create — a crafted torrent
+	// declaring hundreds of thousands of files is a database bomb.
+	if len(selectedFiles) > maxDownloadFiles {
+		return fmt.Errorf("download task selects %d files, exceeds the %d limit", len(selectedFiles), maxDownloadFiles)
 	}
 
 	validateArgs := lo.Map(selectedFiles, func(f downloader.TaskFile, _ int) fs.PreValidateFile {
