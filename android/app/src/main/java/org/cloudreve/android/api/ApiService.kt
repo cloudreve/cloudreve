@@ -72,6 +72,12 @@ interface ApiService {
         @Query("offset") offset: Int = 0,
     ): Response<ApiResponse<SearchResponse>>
 
+    @GET("api/v4/workflow")
+    suspend fun listTasks(
+        @Query("page_size") pageSize: Int = 20,
+        @Query("category") category: String = "general",
+    ): Response<ApiResponse<TaskListResponse>>
+
     @PUT("api/v4/share")
     suspend fun createShare(@Body request: ShareCreateRequest): Response<ApiResponse<String>>
 }

@@ -41,8 +41,11 @@ CI runs `assembleDebug` on every PR.
 - DocumentsProvider: the whole tree appears in the system Files app /
   SAF pickers — browse, open (cached download), thumbnails, rename,
   delete, and search all proxy to `api/v4`
+- Task notifications: periodic `GET /workflow` poll posts a
+  notification when a task completes/fails/cancels — toggle in the
+  settings dialog, runtime POST_NOTIFICATIONS permission gated
 
 ## Planned next
 
-- Quick-share tile, task/share notifications, local sync folder
+- Quick-share tile, local sync folder
 - No iOS. Ever.

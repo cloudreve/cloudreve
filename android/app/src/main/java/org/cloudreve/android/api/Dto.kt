@@ -192,3 +192,17 @@ data class SiteConfig(
     @SerialName("tos_url") val tosUrl: String = "",
     @SerialName("privacy_policy_url") val privacyPolicyUrl: String = "",
 )
+
+@Serializable
+data class TaskItem(
+    val id: String = "",
+    val status: String = "",
+    val type: String = "",
+    val error: String? = null,
+    @SerialName("updated_at") val updatedAt: String = "",
+)
+
+@Serializable
+data class TaskListResponse(
+    val tasks: List<TaskItem> = emptyList(),
+)
