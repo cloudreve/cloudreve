@@ -70,7 +70,10 @@
       "sso_token_invalid": "Failed to verify the identity response.",
       "sso_no_email": "The identity provider did not return an email address.",
       "sso_account_unavailable": "No account is available for this identity. Registration may be restricted."
-    }
+    },
+    "inputBackupCode": "Enter one of your recovery codes",
+    "useBackupCode": "Use a recovery code instead",
+    "use2FACode": "Use authenticator code instead"
   },
   "oauth": {
     "authorize": "Authorize Application",
@@ -1144,7 +1147,11 @@
     "deleteTagDes": "Remove tag \"{{name}}\" from {{count}} file(s)? The files themselves are kept.",
     "tagUpdated": "Tag updated",
     "tagDeleted": "Tag deleted",
-    "tagNameInvalid": "Tag name cannot be empty or contain \":\""
+    "tagNameInvalid": "Tag name cannot be empty or contain \":\"",
+    "backup2FACodes": "Recovery codes",
+    "backupCodesDes": "Recovery codes let you sign in when your authenticator is unavailable. Generating a new batch invalidates all previous codes.",
+    "backupCodesWarning": "Save these codes now. Each can be used once and they will not be shown again.",
+    "copyCodes": "Copy codes"
   },
   "vas": {
     "points": "Points",

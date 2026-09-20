@@ -142,6 +142,7 @@ export interface UserSettings {
   version_retention_max?: number;
   passwordless: boolean;
   two_fa_enabled: boolean;
+  two_factor_backup_count?: number;
   passkeys?: Passkey[];
   disable_view_sync: boolean;
   share_links_in_profile: ShareLinksInProfileLevel;

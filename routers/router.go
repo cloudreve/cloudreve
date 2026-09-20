@@ -1541,6 +1541,13 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 					// 获得二步验证初始化信息
 					setting.GET("2fa", controllers.UserInit2FA)
+					// 重新生成二步验证备用代码
+					setting.PUT("2fa/backup",
+						middleware.RequiredScopes(types.ScopeUserSecurityInfoWrite),
+						middleware.RateLimitByIP("backup_2fa", 5, time.Hour),
+						controllers.FromJSON[usersvc.Backup2FAService](usersvc.Backup2FAParameterCtx{}),
+						controllers.UserBackup2FA,
+					)
 					// 请求更换邮箱（向新地址发送确认链接）
 					setting.POST("email",
 						middleware.RequiredScopes(types.ScopeUserSecurityInfoWrite),

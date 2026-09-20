@@ -297,7 +297,9 @@ const EmailLogin = ({ oauthConsent }: SignInProps) => {
   };
 
   useEffect(() => {
-    if (otp.length === 6) {
+    // Auto-submit only a complete numeric TOTP; alphanumeric recovery
+    // codes are submitted via the button.
+    if (/^\d{6}$/.test(otp)) {
       submit();
     }
   }, [otp]);

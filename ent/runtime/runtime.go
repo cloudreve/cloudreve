@@ -690,7 +690,7 @@ func init() {
 	// user.DefaultVaultFolder holds the default value on creation for the vault_folder field.
 	user.DefaultVaultFolder = userDescVaultFolder.Default.(int)
 	// userDescSettings is the schema descriptor for settings field.
-	userDescSettings := userFields[13].Descriptor()
+	userDescSettings := userFields[14].Descriptor()
 	// user.DefaultSettings holds the default value on creation for the settings field.
 	user.DefaultSettings = userDescSettings.Default.(*types.UserSetting)
 	usergrantMixin := schema.UserGrant{}.Mixin()

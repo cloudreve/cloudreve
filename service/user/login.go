@@ -268,8 +268,14 @@ func (service *OtpValidationService) Verify2FA(c *gin.Context) (*ent.User, error
 
 	if expectedUser.TwoFactorSecret != "" {
 		if !totp.Validate(service.OTP, expectedUser.TwoFactorSecret) {
-			err := serializer.NewError(serializer.Code2FACodeErr, "Incorrect 2FA code", nil)
-			return nil, err
+			// TOTP failed — fall back to one-time recovery codes.
+			ok, err := dep.UserClient().ConsumeTwoFABackupCode(c, expectedUser, service.OTP)
+			if err != nil {
+				return nil, serializer.NewError(serializer.CodeDBError, "Failed to verify recovery code", err)
+			}
+			if !ok {
+				return nil, serializer.NewError(serializer.Code2FACodeErr, "Incorrect 2FA code", nil)
+			}
 		}
 	}
 
