@@ -85,6 +85,9 @@ pub struct AddDriveArgs {
     pub local_path: String,
     pub user_id: String,
     pub drive_id: Option<String>,
+    /// "full" (default) mirrors everything; "ondemand" mounts a FUSE
+    /// filesystem with hydrate-on-open. Only honored on Linux.
+    pub sync_mode: Option<String>,
 }
 
 /// Add a new drive configuration
@@ -146,6 +149,11 @@ pub async fn add_drive(
     // Generate a new UUID for a new drive
     let drive_id = Uuid::new_v4().to_string();
 
+    let sync_mode = match config.sync_mode.as_deref() {
+        Some("ondemand") => cloudreve_sync::drive::mounts::DriveSyncMode::OnDemand,
+        _ => cloudreve_sync::drive::mounts::DriveSyncMode::Full,
+    };
+
     let drive_config = DriveConfig {
         id: drive_id,
         name: config.drive_name,
@@ -157,6 +165,7 @@ pub async fn add_drive(
         raw_icon_path: None,
         enabled: true,
         user_id: config.user_id,
+        sync_mode,
         sync_root_id: None,
         ignore_patterns: Vec::new(),
         extra: Default::default(),

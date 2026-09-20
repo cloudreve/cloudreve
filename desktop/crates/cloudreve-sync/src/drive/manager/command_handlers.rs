@@ -175,12 +175,15 @@ impl DriveManager {
             .await
             .ok_or_else(|| anyhow::anyhow!("No drive found for path: {:?}", path))?;
 
+        let config = mount.get_config().await;
+        // Inventory rows are keyed by store path in on-demand mode; `path`
+        // arrives in mount space.
+        let store_path = config.mount_to_store(&path);
         let file_meta = self
             .inventory
-            .query_by_path(path.to_str().unwrap_or(""))
+            .query_by_path(store_path.to_str().unwrap_or(""))
             .context("Failed to query file metadata")?;
 
-        let config = mount.get_config().await;
         let (sync_path, remote_path) =
             { (config.sync_path.clone(), config.remote_path.to_string()) };
         let uri = local_path_to_cr_uri(path.clone(), sync_path, remote_path)

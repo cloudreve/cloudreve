@@ -42,6 +42,20 @@ type MountConnection = Connection<CallbackHandler>;
 #[cfg(not(windows))]
 type MountConnection = Connection<()>;
 
+/// How a drive presents remote files locally.
+///
+/// `Full` mirrors everything into the sync directory (the only mode on
+/// Windows and the default everywhere). `OnDemand` mounts a FUSE filesystem at
+/// `sync_path` backed by a sparse store directory: remote entries appear
+/// immediately and their bytes are fetched on first open. Linux only.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum DriveSyncMode {
+    #[default]
+    Full,
+    OnDemand,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct DriveConfig {
     pub id: String,
@@ -55,6 +69,11 @@ pub struct DriveConfig {
     pub raw_icon_path: Option<String>,
     pub enabled: bool,
     pub user_id: String,
+
+    /// Sync presentation mode. `ondemand` (FUSE) is only honored on Linux;
+    /// other platforms always behave as `full`.
+    #[serde(default)]
+    pub sync_mode: DriveSyncMode,
 
     // Windows CFAPI
     pub sync_root_id: Option<SyncRootId>,
@@ -73,6 +92,53 @@ pub struct Credentials {
     pub refresh_token: String,
     pub refresh_expires: String,
     pub access_expires: Option<String>,
+}
+
+impl DriveConfig {
+    /// Directory the sync engine treats as the local root.
+    ///
+    /// In `full` mode this is `sync_path` itself. In `ondemand` mode the
+    /// FUSE mount occupies `sync_path` for presentation while real bytes live
+    /// in a private store — the watcher, task queue, inventory paths, and URI
+    /// mapping all operate here so engine IO never traverses the mount.
+    pub fn data_root(&self) -> PathBuf {
+        #[cfg(target_os = "linux")]
+        if self.sync_mode == DriveSyncMode::OnDemand {
+            return dirs::home_dir()
+                .unwrap_or_else(|| PathBuf::from("."))
+                .join(".cloudreve")
+                .join("fuse-store")
+                .join(&self.id);
+        }
+        self.sync_path.clone()
+    }
+
+    /// True when this drive serves its tree through the FUSE layer.
+    pub fn is_ondemand(&self) -> bool {
+        cfg!(target_os = "linux") && self.sync_mode == DriveSyncMode::OnDemand
+    }
+
+    /// Translate a user-visible mount path into the engine's store-space path.
+    /// Identity outside on-demand mode or for paths already in store space.
+    pub fn mount_to_store(&self, path: &Path) -> PathBuf {
+        if self.is_ondemand()
+            && let Ok(rel) = path.strip_prefix(&self.sync_path)
+        {
+            return self.data_root().join(rel);
+        }
+        path.to_path_buf()
+    }
+
+    /// Translate an engine store path back to the user-visible mount path.
+    /// Identity outside on-demand mode.
+    pub fn store_to_mount(&self, path: &Path) -> PathBuf {
+        if self.is_ondemand()
+            && let Ok(rel) = path.strip_prefix(self.data_root())
+        {
+            return self.sync_path.join(rel);
+        }
+        path.to_path_buf()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -159,6 +225,9 @@ pub struct Mount {
     pub ignore_matcher: RwLock<IgnoreMatcher>,
     /// Status flags for the mount (credential expired, event push subscribed, etc.)
     status_flags: Mutex<MountStatusFlags>,
+    /// Live FUSE session for on-demand drives. Dropping it unmounts.
+    #[cfg(target_os = "linux")]
+    fuse_session: Mutex<Option<fuser::BackgroundSession>>,
 }
 
 impl Mount {
@@ -221,13 +290,13 @@ impl Mount {
             cr_client_arc.clone(),
             inventory.clone(),
             queue_config,
-            config.sync_path.clone(),
+            config.data_root(),
             config.remote_path.clone(),
         )
         .await;
 
         // Parse ignore patterns from config and sync-root ignore files
-        let sync_path = config.sync_path.clone();
+        let sync_path = config.data_root();
         let ignore_matcher = match build_ignore_matcher(&config.ignore_patterns, &sync_path) {
             Ok(matcher) => {
                 if !matcher.is_empty() {
@@ -270,6 +339,8 @@ impl Mount {
             event_blocker: EventBlocker::new(),
             ignore_matcher: RwLock::new(ignore_matcher),
             status_flags: Mutex::new(MountStatusFlags::new()),
+            #[cfg(target_os = "linux")]
+            fuse_session: Mutex::new(None),
         }
     }
 
@@ -326,7 +397,7 @@ impl Mount {
     /// # Errors
     /// Returns an error if any pattern is invalid
     pub async fn update_ignore_patterns(&self, patterns: Vec<String>) -> Result<()> {
-        let sync_path = self.config.read().await.sync_path.clone();
+        let sync_path = self.config.read().await.data_root();
         let new_matcher = build_ignore_matcher(&patterns, &sync_path)?;
         self.config.write().await.ignore_patterns = patterns;
         *self.ignore_matcher.write().await = new_matcher;
@@ -338,7 +409,7 @@ impl Mount {
     pub async fn reload_ignore_patterns(&self) -> Result<()> {
         let (patterns, sync_path) = {
             let config = self.config.read().await;
-            (config.ignore_patterns.clone(), config.sync_path.clone())
+            (config.ignore_patterns.clone(), config.data_root())
         };
         *self.ignore_matcher.write().await = build_ignore_matcher(&patterns, &sync_path)?;
         Ok(())
@@ -404,8 +475,53 @@ impl Mount {
     pub async fn start(&mut self) -> Result<()> {
         #[cfg(not(windows))]
         {
-            let sync_path = self.config.read().await.sync_path.clone();
-            std::fs::create_dir_all(&sync_path).context("failed to create sync directory")?;
+            let (sync_path, data_root, ondemand) = {
+                let config = self.config.read().await;
+                (
+                    config.sync_path.clone(),
+                    config.data_root(),
+                    config.is_ondemand(),
+                )
+            };
+            std::fs::create_dir_all(&data_root).context("failed to create sync store directory")?;
+
+            #[cfg(target_os = "linux")]
+            if ondemand {
+                // Sweep interrupted hydration leftovers from a previous run.
+                let tmp_dir = crate::drive::fuse_fs::CloudreveFs::tmp_dir(
+                    &data_root,
+                    &self.id,
+                );
+                let _ = std::fs::remove_dir_all(&tmp_dir);
+                std::fs::create_dir_all(&sync_path)
+                    .context("failed to create FUSE mountpoint")?;
+                let (remote_base, drive_id) = {
+                    let config = self.config.read().await;
+                    (config.remote_path.clone(), config.id.clone())
+                };
+                let fs = crate::drive::fuse_fs::CloudreveFs::new(Arc::new(
+                    crate::drive::fuse_fs::FuseContext {
+                        data_root: data_root.clone(),
+                        remote_base,
+                        drive_id,
+                        inventory: self.inventory.clone(),
+                        cr_client: self.cr_client.clone(),
+                        command_tx: self.command_tx.clone(),
+                        runtime: tokio::runtime::Handle::current(),
+                    },
+                ));
+                let session = crate::drive::fuse_fs::spawn(fs, &sync_path)
+                    .context("failed to mount FUSE filesystem")?;
+                *self.fuse_session.lock().await = Some(session);
+                tracing::info!(
+                    target: "drive::mounts",
+                    id = %self.id,
+                    mount = %sync_path.display(),
+                    store = %data_root.display(),
+                    "FUSE on-demand mount started"
+                );
+            }
+
             self.start_fs_watcher().await?;
             return Ok(());
         }
@@ -511,7 +627,7 @@ impl Mount {
 
         tracing::info!(target: "drive::mounts", id = %self.id, "Watching FS");
         debouncer.watch(
-            &self.config.read().await.sync_path,
+            self.config.read().await.data_root(),
             RecursiveMode::Recursive,
         )?;
         *self.fs_watcher.lock().await = Some(debouncer);
@@ -680,7 +796,7 @@ impl Mount {
 
                         let sync_path = {
                             let config = s_clone.config.read().await;
-                            config.sync_path.clone()
+                            config.data_root()
                         };
                         let _ = s_clone.command_tx.send(MountCommand::Sync {
                             local_paths: vec![sync_path],
@@ -729,6 +845,25 @@ impl Mount {
             }
         }
 
+        // On-demand drives keep hydrated bytes in a private store directory;
+        // remove it once the FUSE session is gone so no cache lingers.
+        #[cfg(target_os = "linux")]
+        {
+            let config = self.config.read().await;
+            if config.is_ondemand() {
+                let store = config.data_root();
+                let tmp = crate::drive::fuse_fs::CloudreveFs::tmp_dir(&store, &config.id);
+                drop(config);
+                for dir in [store, tmp] {
+                    if let Err(e) = std::fs::remove_dir_all(&dir)
+                        && e.kind() != std::io::ErrorKind::NotFound
+                    {
+                        tracing::warn!(target: "drive::mounts", id=%self.id, path=%dir.display(), error=%e, "Failed to remove FUSE store directory");
+                    }
+                }
+            }
+        }
+
         Ok(())
     }
 
@@ -745,6 +880,14 @@ impl Mount {
         if let Some(fs_watcher) = self.fs_watcher.lock().await.take() {
             tracing::debug!(target: "drive::mounts", id=%self.id, "Stopping FS watcher");
             drop(fs_watcher);
+        }
+
+        // Unmount the FUSE session before the command channel closes so queued
+        // kernel callbacks don't block on a dead command processor.
+        #[cfg(target_os = "linux")]
+        if let Some(session) = self.fuse_session.lock().await.take() {
+            tracing::debug!(target: "drive::mounts", id=%self.id, "Unmounting FUSE session");
+            drop(session);
         }
 
         // Close the command channel to signal the processor task to stop
@@ -954,6 +1097,7 @@ mod tests {
             raw_icon_path: None,
             enabled: true,
             user_id: "user".to_string(),
+            sync_mode: DriveSyncMode::Full,
             sync_root_id: None,
             ignore_patterns: vec![],
             extra: HashMap::new(),
@@ -996,5 +1140,65 @@ mod tests {
 
         // Command processor handle should be cleared.
         assert!(mount.processor_handle.lock().await.is_none());
+    }
+
+    fn drive_config(mode: DriveSyncMode) -> DriveConfig {
+        DriveConfig {
+            id: "drive-1".to_string(),
+            name: "d".to_string(),
+            instance_url: "https://example.com".to_string(),
+            remote_path: "my:///".to_string(),
+            credentials: Credentials::default(),
+            sync_path: PathBuf::from("/mnt/cloudreve"),
+            icon_path: None,
+            raw_icon_path: None,
+            enabled: true,
+            user_id: "u".to_string(),
+            sync_mode: mode,
+            sync_root_id: None,
+            ignore_patterns: vec![],
+            extra: HashMap::new(),
+        }
+    }
+
+    #[test]
+    fn full_mode_uses_sync_path_as_data_root() {
+        let config = drive_config(DriveSyncMode::Full);
+        assert_eq!(config.data_root(), PathBuf::from("/mnt/cloudreve"));
+        assert!(!config.is_ondemand());
+        let p = PathBuf::from("/mnt/cloudreve/a/b.txt");
+        assert_eq!(config.mount_to_store(&p), p);
+        assert_eq!(config.store_to_mount(&p), p);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn ondemand_separates_mount_and_store() {
+        let config = drive_config(DriveSyncMode::OnDemand);
+        assert!(config.is_ondemand());
+        let store = config.data_root();
+        assert_ne!(store, config.sync_path);
+        assert!(store.ends_with("fuse-store/drive-1"));
+
+        // Mount-space paths map into the store; store paths map back.
+        let mounted = PathBuf::from("/mnt/cloudreve/dir/file.txt");
+        let stored = config.mount_to_store(&mounted);
+        assert_eq!(stored, store.join("dir/file.txt"));
+        assert_eq!(config.store_to_mount(&stored), mounted);
+
+        // Paths outside the mount pass through unchanged.
+        let foreign = PathBuf::from("/elsewhere/file.txt");
+        assert_eq!(config.mount_to_store(&foreign), foreign);
+        assert_eq!(config.store_to_mount(&foreign), foreign);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn tmp_dir_is_store_sibling() {
+        let store = PathBuf::from("/home/u/.cloudreve/fuse-store/drive-1");
+        let tmp = crate::drive::fuse_fs::CloudreveFs::tmp_dir(&store, "drive-1");
+        assert_eq!(tmp, PathBuf::from("/home/u/.cloudreve/fuse-store/.tmp-drive-1"));
+        // Same parent directory => same filesystem => atomic rename works.
+        assert_eq!(tmp.parent(), store.parent());
     }
 }

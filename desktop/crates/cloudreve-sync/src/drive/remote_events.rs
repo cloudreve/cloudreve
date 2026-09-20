@@ -62,7 +62,7 @@ impl Mount {
 
         let sync_path = {
             let config = s.config.read().await;
-            config.sync_path.clone()
+            config.data_root()
         };
 
         loop {
@@ -111,7 +111,7 @@ impl Mount {
     async fn listen_remote_events(&self) -> ListenResult {
         let (remote_base, sync_path) = {
             let config = self.config.read().await;
-            (config.remote_path.clone(), config.sync_path.clone())
+            (config.remote_path.clone(), config.data_root())
         };
 
         let mut subscription = match self.cr_client.subscribe_file_events(&remote_base).await {

@@ -51,6 +51,8 @@ win32_notif = { path = "../win32_notif" }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 notify-rust = "4.11"
+fuser = "0.18"
+libc = "0.2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 mac-notification-sys = "0.6"

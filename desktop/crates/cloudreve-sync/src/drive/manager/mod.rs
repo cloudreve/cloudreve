@@ -234,7 +234,7 @@ impl DriveManager {
         // Spawn initial sync in the background so add_drive returns immediately
         let mount_for_sync = mount_arc.clone();
         let initial_sync_handle = tokio::spawn(async move {
-            let sync_path = mount_for_sync.config.read().await.sync_path.clone();
+            let sync_path = mount_for_sync.config.read().await.data_root();
             tracing::info!(target: "drive", id = %mount_for_sync.id, path = %sync_path.display(), "Starting background initial sync");
             if let Err(e) = mount_for_sync
                 .sync_paths(vec![sync_path], crate::drive::sync::SyncMode::FullHierarchy)

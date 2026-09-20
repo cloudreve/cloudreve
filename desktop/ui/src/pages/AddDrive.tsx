@@ -1,4 +1,4 @@
-import { Alert, Box, Button, CircularProgress, Container, IconButton, InputAdornment, Snackbar, Typography } from "@mui/material";
+import { Alert, Box, Button, CircularProgress, Container, FormControlLabel, IconButton, InputAdornment, Radio, RadioGroup, Snackbar, Typography } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { openUrl, openPath } from "@tauri-apps/plugin-opener";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
@@ -20,6 +20,7 @@ import {
 } from "../utils/siteValidation";
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { platform } from "@tauri-apps/plugin-os";
 import { CALLBACK_PATH, CLIENT_ID, SCOPES } from "../utils/constants";
 
 type PageState = "url_input" | "waiting" | "final_setup" | "setting_up" | "success";
@@ -99,6 +100,8 @@ export default function AddDrive({ mode = "add" }: AddDriveProps) {
   const [pageState, setPageState] = useState<PageState>(isReauthorize ? "url_input" : "url_input");
   const [localPath, setLocalPath] = useState("");
   const [folderNotEmpty, setFolderNotEmpty] = useState(false);
+  const isLinux = platform() === "linux";
+  const [syncMode, setSyncMode] = useState<"full" | "ondemand">("full");
   const [driveName, setDriveName] = useState(driveNameQuery ? decodeURIComponent(driveNameQuery) : "");
   const lastFetchedUrl = useRef<string>("");
   const currentIconUrl = useRef<string | undefined>(undefined);
@@ -349,6 +352,7 @@ export default function AddDrive({ mode = "add" }: AddDriveProps) {
           remote_path: pkceSessionRef.current!.callbackData!.path,
           user_id: pkceSessionRef.current!.callbackData!.user_id || "",
           drive_id: isReauthorize ? driveId : undefined,
+          sync_mode: isLinux ? syncMode : "full",
         }
       });
       // Success - switch to success state
@@ -572,6 +576,37 @@ export default function AddDrive({ mode = "add" }: AddDriveProps) {
                           "This folder already has files. Existing local content will be merged into the remote drive; same-name files with matching hashes will be treated as already synced."
                         )}
                       </Alert>
+                    )}
+                    {isLinux && (
+                      <>
+                        <RadioGroup
+                          row
+                          value={syncMode}
+                          onChange={(e) => setSyncMode(e.target.value as "full" | "ondemand")}
+                        >
+                          <FormControlLabel
+                            value="full"
+                            control={<Radio size="small" />}
+                            label={t("addDrive.syncModeFull", "Full sync")}
+                          />
+                          <FormControlLabel
+                            value="ondemand"
+                            control={<Radio size="small" />}
+                            label={t("addDrive.syncModeOndemand", "On-demand")}
+                          />
+                        </RadioGroup>
+                        <Typography variant="caption" color="text.secondary">
+                          {syncMode === "ondemand"
+                            ? t(
+                                "addDrive.syncModeOndemandHint",
+                                "Files appear instantly and download when opened. Uses less disk space; needs the network for new files. Existing files in the selected folder are hidden while mounted."
+                              )
+                            : t(
+                                "addDrive.syncModeFullHint",
+                                "All files are mirrored to this folder and available offline."
+                              )}
+                        </Typography>
+                      </>
                     )}
                   </>
                 )}
