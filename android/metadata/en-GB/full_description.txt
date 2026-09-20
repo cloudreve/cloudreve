@@ -1,0 +1,21 @@
+Cloudreve Mobile is the open-source Android client for Cloudreve — the self-hosted cloud storage platform. Connect to your own Cloudreve server and take your files anywhere.
+
+YOUR FILES, YOUR SERVER
+No third-party cloud. Your data lives on infrastructure you control — the app talks directly to the server you configure, nothing else.
+
+FEATURES
+• Browse, upload, and download files and folders
+• Create and manage share links
+• Full-text search across your drive
+• Automatic camera backup with Wi-Fi-only option
+• Keep files offline with one tap
+• Local sync folder — mirror a device folder to your server
+• Android Files app integration (DocumentsProvider)
+• Share-sheet target — send files from any app
+• Quick Settings tile for one-tap camera backup
+• Notifications for uploads, downloads, and background tasks
+
+OPEN SOURCE
+Fully open source — audit the code, self-host the server, own your data.
+
+Requires a self-hosted Cloudreve server (v4+). Source code and documentation: https://github.com/Dvorinka/cloudreve
