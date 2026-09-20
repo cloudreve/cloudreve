@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/cloudreve/Cloudreve/v4/ent"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 )
@@ -112,6 +114,9 @@ func (f *DBFS) validateUserCapacity(ctx context.Context, size int64, u *ent.User
 // validateUserCapacityRaw validates the user capacity, but does not fetch the capacity.
 func (f *DBFS) validateUserCapacityRaw(ctx context.Context, size int64, capacity *fs.Capacity) error {
 	if capacity.Used+size > capacity.Total {
+		f.record(ctx, types.EventUserExceedQuotaNotified, activity.Extra(map[string]any{
+			"size": size, "capacity": capacity.Total,
+		}))
 		return fs.ErrInsufficientCapacity
 	}
 	return nil

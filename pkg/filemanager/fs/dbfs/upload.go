@@ -223,6 +223,9 @@ func (f *DBFS) PrepareUpload(ctx context.Context, req *fs.UploadRequest, opts ..
 	if err := dbTx.ReserveStorage(ctx, f.userClient, owner.ID, req.Props.Size, capacity.Total); err != nil {
 		_ = inventory.Rollback(dbTx)
 		if errors.Is(err, inventory.ErrInsufficientCapacity) {
+			f.record(ctx, types.EventUserExceedQuotaNotified, activity.Extra(map[string]any{
+				"size": req.Props.Size, "capacity": capacity.Total,
+			}))
 			return nil, fs.ErrInsufficientCapacity
 		}
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to reserve storage capacity", err)
