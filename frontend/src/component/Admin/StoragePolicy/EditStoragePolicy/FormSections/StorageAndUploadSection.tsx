@@ -5,15 +5,19 @@ import {
   InputAdornment,
   Link,
   MenuItem,
+  SelectChangeEvent,
   Switch,
   Typography,
 } from "@mui/material";
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
+import { getStoragePolicyList } from "../../../../../api/api";
 import { StoragePolicy } from "../../../../../api/dashboard";
 import { PolicyType } from "../../../../../api/explorer";
+import { useAppDispatch } from "../../../../../redux/hooks";
 import SizeInput, { StyleOutlinedSelect } from "../../../../Common/SizeInput";
-import { DenseFilledTextField } from "../../../../Common/StyledComponents";
+import { DenseFilledTextField, DenseSelect } from "../../../../Common/StyledComponents";
+import { SquareMenuItem } from "../../../../FileManager/ContextMenu/ContextMenu";
 import SettingForm from "../../../../Pages/Setting/SettingForm";
 import MagicVarDialog from "../../../Common/MagicVarDialog";
 import { NoMarginHelperText, SettingSection, SettingSectionContent } from "../../../Settings/Settings";
@@ -25,8 +29,18 @@ import { fileMagicVars, pathMagicVars } from "./magicVars";
 const StorageAndUploadSection = () => {
   const { t } = useTranslation("dashboard");
   const { values, setPolicy, formRef } = useContext(StoragePolicySettingContext);
+  const dispatch = useAppDispatch();
   const [magicVarDialogOpen, setMagicVarDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<"path" | "file">("path");
+  const [overflowCandidates, setOverflowCandidates] = useState<StoragePolicy[]>([]);
+
+  useEffect(() => {
+    dispatch(getStoragePolicyList({ page: 1, page_size: 1000, order_by: "id", order_direction: "asc" })).then(
+      (res) => {
+        setOverflowCandidates(res.policies.filter((p) => p.id !== values.id));
+      },
+    );
+  }, [values.id]);
 
   const fileNameInputRef = useRef<HTMLInputElement>(null);
 
@@ -115,6 +129,17 @@ const StorageAndUploadSection = () => {
       setPolicy((p: StoragePolicy) => ({
         ...p,
         settings: { ...p.settings, max_total_size: e === 0 ? undefined : e },
+      }));
+    },
+    [setPolicy],
+  );
+
+  const onOverflowChange = useCallback(
+    (e: SelectChangeEvent<unknown>) => {
+      const id = e.target.value as number;
+      setPolicy((p: StoragePolicy) => ({
+        ...p,
+        settings: { ...p.settings, overflow_policy_id: id === 0 ? undefined : id },
       }));
     },
     [setPolicy],
@@ -292,6 +317,22 @@ const StorageAndUploadSection = () => {
           <FormControl fullWidth>
             <SizeInput variant={"outlined"} value={values.settings?.max_total_size ?? 0} onChange={onMaxTotalSizeChange} />
             <NoMarginHelperText>{t("policy.maxTotalSizeDes")}</NoMarginHelperText>
+          </FormControl>
+        </SettingForm>
+        <SettingForm title={t("policy.overflowPolicy")} lgWidth={5}>
+          <FormControl fullWidth>
+            <DenseSelect
+              value={values.settings?.overflow_policy_id ?? 0}
+              onChange={onOverflowChange}
+            >
+              <SquareMenuItem value={0}>{t("policy.overflowNone")}</SquareMenuItem>
+              {overflowCandidates.map((p) => (
+                <SquareMenuItem key={p.id} value={p.id}>
+                  {p.name}
+                </SquareMenuItem>
+              ))}
+            </DenseSelect>
+            <NoMarginHelperText>{t("policy.overflowPolicyDes")}</NoMarginHelperText>
           </FormControl>
         </SettingForm>
         <SettingForm title={t("policy.extList")} lgWidth={5}>

@@ -64,12 +64,18 @@ func (f *DBFS) PreValidateUpload(ctx context.Context, dst *fs.URI, files ...fs.P
 		}
 	}
 
-	// Validate available capacity
+	// Validate available capacity — a batch may spill across the policy's
+	// overflow chain, so check aggregate headroom rather than one member.
 	if err := f.validateUserCapacity(ctx, total, dstFile.Owner()); err != nil {
 		return err
 	}
-	if err := f.validatePolicyCapacity(ctx, total, policy); err != nil {
+	headroom, err := f.chainHeadroom(ctx, policy)
+	if err != nil {
 		return err
+	}
+	if total > headroom {
+		f.l.Warning("storage policy %q overflow chain lacks headroom (%d > %d)", policy.Name, total, headroom)
+		return fs.ErrInsufficientCapacity
 	}
 
 	return nil
@@ -145,6 +151,13 @@ func (f *DBFS) PrepareUpload(ctx context.Context, req *fs.UploadRequest, opts ..
 
 	if policy.Status == storagepolicy.StatusSuspended {
 		return nil, serializer.NewError(serializer.CodePolicyNotAllowed, "Storage policy is suspended", nil)
+	}
+
+	// When the preferred policy has no headroom, spill into its overflow
+	// chain before any rule validation so constraints apply to the policy
+	// the entity will actually land on.
+	if policy.Settings.OverflowPolicyID != 0 {
+		policy = f.resolveOverflowPolicy(ctx, policy, req.Props.Size)
 	}
 
 	// Encryption setting

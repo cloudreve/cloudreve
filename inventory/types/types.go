@@ -127,6 +127,10 @@ type (
 		// MaxTotalSize caps the total bytes of entities stored under this
 		// policy. Checked at upload/copy validation; 0 means unlimited.
 		MaxTotalSize int64 `json:"max_total_size,omitempty"`
+		// OverflowPolicyID links the next policy in an overflow chain: when
+		// this policy has no headroom for an upload, the upload spills into
+		// the linked policy. Chains terminate at 0; cycles are guarded.
+		OverflowPolicyID int `json:"overflow_policy_id,omitempty"`
 		// Whether to upload file through server's relay.
 		Relay bool `json:"relay,omitempty"`
 		// Whether to pre allocate space for file before upload in physical disk.

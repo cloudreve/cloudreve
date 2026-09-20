@@ -254,6 +254,7 @@ export interface PolicySetting {
   thumb_support_all_exts?: boolean;
   thumb_max_size?: number;
   max_total_size?: number;
+  overflow_policy_id?: number;
   relay?: boolean;
   pre_allocate?: boolean;
   media_meta_exts?: string[];
