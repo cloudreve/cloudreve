@@ -51,8 +51,8 @@ CI runs `assembleDebug` on every PR.
   and a remote folder — periodic WorkManager worker mirrors new/changed
   files upstream, subdirectory structure preserved, unchanged files
   skipped via mtime/size signatures, Wi-Fi-only option
+- Quick Settings tile toggling camera backup, with active/inactive state
 
 ## Planned next
 
-- Quick-share tile
 - No iOS. Ever.
