@@ -34,6 +34,8 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -78,6 +80,7 @@ import kotlinx.coroutines.launch
 import org.cloudreve.android.CloudreveApp
 import org.cloudreve.android.api.FileObject
 import org.cloudreve.android.data.CameraUploadSettings
+import org.cloudreve.android.data.FavoriteEntry
 import org.cloudreve.android.util.CrUri
 import org.cloudreve.android.work.CameraUploadWorker
 import org.cloudreve.android.work.UploadWorker
@@ -101,6 +104,7 @@ fun FilesScreen(
     var searchOpen by remember { mutableStateOf(false) }
     var searchText by remember { mutableStateOf("") }
     var cameraSettingsOpen by remember { mutableStateOf(false) }
+    var favoritesOpen by remember { mutableStateOf(false) }
     val searchFocus = remember { FocusRequester() }
 
     val inSearch = state.searchQuery != null
@@ -197,6 +201,15 @@ fun FilesScreen(
                         IconButton(onClick = { searchOpen = true }) {
                             Icon(Icons.Default.Search, contentDescription = "Search")
                         }
+                        IconButton(onClick = { favoritesOpen = true }) {
+                            Icon(
+                                if (state.favorites.isEmpty()) Icons.Default.StarBorder
+                                else Icons.Default.Star,
+                                contentDescription = "Offline files",
+                                tint = if (state.favorites.isEmpty()) MaterialTheme.colorScheme.onSurface
+                                else MaterialTheme.colorScheme.primary,
+                            )
+                        }
                         IconButton(onClick = { cameraSettingsOpen = true }) {
                             Icon(Icons.Default.Settings, contentDescription = "Camera backup")
                         }
@@ -274,6 +287,10 @@ fun FilesScreen(
                             FileRow(
                                 file = file,
                                 thumbUrl = thumbUrlFor(viewModel, file),
+                                isFavorite = file.path in state.favoritePaths,
+                                onToggleFavorite = {
+                                    viewModel.toggleFavorite(context, file)
+                                },
                                 onClick = {
                                     if (file.isFolder) {
                                         viewModel.navigateTo(file)
@@ -372,6 +389,77 @@ fun FilesScreen(
     if (cameraSettingsOpen) {
         CameraUploadDialog(onDismiss = { cameraSettingsOpen = false })
     }
+    if (favoritesOpen) {
+        FavoritesDialog(
+            favorites = state.favorites,
+            onDismiss = { favoritesOpen = false },
+            onOpen = { entry -> openFile(context, java.io.File(entry.localFile)) },
+            onRefresh = { entry -> viewModel.refreshFavorite(context, entry) },
+            onRemove = { entry -> viewModel.removeFavorite(entry) },
+        )
+    }
+}
+
+@Composable
+private fun FavoritesDialog(
+    favorites: List<FavoriteEntry>,
+    onDismiss: () -> Unit,
+    onOpen: (FavoriteEntry) -> Unit,
+    onRefresh: (FavoriteEntry) -> Unit,
+    onRemove: (FavoriteEntry) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Offline files") },
+        text = {
+            if (favorites.isEmpty()) {
+                Text(
+                    "Nothing saved for offline use yet. Use a file's menu → Keep offline.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                LazyColumn {
+                    items(favorites, key = { it.path }) { entry ->
+                        ListItem(
+                            modifier = Modifier.clickable { onOpen(entry) },
+                            headlineContent = {
+                                Text(entry.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            },
+                            supportingContent = {
+                                Text(
+                                    "${formatSize(entry.size)} · saved " +
+                                        java.text.DateFormat.getDateInstance(java.text.DateFormat.SHORT)
+                                            .format(java.util.Date(entry.savedAt)),
+                                    style = MaterialTheme.typography.labelMedium,
+                                )
+                            },
+                            trailingContent = {
+                                Row {
+                                    IconButton(onClick = { onRefresh(entry) }) {
+                                        Icon(
+                                            Icons.Default.Refresh,
+                                            contentDescription = "Re-download",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                    IconButton(onClick = { onRemove(entry) }) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = "Remove",
+                                            tint = MaterialTheme.colorScheme.error,
+                                        )
+                                    }
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Done") }
+        },
+    )
 }
 
 private fun pathLabel(uri: String): String {
@@ -610,6 +698,8 @@ private fun thumbUrlFor(viewModel: FilesViewModel, file: FileObject): String? {
 private fun FileRow(
     file: FileObject,
     thumbUrl: String?,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
     onClick: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
@@ -654,6 +744,16 @@ private fun FileRow(
                             text = { Text("Download") },
                             leadingIcon = { Icon(Icons.Default.Download, null) },
                             onClick = { menuOpen = false; onDownload() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(if (isFavorite) "Remove offline copy" else "Keep offline") },
+                            leadingIcon = {
+                                Icon(
+                                    if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                                    null,
+                                )
+                            },
+                            onClick = { menuOpen = false; onToggleFavorite() },
                         )
                     }
                     DropdownMenuItem(

@@ -34,8 +34,12 @@ CI runs `assembleDebug` on every PR.
   photos/videos to a configurable remote folder, Wi-Fi-only constraint,
   media-permission gated toggle, synced/failed ID dedup, manual
   "sync now" — settings dialog in the files top bar
+- Offline favorites: "Keep offline" in a file's menu downloads to
+  `filesDir/offline/` and registers the entry (DataStore JSON);
+  star icon in the top bar opens the offline list — open via
+  FileProvider, re-download to refresh, remove to delete
 
 ## Planned next
 
-- Offline-favorite files, DocumentsProvider
+- DocumentsProvider
 - No iOS. Ever.
