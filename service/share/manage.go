@@ -21,17 +21,18 @@ import (
 type (
 	// ShareCreateService 创建新分享服务
 	ShareCreateService struct {
-		Uri             string `json:"uri" binding:"required"`
-		IsPrivate       bool   `json:"is_private"`
-		Password        string `json:"password" binding:"omitempty,max=32"`
-		RemainDownloads int    `json:"downloads"`
-		Expire          int    `json:"expire"`
-		ShareView       bool   `json:"share_view"`
-		ShowReadMe      bool   `json:"show_readme"`
-		AllowUpload     bool   `json:"allow_upload"`
-		AllowEdit       bool   `json:"allow_edit"`
-		PreviewOnly     bool   `json:"preview_only"`
-		UploadOnly      bool   `json:"upload_only"`
+		Uri             string   `json:"uri" binding:"required_without=Uris"`
+		Uris            []string `json:"uris" binding:"omitempty,min=1,max=50,dive,required"`
+		IsPrivate       bool     `json:"is_private"`
+		Password        string   `json:"password" binding:"omitempty,max=32"`
+		RemainDownloads int      `json:"downloads"`
+		Expire          int      `json:"expire"`
+		ShareView       bool     `json:"share_view"`
+		ShowReadMe      bool     `json:"show_readme"`
+		AllowUpload     bool     `json:"allow_upload"`
+		AllowEdit       bool     `json:"allow_edit"`
+		PreviewOnly     bool     `json:"preview_only"`
+		UploadOnly      bool     `json:"upload_only"`
 		// Optional owner-defined note shown on My Shares (#3570).
 		Note string `json:"note" binding:"omitempty,max=255"`
 		// Points price visitors must pay before downloading. 0 = free share.
@@ -87,9 +88,29 @@ func (service *ShareCreateService) Upsert(c *gin.Context, existed int) (string, 
 		return "", serializer.NewError(serializer.CodeGroupNotAllowed, "Group permission denied for paid share", nil)
 	}
 
-	uri, err := fs.NewUriFromString(service.Uri)
-	if err != nil {
-		return "", serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
+	rawUris := service.Uris
+	if len(rawUris) == 0 && service.Uri != "" {
+		rawUris = []string{service.Uri}
+	}
+	if len(rawUris) > 1 && service.UploadOnly {
+		return "", serializer.NewError(serializer.CodeParamErr, "upload-only shares cannot cover multiple files", nil)
+	}
+
+	uris := make([]*fs.URI, 0, len(rawUris))
+	seenUris := make(map[string]struct{}, len(rawUris))
+	for _, raw := range rawUris {
+		if _, ok := seenUris[raw]; ok {
+			continue
+		}
+		seenUris[raw] = struct{}{}
+		uri, err := fs.NewUriFromString(raw)
+		if err != nil {
+			return "", serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
+		}
+		uris = append(uris, uri)
+	}
+	if len(uris) == 0 {
+		return "", serializer.NewError(serializer.CodeParamErr, "unknown uri", nil)
 	}
 
 	var expires *time.Time
@@ -98,7 +119,7 @@ func (service *ShareCreateService) Upsert(c *gin.Context, existed int) (string, 
 		*expires = time.Now().Add(time.Duration(service.Expire) * time.Second)
 	}
 
-	share, err := m.CreateOrUpdateShare(c, uri, &manager.CreateShareArgs{
+	share, err := m.CreateOrUpdateShare(c, uris, &manager.CreateShareArgs{
 		IsPrivate:       service.IsPrivate,
 		Password:        service.Password,
 		RemainDownloads: service.RemainDownloads,

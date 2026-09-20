@@ -316,6 +316,21 @@ func (fu *FileUpdate) AddShares(s ...*Share) *FileUpdate {
 	return fu.AddShareIDs(ids...)
 }
 
+// AddMultiShareIDs adds the "multi_shares" edge to the Share entity by IDs.
+func (fu *FileUpdate) AddMultiShareIDs(ids ...int) *FileUpdate {
+	fu.mutation.AddMultiShareIDs(ids...)
+	return fu
+}
+
+// AddMultiShares adds the "multi_shares" edges to the Share entity.
+func (fu *FileUpdate) AddMultiShares(s ...*Share) *FileUpdate {
+	ids := make([]int, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return fu.AddMultiShareIDs(ids...)
+}
+
 // AddACLEntryIDs adds the "acl_entries" edge to the AclEntry entity by IDs.
 func (fu *FileUpdate) AddACLEntryIDs(ids ...int) *FileUpdate {
 	fu.mutation.AddACLEntryIDs(ids...)
@@ -451,6 +466,27 @@ func (fu *FileUpdate) RemoveShares(s ...*Share) *FileUpdate {
 		ids[i] = s[i].ID
 	}
 	return fu.RemoveShareIDs(ids...)
+}
+
+// ClearMultiShares clears all "multi_shares" edges to the Share entity.
+func (fu *FileUpdate) ClearMultiShares() *FileUpdate {
+	fu.mutation.ClearMultiShares()
+	return fu
+}
+
+// RemoveMultiShareIDs removes the "multi_shares" edge to Share entities by IDs.
+func (fu *FileUpdate) RemoveMultiShareIDs(ids ...int) *FileUpdate {
+	fu.mutation.RemoveMultiShareIDs(ids...)
+	return fu
+}
+
+// RemoveMultiShares removes "multi_shares" edges to Share entities.
+func (fu *FileUpdate) RemoveMultiShares(s ...*Share) *FileUpdate {
+	ids := make([]int, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return fu.RemoveMultiShareIDs(ids...)
 }
 
 // ClearACLEntries clears all "acl_entries" edges to the AclEntry entity.
@@ -835,6 +871,51 @@ func (fu *FileUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Inverse: false,
 			Table:   file.SharesTable,
 			Columns: []string{file.SharesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(share.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if fu.mutation.MultiSharesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   file.MultiSharesTable,
+			Columns: file.MultiSharesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(share.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := fu.mutation.RemovedMultiSharesIDs(); len(nodes) > 0 && !fu.mutation.MultiSharesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   file.MultiSharesTable,
+			Columns: file.MultiSharesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(share.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := fu.mutation.MultiSharesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   file.MultiSharesTable,
+			Columns: file.MultiSharesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(share.FieldID, field.TypeInt),
@@ -1235,6 +1316,21 @@ func (fuo *FileUpdateOne) AddShares(s ...*Share) *FileUpdateOne {
 	return fuo.AddShareIDs(ids...)
 }
 
+// AddMultiShareIDs adds the "multi_shares" edge to the Share entity by IDs.
+func (fuo *FileUpdateOne) AddMultiShareIDs(ids ...int) *FileUpdateOne {
+	fuo.mutation.AddMultiShareIDs(ids...)
+	return fuo
+}
+
+// AddMultiShares adds the "multi_shares" edges to the Share entity.
+func (fuo *FileUpdateOne) AddMultiShares(s ...*Share) *FileUpdateOne {
+	ids := make([]int, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return fuo.AddMultiShareIDs(ids...)
+}
+
 // AddACLEntryIDs adds the "acl_entries" edge to the AclEntry entity by IDs.
 func (fuo *FileUpdateOne) AddACLEntryIDs(ids ...int) *FileUpdateOne {
 	fuo.mutation.AddACLEntryIDs(ids...)
@@ -1370,6 +1466,27 @@ func (fuo *FileUpdateOne) RemoveShares(s ...*Share) *FileUpdateOne {
 		ids[i] = s[i].ID
 	}
 	return fuo.RemoveShareIDs(ids...)
+}
+
+// ClearMultiShares clears all "multi_shares" edges to the Share entity.
+func (fuo *FileUpdateOne) ClearMultiShares() *FileUpdateOne {
+	fuo.mutation.ClearMultiShares()
+	return fuo
+}
+
+// RemoveMultiShareIDs removes the "multi_shares" edge to Share entities by IDs.
+func (fuo *FileUpdateOne) RemoveMultiShareIDs(ids ...int) *FileUpdateOne {
+	fuo.mutation.RemoveMultiShareIDs(ids...)
+	return fuo
+}
+
+// RemoveMultiShares removes "multi_shares" edges to Share entities.
+func (fuo *FileUpdateOne) RemoveMultiShares(s ...*Share) *FileUpdateOne {
+	ids := make([]int, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return fuo.RemoveMultiShareIDs(ids...)
 }
 
 // ClearACLEntries clears all "acl_entries" edges to the AclEntry entity.
@@ -1784,6 +1901,51 @@ func (fuo *FileUpdateOne) sqlSave(ctx context.Context) (_node *File, err error) 
 			Inverse: false,
 			Table:   file.SharesTable,
 			Columns: []string{file.SharesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(share.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if fuo.mutation.MultiSharesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   file.MultiSharesTable,
+			Columns: file.MultiSharesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(share.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := fuo.mutation.RemovedMultiSharesIDs(); len(nodes) > 0 && !fuo.mutation.MultiSharesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   file.MultiSharesTable,
+			Columns: file.MultiSharesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(share.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := fuo.mutation.MultiSharesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   file.MultiSharesTable,
+			Columns: file.MultiSharesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(share.FieldID, field.TypeInt),

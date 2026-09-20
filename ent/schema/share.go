@@ -46,6 +46,9 @@ func (Share) Edges() []ent.Edge {
 			Ref("shares").Unique(),
 		edge.From("file", File.Type).
 			Ref("shares").Unique(),
+		// All files covered by a multi-file share, anchor included. Empty
+		// for legacy single-file shares.
+		edge.To("files", File.Type),
 		edge.To("purchases", SharePurchase.Type),
 	}
 }

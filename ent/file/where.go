@@ -641,6 +641,29 @@ func HasSharesWith(preds ...predicate.Share) predicate.File {
 	})
 }
 
+// HasMultiShares applies the HasEdge predicate on the "multi_shares" edge.
+func HasMultiShares() predicate.File {
+	return predicate.File(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, MultiSharesTable, MultiSharesPrimaryKey...),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasMultiSharesWith applies the HasEdge predicate on the "multi_shares" edge with a given conditions (other predicates).
+func HasMultiSharesWith(preds ...predicate.Share) predicate.File {
+	return predicate.File(func(s *sql.Selector) {
+		step := newMultiSharesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasACLEntries applies the HasEdge predicate on the "acl_entries" edge.
 func HasACLEntries() predicate.File {
 	return predicate.File(func(s *sql.Selector) {

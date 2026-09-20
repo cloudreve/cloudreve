@@ -123,7 +123,9 @@ const ShareDialog = () => {
 
   const open = useAppSelector((state) => state.globalState.shareLinkDialogOpen);
   const target = useAppSelector((state) => state.globalState.shareLinkDialogFile);
+  const targets = useAppSelector((state) => state.globalState.shareLinkDialogFiles);
   const editTarget = useAppSelector((state) => state.globalState.shareLinkDialogShare);
+  const multiCount = targets && targets.length > 1 ? targets.length : 0;
 
   useEffect(() => {
     if (open) {
@@ -159,7 +161,7 @@ const ShareDialog = () => {
       setLoading(true);
       try {
         const shareLink = await dispatch(
-          createOrUpdateShareLink(FileManagerIndex.main, target, setting, editTarget?.id),
+          createOrUpdateShareLink(FileManagerIndex.main, target, setting, editTarget?.id, targets),
         );
         rememberSetting(setting);
         setShareLink(shareLink);
@@ -224,12 +226,24 @@ const ShareDialog = () => {
               >
                 <Box>
                   {!shareLink && (
-                    <ShareSettingContent
-                      editing={!!editTarget}
-                      onSettingChange={setSetting}
-                      setting={setting}
-                      file={target}
-                    />
+                    <>
+                      {multiCount > 0 && (
+                        <FilledTextField
+                          variant={"filled"}
+                          inputProps={{ readOnly: true }}
+                          label={t("application:modals.shareTargets")}
+                          fullWidth
+                          value={t("application:modals.shareTargetsCount", { count: multiCount })}
+                          sx={{ mb: 1 }}
+                        />
+                      )}
+                      <ShareSettingContent
+                        editing={!!editTarget}
+                        onSettingChange={setSetting}
+                        setting={setting}
+                        file={multiCount > 0 ? undefined : target}
+                      />
+                    </>
                   )}
                   {shareLink && (
                     <Stack spacing={1}>

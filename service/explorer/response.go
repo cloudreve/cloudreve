@@ -360,6 +360,10 @@ type Share struct {
 	// PurchaseTicket is the requester's resume credential; only set for
 	// the purchasing user, never for the owner or other visitors.
 	PurchaseTicket string `json:"purchase_ticket,omitempty"`
+
+	// FileCount is the linked file count of a multi-file share; 0 for
+	// legacy single-file shares.
+	FileCount int `json:"file_count,omitempty"`
 }
 
 func BuildShare(ctx context.Context, s *ent.Share, base *url.URL, hasher hashid.Encoder, requester *ent.User, owner *ent.User,

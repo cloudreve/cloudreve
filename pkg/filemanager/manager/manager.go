@@ -84,8 +84,9 @@ type (
 	}
 
 	ShareManagement interface {
-		// CreateShare creates a share link for given path
-		CreateOrUpdateShare(ctx context.Context, path *fs.URI, args *CreateShareArgs) (*ent.Share, error)
+		// CreateShare creates a share link for given paths. Multiple paths
+		// create a multi-file share anchored on the first path.
+		CreateOrUpdateShare(ctx context.Context, paths []*fs.URI, args *CreateShareArgs) (*ent.Share, error)
 	}
 
 	Archiver interface {

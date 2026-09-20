@@ -265,7 +265,7 @@ const ContextMenu = ({ fmIndex = 0 }: ContextMenuProps) => {
         </SquareMenuItem>
       )}
       {displayOpt.showShare && (
-        <SquareMenuItem onClick={() => dispatch(openShareDialog(fmIndex, targets[0]))}>
+        <SquareMenuItem onClick={() => dispatch(openShareDialog(fmIndex, targets))}>
           <ListItemIcon>
             <ShareOutlined fontSize="small" />
           </ListItemIcon>

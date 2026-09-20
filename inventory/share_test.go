@@ -46,6 +46,76 @@ func TestIsValidShareChecksOwnerAccess(t *testing.T) {
 	}
 }
 
+func TestIsValidShareMultiFile(t *testing.T) {
+	permissions := &boolset.BooleanSet{}
+	boolset.Set(types.GroupPermissionShare, true, permissions)
+	group := &ent.Group{Permissions: permissions}
+	owner := &ent.User{ID: 1, Status: entuser.StatusActive}
+	owner.SetGroup(group)
+
+	alive := &ent.File{OwnerID: owner.ID, FileChildren: 1}
+	dead := &ent.File{OwnerID: owner.ID, FileChildren: 0}
+	foreign := &ent.File{OwnerID: 2, FileChildren: 1}
+
+	newShare := func(files ...*ent.File) *ent.Share {
+		s := &ent.Share{}
+		s.SetUser(owner)
+		s.SetFile(dead)
+		s.Edges.Files = files
+		return s
+	}
+
+	// Multi-file shares stay valid while at least one linked file is alive.
+	require.NoError(t, IsValidShare(newShare(dead, alive)))
+	require.NoError(t, IsValidShare(newShare(alive)))
+	require.ErrorIs(t, IsValidShare(newShare(dead)), ErrSourceFileInvalid)
+	require.ErrorIs(t, IsValidShare(newShare(foreign)), ErrSourceFileInvalid)
+	require.ErrorIs(t, IsValidShare(newShare(dead, foreign)), ErrSourceFileInvalid)
+
+	// Anchor-dead but linked-alive shares remain valid.
+	require.NoError(t, IsValidShare(newShare(dead, dead, alive)))
+}
+
+func TestShareUpsertFileIDs(t *testing.T) {
+	client := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared")
+	t.Cleanup(func() { require.NoError(t, client.Close()) })
+	ctx := context.Background()
+
+	permissions := &boolset.BooleanSet{}
+	boolset.Set(types.GroupPermissionShare, true, permissions)
+	group := client.Group.Create().SetName("g").SetPermissions(permissions).SaveX(ctx)
+	owner := client.User.Create().SetEmail("owner@example.com").SetNick("owner").SetGroup(group).SaveX(ctx)
+	root := client.File.Create().SetName(RootFolderName).SetType(int(types.FileTypeFolder)).SetOwner(owner).SaveX(ctx)
+	f1 := client.File.Create().SetName("a.txt").SetType(int(types.FileTypeFile)).SetOwner(owner).SetParent(root).SaveX(ctx)
+	f2 := client.File.Create().SetName("b.txt").SetType(int(types.FileTypeFile)).SetOwner(owner).SetParent(root).SaveX(ctx)
+
+	shareClient := NewShareClient(client, conf.SQLiteDB, nil)
+
+	// Multi-file share: files edge holds the full set, anchor included.
+	s, err := shareClient.Upsert(ctx, &CreateShareParams{
+		OwnerID: owner.ID,
+		FileID:  f1.ID,
+		FileIDs: []int{f1.ID, f2.ID},
+	})
+	require.NoError(t, err)
+
+	loadCtx := context.WithValue(ctx, LoadShareFiles{}, true)
+	loaded, err := shareClient.GetByID(loadCtx, s.ID)
+	require.NoError(t, err)
+	require.Len(t, loaded.Edges.Files, 2)
+
+	// Single-file share: no files edge — legacy behavior unchanged.
+	single, err := shareClient.Upsert(ctx, &CreateShareParams{
+		OwnerID: owner.ID,
+		FileID:  f1.ID,
+		FileIDs: []int{f1.ID},
+	})
+	require.NoError(t, err)
+	loaded, err = shareClient.GetByID(loadCtx, single.ID)
+	require.NoError(t, err)
+	require.Empty(t, loaded.Edges.Files)
+}
+
 func TestShareClientRevalidatesOwnerGroup(t *testing.T) {
 	client := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared")
 	t.Cleanup(func() { require.NoError(t, client.Close()) })

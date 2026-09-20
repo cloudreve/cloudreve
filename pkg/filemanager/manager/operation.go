@@ -311,25 +311,43 @@ func (l *manager) Restore(ctx context.Context, path ...*fs.URI) error {
 	return l.fs.Restore(ctx, path...)
 }
 
-func (l *manager) CreateOrUpdateShare(ctx context.Context, path *fs.URI, args *CreateShareArgs) (*ent.Share, error) {
-	file, err := l.fs.Get(ctx, path, dbfs.WithRequiredCapabilities(dbfs.NavigatorCapabilityShare), dbfs.WithNotRoot())
-	if err != nil {
-		return nil, serializer.NewError(serializer.CodeNotFound, "src file not found", err)
+func (l *manager) CreateOrUpdateShare(ctx context.Context, paths []*fs.URI, args *CreateShareArgs) (*ent.Share, error) {
+	if len(paths) == 0 {
+		return nil, serializer.NewError(serializer.CodeParamErr, "src file not found", nil)
 	}
 
-	// Only file owner can share file
-	if file.OwnerID() != l.user.ID {
-		return nil, serializer.NewError(serializer.CodeNoPermissionErr, "permission denied", nil)
+	files := make([]fs.File, 0, len(paths))
+	seen := make(map[int]struct{}, len(paths))
+	for _, path := range paths {
+		file, err := l.fs.Get(ctx, path, dbfs.WithRequiredCapabilities(dbfs.NavigatorCapabilityShare), dbfs.WithNotRoot())
+		if err != nil {
+			return nil, serializer.NewError(serializer.CodeNotFound, "src file not found", err)
+		}
+
+		// Only file owner can share file
+		if file.OwnerID() != l.user.ID {
+			return nil, serializer.NewError(serializer.CodeNoPermissionErr, "permission denied", nil)
+		}
+
+		if file.IsSymbolic() {
+			return nil, serializer.NewError(serializer.CodeNoPermissionErr, "cannot share symbolic file", nil)
+		}
+
+		if _, ok := seen[file.ID()]; !ok {
+			seen[file.ID()] = struct{}{}
+			files = append(files, file)
+		}
 	}
 
-	if file.IsSymbolic() {
-		return nil, serializer.NewError(serializer.CodeNoPermissionErr, "cannot share symbolic file", nil)
-	}
-
-	var existed *ent.Share
+	file := files[0]
+	var (
+		existed *ent.Share
+		err     error
+	)
 	shareClient := l.dep.ShareClient()
 	if args.ExistedShareID != 0 {
 		loadShareCtx := context.WithValue(ctx, inventory.LoadShareFile{}, true)
+		loadShareCtx = context.WithValue(loadShareCtx, inventory.LoadShareFiles{}, true)
 		existed, err = shareClient.GetByID(loadShareCtx, args.ExistedShareID)
 		if err != nil {
 			return nil, serializer.NewError(serializer.CodeNotFound, "failed to get existed share", err)
@@ -337,6 +355,10 @@ func (l *manager) CreateOrUpdateShare(ctx context.Context, path *fs.URI, args *C
 
 		if existed.Edges.File.ID != file.ID() {
 			return nil, serializer.NewError(serializer.CodeNotFound, "share link not found", nil)
+		}
+
+		if len(existed.Edges.Files) > 0 && args.UploadOnly {
+			return nil, serializer.NewError(serializer.CodeParamErr, "upload-only shares cannot cover multiple files", nil)
 		}
 	}
 
@@ -358,9 +380,11 @@ func (l *manager) CreateOrUpdateShare(ctx context.Context, path *fs.URI, args *C
 		Note:        args.Note,
 	}
 
+	fileIDs := lo.Map(files, func(f fs.File, _ int) int { return f.ID() })
 	share, err := shareClient.Upsert(ctx, &inventory.CreateShareParams{
 		OwnerID:         file.OwnerID(),
 		FileID:          file.ID(),
+		FileIDs:         fileIDs,
 		Password:        password,
 		Expires:         args.Expire,
 		RemainDownloads: args.RemainDownloads,

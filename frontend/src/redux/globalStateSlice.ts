@@ -145,6 +145,7 @@ export interface GlobalStateSlice {
   // Share link dialog
   shareLinkDialogOpen?: boolean;
   shareLinkDialogFile?: FileResponse;
+  shareLinkDialogFiles?: FileResponse[];
   shareLinkDialogShare?: Share;
 
   // Version control dialog
@@ -776,11 +777,13 @@ export const globalStateSlice = createSlice({
       action: PayloadAction<{
         open: boolean;
         file?: FileResponse;
+        files?: FileResponse[];
         share?: Share;
       }>,
     ) => {
       state.shareLinkDialogOpen = action.payload.open;
       state.shareLinkDialogFile = action.payload.file;
+      state.shareLinkDialogFiles = action.payload.files;
       state.shareLinkDialogShare = action.payload.share;
     },
     closeShareLinkDialog: (state) => {

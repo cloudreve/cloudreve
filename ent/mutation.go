@@ -6888,6 +6888,9 @@ type FileMutation struct {
 	shares                  map[int]struct{}
 	removedshares           map[int]struct{}
 	clearedshares           bool
+	multi_shares            map[int]struct{}
+	removedmulti_shares     map[int]struct{}
+	clearedmulti_shares     bool
 	acl_entries             map[int]struct{}
 	removedacl_entries      map[int]struct{}
 	clearedacl_entries      bool
@@ -7829,6 +7832,60 @@ func (m *FileMutation) ResetShares() {
 	m.removedshares = nil
 }
 
+// AddMultiShareIDs adds the "multi_shares" edge to the Share entity by ids.
+func (m *FileMutation) AddMultiShareIDs(ids ...int) {
+	if m.multi_shares == nil {
+		m.multi_shares = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.multi_shares[ids[i]] = struct{}{}
+	}
+}
+
+// ClearMultiShares clears the "multi_shares" edge to the Share entity.
+func (m *FileMutation) ClearMultiShares() {
+	m.clearedmulti_shares = true
+}
+
+// MultiSharesCleared reports if the "multi_shares" edge to the Share entity was cleared.
+func (m *FileMutation) MultiSharesCleared() bool {
+	return m.clearedmulti_shares
+}
+
+// RemoveMultiShareIDs removes the "multi_shares" edge to the Share entity by IDs.
+func (m *FileMutation) RemoveMultiShareIDs(ids ...int) {
+	if m.removedmulti_shares == nil {
+		m.removedmulti_shares = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.multi_shares, ids[i])
+		m.removedmulti_shares[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedMultiShares returns the removed IDs of the "multi_shares" edge to the Share entity.
+func (m *FileMutation) RemovedMultiSharesIDs() (ids []int) {
+	for id := range m.removedmulti_shares {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// MultiSharesIDs returns the "multi_shares" edge IDs in the mutation.
+func (m *FileMutation) MultiSharesIDs() (ids []int) {
+	for id := range m.multi_shares {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetMultiShares resets all changes to the "multi_shares" edge.
+func (m *FileMutation) ResetMultiShares() {
+	m.multi_shares = nil
+	m.clearedmulti_shares = false
+	m.removedmulti_shares = nil
+}
+
 // AddACLEntryIDs adds the "acl_entries" edge to the AclEntry entity by ids.
 func (m *FileMutation) AddACLEntryIDs(ids ...int) {
 	if m.acl_entries == nil {
@@ -8306,7 +8363,7 @@ func (m *FileMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *FileMutation) AddedEdges() []string {
-	edges := make([]string, 0, 9)
+	edges := make([]string, 0, 10)
 	if m.owner != nil {
 		edges = append(edges, file.EdgeOwner)
 	}
@@ -8327,6 +8384,9 @@ func (m *FileMutation) AddedEdges() []string {
 	}
 	if m.shares != nil {
 		edges = append(edges, file.EdgeShares)
+	}
+	if m.multi_shares != nil {
+		edges = append(edges, file.EdgeMultiShares)
 	}
 	if m.acl_entries != nil {
 		edges = append(edges, file.EdgeACLEntries)
@@ -8377,6 +8437,12 @@ func (m *FileMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case file.EdgeMultiShares:
+		ids := make([]ent.Value, 0, len(m.multi_shares))
+		for id := range m.multi_shares {
+			ids = append(ids, id)
+		}
+		return ids
 	case file.EdgeACLEntries:
 		ids := make([]ent.Value, 0, len(m.acl_entries))
 		for id := range m.acl_entries {
@@ -8395,7 +8461,7 @@ func (m *FileMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *FileMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 9)
+	edges := make([]string, 0, 10)
 	if m.removedchildren != nil {
 		edges = append(edges, file.EdgeChildren)
 	}
@@ -8407,6 +8473,9 @@ func (m *FileMutation) RemovedEdges() []string {
 	}
 	if m.removedshares != nil {
 		edges = append(edges, file.EdgeShares)
+	}
+	if m.removedmulti_shares != nil {
+		edges = append(edges, file.EdgeMultiShares)
 	}
 	if m.removedacl_entries != nil {
 		edges = append(edges, file.EdgeACLEntries)
@@ -8445,6 +8514,12 @@ func (m *FileMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case file.EdgeMultiShares:
+		ids := make([]ent.Value, 0, len(m.removedmulti_shares))
+		for id := range m.removedmulti_shares {
+			ids = append(ids, id)
+		}
+		return ids
 	case file.EdgeACLEntries:
 		ids := make([]ent.Value, 0, len(m.removedacl_entries))
 		for id := range m.removedacl_entries {
@@ -8463,7 +8538,7 @@ func (m *FileMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *FileMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 9)
+	edges := make([]string, 0, 10)
 	if m.clearedowner {
 		edges = append(edges, file.EdgeOwner)
 	}
@@ -8484,6 +8559,9 @@ func (m *FileMutation) ClearedEdges() []string {
 	}
 	if m.clearedshares {
 		edges = append(edges, file.EdgeShares)
+	}
+	if m.clearedmulti_shares {
+		edges = append(edges, file.EdgeMultiShares)
 	}
 	if m.clearedacl_entries {
 		edges = append(edges, file.EdgeACLEntries)
@@ -8512,6 +8590,8 @@ func (m *FileMutation) EdgeCleared(name string) bool {
 		return m.clearedentities
 	case file.EdgeShares:
 		return m.clearedshares
+	case file.EdgeMultiShares:
+		return m.clearedmulti_shares
 	case file.EdgeACLEntries:
 		return m.clearedacl_entries
 	case file.EdgeDirectLinks:
@@ -8561,6 +8641,9 @@ func (m *FileMutation) ResetEdge(name string) error {
 		return nil
 	case file.EdgeShares:
 		m.ResetShares()
+		return nil
+	case file.EdgeMultiShares:
+		m.ResetMultiShares()
 		return nil
 	case file.EdgeACLEntries:
 		m.ResetACLEntries()
@@ -17390,6 +17473,9 @@ type ShareMutation struct {
 	cleareduser         bool
 	file                *int
 	clearedfile         bool
+	files               map[int]struct{}
+	removedfiles        map[int]struct{}
+	clearedfiles        bool
 	purchases           map[int]struct{}
 	removedpurchases    map[int]struct{}
 	clearedpurchases    bool
@@ -18080,6 +18166,60 @@ func (m *ShareMutation) ResetFile() {
 	m.clearedfile = false
 }
 
+// AddFileIDs adds the "files" edge to the File entity by ids.
+func (m *ShareMutation) AddFileIDs(ids ...int) {
+	if m.files == nil {
+		m.files = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.files[ids[i]] = struct{}{}
+	}
+}
+
+// ClearFiles clears the "files" edge to the File entity.
+func (m *ShareMutation) ClearFiles() {
+	m.clearedfiles = true
+}
+
+// FilesCleared reports if the "files" edge to the File entity was cleared.
+func (m *ShareMutation) FilesCleared() bool {
+	return m.clearedfiles
+}
+
+// RemoveFileIDs removes the "files" edge to the File entity by IDs.
+func (m *ShareMutation) RemoveFileIDs(ids ...int) {
+	if m.removedfiles == nil {
+		m.removedfiles = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.files, ids[i])
+		m.removedfiles[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedFiles returns the removed IDs of the "files" edge to the File entity.
+func (m *ShareMutation) RemovedFilesIDs() (ids []int) {
+	for id := range m.removedfiles {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// FilesIDs returns the "files" edge IDs in the mutation.
+func (m *ShareMutation) FilesIDs() (ids []int) {
+	for id := range m.files {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetFiles resets all changes to the "files" edge.
+func (m *ShareMutation) ResetFiles() {
+	m.files = nil
+	m.clearedfiles = false
+	m.removedfiles = nil
+}
+
 // AddPurchaseIDs adds the "purchases" edge to the SharePurchase entity by ids.
 func (m *ShareMutation) AddPurchaseIDs(ids ...int) {
 	if m.purchases == nil {
@@ -18504,12 +18644,15 @@ func (m *ShareMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ShareMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.user != nil {
 		edges = append(edges, share.EdgeUser)
 	}
 	if m.file != nil {
 		edges = append(edges, share.EdgeFile)
+	}
+	if m.files != nil {
+		edges = append(edges, share.EdgeFiles)
 	}
 	if m.purchases != nil {
 		edges = append(edges, share.EdgePurchases)
@@ -18529,6 +18672,12 @@ func (m *ShareMutation) AddedIDs(name string) []ent.Value {
 		if id := m.file; id != nil {
 			return []ent.Value{*id}
 		}
+	case share.EdgeFiles:
+		ids := make([]ent.Value, 0, len(m.files))
+		for id := range m.files {
+			ids = append(ids, id)
+		}
+		return ids
 	case share.EdgePurchases:
 		ids := make([]ent.Value, 0, len(m.purchases))
 		for id := range m.purchases {
@@ -18541,7 +18690,10 @@ func (m *ShareMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ShareMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
+	if m.removedfiles != nil {
+		edges = append(edges, share.EdgeFiles)
+	}
 	if m.removedpurchases != nil {
 		edges = append(edges, share.EdgePurchases)
 	}
@@ -18552,6 +18704,12 @@ func (m *ShareMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *ShareMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
+	case share.EdgeFiles:
+		ids := make([]ent.Value, 0, len(m.removedfiles))
+		for id := range m.removedfiles {
+			ids = append(ids, id)
+		}
+		return ids
 	case share.EdgePurchases:
 		ids := make([]ent.Value, 0, len(m.removedpurchases))
 		for id := range m.removedpurchases {
@@ -18564,12 +18722,15 @@ func (m *ShareMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ShareMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.cleareduser {
 		edges = append(edges, share.EdgeUser)
 	}
 	if m.clearedfile {
 		edges = append(edges, share.EdgeFile)
+	}
+	if m.clearedfiles {
+		edges = append(edges, share.EdgeFiles)
 	}
 	if m.clearedpurchases {
 		edges = append(edges, share.EdgePurchases)
@@ -18585,6 +18746,8 @@ func (m *ShareMutation) EdgeCleared(name string) bool {
 		return m.cleareduser
 	case share.EdgeFile:
 		return m.clearedfile
+	case share.EdgeFiles:
+		return m.clearedfiles
 	case share.EdgePurchases:
 		return m.clearedpurchases
 	}
@@ -18614,6 +18777,9 @@ func (m *ShareMutation) ResetEdge(name string) error {
 		return nil
 	case share.EdgeFile:
 		m.ResetFile()
+		return nil
+	case share.EdgeFiles:
+		m.ResetFiles()
 		return nil
 	case share.EdgePurchases:
 		m.ResetPurchases()

@@ -66,6 +66,7 @@ func (s *ShareInfoService) Get(c *gin.Context) (*explorer.Share, error) {
 
 	ctx := context.WithValue(c, inventory.LoadShareUser{}, true)
 	ctx = context.WithValue(ctx, inventory.LoadShareFile{}, true)
+	ctx = context.WithValue(ctx, inventory.LoadShareFiles{}, true)
 	share, err := shareClient.GetByID(ctx, hashid.FromContext(c))
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -91,8 +92,15 @@ func (s *ShareInfoService) Get(c *gin.Context) (*explorer.Share, error) {
 	}
 
 	base := dep.SettingProvider().SiteURL(c)
+	sourceType := types.FileType(share.Edges.File.Type)
+	if len(share.Edges.Files) > 0 {
+		// Multi-file shares render as a folder listing regardless of the
+		// anchor file's type.
+		sourceType = types.FileTypeFolder
+	}
 	res := explorer.BuildShare(c, share, base, dep.HashIDEncoder(), u, share.Edges.User, share.Edges.File.Name,
-		types.FileType(share.Edges.File.Type), unlocked, false)
+		sourceType, unlocked, false)
+	res.FileCount = len(share.Edges.Files)
 
 	// Priced shares resolve the requester's payment state: owner, existing
 	// buyer, or bearer of a valid resume ticket.
@@ -129,12 +137,22 @@ func (s *ShareInfoService) Get(c *gin.Context) (*explorer.Share, error) {
 			return nil, serializer.NewError(serializer.CodeInternalSetting, "Invalid share url", err)
 		}
 
-		root, err := m.Get(c, shareUri)
-		if err != nil {
-			return nil, serializer.NewError(serializer.CodeNotFound, "File not found", err)
-		}
+		if len(share.Edges.Files) > 0 {
+			// For multi-file shares point source_uri at the anchor's real
+			// path so the owner edit dialog resolves a concrete file.
+			anchor, err := m.Get(c, shareUri.Join(share.Edges.File.Name))
+			if err != nil {
+				return nil, serializer.NewError(serializer.CodeNotFound, "File not found", err)
+			}
+			res.SourceUri = anchor.Uri(true).String()
+		} else {
+			root, err := m.Get(c, shareUri)
+			if err != nil {
+				return nil, serializer.NewError(serializer.CodeNotFound, "File not found", err)
+			}
 
-		res.SourceUri = root.Uri(true).String()
+			res.SourceUri = root.Uri(true).String()
+		}
 	}
 
 	return res, nil
@@ -170,6 +188,7 @@ func (s *ListShareService) List(c *gin.Context) (*ListShareResponse, error) {
 
 	ctx := context.WithValue(c, inventory.LoadShareUser{}, true)
 	ctx = context.WithValue(ctx, inventory.LoadShareFile{}, true)
+	ctx = context.WithValue(ctx, inventory.LoadShareFiles{}, true)
 	ctx = context.WithValue(ctx, inventory.LoadFileMetadata{}, true)
 	res, err := shareClient.List(ctx, args)
 	if err != nil {
@@ -219,6 +238,7 @@ func (s *ListShareService) ListInUserProfile(c *gin.Context, uid int) (*ListShar
 
 	ctx := context.WithValue(c, inventory.LoadShareUser{}, true)
 	ctx = context.WithValue(ctx, inventory.LoadShareFile{}, true)
+	ctx = context.WithValue(ctx, inventory.LoadShareFiles{}, true)
 	ctx = context.WithValue(ctx, inventory.LoadFileMetadata{}, true)
 	res, err := shareClient.List(ctx, args)
 	if err != nil {

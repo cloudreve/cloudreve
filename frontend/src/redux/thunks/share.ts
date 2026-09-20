@@ -22,10 +22,12 @@ export function createOrUpdateShareLink(
   file: FileResponse,
   setting: ShareSetting,
   existed?: string,
+  files?: FileResponse[],
 ): AppThunk<Promise<string>> {
   return async (dispatch, getState) => {
     const req: ShareCreateService = {
       uri: file.path,
+      uris: files && files.length > 1 ? files.map((f) => f.path) : undefined,
       is_private: setting.is_private,
       password: setting.password,
       share_view: setting.share_view,
@@ -41,15 +43,14 @@ export function createOrUpdateShareLink(
     };
 
     const res = await dispatch(existed ? sendUpdateShare(req, existed) : sendCreateShare(req));
+    const shared = files && files.length > 1 ? files : [file];
     dispatch(
       fileUpdated({
         index,
-        value: [
-          {
-            file: { ...file, shared: true },
-            oldPath: file.path,
-          },
-        ],
+        value: shared.map((f) => ({
+          file: { ...f, shared: true },
+          oldPath: f.path,
+        })),
       }),
     );
 

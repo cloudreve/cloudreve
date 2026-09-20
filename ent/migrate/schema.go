@@ -893,6 +893,31 @@ var (
 			},
 		},
 	}
+	// ShareFilesColumns holds the columns for the "share_files" table.
+	ShareFilesColumns = []*schema.Column{
+		{Name: "share_id", Type: field.TypeInt},
+		{Name: "file_id", Type: field.TypeInt},
+	}
+	// ShareFilesTable holds the schema information for the "share_files" table.
+	ShareFilesTable = &schema.Table{
+		Name:       "share_files",
+		Columns:    ShareFilesColumns,
+		PrimaryKey: []*schema.Column{ShareFilesColumns[0], ShareFilesColumns[1]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "share_files_share_id",
+				Columns:    []*schema.Column{ShareFilesColumns[0]},
+				RefColumns: []*schema.Column{SharesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "share_files_file_id",
+				Columns:    []*schema.Column{ShareFilesColumns[1]},
+				RefColumns: []*schema.Column{FilesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		AbuseReportsTable,
@@ -923,6 +948,7 @@ var (
 		UserGrantsTable,
 		FileEntitiesTable,
 		GroupAllowedPoliciesTable,
+		ShareFilesTable,
 	}
 )
 
@@ -956,4 +982,6 @@ func init() {
 	FileEntitiesTable.ForeignKeys[1].RefTable = EntitiesTable
 	GroupAllowedPoliciesTable.ForeignKeys[0].RefTable = GroupsTable
 	GroupAllowedPoliciesTable.ForeignKeys[1].RefTable = StoragePoliciesTable
+	ShareFilesTable.ForeignKeys[0].RefTable = SharesTable
+	ShareFilesTable.ForeignKeys[1].RefTable = FilesTable
 }

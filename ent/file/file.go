@@ -51,6 +51,8 @@ const (
 	EdgeEntities = "entities"
 	// EdgeShares holds the string denoting the shares edge name in mutations.
 	EdgeShares = "shares"
+	// EdgeMultiShares holds the string denoting the multi_shares edge name in mutations.
+	EdgeMultiShares = "multi_shares"
 	// EdgeACLEntries holds the string denoting the acl_entries edge name in mutations.
 	EdgeACLEntries = "acl_entries"
 	// EdgeDirectLinks holds the string denoting the direct_links edge name in mutations.
@@ -98,6 +100,11 @@ const (
 	SharesInverseTable = "shares"
 	// SharesColumn is the table column denoting the shares relation/edge.
 	SharesColumn = "file_shares"
+	// MultiSharesTable is the table that holds the multi_shares relation/edge. The primary key declared below.
+	MultiSharesTable = "share_files"
+	// MultiSharesInverseTable is the table name for the Share entity.
+	// It exists in this package in order to avoid circular dependency with the "share" package.
+	MultiSharesInverseTable = "shares"
 	// ACLEntriesTable is the table that holds the acl_entries relation/edge.
 	ACLEntriesTable = "acl_entries"
 	// ACLEntriesInverseTable is the table name for the AclEntry entity.
@@ -134,6 +141,9 @@ var (
 	// EntitiesPrimaryKey and EntitiesColumn2 are the table columns denoting the
 	// primary key for the entities relation (M2M).
 	EntitiesPrimaryKey = []string{"file_id", "entity_id"}
+	// MultiSharesPrimaryKey and MultiSharesColumn2 are the table columns denoting the
+	// primary key for the multi_shares relation (M2M).
+	MultiSharesPrimaryKey = []string{"share_id", "file_id"}
 )
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -298,6 +308,20 @@ func ByShares(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByMultiSharesCount orders the results by multi_shares count.
+func ByMultiSharesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newMultiSharesStep(), opts...)
+	}
+}
+
+// ByMultiShares orders the results by multi_shares terms.
+func ByMultiShares(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newMultiSharesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByACLEntriesCount orders the results by acl_entries count.
 func ByACLEntriesCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -372,6 +396,13 @@ func newSharesStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(SharesInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, SharesTable, SharesColumn),
+	)
+}
+func newMultiSharesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(MultiSharesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, true, MultiSharesTable, MultiSharesPrimaryKey...),
 	)
 }
 func newACLEntriesStep() *sqlgraph.Step {

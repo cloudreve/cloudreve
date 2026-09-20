@@ -68,6 +68,9 @@ func (File) Edges() []ent.Edge {
 		edge.To("metadata", Metadata.Type),
 		edge.To("entities", Entity.Type),
 		edge.To("shares", Share.Type),
+		// Inverse of Share.files — shares that cover this file as part of a
+		// multi-file link. Forms the share_files join table.
+		edge.From("multi_shares", Share.Type).Ref("files"),
 		edge.To("acl_entries", AclEntry.Type),
 		edge.To("direct_links", DirectLink.Type),
 	}

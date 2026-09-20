@@ -238,6 +238,21 @@ func (su *ShareUpdate) SetFile(f *File) *ShareUpdate {
 	return su.SetFileID(f.ID)
 }
 
+// AddFileIDs adds the "files" edge to the File entity by IDs.
+func (su *ShareUpdate) AddFileIDs(ids ...int) *ShareUpdate {
+	su.mutation.AddFileIDs(ids...)
+	return su
+}
+
+// AddFiles adds the "files" edges to the File entity.
+func (su *ShareUpdate) AddFiles(f ...*File) *ShareUpdate {
+	ids := make([]int, len(f))
+	for i := range f {
+		ids[i] = f[i].ID
+	}
+	return su.AddFileIDs(ids...)
+}
+
 // AddPurchaseIDs adds the "purchases" edge to the SharePurchase entity by IDs.
 func (su *ShareUpdate) AddPurchaseIDs(ids ...int) *ShareUpdate {
 	su.mutation.AddPurchaseIDs(ids...)
@@ -268,6 +283,27 @@ func (su *ShareUpdate) ClearUser() *ShareUpdate {
 func (su *ShareUpdate) ClearFile() *ShareUpdate {
 	su.mutation.ClearFile()
 	return su
+}
+
+// ClearFiles clears all "files" edges to the File entity.
+func (su *ShareUpdate) ClearFiles() *ShareUpdate {
+	su.mutation.ClearFiles()
+	return su
+}
+
+// RemoveFileIDs removes the "files" edge to File entities by IDs.
+func (su *ShareUpdate) RemoveFileIDs(ids ...int) *ShareUpdate {
+	su.mutation.RemoveFileIDs(ids...)
+	return su
+}
+
+// RemoveFiles removes "files" edges to File entities.
+func (su *ShareUpdate) RemoveFiles(f ...*File) *ShareUpdate {
+	ids := make([]int, len(f))
+	for i := range f {
+		ids[i] = f[i].ID
+	}
+	return su.RemoveFileIDs(ids...)
 }
 
 // ClearPurchases clears all "purchases" edges to the SharePurchase entity.
@@ -457,6 +493,51 @@ func (su *ShareUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Inverse: true,
 			Table:   share.FileTable,
 			Columns: []string{share.FileColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if su.mutation.FilesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   share.FilesTable,
+			Columns: share.FilesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := su.mutation.RemovedFilesIDs(); len(nodes) > 0 && !su.mutation.FilesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   share.FilesTable,
+			Columns: share.FilesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := su.mutation.FilesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   share.FilesTable,
+			Columns: share.FilesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt),
@@ -738,6 +819,21 @@ func (suo *ShareUpdateOne) SetFile(f *File) *ShareUpdateOne {
 	return suo.SetFileID(f.ID)
 }
 
+// AddFileIDs adds the "files" edge to the File entity by IDs.
+func (suo *ShareUpdateOne) AddFileIDs(ids ...int) *ShareUpdateOne {
+	suo.mutation.AddFileIDs(ids...)
+	return suo
+}
+
+// AddFiles adds the "files" edges to the File entity.
+func (suo *ShareUpdateOne) AddFiles(f ...*File) *ShareUpdateOne {
+	ids := make([]int, len(f))
+	for i := range f {
+		ids[i] = f[i].ID
+	}
+	return suo.AddFileIDs(ids...)
+}
+
 // AddPurchaseIDs adds the "purchases" edge to the SharePurchase entity by IDs.
 func (suo *ShareUpdateOne) AddPurchaseIDs(ids ...int) *ShareUpdateOne {
 	suo.mutation.AddPurchaseIDs(ids...)
@@ -768,6 +864,27 @@ func (suo *ShareUpdateOne) ClearUser() *ShareUpdateOne {
 func (suo *ShareUpdateOne) ClearFile() *ShareUpdateOne {
 	suo.mutation.ClearFile()
 	return suo
+}
+
+// ClearFiles clears all "files" edges to the File entity.
+func (suo *ShareUpdateOne) ClearFiles() *ShareUpdateOne {
+	suo.mutation.ClearFiles()
+	return suo
+}
+
+// RemoveFileIDs removes the "files" edge to File entities by IDs.
+func (suo *ShareUpdateOne) RemoveFileIDs(ids ...int) *ShareUpdateOne {
+	suo.mutation.RemoveFileIDs(ids...)
+	return suo
+}
+
+// RemoveFiles removes "files" edges to File entities.
+func (suo *ShareUpdateOne) RemoveFiles(f ...*File) *ShareUpdateOne {
+	ids := make([]int, len(f))
+	for i := range f {
+		ids[i] = f[i].ID
+	}
+	return suo.RemoveFileIDs(ids...)
 }
 
 // ClearPurchases clears all "purchases" edges to the SharePurchase entity.
@@ -987,6 +1104,51 @@ func (suo *ShareUpdateOne) sqlSave(ctx context.Context) (_node *Share, err error
 			Inverse: true,
 			Table:   share.FileTable,
 			Columns: []string{share.FileColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if suo.mutation.FilesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   share.FilesTable,
+			Columns: share.FilesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := suo.mutation.RemovedFilesIDs(); len(nodes) > 0 && !suo.mutation.FilesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   share.FilesTable,
+			Columns: share.FilesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := suo.mutation.FilesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   share.FilesTable,
+			Columns: share.FilesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(file.FieldID, field.TypeInt),

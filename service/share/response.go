@@ -37,8 +37,15 @@ func BuildListShareResponse(ctx context.Context, res *inventory.ListShareResult,
 			}
 		}
 
-		infos = append(infos, *explorer.BuildShare(ctx, share, base, hasher, requester, share.Edges.User, shareName,
-			types.FileType(share.Edges.File.Type), unlocked, expired))
+		sourceType := types.FileType(share.Edges.File.Type)
+		if len(share.Edges.Files) > 0 {
+			sourceType = types.FileTypeFolder
+		}
+
+		built := explorer.BuildShare(ctx, share, base, hasher, requester, share.Edges.User, shareName,
+			sourceType, unlocked, expired)
+		built.FileCount = len(share.Edges.Files)
+		infos = append(infos, *built)
 	}
 
 	return &ListShareResponse{

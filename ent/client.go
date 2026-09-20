@@ -1692,6 +1692,22 @@ func (c *FileClient) QueryShares(f *File) *ShareQuery {
 	return query
 }
 
+// QueryMultiShares queries the multi_shares edge of a File.
+func (c *FileClient) QueryMultiShares(f *File) *ShareQuery {
+	query := (&ShareClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := f.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(file.Table, file.FieldID, id),
+			sqlgraph.To(share.Table, share.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, file.MultiSharesTable, file.MultiSharesPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(f.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryACLEntries queries the acl_entries edge of a File.
 func (c *FileClient) QueryACLEntries(f *File) *AclEntryQuery {
 	query := (&AclEntryClient{config: c.config}).Query()
@@ -3409,6 +3425,22 @@ func (c *ShareClient) QueryFile(s *Share) *FileQuery {
 			sqlgraph.From(share.Table, share.FieldID, id),
 			sqlgraph.To(file.Table, file.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, share.FileTable, share.FileColumn),
+		)
+		fromV = sqlgraph.Neighbors(s.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryFiles queries the files edge of a Share.
+func (c *ShareClient) QueryFiles(s *Share) *FileQuery {
+	query := (&FileClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := s.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(share.Table, share.FieldID, id),
+			sqlgraph.To(file.Table, file.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, share.FilesTable, share.FilesPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(s.driver.Dialect(), step)
 		return fromV, nil
