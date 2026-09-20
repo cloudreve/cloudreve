@@ -1429,6 +1429,7 @@
     "groupExpired": "Group expired date",
     "groupExpiredDes": "ISO8601 format group expired date, leave blank means the group is permanent.",
     "openUserFiles": "Open user files",
+    "relocateFiles": "Relocate files",
     "id": "ID",
     "idValue": "{{id}} ({{hash_id}})",
     "avatar": "Profile picture",
@@ -1587,6 +1588,7 @@
     "relocateTitle": "Relocate Blobs",
     "relocateEntitiesDes": "Move the data of {{num}} selected Blobs to another storage policy. The task runs in the background and can be resumed.",
     "relocatePolicyDes": "Move all Blobs stored on \"{{name}}\" to another storage policy. The task runs in the background and can be resumed.",
+    "relocateUserDes": "Move all Blobs owned by \"{{name}}\" to another storage policy. The task runs in the background and can be resumed.",
     "relocatePolicy": "Migrate all Blobs on {{name}} to another policy",
     "relocateStart": "Start relocation",
     "relocateSubmitted": "Relocation task submitted"
