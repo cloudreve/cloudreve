@@ -231,6 +231,7 @@ Goal: Windows + macOS + Linux from the `desktop/` tree in this repo.
 - Status: (1) notifications already per-OS (`win32_notif` / `notify_rust` / `mac_notification_sys`) — no abstraction needed; (2) hydration abstracted via `drive/placeholder` cfg swap — `cfapi` on Windows, `placeholder_non_windows` full-sync adapter elsewhere (FUSE / File Provider still open); (3) CI matrix builds + tests all 3 OSes; (4) packaging: `desktop-release.yml` on `desktop-v*` tags ships .msi/.exe (Windows), .dmg (macOS), .deb/.AppImage (Linux) — MSIX deferred (needs store signing).
 - Verified on Linux: `cargo test --workspace` green (49 tests), `cargo tauri build` produces working .deb + .AppImage.
 - Feature fallback on Linux/macOS until providers land: full sync without placeholders (download-on-access still works via sync engine).
+- [x] #167 (upstream desktop#49) — online-only thumbnails missing in Explorer: root cause was a client/server contract mismatch — the CE `/file/thumb` response carries only `url`/`expires` while the `cloudreve-api` model required `obfuscated`, failing deserialization on every thumbnail request (`E_FAIL` to Explorer; hydrated files were unaffected since Windows thumbs them locally). `obfuscated` is now `#[serde(default)]`; the decode path still runs when a server emits the flag
 
 ## 7. Phase E — Android app (native, no iOS)
 
