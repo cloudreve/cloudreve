@@ -240,7 +240,7 @@ Lives in `android/` in this repo. Kotlin + Jetpack Compose, Material 3.
 
 - **API**: `api/v4` REST + OAuth token (entities exist: `oauthclient`, `oauthgrant`) — same surface the desktop `cloudreve-api` crate documents; port its models as the spec
 - **Core features**: browse/download/upload files, share links, full-text search (done — query bar + offset pagination + parent-path/snippet rows), camera-upload (done — periodic WorkManager MediaStore sync, Wi-Fi-only constraint, ID dedup, settings dialog), offline-favorite files (done — "Keep offline" downloads to filesDir/offline, DataStore registry, star dialog with open/refresh/remove), local sync folder via SAF/WorkManager
-- **System integration** (the "native, complete" ask): share-sheet target (upload to Cloudreve from any app), DocumentsProvider (Cloudreve in Files app), quick-share tile, notifications on share/task events
+- **System integration** (the "native, complete" ask): share-sheet target (done — SEND/SEND_MULTIPLE → UploadWorker), DocumentsProvider (done — Files-app browse/open/thumb/rename/delete/search), quick-share tile, notifications on share/task events
 - **Auth**: webview OAuth flow → token; later passkey if backend exposes
 - **WebDAV bridge**: `/dav` works as fallback file access until SDK matures
 - Non-goals: iOS, tablet-first layouts (works, not optimized)
