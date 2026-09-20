@@ -101,6 +101,7 @@ const FileSystem = () => {
                     "explorer_category_document_query",
                     "archive_timeout",
                     "upload_session_timeout",
+                    "upload_dedup_scope",
                     "slave_api_timeout",
                     "folder_props_timeout",
                     "chunk_retries",

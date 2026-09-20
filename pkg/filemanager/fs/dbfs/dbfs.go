@@ -705,7 +705,14 @@ func (f *DBFS) createFile(ctx context.Context, parent *File, name string, fileTy
 			UploadSessionID: uuid.FromStringOrNil(o.UploadRequest.Props.UploadSessionID),
 			Importing:       o.UploadRequest.ImportFrom != nil,
 			EncryptMetadata: o.encryptMetadata,
+			Hash:            o.UploadRequest.Props.Hash,
 		}
+	}
+	if o.existingEntity != nil {
+		if createFileArgs.EntityParameters == nil {
+			createFileArgs.EntityParameters = &inventory.EntityParameters{}
+		}
+		createFileArgs.EntityParameters.LinkedEntityID = o.existingEntity.ID
 	}
 
 	// Start transaction to create files

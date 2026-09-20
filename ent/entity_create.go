@@ -101,6 +101,20 @@ func (ec *EntityCreate) SetNillableReferenceCount(i *int) *EntityCreate {
 	return ec
 }
 
+// SetHash sets the "hash" field.
+func (ec *EntityCreate) SetHash(s string) *EntityCreate {
+	ec.mutation.SetHash(s)
+	return ec
+}
+
+// SetNillableHash sets the "hash" field if the given value is not nil.
+func (ec *EntityCreate) SetNillableHash(s *string) *EntityCreate {
+	if s != nil {
+		ec.SetHash(*s)
+	}
+	return ec
+}
+
 // SetStoragePolicyEntities sets the "storage_policy_entities" field.
 func (ec *EntityCreate) SetStoragePolicyEntities(i int) *EntityCreate {
 	ec.mutation.SetStoragePolicyEntities(i)
@@ -264,6 +278,11 @@ func (ec *EntityCreate) check() error {
 	if _, ok := ec.mutation.ReferenceCount(); !ok {
 		return &ValidationError{Name: "reference_count", err: errors.New(`ent: missing required field "Entity.reference_count"`)}
 	}
+	if v, ok := ec.mutation.Hash(); ok {
+		if err := entity.HashValidator(v); err != nil {
+			return &ValidationError{Name: "hash", err: fmt.Errorf(`ent: validator failed for field "Entity.hash": %w`, err)}
+		}
+	}
 	if _, ok := ec.mutation.StoragePolicyEntities(); !ok {
 		return &ValidationError{Name: "storage_policy_entities", err: errors.New(`ent: missing required field "Entity.storage_policy_entities"`)}
 	}
@@ -331,6 +350,10 @@ func (ec *EntityCreate) createSpec() (*Entity, *sqlgraph.CreateSpec) {
 	if value, ok := ec.mutation.ReferenceCount(); ok {
 		_spec.SetField(entity.FieldReferenceCount, field.TypeInt, value)
 		_node.ReferenceCount = value
+	}
+	if value, ok := ec.mutation.Hash(); ok {
+		_spec.SetField(entity.FieldHash, field.TypeString, value)
+		_node.Hash = value
 	}
 	if value, ok := ec.mutation.UploadSessionID(); ok {
 		_spec.SetField(entity.FieldUploadSessionID, field.TypeUUID, value)
@@ -535,6 +558,24 @@ func (u *EntityUpsert) UpdateReferenceCount() *EntityUpsert {
 // AddReferenceCount adds v to the "reference_count" field.
 func (u *EntityUpsert) AddReferenceCount(v int) *EntityUpsert {
 	u.Add(entity.FieldReferenceCount, v)
+	return u
+}
+
+// SetHash sets the "hash" field.
+func (u *EntityUpsert) SetHash(v string) *EntityUpsert {
+	u.Set(entity.FieldHash, v)
+	return u
+}
+
+// UpdateHash sets the "hash" field to the value that was provided on create.
+func (u *EntityUpsert) UpdateHash() *EntityUpsert {
+	u.SetExcluded(entity.FieldHash)
+	return u
+}
+
+// ClearHash clears the value of the "hash" field.
+func (u *EntityUpsert) ClearHash() *EntityUpsert {
+	u.SetNull(entity.FieldHash)
 	return u
 }
 
@@ -758,6 +799,27 @@ func (u *EntityUpsertOne) AddReferenceCount(v int) *EntityUpsertOne {
 func (u *EntityUpsertOne) UpdateReferenceCount() *EntityUpsertOne {
 	return u.Update(func(s *EntityUpsert) {
 		s.UpdateReferenceCount()
+	})
+}
+
+// SetHash sets the "hash" field.
+func (u *EntityUpsertOne) SetHash(v string) *EntityUpsertOne {
+	return u.Update(func(s *EntityUpsert) {
+		s.SetHash(v)
+	})
+}
+
+// UpdateHash sets the "hash" field to the value that was provided on create.
+func (u *EntityUpsertOne) UpdateHash() *EntityUpsertOne {
+	return u.Update(func(s *EntityUpsert) {
+		s.UpdateHash()
+	})
+}
+
+// ClearHash clears the value of the "hash" field.
+func (u *EntityUpsertOne) ClearHash() *EntityUpsertOne {
+	return u.Update(func(s *EntityUpsert) {
+		s.ClearHash()
 	})
 }
 
@@ -1163,6 +1225,27 @@ func (u *EntityUpsertBulk) AddReferenceCount(v int) *EntityUpsertBulk {
 func (u *EntityUpsertBulk) UpdateReferenceCount() *EntityUpsertBulk {
 	return u.Update(func(s *EntityUpsert) {
 		s.UpdateReferenceCount()
+	})
+}
+
+// SetHash sets the "hash" field.
+func (u *EntityUpsertBulk) SetHash(v string) *EntityUpsertBulk {
+	return u.Update(func(s *EntityUpsert) {
+		s.SetHash(v)
+	})
+}
+
+// UpdateHash sets the "hash" field to the value that was provided on create.
+func (u *EntityUpsertBulk) UpdateHash() *EntityUpsertBulk {
+	return u.Update(func(s *EntityUpsert) {
+		s.UpdateHash()
+	})
+}
+
+// ClearHash clears the value of the "hash" field.
+func (u *EntityUpsertBulk) ClearHash() *EntityUpsertBulk {
+	return u.Update(func(s *EntityUpsert) {
+		s.ClearHash()
 	})
 }
 

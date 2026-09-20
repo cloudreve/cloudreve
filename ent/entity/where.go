@@ -91,6 +91,11 @@ func ReferenceCount(v int) predicate.Entity {
 	return predicate.Entity(sql.FieldEQ(FieldReferenceCount, v))
 }
 
+// Hash applies equality check predicate on the "hash" field. It's identical to HashEQ.
+func Hash(v string) predicate.Entity {
+	return predicate.Entity(sql.FieldEQ(FieldHash, v))
+}
+
 // StoragePolicyEntities applies equality check predicate on the "storage_policy_entities" field. It's identical to StoragePolicyEntitiesEQ.
 func StoragePolicyEntities(v int) predicate.Entity {
 	return predicate.Entity(sql.FieldEQ(FieldStoragePolicyEntities, v))
@@ -419,6 +424,81 @@ func ReferenceCountLT(v int) predicate.Entity {
 // ReferenceCountLTE applies the LTE predicate on the "reference_count" field.
 func ReferenceCountLTE(v int) predicate.Entity {
 	return predicate.Entity(sql.FieldLTE(FieldReferenceCount, v))
+}
+
+// HashEQ applies the EQ predicate on the "hash" field.
+func HashEQ(v string) predicate.Entity {
+	return predicate.Entity(sql.FieldEQ(FieldHash, v))
+}
+
+// HashNEQ applies the NEQ predicate on the "hash" field.
+func HashNEQ(v string) predicate.Entity {
+	return predicate.Entity(sql.FieldNEQ(FieldHash, v))
+}
+
+// HashIn applies the In predicate on the "hash" field.
+func HashIn(vs ...string) predicate.Entity {
+	return predicate.Entity(sql.FieldIn(FieldHash, vs...))
+}
+
+// HashNotIn applies the NotIn predicate on the "hash" field.
+func HashNotIn(vs ...string) predicate.Entity {
+	return predicate.Entity(sql.FieldNotIn(FieldHash, vs...))
+}
+
+// HashGT applies the GT predicate on the "hash" field.
+func HashGT(v string) predicate.Entity {
+	return predicate.Entity(sql.FieldGT(FieldHash, v))
+}
+
+// HashGTE applies the GTE predicate on the "hash" field.
+func HashGTE(v string) predicate.Entity {
+	return predicate.Entity(sql.FieldGTE(FieldHash, v))
+}
+
+// HashLT applies the LT predicate on the "hash" field.
+func HashLT(v string) predicate.Entity {
+	return predicate.Entity(sql.FieldLT(FieldHash, v))
+}
+
+// HashLTE applies the LTE predicate on the "hash" field.
+func HashLTE(v string) predicate.Entity {
+	return predicate.Entity(sql.FieldLTE(FieldHash, v))
+}
+
+// HashContains applies the Contains predicate on the "hash" field.
+func HashContains(v string) predicate.Entity {
+	return predicate.Entity(sql.FieldContains(FieldHash, v))
+}
+
+// HashHasPrefix applies the HasPrefix predicate on the "hash" field.
+func HashHasPrefix(v string) predicate.Entity {
+	return predicate.Entity(sql.FieldHasPrefix(FieldHash, v))
+}
+
+// HashHasSuffix applies the HasSuffix predicate on the "hash" field.
+func HashHasSuffix(v string) predicate.Entity {
+	return predicate.Entity(sql.FieldHasSuffix(FieldHash, v))
+}
+
+// HashIsNil applies the IsNil predicate on the "hash" field.
+func HashIsNil() predicate.Entity {
+	return predicate.Entity(sql.FieldIsNull(FieldHash))
+}
+
+// HashNotNil applies the NotNil predicate on the "hash" field.
+func HashNotNil() predicate.Entity {
+	return predicate.Entity(sql.FieldNotNull(FieldHash))
+}
+
+// HashEqualFold applies the EqualFold predicate on the "hash" field.
+func HashEqualFold(v string) predicate.Entity {
+	return predicate.Entity(sql.FieldEqualFold(FieldHash, v))
+}
+
+// HashContainsFold applies the ContainsFold predicate on the "hash" field.
+func HashContainsFold(v string) predicate.Entity {
+	return predicate.Entity(sql.FieldContainsFold(FieldHash, v))
 }
 
 // StoragePolicyEntitiesEQ applies the EQ predicate on the "storage_policy_entities" field.

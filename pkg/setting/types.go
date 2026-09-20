@@ -118,6 +118,10 @@ type DBFS struct {
 	MaxPageSize                int
 	MaxRecursiveSearchedFolder int
 	UseSSEForSearch            bool
+	// DedupScope controls hash-based duplicate detection on upload:
+	// "off" disables it, "owner" dedups against the uploader's own
+	// entities, "global" dedups across all users.
+	DedupScope string
 }
 
 type (

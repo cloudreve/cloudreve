@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
@@ -31,6 +32,9 @@ type (
 		EntityType          string            `json:"entity_type" binding:"eq=|eq=live_photo|eq=version"`
 		EncryptionSupported []types.Cipher    `json:"encryption_supported"`
 		Previous            string            `json:"previous" form:"previous"`
+		// Hash is the client-computed sha256 of the content, enabling
+		// duplicate detection / instant upload when dedup is enabled.
+		Hash string `json:"hash" binding:"omitempty,hexadecimal,len=64"`
 	}
 )
 
@@ -77,6 +81,7 @@ func (service *CreateUploadSessionService) Create(c context.Context) (*UploadSes
 			PreferredStoragePolicy: policyId,
 			EncryptionSupported:    service.EncryptionSupported,
 			ClientSideEncrypted:    len(service.EncryptionSupported) > 0,
+			Hash:                   strings.ToLower(service.Hash),
 		},
 	}
 

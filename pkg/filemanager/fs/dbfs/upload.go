@@ -192,6 +192,22 @@ func (f *DBFS) PrepareUpload(ctx context.Context, req *fs.UploadRequest, opts ..
 		}
 	}
 
+	// Rapid upload: when the uploader asserted a content hash and a
+	// completed identical entity already exists within the configured
+	// dedup scope, the file is materialized from that entity and no
+	// transfer happens.
+	var rapidEntity *ent.Entity
+	if !fileExisted && req.ImportFrom == nil && req.Props.Hash != "" {
+		if scope := f.settingClient.DBFS(ctx).DedupScope; scope != "off" {
+			candidate, err := f.fileClient.FindEntityByHash(ctx, req.Props.Hash, req.Props.Size, ancestor.Owner().ID, scope == "global")
+			if err != nil && !ent.IsNotFound(err) {
+				return nil, serializer.NewError(serializer.CodeDBError, "Failed to query dedup entity", err)
+			} else if err == nil {
+				rapidEntity = candidate
+			}
+		}
+	}
+
 	// Create upload placeholder
 	var (
 		fileId     int
@@ -237,6 +253,7 @@ func (f *DBFS) PrepareUpload(ctx context.Context, req *fs.UploadRequest, opts ..
 			WithErrorOnConflict(),
 			WithAncestor(ancestor),
 			WithEncryptMetadata(encryptMetadata),
+			WithExistingEntity(rapidEntity),
 		)
 		if err != nil {
 			_ = inventory.Rollback(dbTx)
@@ -246,6 +263,27 @@ func (f *DBFS) PrepareUpload(ctx context.Context, req *fs.UploadRequest, opts ..
 		fileId = uploadPlaceholder.ID()
 		entityId = uploadPlaceholder.Entities()[0].ID()
 		targetFile = uploadPlaceholder.(*File).Model
+	}
+
+	if rapidEntity != nil {
+		// Instant upload is complete at this point — no session metadata
+		// or transfer lock is needed.
+		if err := inventory.CommitWithStorageDiff(ctx, dbTx, f.l, f.userClient); err != nil {
+			return nil, serializer.NewError(serializer.CodeDBError, "Failed to commit rapid upload", err)
+		}
+		f.record(ctx, types.EventEntityUploaded, activity.File(fileId), activity.Extra(map[string]any{"uri": req.Props.Uri.String(), "size": req.Props.Size, "rapid": true}))
+		return &fs.UploadSession{
+			Props: &fs.UploadProps{
+				Uri:           req.Props.Uri,
+				Size:          req.Props.Size,
+				RapidUploaded: true,
+			},
+			FileID:         fileId,
+			NewFileCreated: true,
+			EntityID:       entityId,
+			UID:            f.user.ID,
+			Policy:         policy,
+		}, nil
 	}
 
 	if req.ImportFrom == nil {

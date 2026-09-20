@@ -180,6 +180,10 @@ func init() {
 	entityDescReferenceCount := entityFields[3].Descriptor()
 	// entity.DefaultReferenceCount holds the default value on creation for the reference_count field.
 	entity.DefaultReferenceCount = entityDescReferenceCount.Default.(int)
+	// entityDescHash is the schema descriptor for hash field.
+	entityDescHash := entityFields[4].Descriptor()
+	// entity.HashValidator is a validator for the "hash" field. It is called by the builders before save.
+	entity.HashValidator = entityDescHash.Validators[0].(func(string) error)
 	fileHooks := schema.File{}.Hooks()
 	file.Hooks[0] = fileHooks[0]
 	fileFields := schema.File{}.Fields()

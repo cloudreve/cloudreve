@@ -556,6 +556,8 @@ export interface UploadSessionRequest {
   };
   mime_type?: string;
   encryption_supported?: EncryptionCipher[];
+  // sha256 hex of the file content — enables server-side dedup / instant upload
+  hash?: string;
 }
 
 export interface EncryptMetadata {
@@ -582,6 +584,8 @@ export interface UploadCredential {
   mime_type?: string;
   upload_policy?: string;
   encrypt_metadata?: EncryptMetadata;
+  // File was materialized from an existing identical entity — no bytes to send
+  rapid_uploaded?: boolean;
 }
 
 export interface DeleteUploadSessionService {

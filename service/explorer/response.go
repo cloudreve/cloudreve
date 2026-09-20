@@ -163,6 +163,9 @@ type UploadSessionResponse struct {
 	MimeType        string                 `json:"mime_type,omitempty"`
 	UploadPolicy    string                 `json:"upload_policy,omitempty"`
 	EncryptMetadata *types.EncryptMetadata `json:"encrypt_metadata,omitempty"`
+	// RapidUploaded marks that the file already exists identically on the
+	// server — no bytes need to be transferred.
+	RapidUploaded bool `json:"rapid_uploaded,omitempty"`
 }
 
 func BuildUploadSessionResponse(session *fs.UploadCredential, hasher hashid.Encoder) *UploadSessionResponse {
@@ -180,6 +183,7 @@ func BuildUploadSessionResponse(session *fs.UploadCredential, hasher hashid.Enco
 		MimeType:        session.MimeType,
 		UploadPolicy:    session.UploadPolicy,
 		EncryptMetadata: session.EncryptMetadata,
+		RapidUploaded:   session.RapidUploaded,
 	}
 
 	if session.EncryptMetadata != nil {

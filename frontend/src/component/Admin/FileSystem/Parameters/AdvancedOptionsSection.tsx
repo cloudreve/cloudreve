@@ -1,5 +1,5 @@
 import { DeleteOutline } from "@mui/icons-material";
-import { Box, FormControl, FormControlLabel, Link, Switch, Typography } from "@mui/material";
+import { Box, FormControl, FormControlLabel, Link, ListItemText, Switch, Typography } from "@mui/material";
 import { useSnackbar } from "notistack";
 import { useContext, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -7,7 +7,8 @@ import { sendClearBlobUrlCache } from "../../../../api/api.ts";
 import { useAppDispatch } from "../../../../redux/hooks.ts";
 import { isTrueVal } from "../../../../session/utils.ts";
 import { DefaultCloseAction } from "../../../Common/Snackbar/snackbar.tsx";
-import { DenseFilledTextField, SecondaryButton } from "../../../Common/StyledComponents.tsx";
+import { DenseFilledTextField, DenseSelect, SecondaryButton } from "../../../Common/StyledComponents.tsx";
+import { SquareMenuItem } from "../../../FileManager/ContextMenu/ContextMenu.tsx";
 import SettingForm from "../../../Pages/Setting/SettingForm.tsx";
 import { NoMarginHelperText, SettingSection, SettingSectionContent } from "../../Settings/Settings.tsx";
 import { SettingContext } from "../../Settings/SettingWrapper.tsx";
@@ -63,6 +64,41 @@ const AdvancedOptionsSection = () => {
             required
           />
           <NoMarginHelperText>{t("settings.uploadSessionDes")}</NoMarginHelperText>
+        </SettingForm>
+        <SettingForm title={t("settings.uploadDedupScope")} lgWidth={5}>
+          <FormControl>
+            <DenseSelect
+              renderValue={(v) => (
+                <ListItemText
+                  slotProps={{
+                    primary: { variant: "body2" },
+                  }}
+                >
+                  {t(`settings.uploadDedupScope_${v}`)}
+                </ListItemText>
+              )}
+              onChange={(e) =>
+                setSettings({
+                  upload_dedup_scope: e.target.value as string,
+                })
+              }
+              value={values.upload_dedup_scope ?? "owner"}
+            >
+              {["off", "owner", "global"].map((scope) => (
+                <SquareMenuItem key={scope} value={scope}>
+                  <Box sx={{ display: "flex", flexDirection: "column" }}>
+                    <Typography variant={"body2"} fontWeight={600}>
+                      {t(`settings.uploadDedupScope_${scope}`)}
+                    </Typography>
+                    <Typography variant={"body2"} color={"textSecondary"}>
+                      {t(`settings.uploadDedupScope_${scope}Des`)}
+                    </Typography>
+                  </Box>
+                </SquareMenuItem>
+              ))}
+            </DenseSelect>
+            <NoMarginHelperText>{t("settings.uploadDedupScopeDes")}</NoMarginHelperText>
+          </FormControl>
         </SettingForm>
         <SettingForm title={t("settings.slaveAPIExpiration")} lgWidth={5}>
           <DenseFilledTextField

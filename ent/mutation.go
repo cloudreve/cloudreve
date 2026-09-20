@@ -5537,6 +5537,7 @@ type EntityMutation struct {
 	addsize               *int64
 	reference_count       *int
 	addreference_count    *int
+	hash                  *string
 	upload_session_id     *uuid.UUID
 	props                 **types.EntityProps
 	clearedFields         map[string]struct{}
@@ -5975,6 +5976,55 @@ func (m *EntityMutation) ResetReferenceCount() {
 	m.addreference_count = nil
 }
 
+// SetHash sets the "hash" field.
+func (m *EntityMutation) SetHash(s string) {
+	m.hash = &s
+}
+
+// Hash returns the value of the "hash" field in the mutation.
+func (m *EntityMutation) Hash() (r string, exists bool) {
+	v := m.hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHash returns the old "hash" field's value of the Entity entity.
+// If the Entity object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EntityMutation) OldHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHash: %w", err)
+	}
+	return oldValue.Hash, nil
+}
+
+// ClearHash clears the value of the "hash" field.
+func (m *EntityMutation) ClearHash() {
+	m.hash = nil
+	m.clearedFields[entity.FieldHash] = struct{}{}
+}
+
+// HashCleared returns if the "hash" field was cleared in this mutation.
+func (m *EntityMutation) HashCleared() bool {
+	_, ok := m.clearedFields[entity.FieldHash]
+	return ok
+}
+
+// ResetHash resets all changes to the "hash" field.
+func (m *EntityMutation) ResetHash() {
+	m.hash = nil
+	delete(m.clearedFields, entity.FieldHash)
+}
+
 // SetStoragePolicyEntities sets the "storage_policy_entities" field.
 func (m *EntityMutation) SetStoragePolicyEntities(i int) {
 	m.storage_policy = &i
@@ -6326,7 +6376,7 @@ func (m *EntityMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *EntityMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 12)
 	if m.created_at != nil {
 		fields = append(fields, entity.FieldCreatedAt)
 	}
@@ -6347,6 +6397,9 @@ func (m *EntityMutation) Fields() []string {
 	}
 	if m.reference_count != nil {
 		fields = append(fields, entity.FieldReferenceCount)
+	}
+	if m.hash != nil {
+		fields = append(fields, entity.FieldHash)
 	}
 	if m.storage_policy != nil {
 		fields = append(fields, entity.FieldStoragePolicyEntities)
@@ -6382,6 +6435,8 @@ func (m *EntityMutation) Field(name string) (ent.Value, bool) {
 		return m.Size()
 	case entity.FieldReferenceCount:
 		return m.ReferenceCount()
+	case entity.FieldHash:
+		return m.Hash()
 	case entity.FieldStoragePolicyEntities:
 		return m.StoragePolicyEntities()
 	case entity.FieldCreatedBy:
@@ -6413,6 +6468,8 @@ func (m *EntityMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldSize(ctx)
 	case entity.FieldReferenceCount:
 		return m.OldReferenceCount(ctx)
+	case entity.FieldHash:
+		return m.OldHash(ctx)
 	case entity.FieldStoragePolicyEntities:
 		return m.OldStoragePolicyEntities(ctx)
 	case entity.FieldCreatedBy:
@@ -6478,6 +6535,13 @@ func (m *EntityMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetReferenceCount(v)
+		return nil
+	case entity.FieldHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHash(v)
 		return nil
 	case entity.FieldStoragePolicyEntities:
 		v, ok := value.(int)
@@ -6579,6 +6643,9 @@ func (m *EntityMutation) ClearedFields() []string {
 	if m.FieldCleared(entity.FieldDeletedAt) {
 		fields = append(fields, entity.FieldDeletedAt)
 	}
+	if m.FieldCleared(entity.FieldHash) {
+		fields = append(fields, entity.FieldHash)
+	}
 	if m.FieldCleared(entity.FieldCreatedBy) {
 		fields = append(fields, entity.FieldCreatedBy)
 	}
@@ -6604,6 +6671,9 @@ func (m *EntityMutation) ClearField(name string) error {
 	switch name {
 	case entity.FieldDeletedAt:
 		m.ClearDeletedAt()
+		return nil
+	case entity.FieldHash:
+		m.ClearHash()
 		return nil
 	case entity.FieldCreatedBy:
 		m.ClearCreatedBy()
@@ -6642,6 +6712,9 @@ func (m *EntityMutation) ResetField(name string) error {
 		return nil
 	case entity.FieldReferenceCount:
 		m.ResetReferenceCount()
+		return nil
+	case entity.FieldHash:
+		m.ResetHash()
 		return nil
 	case entity.FieldStoragePolicyEntities:
 		m.ResetStoragePolicyEntities()

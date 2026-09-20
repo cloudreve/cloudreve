@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/gofrs/uuid"
 )
@@ -20,6 +21,12 @@ func (Entity) Fields() []ent.Field {
 		field.Text("source"),
 		field.Int64("size"),
 		field.Int("reference_count").Default(1),
+		// Content hash asserted by the uploader (sha256 hex). Used for
+		// duplicate detection / instant upload; not verified server-side
+		// because remote-policy blobs never pass through this server.
+		field.String("hash").
+			Optional().
+			MaxLen(64),
 		field.Int("storage_policy_entities"),
 		field.Int("created_by").Optional(),
 		field.UUID("upload_session_id", uuid.Must(uuid.NewV4())).
@@ -51,5 +58,11 @@ func (Entity) Edges() []ent.Edge {
 func (Entity) Mixin() []ent.Mixin {
 	return []ent.Mixin{
 		CommonMixin{},
+	}
+}
+
+func (Entity) Indexes() []ent.Index {
+	return []ent.Index{
+		index.Fields("hash", "size"),
 	}
 }

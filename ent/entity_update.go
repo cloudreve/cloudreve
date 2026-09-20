@@ -136,6 +136,26 @@ func (eu *EntityUpdate) AddReferenceCount(i int) *EntityUpdate {
 	return eu
 }
 
+// SetHash sets the "hash" field.
+func (eu *EntityUpdate) SetHash(s string) *EntityUpdate {
+	eu.mutation.SetHash(s)
+	return eu
+}
+
+// SetNillableHash sets the "hash" field if the given value is not nil.
+func (eu *EntityUpdate) SetNillableHash(s *string) *EntityUpdate {
+	if s != nil {
+		eu.SetHash(*s)
+	}
+	return eu
+}
+
+// ClearHash clears the value of the "hash" field.
+func (eu *EntityUpdate) ClearHash() *EntityUpdate {
+	eu.mutation.ClearHash()
+	return eu
+}
+
 // SetStoragePolicyEntities sets the "storage_policy_entities" field.
 func (eu *EntityUpdate) SetStoragePolicyEntities(i int) *EntityUpdate {
 	eu.mutation.SetStoragePolicyEntities(i)
@@ -329,6 +349,11 @@ func (eu *EntityUpdate) defaults() error {
 
 // check runs all checks and user-defined validators on the builder.
 func (eu *EntityUpdate) check() error {
+	if v, ok := eu.mutation.Hash(); ok {
+		if err := entity.HashValidator(v); err != nil {
+			return &ValidationError{Name: "hash", err: fmt.Errorf(`ent: validator failed for field "Entity.hash": %w`, err)}
+		}
+	}
 	if _, ok := eu.mutation.StoragePolicyID(); eu.mutation.StoragePolicyCleared() && !ok {
 		return errors.New(`ent: clearing a required unique edge "Entity.storage_policy"`)
 	}
@@ -376,6 +401,12 @@ func (eu *EntityUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := eu.mutation.AddedReferenceCount(); ok {
 		_spec.AddField(entity.FieldReferenceCount, field.TypeInt, value)
+	}
+	if value, ok := eu.mutation.Hash(); ok {
+		_spec.SetField(entity.FieldHash, field.TypeString, value)
+	}
+	if eu.mutation.HashCleared() {
+		_spec.ClearField(entity.FieldHash, field.TypeString)
 	}
 	if value, ok := eu.mutation.UploadSessionID(); ok {
 		_spec.SetField(entity.FieldUploadSessionID, field.TypeUUID, value)
@@ -615,6 +646,26 @@ func (euo *EntityUpdateOne) AddReferenceCount(i int) *EntityUpdateOne {
 	return euo
 }
 
+// SetHash sets the "hash" field.
+func (euo *EntityUpdateOne) SetHash(s string) *EntityUpdateOne {
+	euo.mutation.SetHash(s)
+	return euo
+}
+
+// SetNillableHash sets the "hash" field if the given value is not nil.
+func (euo *EntityUpdateOne) SetNillableHash(s *string) *EntityUpdateOne {
+	if s != nil {
+		euo.SetHash(*s)
+	}
+	return euo
+}
+
+// ClearHash clears the value of the "hash" field.
+func (euo *EntityUpdateOne) ClearHash() *EntityUpdateOne {
+	euo.mutation.ClearHash()
+	return euo
+}
+
 // SetStoragePolicyEntities sets the "storage_policy_entities" field.
 func (euo *EntityUpdateOne) SetStoragePolicyEntities(i int) *EntityUpdateOne {
 	euo.mutation.SetStoragePolicyEntities(i)
@@ -821,6 +872,11 @@ func (euo *EntityUpdateOne) defaults() error {
 
 // check runs all checks and user-defined validators on the builder.
 func (euo *EntityUpdateOne) check() error {
+	if v, ok := euo.mutation.Hash(); ok {
+		if err := entity.HashValidator(v); err != nil {
+			return &ValidationError{Name: "hash", err: fmt.Errorf(`ent: validator failed for field "Entity.hash": %w`, err)}
+		}
+	}
 	if _, ok := euo.mutation.StoragePolicyID(); euo.mutation.StoragePolicyCleared() && !ok {
 		return errors.New(`ent: clearing a required unique edge "Entity.storage_policy"`)
 	}
@@ -885,6 +941,12 @@ func (euo *EntityUpdateOne) sqlSave(ctx context.Context) (_node *Entity, err err
 	}
 	if value, ok := euo.mutation.AddedReferenceCount(); ok {
 		_spec.AddField(entity.FieldReferenceCount, field.TypeInt, value)
+	}
+	if value, ok := euo.mutation.Hash(); ok {
+		_spec.SetField(entity.FieldHash, field.TypeString, value)
+	}
+	if euo.mutation.HashCleared() {
+		_spec.ClearField(entity.FieldHash, field.TypeString)
 	}
 	if value, ok := euo.mutation.UploadSessionID(); ok {
 		_spec.SetField(entity.FieldUploadSessionID, field.TypeUUID, value)

@@ -1,6 +1,7 @@
 // 所有 Uploader 的基类
 import axios, { CanceledError, CancelTokenSource } from "axios";
 import { EncryptionCipher, PolicyType } from "../../../../api/explorer.ts";
+import { store } from "../../../../redux/store.ts";
 import CrUri from "../../../../util/uri.ts";
 import { createUploadSession, deleteUploadSession } from "../api";
 import { UploaderError } from "../errors";
@@ -139,6 +140,18 @@ export default abstract class Base {
     if (cachedInfo == null) {
       const crUri = new CrUri(this.task.dst);
       crUri.join(this.task.name);
+      // Content hash enables server-side dedup / instant upload. Skipped for
+      // encrypted policies: the blob is ciphertext with a random IV, so a
+      // plaintext hash would never match — and storing it would leak content
+      // identity.
+      let hash: string | undefined;
+      if (store.getState().siteConfig.basic.config.upload_dedup && !this.task.policy.encryption) {
+        try {
+          hash = await utils.sha256File(this.task.file);
+        } catch (e) {
+          this.logger.warn("Failed to hash file for dedup, uploading without hash:", e);
+        }
+      }
       this.task.session = await createUploadSession(
         {
           uri: crUri.toString(),
@@ -149,6 +162,7 @@ export default abstract class Base {
           entity_type: this.task.overwrite ? "version" : undefined,
           encryption_supported:
             this.task.policy.encryption && "crypto" in window ? [EncryptionCipher.aes256ctr] : undefined,
+          hash,
         },
         this.cancelToken.token,
       );
@@ -158,6 +172,14 @@ export default abstract class Base {
       this.task.resumed = true;
       this.task.chunkProgress = cachedInfo.chunkProgress;
       this.logger.info("Resume upload from cached ctx:", cachedInfo);
+    }
+
+    if (this.task.session?.rapid_uploaded) {
+      // Instant upload: server materialized the file from an identical
+      // existing entity — nothing to transfer.
+      this.logger.info("Rapid upload: identical content already exists on server");
+      this.transit(Status.finished);
+      return;
     }
 
     if (this.task.session?.encrypt_metadata && !this.task.policy?.relay) {
@@ -236,7 +258,7 @@ export default abstract class Base {
   protected cancelUploadSession = (): Promise<void> => {
     return new Promise<void>((resolve) => {
       utils.removeResumeCtx(this.task, this.logger);
-      if (this.task.session) {
+      if (this.task.session?.session_id) {
         setTimeout(() => {
           deleteUploadSession(this.task.session!?.session_id, this.task.session!?.uri)
             .catch((e) => {

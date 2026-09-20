@@ -35,6 +35,7 @@ export interface SiteConfig {
   qq_connect_enabled?: boolean;
   download_cdn_routes?: { name: string; url: string }[];
   abuse_captcha?: boolean;
+  upload_dedup?: boolean;
   allow_select_node?: boolean;
   task_nodes?: { id: string; name: string }[];
   logo?: string;

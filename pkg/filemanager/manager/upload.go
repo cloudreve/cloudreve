@@ -16,6 +16,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/cluster"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs/dbfs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 	"github.com/cloudreve/Cloudreve/v4/pkg/queue"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
@@ -127,6 +128,22 @@ func (m *manager) CreateUploadSession(ctx context.Context, req *fs.UploadRequest
 		}
 	}
 
+	if uploadSession.Props != nil && uploadSession.Props.RapidUploaded {
+		// File was materialized from an existing identical entity — no
+		// storage credential or session cache is needed. Still queue the
+		// same post-upload processing (media meta, full-text index) a
+		// completed upload would get, since those are per-file.
+		if !m.stateless {
+			m.postProcessRapidUpload(ctx, uploadSession)
+		}
+		return &fs.UploadCredential{
+			Uri:           uploadSession.Props.Uri.String(),
+			StoragePolicy: uploadSession.Policy,
+			Expires:       req.Props.ExpireAt.Unix(),
+			RapidUploaded: true,
+		}, nil
+	}
+
 	d, err := m.GetStorageDriver(ctx, m.CastStoragePolicyOnSlave(ctx, uploadSession.Policy))
 	if err != nil {
 		m.OnUploadFailed(ctx, uploadSession)
@@ -187,6 +204,30 @@ func (m *manager) CreateUploadSession(ctx context.Context, req *fs.UploadRequest
 	}
 
 	return credential, nil
+}
+
+// postProcessRapidUpload resolves the linked entity's real storage policy
+// driver (it may differ from the file's upload policy when dedup matched a
+// cross-policy entity) and queues media-meta / full-text tasks.
+func (m *manager) postProcessRapidUpload(ctx context.Context, session *fs.UploadSession) {
+	file, err := m.fs.Get(ctx, session.Props.Uri, dbfs.WithFileEntities())
+	if err != nil {
+		m.l.Warning("Failed to load rapid-uploaded file for post-processing: %s", err)
+		return
+	}
+	entity, found := lo.Find(file.Entities(), func(e fs.Entity) bool {
+		return e.ID() == session.EntityID
+	})
+	if !found {
+		m.l.Warning("Rapid-uploaded file %d missing entity %d", session.FileID, session.EntityID)
+		return
+	}
+	_, d, err := m.getEntityPolicyDriver(ctx, entity, nil)
+	if err != nil {
+		m.l.Warning("Failed to resolve rapid-upload entity driver: %s", err)
+		return
+	}
+	m.onNewEntityUploaded(ctx, session, d, file.OwnerID())
 }
 
 func (m *manager) ConfirmUploadSession(ctx context.Context, session *fs.UploadSession, chunkIndex int) (fs.File, error) {

@@ -28,6 +28,7 @@ type dbfsOption struct {
 	ancestor                   *File
 	notRoot                    bool
 	encryptMetadata            *types.EncryptMetadata
+	existingEntity             *ent.Entity
 }
 
 func newDbfsOption() *dbfsOption {
@@ -184,5 +185,13 @@ func WithEntityUser() fs.Option {
 func WithAncestor(f *File) fs.Option {
 	return optionFunc(func(o *dbfsOption) {
 		o.ancestor = f
+	})
+}
+
+// WithExistingEntity links an already-stored entity to the new file
+// instead of creating a fresh one (instant upload / hash dedup).
+func WithExistingEntity(e *ent.Entity) fs.Option {
+	return optionFunc(func(o *dbfsOption) {
+		o.existingEntity = e
 	})
 }

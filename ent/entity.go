@@ -36,6 +36,8 @@ type Entity struct {
 	Size int64 `json:"size,omitempty"`
 	// ReferenceCount holds the value of the "reference_count" field.
 	ReferenceCount int `json:"reference_count,omitempty"`
+	// Hash holds the value of the "hash" field.
+	Hash string `json:"hash,omitempty"`
 	// StoragePolicyEntities holds the value of the "storage_policy_entities" field.
 	StoragePolicyEntities int `json:"storage_policy_entities,omitempty"`
 	// CreatedBy holds the value of the "created_by" field.
@@ -109,7 +111,7 @@ func (*Entity) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case entity.FieldID, entity.FieldType, entity.FieldSize, entity.FieldReferenceCount, entity.FieldStoragePolicyEntities, entity.FieldCreatedBy:
 			values[i] = new(sql.NullInt64)
-		case entity.FieldSource:
+		case entity.FieldSource, entity.FieldHash:
 			values[i] = new(sql.NullString)
 		case entity.FieldCreatedAt, entity.FieldUpdatedAt, entity.FieldDeletedAt:
 			values[i] = new(sql.NullTime)
@@ -176,6 +178,12 @@ func (e *Entity) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field reference_count", values[i])
 			} else if value.Valid {
 				e.ReferenceCount = int(value.Int64)
+			}
+		case entity.FieldHash:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field hash", values[i])
+			} else if value.Valid {
+				e.Hash = value.String
 			}
 		case entity.FieldStoragePolicyEntities:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -277,6 +285,9 @@ func (e *Entity) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("reference_count=")
 	builder.WriteString(fmt.Sprintf("%v", e.ReferenceCount))
+	builder.WriteString(", ")
+	builder.WriteString("hash=")
+	builder.WriteString(e.Hash)
 	builder.WriteString(", ")
 	builder.WriteString("storage_policy_entities=")
 	builder.WriteString(fmt.Sprintf("%v", e.StoragePolicyEntities))

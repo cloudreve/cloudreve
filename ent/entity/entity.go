@@ -29,6 +29,8 @@ const (
 	FieldSize = "size"
 	// FieldReferenceCount holds the string denoting the reference_count field in the database.
 	FieldReferenceCount = "reference_count"
+	// FieldHash holds the string denoting the hash field in the database.
+	FieldHash = "hash"
 	// FieldStoragePolicyEntities holds the string denoting the storage_policy_entities field in the database.
 	FieldStoragePolicyEntities = "storage_policy_entities"
 	// FieldCreatedBy holds the string denoting the created_by field in the database.
@@ -76,6 +78,7 @@ var Columns = []string{
 	FieldSource,
 	FieldSize,
 	FieldReferenceCount,
+	FieldHash,
 	FieldStoragePolicyEntities,
 	FieldCreatedBy,
 	FieldUploadSessionID,
@@ -114,6 +117,8 @@ var (
 	UpdateDefaultUpdatedAt func() time.Time
 	// DefaultReferenceCount holds the default value on creation for the "reference_count" field.
 	DefaultReferenceCount int
+	// HashValidator is a validator for the "hash" field. It is called by the builders before save.
+	HashValidator func(string) error
 )
 
 // OrderOption defines the ordering options for the Entity queries.
@@ -157,6 +162,11 @@ func BySize(opts ...sql.OrderTermOption) OrderOption {
 // ByReferenceCount orders the results by the reference_count field.
 func ByReferenceCount(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldReferenceCount, opts...).ToFunc()
+}
+
+// ByHash orders the results by the hash field.
+func ByHash(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldHash, opts...).ToFunc()
 }
 
 // ByStoragePolicyEntities orders the results by the storage_policy_entities field.

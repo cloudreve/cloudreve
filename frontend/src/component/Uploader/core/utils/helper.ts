@@ -1,8 +1,25 @@
+import { createSHA256 } from "hash-wasm";
 import CrUri from "../../../../util/uri";
 import { UploaderError, UploaderErrorName } from "../errors";
 import Logger from "../logger";
 import { Task } from "../types";
 import { ChunkProgress } from "../uploader/chunk";
+
+// sha256File streams the file through WASM sha256 without buffering it
+// whole — used for server-side dedup / instant upload.
+const hashChunkSize = 8 * 1024 * 1024;
+export async function sha256File(file: Blob): Promise<string> {
+  const hasher = await createSHA256();
+  hasher.init();
+  for (let offset = 0; offset < file.size; offset += hashChunkSize) {
+    const buf = await file.slice(offset, offset + hashChunkSize).arrayBuffer();
+    hasher.update(new Uint8Array(buf));
+  }
+  if (file.size === 0) {
+    hasher.update(new Uint8Array(0));
+  }
+  return hasher.digest("hex");
+}
 
 // 文件分块
 export function getChunks(file: Blob, chunkByteSize: number | undefined): Blob[] {

@@ -257,6 +257,9 @@ type (
 		MimeType        string                 `json:"mime_type,omitempty"`     // Expected mimetype
 		UploadPolicy    string                 `json:"upload_policy,omitempty"` // Upyun upload policy
 		EncryptMetadata *types.EncryptMetadata `json:"encrypt_metadata,omitempty"`
+		// RapidUploaded marks that the file was materialized from an existing
+		// identical entity — the client must not transfer any bytes.
+		RapidUploaded bool `json:"rapid_uploaded,omitempty"`
 	}
 
 	// UploadSession stores the information of an upload session, used in server side.
@@ -305,6 +308,12 @@ type (
 		ExpireAt            time.Time
 		EncryptionSupported []types.Cipher
 		ClientSideEncrypted bool // Whether the file stream is already encrypted by client side.
+		// Hash is the client-asserted sha256 of the file content, used for
+		// duplicate detection and instant upload. Stored on the entity.
+		Hash string
+		// RapidUploaded marks a session whose file was materialized from an
+		// existing identical entity — no transfer is needed.
+		RapidUploaded bool
 	}
 
 	// FsOption options for underlying file system.

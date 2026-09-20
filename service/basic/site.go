@@ -61,6 +61,10 @@ type SiteConfig struct {
 	// AbuseCaptcha controls whether the report-abuse dialog shows captcha.
 	AbuseCaptcha bool `json:"abuse_captcha,omitempty"`
 
+	// UploadDedup signals clients to send content hashes with upload
+	// sessions, enabling server-side duplicate detection / instant upload.
+	UploadDedup bool `json:"upload_dedup,omitempty"`
+
 	// TaskNodes lists nodes the current user may target when creating tasks
 	// (remote download, archive ops); populated when the group allows node
 	// selection, filtered to the group's allowed pool.
@@ -257,6 +261,7 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 		DefaultShareLinksInProfile: string(shareDefaults.LinksInProfile),
 		DownloadCDNRoutes:          settings.DownloadCDNRoutes(c),
 		AbuseCaptcha:               settings.AbuseCaptchaEnabled(c),
+		UploadDedup:                settings.DBFS(c).DedupScope != "off",
 		TaskNodes:                  taskNodes,
 		AllowSelectNode:            allowSelect,
 	}, nil

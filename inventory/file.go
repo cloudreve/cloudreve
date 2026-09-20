@@ -147,6 +147,12 @@ type (
 		UploadSessionID uuid.UUID
 		Importing       bool
 		EncryptMetadata *types.EncryptMetadata
+		// Hash is the uploader-asserted content hash (sha256 hex) stored
+		// on the entity for later dedup lookups.
+		Hash string
+		// LinkedEntityID, when non-zero, makes CreateFile attach an
+		// existing entity (instant upload) instead of creating a new one.
+		LinkedEntityID int
 	}
 
 	RelocateEntityParameter struct {
@@ -251,6 +257,11 @@ type FileClient interface {
 	Update(ctx context.Context, file *ent.File) (*ent.File, error)
 	// ListEntities lists entities
 	ListEntities(ctx context.Context, args *ListEntityParameters) (*ListEntityResult, error)
+	// FindEntityByHash returns the newest completed version entity matching
+	// the uploader-asserted content hash and size. When global is false the
+	// match is restricted to entities created by creatorID so one user
+	// cannot probe another user's blobs by hash.
+	FindEntityByHash(ctx context.Context, hash string, size int64, creatorID int, global bool) (*ent.Entity, error)
 	// UpdateProps updates props of a file
 	UpdateProps(ctx context.Context, file *ent.File, props *types.FileProps) (*ent.File, error)
 	// UpdateModifiedAt updates modified at of a file
@@ -863,7 +874,22 @@ func (f *fileClient) CreateFile(ctx context.Context, root *ent.File, args *Creat
 
 	// Create default primary file entity if needed
 	var storageDiff StorageDiff
-	if args.EntityParameters != nil {
+	if args.EntityParameters != nil && args.EntityParameters.LinkedEntityID != 0 {
+		// Instant upload: attach an already-stored entity and bump its
+		// refcount. The file still consumes the owner's logical quota.
+		linked, err := f.client.Entity.Get(ctx, args.EntityParameters.LinkedEntityID)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to get linked entity: %v", err)
+		}
+		if err := f.client.Entity.UpdateOne(linked).AddFile(newFile).AddReferenceCount(1).Exec(ctx); err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to link entity: %v", err)
+		}
+		if err := f.client.File.UpdateOne(newFile).SetPrimaryEntity(linked.ID).SetSize(linked.Size).Exec(ctx); err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to set primary entity: %v", err)
+		}
+		defaultEntity = linked
+		storageDiff = map[int]int64{newFile.OwnerID: linked.Size}
+	} else if args.EntityParameters != nil {
 		args.EntityParameters.OwnerID = root.OwnerID
 		args.EntityParameters.StoragePolicyID = args.StoragePolicyID
 		defaultEntity, storageDiff, err = f.CreateEntity(ctx, newFile, args.EntityParameters)
@@ -996,6 +1022,10 @@ func (f *fileClient) CreateEntity(ctx context.Context, file *ent.File, args *Ent
 		SetSource(args.Source).
 		SetSize(args.Size).
 		SetStoragePolicyID(args.StoragePolicyID)
+
+	if args.Hash != "" {
+		stm.SetHash(args.Hash)
+	}
 
 	if opt != nil {
 		stm.SetProps(opt)
@@ -1274,6 +1304,26 @@ func ParseReferenceCountFilter(expr string) (*ReferenceCountFilter, error) {
 		return nil, fmt.Errorf("invalid reference count filter %q: %w", expr, err)
 	}
 	return &ReferenceCountFilter{Op: op, Value: v}, nil
+}
+
+func (f *fileClient) FindEntityByHash(ctx context.Context, hash string, size int64, creatorID int, global bool) (*ent.Entity, error) {
+	if hash == "" {
+		return nil, &ent.NotFoundError{}
+	}
+
+	query := f.client.Entity.Query().
+		Where(
+			entity.Hash(hash),
+			entity.Size(size),
+			entity.Type(int(types.EntityTypeVersion)),
+			entity.ReferenceCountGT(0),
+			entity.UploadSessionIDIsNil(),
+		)
+	if !global {
+		query = query.Where(entity.CreatedBy(creatorID))
+	}
+
+	return query.Order(ent.Desc(entity.FieldID)).First(ctx)
 }
 
 func (f *fileClient) ListEntities(ctx context.Context, args *ListEntityParameters) (*ListEntityResult, error) {

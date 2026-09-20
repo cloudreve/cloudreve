@@ -774,6 +774,7 @@ func (s *settingProvider) DBFS(ctx context.Context) *DBFS {
 		MaxPageSize:                s.getInt(ctx, "max_page_size", 2000),
 		MaxRecursiveSearchedFolder: s.getInt(ctx, "max_recursive_searched_folder", 65535),
 		UseSSEForSearch:            s.getBoolean(ctx, "use_sse_for_search", false),
+		DedupScope:                 s.getString(ctx, "upload_dedup_scope", "owner"),
 	}
 }
 
