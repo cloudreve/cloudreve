@@ -1,11 +1,15 @@
-import { Box, Divider, PopoverProps, Stack, styled, Typography } from "@mui/material";
+import { Box, Button, Divider, PopoverProps, Stack, styled, Typography } from "@mui/material";
 import HoverPopover from "material-ui-popup-state/HoverPopover";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Share } from "../../../api/explorer.ts";
+import { useAppDispatch } from "../../../redux/hooks.ts";
+import { saveShareToMyFiles } from "../../../redux/thunks/share.ts";
+import SessionManager from "../../../session";
 import TimeBadge from "../../Common/TimeBadge.tsx";
 import UserBadge from "../../Common/User/UserBadge.tsx";
 import Eye from "../../Icons/Eye.tsx";
+import Save from "../../Icons/Save.tsx";
 import Timer from "../../Icons/Timer.tsx";
 
 interface ShareInfoPopoverProps extends PopoverProps {
@@ -64,7 +68,15 @@ export const ShareStatistics = ({ shareInfo }: { shareInfo: Share }) => {
 
 const ShareInfoPopover = ({ displayName, shareInfo, ...rest }: ShareInfoPopoverProps) => {
   const { t } = useTranslation();
+  const dispatch = useAppDispatch();
+  const [saving, setSaving] = useState(false);
+  const loggedIn = SessionManager.currentLoginOrNull() != null;
   const stopPropagation = useCallback((e: any) => e.stopPropagation(), []);
+
+  const saveToMyFiles = useCallback(() => {
+    setSaving(true);
+    dispatch(saveShareToMyFiles(shareInfo, shareInfo.password, displayName)).finally(() => setSaving(false));
+  }, [dispatch, shareInfo, displayName]);
   return (
     <HoverPopover
       onMouseDown={stopPropagation}
@@ -119,6 +131,22 @@ const ShareInfoPopover = ({ displayName, shareInfo, ...rest }: ShareInfoPopoverP
             <TimeBadge sx={{ ml: 1 }} variant={"body2"} color={"text.secondary"} datetime={shareInfo.created_at} />
           )}
         </Box>
+        {loggedIn && (
+          <>
+            <Divider />
+            <Box sx={{ px: 1.5, py: 1 }}>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<Save />}
+                disabled={saving}
+                onClick={saveToMyFiles}
+              >
+                {t("application:share.saveToMyFiles")}
+              </Button>
+            </Box>
+          </>
+        )}
       </Box>
     </HoverPopover>
   );

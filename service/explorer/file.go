@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
+	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
@@ -216,9 +217,14 @@ type (
 	CreateFileParameterCtx struct{}
 	CreateFileService      struct {
 		Uri           string            `json:"uri" binding:"required"`
-		Type          string            `json:"type" binding:"required,eq=file|eq=folder"`
+		Type          string            `json:"type" binding:"required,eq=file|eq=folder|eq=share"`
 		Metadata      map[string]string `json:"metadata"`
 		ErrOnConflict bool              `json:"err_on_conflict"`
+		// ShareID and SharePassword create a symbolic share shortcut instead
+		// of a regular entry when Type == "share", so a saved share link
+		// stays browsable from the owner's file list.
+		ShareID       string `json:"share_id"`
+		SharePassword string `json:"share_password"`
 	}
 )
 
@@ -233,10 +239,35 @@ func (service *CreateFileService) Create(c *gin.Context) (*FileResponse, error) 
 		return nil, serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
 	}
 
-	fileType := types.FileTypeFromString(service.Type)
 	opts := []fs.Option{
 		fs.WithMetadata(service.Metadata),
 	}
+	fileType := types.FileTypeFromString(service.Type)
+	if service.Type == "share" {
+		if service.ShareID == "" {
+			return nil, serializer.NewError(serializer.CodeParamErr, "share_id is required", nil)
+		}
+
+		shareCtx := context.WithValue(c, inventory.LoadShareUser{}, true)
+		shareCtx = context.WithValue(shareCtx, inventory.LoadShareFile{}, true)
+		shareCtx = context.WithValue(shareCtx, inventory.LoadShareFiles{}, true)
+		share, err := dep.ShareClient().GetByHashID(shareCtx, service.ShareID)
+		if err != nil || share == nil {
+			return nil, serializer.NewError(serializer.CodeNotFound, "Share not found", err)
+		}
+
+		ft, metadata, sErr := shareShortcutEntry(share, dep.HashIDEncoder(), service.SharePassword)
+		if sErr != nil {
+			return nil, sErr
+		}
+		fileType = ft
+
+		opts = []fs.Option{
+			dbfs.WithSymbolicLink(),
+			fs.WithMetadata(metadata),
+		}
+	}
+
 	if service.ErrOnConflict {
 		opts = append(opts, dbfs.WithErrorOnConflict())
 	}
@@ -246,6 +277,30 @@ func (service *CreateFileService) Create(c *gin.Context) (*FileResponse, error) 
 	}
 
 	return BuildFileResponse(c, user, file, dep.HashIDEncoder(), nil), nil
+}
+
+// shareShortcutEntry resolves a share into the symbolic entry attributes used
+// for saved share links: folder type for folder and multi-file shares, file
+// type otherwise.
+func shareShortcutEntry(share *ent.Share, hasher hashid.Encoder, password string) (types.FileType, map[string]string, error) {
+	if err := inventory.IsValidShare(share); err != nil {
+		return 0, nil, err
+	}
+
+	fileType := types.FileTypeFolder
+	if len(share.Edges.Files) == 0 && share.Edges.File != nil &&
+		types.FileType(share.Edges.File.Type) != types.FileTypeFolder {
+		fileType = types.FileTypeFile
+	}
+
+	metadata := map[string]string{
+		dbfs.MetadataSharedRedirect: fs.NewShareUri(hashid.EncodeShareID(hasher, share.ID), password),
+	}
+	if share.Edges.User != nil {
+		metadata[dbfs.MetadataSharedOwner] = hashid.EncodeUserID(hasher, share.Edges.User.ID)
+	}
+
+	return fileType, metadata, nil
 }
 
 type (

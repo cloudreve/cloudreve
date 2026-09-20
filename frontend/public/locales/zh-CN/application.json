@@ -843,7 +843,16 @@
     "paidShareDes": "此分享为付费分享，需支付 {{price}} 积分购买后才能下载。",
     "purchaseForPoints": "支付 {{price}} 积分购买",
     "signInToPurchase": "登录后购买",
-    "yourBalance": "余额：{{credits}} 积分"
+    "yourBalance": "余额：{{credits}} 积分",
+    "saveToMyFiles": "保存到我的文件",
+    "savedToMyFiles": "分享已保存到你的文件。",
+    "saveShareLink": "保存分享链接",
+    "saveShareLinkHint": "粘贴分享链接，例如 https://example.com/s/abc123",
+    "shareLink": "分享链接",
+    "savedAs": "保存名称（可选）",
+    "sharePassword": "分享密码（可选）",
+    "sharePasswordRequired": "此分享需要密码。",
+    "invalidShareLink": "无法解析此分享链接。"
   },
   "download": {
     "noFilesFound": "没有找到任何文件",
