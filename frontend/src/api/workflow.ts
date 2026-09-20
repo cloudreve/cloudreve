@@ -189,5 +189,6 @@ export interface BlobAuditWorkflowService {
 export interface RelocateEntityService {
   entity_ids?: number[];
   src_policy_id?: number;
+  src_user_id?: number;
   dst_policy_id: number;
 }

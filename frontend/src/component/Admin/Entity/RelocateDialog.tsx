@@ -13,9 +13,11 @@ export interface RelocateDialogProps {
   entityIDs?: number[];
   srcPolicyID?: number;
   srcPolicyName?: string;
+  srcUserID?: number;
+  srcUserName?: string;
 }
 
-const RelocateDialog = ({ open, onClose, entityIDs, srcPolicyID, srcPolicyName }: RelocateDialogProps) => {
+const RelocateDialog = ({ open, onClose, entityIDs, srcPolicyID, srcPolicyName, srcUserID, srcUserName }: RelocateDialogProps) => {
   const { t } = useTranslation("dashboard");
   const dispatch = useAppDispatch();
   const { enqueueSnackbar } = useSnackbar();
@@ -37,6 +39,7 @@ const RelocateDialog = ({ open, onClose, entityIDs, srcPolicyID, srcPolicyName }
       relocateEntities({
         entity_ids: entityIDs,
         src_policy_id: srcPolicyID,
+        src_user_id: srcUserID,
         dst_policy_id: dstPolicyID,
       }),
     )
@@ -56,7 +59,9 @@ const RelocateDialog = ({ open, onClose, entityIDs, srcPolicyID, srcPolicyName }
         <DialogContentText sx={{ mb: 2 }}>
           {srcPolicyID
             ? t("entity.relocatePolicyDes", { name: srcPolicyName ?? "" })
-            : t("entity.relocateEntitiesDes", { num: entityIDs?.length ?? 0 })}
+            : srcUserID
+              ? t("entity.relocateUserDes", { name: srcUserName ?? "" })
+              : t("entity.relocateEntitiesDes", { num: entityIDs?.length ?? 0 })}
         </DialogContentText>
         <SinglePolicySelectionInput value={dstPolicyID} onChange={setDstPolicyID} />
       </DialogContent>

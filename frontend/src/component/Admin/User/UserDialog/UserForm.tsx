@@ -14,7 +14,7 @@ import {
   useTheme,
 } from "@mui/material";
 import { useSnackbar } from "notistack";
-import { useCallback, useContext } from "react";
+import { useCallback, useContext, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { sendCalibrateUserStorage } from "../../../../api/api";
@@ -27,6 +27,7 @@ import { SquareMenuItem } from "../../../FileManager/ContextMenu/ContextMenu";
 import Delete from "../../../Icons/Delete";
 import SettingForm from "../../../Pages/Setting/SettingForm";
 import { CapacityBar } from "../../../Pages/Setting/StorageSetting";
+import RelocateDialog from "../../Entity/RelocateDialog";
 import GroupSelectionInput from "../../Common/GroupSelectionInput";
 import { NoMarginHelperText } from "../../Settings/Settings";
 import { UserDialogContext } from "./UserDialog";
@@ -39,6 +40,7 @@ const UserForm = ({ reload, setLoading }: { reload: () => void; setLoading: (loa
   const { t } = useTranslation("dashboard");
   const navigate = useNavigate();
   const { formRef, values, setUser } = useContext(UserDialogContext);
+  const [relocateOpen, setRelocateOpen] = useState(false);
 
   const removeAvatar = useCallback(() => {
     setUser((prev) => ({ ...prev, avatar: undefined }));
@@ -179,6 +181,15 @@ const UserForm = ({ reload, setLoading }: { reload: () => void; setLoading: (loa
             >
               {t("user.openUserFiles")}
             </SecondaryButton>
+            <SecondaryButton sx={{ mt: 1 }} onClick={() => setRelocateOpen(true)} variant="contained">
+              {t("user.relocateFiles")}
+            </SecondaryButton>
+            <RelocateDialog
+              open={relocateOpen}
+              onClose={() => setRelocateOpen(false)}
+              srcUserID={values.id}
+              srcUserName={values.email}
+            />
           </Box>
         </Stack>
         <Divider orientation="vertical" flexItem />

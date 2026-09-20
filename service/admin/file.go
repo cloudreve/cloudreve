@@ -542,11 +542,12 @@ func (s *BatchEntityService) Delete(c *gin.Context) error {
 
 type (
 	// RelocateEntityService moves blobs between storage policies. Exactly one
-	// scope is required: explicit entity IDs, or a source policy whose entities
-	// are all migrated.
+	// scope is required: explicit entity IDs, a source policy whose entities
+	// are all migrated, or a source user whose entities are all migrated.
 	RelocateEntityService struct {
 		EntityIDs   []int `json:"entity_ids"`
 		SrcPolicyID int   `json:"src_policy_id"`
+		SrcUserID   int   `json:"src_user_id"`
 		DstPolicyID int   `json:"dst_policy_id" binding:"required"`
 	}
 	RelocateEntityParamCtx struct{}
@@ -556,11 +557,17 @@ func (s *RelocateEntityService) Relocate(c *gin.Context) (*RelocateTaskResponse,
 	dep := dependency.FromContext(c)
 	hasher := dep.HashIDEncoder()
 
-	if len(s.EntityIDs) == 0 && s.SrcPolicyID == 0 {
-		return nil, serializer.NewError(serializer.CodeParamErr, "either entity_ids or src_policy_id is required", nil)
+	scopes := 0
+	for _, set := range []bool{len(s.EntityIDs) > 0, s.SrcPolicyID != 0, s.SrcUserID != 0} {
+		if set {
+			scopes++
+		}
 	}
-	if len(s.EntityIDs) > 0 && s.SrcPolicyID != 0 {
-		return nil, serializer.NewError(serializer.CodeParamErr, "entity_ids and src_policy_id are mutually exclusive", nil)
+	if scopes == 0 {
+		return nil, serializer.NewError(serializer.CodeParamErr, "one of entity_ids, src_policy_id or src_user_id is required", nil)
+	}
+	if scopes > 1 {
+		return nil, serializer.NewError(serializer.CodeParamErr, "entity_ids, src_policy_id and src_user_id are mutually exclusive", nil)
 	}
 	if s.SrcPolicyID == s.DstPolicyID && s.SrcPolicyID != 0 {
 		return nil, serializer.NewError(serializer.CodeParamErr, "source and destination policies are identical", nil)
@@ -572,13 +579,20 @@ func (s *RelocateEntityService) Relocate(c *gin.Context) (*RelocateTaskResponse,
 	}
 
 	var t queue.Task
-	if s.SrcPolicyID != 0 {
+	switch {
+	case s.SrcPolicyID != 0:
 		srcPolicy, err := dep.StoragePolicyClient().GetPolicyByID(c, s.SrcPolicyID)
 		if err != nil || srcPolicy == nil {
 			return nil, serializer.NewError(serializer.CodeParamErr, "source policy does not exist", err)
 		}
 		t, err = workflows.NewRelocatePolicyTask(c, s.SrcPolicyID, s.DstPolicyID)
-	} else {
+	case s.SrcUserID != 0:
+		srcUser, err := dep.UserClient().GetByID(c, s.SrcUserID)
+		if err != nil || srcUser == nil {
+			return nil, serializer.NewError(serializer.CodeParamErr, "source user does not exist", err)
+		}
+		t, err = workflows.NewRelocateUserTask(c, s.SrcUserID, s.DstPolicyID)
+	default:
 		t, err = workflows.NewRelocateTask(c, s.EntityIDs, s.DstPolicyID)
 	}
 	if err != nil {

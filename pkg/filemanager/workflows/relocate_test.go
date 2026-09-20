@@ -142,6 +142,45 @@ func TestRelocatePendingPolicyScope(t *testing.T) {
 	_ = moved
 }
 
+func TestRelocatePendingUserScope(t *testing.T) {
+	client := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared")
+	t.Cleanup(func() { require.NoError(t, client.Close()) })
+	ctx, dep := newRelocateTestDep(t, client)
+
+	src := client.StoragePolicy.Create().SetName("src").SetType("local").
+		SetStatus(storagepolicy.StatusActive).SaveX(ctx)
+	dst := client.StoragePolicy.Create().SetName("dst").SetType("local").
+		SetStatus(storagepolicy.StatusActive).SaveX(ctx)
+
+	group := client.Group.Create().SetName("g").SetPermissions(&boolset.BooleanSet{}).SaveX(ctx)
+	u7 := client.User.Create().SetEmail("a@example.com").SetNick("a").SetGroup(group).SaveX(ctx)
+	u9 := client.User.Create().SetEmail("b@example.com").SetNick("b").SetGroup(group).SaveX(ctx)
+
+	mine := client.Entity.Create().SetType(0).SetSource("a").SetSize(1).
+		SetStoragePolicyEntities(src.ID).SetCreatedBy(u7.ID).SaveX(ctx)
+	mine2 := client.Entity.Create().SetType(0).SetSource("b").SetSize(1).
+		SetStoragePolicyEntities(src.ID).SetCreatedBy(u7.ID).SaveX(ctx)
+	client.Entity.Create().SetType(0).SetSource("theirs").SetSize(1).
+		SetStoragePolicyEntities(src.ID).SetCreatedBy(u9.ID).SaveX(ctx)
+
+	m := relocateTaskWithState(t, &RelocateTaskState{SrcUserID: u7.ID, DstPolicyID: dst.ID})
+	m.state = &RelocateTaskState{SrcUserID: u7.ID, DstPolicyID: dst.ID}
+
+	pending, err := m.pendingEntities(ctx, dep)
+	require.NoError(t, err)
+	require.Len(t, pending, 2)
+
+	m.state.Cursor = mine.ID
+	pending, err = m.pendingEntities(ctx, dep)
+	require.NoError(t, err)
+	require.Len(t, pending, 1)
+	require.Equal(t, mine2.ID, pending[0].ID)
+
+	count, size := m.progressTotals(ctx, dep)
+	require.Equal(t, int64(2), count)
+	require.Equal(t, int64(2), size)
+}
+
 func TestRelocateProgressTotals(t *testing.T) {
 	client := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared")
 	t.Cleanup(func() { require.NoError(t, client.Close()) })

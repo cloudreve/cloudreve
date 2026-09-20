@@ -41,6 +41,9 @@ type (
 		// SrcPolicyID relocates every entity still on this policy instead of an
 		// explicit list.
 		SrcPolicyID int `json:"src_policy_id,omitempty"`
+		// SrcUserID relocates every entity created by this user instead of an
+		// explicit list.
+		SrcUserID int `json:"src_user_id,omitempty"`
 		DstPolicyID int `json:"dst_policy_id"`
 		// Cursor is the ID of the last successfully processed entity.
 		Cursor int `json:"cursor,omitempty"`
@@ -86,6 +89,16 @@ func NewRelocateTask(ctx context.Context, entityIDs []int, dstPolicyID int) (que
 func NewRelocatePolicyTask(ctx context.Context, srcPolicyID, dstPolicyID int) (queue.Task, error) {
 	return newRelocateTask(ctx, &RelocateTaskState{
 		SrcPolicyID: srcPolicyID,
+		DstPolicyID: dstPolicyID,
+		NodeState:   NodeState{},
+	})
+}
+
+// NewRelocateUserTask creates a RelocateTask moving every entity created by
+// srcUserID to dstPolicyID.
+func NewRelocateUserTask(ctx context.Context, srcUserID, dstPolicyID int) (queue.Task, error) {
+	return newRelocateTask(ctx, &RelocateTaskState{
+		SrcUserID:   srcUserID,
 		DstPolicyID: dstPolicyID,
 		NodeState:   NodeState{},
 	})
@@ -230,6 +243,19 @@ func (m *RelocateTask) pendingEntities(ctx context.Context, dep dependency.Dep) 
 			All(ctx)
 	}
 
+	if m.state.SrcUserID != 0 {
+		return dep.DBClient().Entity.Query().
+			Where(
+				entity.CreatedBy(m.state.SrcUserID),
+				entity.IDGT(m.state.Cursor),
+			).
+			Order(ent.Asc(entity.FieldID)).
+			Limit(relocatePageSize).
+			WithFile().
+			WithUser().
+			All(ctx)
+	}
+
 	if m.state.SrcPolicyID == 0 {
 		return nil, nil
 	}
@@ -251,6 +277,8 @@ func (m *RelocateTask) progressTotals(ctx context.Context, dep dependency.Dep) (
 	var q *ent.EntityQuery
 	if len(m.state.EntityIDs) > 0 {
 		q = dep.DBClient().Entity.Query().Where(entity.IDIn(m.state.EntityIDs...))
+	} else if m.state.SrcUserID != 0 {
+		q = dep.DBClient().Entity.Query().Where(entity.CreatedBy(m.state.SrcUserID))
 	} else if m.state.SrcPolicyID != 0 {
 		q = dep.DBClient().Entity.Query().Where(entity.StoragePolicyEntities(m.state.SrcPolicyID))
 	} else {

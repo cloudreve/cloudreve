@@ -1429,6 +1429,7 @@
     "groupExpired": "用户组过期日期",
     "groupExpiredDes": "ISO8601 格式的用户组到期日期，留空表示当前用户组永久有效。",
     "openUserFiles": "打开用户文件",
+    "relocateFiles": "迁移文件存储策略",
     "id": "ID",
     "idValue": "{{id}} ({{hash_id}})",
     "avatar": "头像",
@@ -1587,6 +1588,7 @@
     "relocateTitle": "迁移 Blob",
     "relocateEntitiesDes": "将选中的 {{num}} 个 Blob 的数据迁移到另一个存储策略。任务将在后台运行，可断点续传。",
     "relocatePolicyDes": "将存储在“{{name}}”上的所有 Blob 迁移到另一个存储策略。任务将在后台运行，可断点续传。",
+    "relocateUserDes": "将“{{name}}”名下的所有 Blob 迁移到另一个存储策略。任务将在后台运行，可断点续传。",
     "relocatePolicy": "将 {{name}} 上的所有 Blob 迁移到其他策略",
     "relocateStart": "开始迁移",
     "relocateSubmitted": "迁移任务已提交"
