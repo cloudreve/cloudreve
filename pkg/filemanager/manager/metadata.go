@@ -27,6 +27,7 @@ const (
 	wildcardMetadataKey       = "*"
 	customizeMetadataSuffix   = "customize"
 	tagMetadataSuffix         = "tag"
+	TagMetadataPrefix         = tagMetadataSuffix + ":"
 	customPropsMetadataSuffix = "props"
 	iconColorMetadataKey      = customizeMetadataSuffix + ":icon_color"
 	emojiIconMetadataKey      = customizeMetadataSuffix + ":emoji"

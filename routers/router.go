@@ -764,6 +764,21 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				middleware.ValidateBatchFileCount(dep, explorer.PatchMetadataParameterCtx{}),
 				controllers.PatchMetadata,
 			)
+			// Tag management across all of the user's files
+			file.GET("tag",
+				controllers.FromQuery[explorer.ListTagsService](explorer.ListTagsParameterCtx{}),
+				controllers.ListTags,
+			)
+			file.PATCH("tag",
+				middleware.RequiredScopes(types.ScopeFilesWrite),
+				controllers.FromJSON[explorer.PatchTagService](explorer.PatchTagParameterCtx{}),
+				controllers.PatchTag,
+			)
+			file.DELETE("tag",
+				middleware.RequiredScopes(types.ScopeFilesWrite),
+				controllers.FromJSON[explorer.DeleteTagService](explorer.DeleteTagParameterCtx{}),
+				controllers.DeleteTag,
+			)
 			// List storage policies available to the current group
 			file.GET("policy",
 				controllers.FromQuery[explorer.AllowedPolicyService](explorer.AllowedPolicyParamCtx{}),

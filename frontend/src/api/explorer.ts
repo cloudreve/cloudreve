@@ -338,6 +338,18 @@ export interface PatchMetadataService extends MultipleUriService {
   patches: MetadataPatch[];
 }
 
+export interface UserTag {
+  name: string;
+  color: string;
+  file_count: number;
+}
+
+export interface PatchTagService {
+  name: string;
+  new_name?: string;
+  color?: string;
+}
+
 export interface ShareCreateService {
   uri?: string;
   uris?: string[];
