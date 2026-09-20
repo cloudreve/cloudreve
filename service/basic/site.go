@@ -40,6 +40,7 @@ type SiteConfig struct {
 	ForgetCaptcha    bool                `json:"forget_captcha,omitempty"`
 	Authn            bool                `json:"authn,omitempty"`
 	ReCaptchaKey     string              `json:"captcha_ReCaptchaKey,omitempty"`
+	TCaptchaAppID    string              `json:"tcaptcha_app_id,omitempty"`
 	CaptchaType      setting.CaptchaType `json:"captcha_type,omitempty"`
 	TurnstileSiteID  string              `json:"turnstile_site_id,omitempty"`
 	CapInstanceURL   string              `json:"captcha_cap_instance_url,omitempty"`
@@ -254,6 +255,7 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 		Logo:                       logo.Normal,
 		LogoLight:                  logo.Light,
 		CaptchaType:                settings.CaptchaType(c),
+		TCaptchaAppID:              settings.TcCaptcha(c).AppID,
 		TurnstileSiteID:            settings.TurnstileCaptcha(c).Key,
 		ReCaptchaKey:               reCaptcha.Key,
 		CapInstanceURL:             capCaptcha.InstanceURL,

@@ -15,6 +15,7 @@ import (
 	request2 "github.com/cloudreve/Cloudreve/v4/pkg/request"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
 	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
+	"github.com/cloudreve/Cloudreve/v4/pkg/tcaptcha"
 	"github.com/gin-gonic/gin"
 	"github.com/mojocn/base64Captcha"
 )
@@ -71,9 +72,44 @@ func CaptchaRequired(enabled func(c *gin.Context) bool) gin.HandlerFunc {
 
 			c.Request.Body = io.NopCloser(bytes.NewReader(bodyData))
 			switch settings.CaptchaType(c) {
-			case setting.CaptchaNormal, setting.CaptchaTcaptcha:
+			case setting.CaptchaNormal:
 				if service.Ticket == "" || !base64Captcha.VerifyCaptcha(service.Ticket, service.Captcha) {
 					c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeCaptchaError, captchaNotMatch, err))
+					c.Abort()
+					return
+				}
+
+				break
+			case setting.CaptchaTcaptcha:
+				captchaSetting := settings.TcCaptcha(c)
+				if captchaSetting.AppID == "" || captchaSetting.AppSecretKey == "" ||
+					captchaSetting.SecretID == "" || captchaSetting.SecretKey == "" {
+					l.Warning("TCaptcha verification failed: missing configuration")
+					c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeCaptchaError, "Captcha configuration error", nil))
+					c.Abort()
+					return
+				}
+
+				if service.Ticket == "" || service.Randstr == "" {
+					c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeCaptchaError, captchaNotMatch, nil))
+					c.Abort()
+					return
+				}
+
+				r := dep.RequestClient(
+					request2.WithContext(c),
+					request2.WithLogger(logging.FromContext(c)),
+				)
+				ok, err := tcaptcha.Verify(c, r, captchaSetting, service.Ticket, service.Randstr, c.ClientIP())
+				if err != nil {
+					l.Warning("TCaptcha verification failed: %s", err)
+					c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeCaptchaError, "Captcha validation failed", err))
+					c.Abort()
+					return
+				}
+
+				if !ok {
+					c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeCaptchaError, captchaRefresh, nil))
 					c.Abort()
 					return
 				}

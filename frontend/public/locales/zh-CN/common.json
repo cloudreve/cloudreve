@@ -34,7 +34,9 @@
       "human": "我是人类",
       "verifying": "验证中…",
       "verified": "您通过了验证"
-    }
+    },
+    "verify": "点击验证",
+    "verified": "已验证"
   },
   "errors": {
     "401": "请先登录",
