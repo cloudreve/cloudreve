@@ -180,8 +180,8 @@ Order = user-visible value first; each ships with backend + UI + tests.
    - [x] User-facing relocate — `POST /file/relocate` from FM More-actions dialog, entity expansion + same-policy skip + dedup, restricted to group-allowed policies (#182, fixes #2262)
 3. **SSO** — generic OIDC, Logto, multi-account switching, sign-up email filtering (fixes #3464, #3056, #3505). See §1.3a.
    - [x] PR #141 — inbound OIDC consumer (auth-code + nonce, JWKS-verified RS256 id_tokens, userinfo fallback, auto-provisioning, one-time ticket handoff, SSRF-validated endpoints, redacted secret); covers Keycloak/Authentik/Logto/generic IdPs; sign-up email domain filtering (whitelist/blacklist + sub-address block) enforced at registration and SSO provisioning; multi-account lands via existing session `upsert` (fixes #3464, #3056)
-   - [ ] Multi-account switcher UI — N-token session store, avatar-menu switch + signed-out badges (frontend-only, backend already supports)
-   - [ ] QQ Connect (non-OIDC protocol, separate integration), account linking UI for existing local accounts, group/role claim mapping
+   - [x] Multi-account switcher UI — N-token session store, avatar-menu switch + signed-out badges (#189)
+   - [x] QQ Connect (non-OIDC protocol, separate integration), account linking UI for existing local accounts — `sso_binding` entity, link/unlink with lockout guard, admin accordion, sign-in button (#190); remainder: group/role claim mapping
 4. **VAS/monetization-free** — credits + redemption codes as *free* features (gift codes for admin use), storage/membership SKU definitions; payment processors stay out of scope (fixes #3231). See §1.3a for the SKU/credits/gift-code spec.
    - [x] `sku` entity (storage-capacity + group-upgrade types, duration, cash+points price, label, bullets); points purchase → atomic debit+grant; admin SKU tables; `/shop` page (Memberships/Storage/Redeem tabs) + nav entry
    - [x] `user.credits` + `credit_txn` ledger (guarded atomic adjust); Finance settings tab (balance + grants + redeem + ledger); admin manual adjust (#183)
@@ -191,7 +191,8 @@ Order = user-visible value first; each ships with backend + UI + tests.
    - [x] PR #144 — task `creator_ip` capture with CIDR-capable admin filter (#115 OSS half), group remote-download quotas per count + per volume (#16), yt-dlp downloader provider (#88), progressive image preview (#113), v3 migrator `DatabaseURL` passthrough (#42)
    - [x] `activity_event` entity (immutable, tx-aware, actor+IP+CID) + per-file Activity dialog + admin `/admin/event` feed + per-type enablement + retention cron (#184)
    - [x] Coverage wave 2: email/user-activated/token-refresh/share-viewed/version/metadata/view/thumb/live-photo/copy-from/webdav/profile+security/oauth/admin-ops/import (1bbaddf)
-   - [ ] Event coverage remainder (needs unbuilt features): payment_*, link/unlink_account, membership_unsubscribe, mount, quota-notify
+   - [x] link/unlink_account events wired via `sso_binding` flows (#190)
+   - [ ] Event coverage remainder (needs unbuilt features): payment_*, membership_unsubscribe, mount, quota-notify
    - [x] site announcement: `announcement` setting (markdown) + post-login modal + per-user dismissal re-triggering on content change (#184)
    - [x] `abuse_report` entity + public `POST /abuse/report` (IP rate-limit + `abuse_captcha` gate) + admin `/admin/abuse` queue (resolve/dismiss + reversible share block) + share-menu Report entry (#185)
    - [x] group `allowed_nodes` pool + `allow_select_node` + task `target_node` dispatch (persisted in task state, weighted LB within pool); group admin multi-select + task-dialog node picker
