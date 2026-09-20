@@ -1,11 +1,14 @@
-import { Checkbox, FormControl, FormControlLabel, Link, Switch, Typography } from "@mui/material";
-import { useCallback, useContext, useMemo } from "react";
+import { Checkbox, FormControl, FormControlLabel, Link, SelectChangeEvent, Switch, Typography } from "@mui/material";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link as RouterLink } from "react-router-dom";
+import { getStoragePolicyList } from "../../../../../api/api";
 import { StoragePolicy } from "../../../../../api/dashboard";
 import { PolicyType } from "../../../../../api/explorer";
+import { useAppDispatch } from "../../../../../redux/hooks";
 import SizeInput from "../../../../Common/SizeInput";
-import { DenseFilledTextField } from "../../../../Common/StyledComponents";
+import { DenseFilledTextField, DenseSelect } from "../../../../Common/StyledComponents";
+import { SquareMenuItem } from "../../../../FileManager/ContextMenu/ContextMenu";
 import SettingForm from "../../../../Pages/Setting/SettingForm";
 import { NoMarginHelperText, SettingSection, SettingSectionContent } from "../../../Settings/Settings";
 import { PolicyPropsMap } from "../../StoragePolicySetting";
@@ -14,6 +17,16 @@ import { StoragePolicySettingContext } from "../StoragePolicySettingWrapper";
 const ThumbnailsSection = () => {
   const { t } = useTranslation("dashboard");
   const { values, setPolicy } = useContext(StoragePolicySettingContext);
+  const dispatch = useAppDispatch();
+  const [thumbPolicyCandidates, setThumbPolicyCandidates] = useState<StoragePolicy[]>([]);
+
+  useEffect(() => {
+    dispatch(getStoragePolicyList({ page: 1, page_size: 1000, order_by: "id", order_direction: "asc" })).then(
+      (res) => {
+        setThumbPolicyCandidates(res.policies.filter((p) => p.id !== values.id));
+      },
+    );
+  }, [values.id]);
 
   const policyProps = useMemo(() => {
     return PolicyPropsMap[values.type];
@@ -66,9 +79,28 @@ const ThumbnailsSection = () => {
     [setPolicy],
   );
 
-  if (values.type === PolicyType.local) {
-    return null;
-  }
+  const onThumbForceProxyChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setPolicy((p: StoragePolicy) => ({
+        ...p,
+        settings: { ...p.settings, thumb_force_proxy: e.target.checked ? true : undefined },
+      }));
+    },
+    [setPolicy],
+  );
+
+  const onThumbPolicyChange = useCallback(
+    (e: SelectChangeEvent<unknown>) => {
+      const id = e.target.value as number;
+      setPolicy((p: StoragePolicy) => ({
+        ...p,
+        settings: { ...p.settings, thumb_storage_policy_id: id === 0 ? undefined : id },
+      }));
+    },
+    [setPolicy],
+  );
+
+  const isLocal = values.type === PolicyType.local;
 
   return (
     <SettingSection>
@@ -76,7 +108,7 @@ const ThumbnailsSection = () => {
         {t("settings.thumbnails")}
       </Typography>
       <SettingSectionContent>
-        {!noNativeThumbnail && (
+        {!isLocal && !noNativeThumbnail && (
           <>
             <SettingForm title={t("policy.nativeThumbNails")} lgWidth={5}>
               <FormControl fullWidth>
@@ -129,21 +161,52 @@ const ThumbnailsSection = () => {
             </SettingForm>
           </>
         )}
-        <SettingForm lgWidth={5}>
-          <FormControl fullWidth>
-            <FormControlLabel
-              control={
-                <Switch checked={values.settings?.thumb_generator_proxy ?? false} onChange={onThumbProxyChange} />
-              }
-              label={t("policy.thumbProxy")}
-            />
-            <NoMarginHelperText>
-              <Trans
-                i18nKey="policy.thumbProxyDes"
-                ns="dashboard"
-                components={[<Link component={RouterLink} to="/admin/settings?tab=mediaProcessing" />]}
+        {!isLocal && (
+          <SettingForm lgWidth={5}>
+            <FormControl fullWidth>
+              <FormControlLabel
+                control={
+                  <Switch checked={values.settings?.thumb_generator_proxy ?? false} onChange={onThumbProxyChange} />
+                }
+                label={t("policy.thumbProxy")}
               />
-            </NoMarginHelperText>
+              <NoMarginHelperText>
+                <Trans
+                  i18nKey="policy.thumbProxyDes"
+                  ns="dashboard"
+                  components={[<Link component={RouterLink} to="/admin/settings?tab=mediaProcessing" />]}
+                />
+              </NoMarginHelperText>
+            </FormControl>
+          </SettingForm>
+        )}
+        {!isLocal && !noNativeThumbnail && (
+          <SettingForm lgWidth={5}>
+            <FormControl fullWidth>
+              <FormControlLabel
+                control={
+                  <Switch checked={values.settings?.thumb_force_proxy ?? false} onChange={onThumbForceProxyChange} />
+                }
+                label={t("policy.thumbForceProxy")}
+              />
+              <NoMarginHelperText>{t("policy.thumbForceProxyDes")}</NoMarginHelperText>
+            </FormControl>
+          </SettingForm>
+        )}
+        <SettingForm title={t("policy.thumbStoragePolicy")} lgWidth={5}>
+          <FormControl fullWidth>
+            <DenseSelect
+              value={values.settings?.thumb_storage_policy_id ?? 0}
+              onChange={onThumbPolicyChange}
+            >
+              <SquareMenuItem value={0}>{t("policy.thumbStoragePolicySource")}</SquareMenuItem>
+              {thumbPolicyCandidates.map((p) => (
+                <SquareMenuItem key={p.id} value={p.id}>
+                  {p.name}
+                </SquareMenuItem>
+              ))}
+            </DenseSelect>
+            <NoMarginHelperText>{t("policy.thumbStoragePolicyDes")}</NoMarginHelperText>
           </FormControl>
         </SettingForm>
       </SettingSectionContent>

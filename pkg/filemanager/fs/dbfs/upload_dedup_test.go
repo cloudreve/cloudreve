@@ -33,6 +33,10 @@ func (p dedupSettingProvider) DBFS(context.Context) *setting.DBFS {
 	return &setting.DBFS{DedupScope: p.scope, MaxPageSize: 200, MaxRecursiveSearchedFolder: 100}
 }
 
+func (p dedupSettingProvider) ThumbEntitySuffix(context.Context) string {
+	return "{blob_path}/{blob_name}._thumb"
+}
+
 func (p dedupSettingProvider) AuditLogEnabled(context.Context, int) bool {
 	return true
 }

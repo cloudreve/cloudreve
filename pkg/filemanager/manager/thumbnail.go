@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/ent"
+	"github.com/cloudreve/Cloudreve/v4/ent/storagepolicy"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
@@ -59,15 +60,18 @@ func (m *manager) Thumbnail(ctx context.Context, uri *fs.URI) (entitysource.Enti
 	}
 
 	// 2. Thumb entity not exist, try native policy generator
-	_, handler, err := m.getEntityPolicyDriver(ctx, latest, nil)
+	policy, handler, err := m.getEntityPolicyDriver(ctx, latest, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get entity policy driver: %w", err)
 	}
 	capabilities := handler.Capabilities()
+	// thumb_force_proxy skips the native generator even when it supports
+	// this file — the local pipeline is mandatory.
+	forceProxy := policy.Settings != nil && policy.Settings.ThumbForceProxy
 	// Check if file extension and size is supported by native policy generator.
-	if capabilities.ThumbSupportAllExts || util.IsInExtensionList(capabilities.ThumbSupportedExts, file.DisplayName()) &&
+	if !forceProxy && (capabilities.ThumbSupportAllExts || util.IsInExtensionList(capabilities.ThumbSupportedExts, file.DisplayName()) &&
 		(capabilities.ThumbMaxSize == 0 || latest.Size() <= capabilities.ThumbMaxSize) &&
-		!latest.Encrypted() {
+		!latest.Encrypted()) {
 		thumbSource, err := m.GetEntitySource(ctx, 0, fs.WithEntity(latest), fs.WithUseThumb(true))
 		if err != nil {
 			return nil, fmt.Errorf("failed to get latest entity source: %w", err)
@@ -75,7 +79,7 @@ func (m *manager) Thumbnail(ctx context.Context, uri *fs.URI) (entitysource.Enti
 
 		thumbSource.Apply(entitysource.WithDisplayName(file.DisplayName()))
 		return thumbSource, nil
-	} else if capabilities.ThumbProxy {
+	} else if capabilities.ThumbProxy || forceProxy {
 		if err := m.fs.CheckCapability(ctx, uri,
 			dbfs.WithRequiredCapabilities(dbfs.NavigatorCapabilityGenerateThumb)); err != nil {
 			// Current FS does not support generate new thumb.
@@ -202,6 +206,18 @@ func (m *manager) generateThumb(ctx context.Context, uri *fs.URI, ext string, es
 			},
 			File:   thumbFile,
 			Seeker: thumbFile,
+		}
+
+		// The source policy may designate a dedicated thumbnail storage
+		// policy — the entity then ignores the file's own policy.
+		if srcPolicy, err := m.policyClient.GetPolicyByID(ctx, es.Entity().PolicyID()); err == nil &&
+			srcPolicy.Settings != nil && srcPolicy.Settings.ThumbStoragePolicyID != 0 {
+			if dst, err := m.policyClient.GetPolicyByID(ctx, srcPolicy.Settings.ThumbStoragePolicyID); err == nil &&
+				dst.Status == storagepolicy.StatusActive {
+				req.Props.PreferredStoragePolicy = dst.ID
+			} else {
+				m.l.Warning("designated thumbnail policy %d unavailable, storing with source policy", srcPolicy.Settings.ThumbStoragePolicyID)
+			}
 		}
 
 		// Generating thumb can be triggered by users with read-only permission. We can bypass update permission check.

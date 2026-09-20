@@ -260,6 +260,8 @@ export interface PolicySetting {
   media_meta_exts?: string[];
   media_meta_generator_proxy?: boolean;
   thumb_generator_proxy?: boolean;
+  thumb_force_proxy?: boolean;
+  thumb_storage_policy_id?: number;
   native_media_processing?: boolean;
   s3_delete_batch_size?: number;
   stream_saver?: boolean;

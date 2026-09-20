@@ -141,6 +141,14 @@ type (
 		MediaMetaGeneratorProxy bool `json:"media_meta_generator_proxy,omitempty"`
 		// ThumbGeneratorProxy whether to use local proxy to generate thumbnail.
 		ThumbGeneratorProxy bool `json:"thumb_generator_proxy,omitempty"`
+		// ThumbForceProxy forces thumbnail generation through the local proxy
+		// pipeline even when the storage backend offers a native thumbnail API.
+		// Implies ThumbGeneratorProxy behavior.
+		ThumbForceProxy bool `json:"thumb_force_proxy,omitempty"`
+		// ThumbStoragePolicyID overrides where generated thumbnail entities are
+		// stored — they ignore the source file's policy and land here. 0 keeps
+		// thumbnails on the source policy.
+		ThumbStoragePolicyID int `json:"thumb_storage_policy_id,omitempty"`
 		// NativeMediaProcessing whether to use native media processing API from storage provider.
 		NativeMediaProcessing bool `json:"native_media_processing"`
 		// S3DeleteBatchSize the number of objects to delete in each batch.
