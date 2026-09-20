@@ -27,9 +27,11 @@ CI runs `assembleDebug` on every PR.
   upload-session flow (local + presigned remote policies)
 - Thumbnails via `/file/thumb` (Coil, lazily resolved per row)
 - Share-link creation (`PUT /share`), link copied to clipboard
+- Full-text search (`GET /file/search`): query bar in the files screen,
+  offset pagination, result rows show parent path + content snippet;
+  folder hits navigate into place
 
 ## Planned next
 
 - Camera auto-upload, offline-favorite files, DocumentsProvider
-- Search
 - No iOS. Ever.

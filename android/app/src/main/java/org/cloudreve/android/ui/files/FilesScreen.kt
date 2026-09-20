@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
@@ -26,8 +28,10 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.AlertDialog
@@ -61,7 +65,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
@@ -86,6 +93,11 @@ fun FilesScreen(
     var mkdirOpen by remember { mutableStateOf(false) }
     var renameTarget by remember { mutableStateOf<FileObject?>(null) }
     var deleteTarget by remember { mutableStateOf<FileObject?>(null) }
+    var searchOpen by remember { mutableStateOf(false) }
+    var searchText by remember { mutableStateOf("") }
+    val searchFocus = remember { FocusRequester() }
+
+    val inSearch = state.searchQuery != null
 
     val uploadLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
@@ -109,45 +121,89 @@ fun FilesScreen(
     LaunchedEffect(listState) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
             .collect { last ->
-                if (last != null && last >= state.files.size - 5) viewModel.loadMore()
+                if (last == null) return@collect
+                if (inSearch) {
+                    if (last >= state.searchResults.size - 5) viewModel.searchMore()
+                } else if (last >= state.files.size - 5) {
+                    viewModel.loadMore()
+                }
             }
     }
 
-    BackHandler(enabled = !CrUri.isRoot(state.currentUri)) {
-        viewModel.navigateUp()
+    LaunchedEffect(searchOpen) {
+        if (searchOpen) searchFocus.requestFocus()
+    }
+
+    fun closeSearch() {
+        viewModel.clearSearch()
+        searchOpen = false
+        searchText = ""
+    }
+
+    BackHandler(enabled = inSearch || !CrUri.isRoot(state.currentUri)) {
+        if (inSearch) closeSearch() else viewModel.navigateUp()
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text("Files")
-                        Text(
-                            pathLabel(state.currentUri),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
+                    if (inSearch || searchOpen) {
+                        OutlinedTextField(
+                            value = searchText,
+                            onValueChange = { searchText = it },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(searchFocus),
+                            placeholder = { Text("Search files") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(
+                                onSearch = { viewModel.search(searchText) },
+                            ),
                         )
+                    } else {
+                        Column {
+                            Text("Files")
+                            Text(
+                                pathLabel(state.currentUri),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                     }
                 },
                 navigationIcon = {
-                    if (!CrUri.isRoot(state.currentUri)) {
+                    if (inSearch || searchOpen) {
+                        IconButton(onClick = { closeSearch() }) {
+                            Icon(Icons.Default.Close, contentDescription = "Close search")
+                        }
+                    } else if (!CrUri.isRoot(state.currentUri)) {
                         IconButton(onClick = { viewModel.navigateUp() }) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Up")
                         }
                     }
                 },
                 actions = {
-                    IconButton(onClick = { mkdirOpen = true }) {
-                        Icon(Icons.Default.CreateNewFolder, contentDescription = "New folder")
-                    }
-                    IconButton(onClick = { viewModel.refresh() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
-                    }
-                    IconButton(onClick = onSignOut) {
-                        Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Sign out")
+                    if (!inSearch && !searchOpen) {
+                        IconButton(onClick = { searchOpen = true }) {
+                            Icon(Icons.Default.Search, contentDescription = "Search")
+                        }
+                        IconButton(onClick = { mkdirOpen = true }) {
+                            Icon(Icons.Default.CreateNewFolder, contentDescription = "New folder")
+                        }
+                        IconButton(onClick = { viewModel.refresh() }) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        }
+                        IconButton(onClick = onSignOut) {
+                            Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Sign out")
+                        }
+                    } else if (!inSearch) {
+                        IconButton(onClick = { viewModel.search(searchText) }) {
+                            Icon(Icons.Default.Search, contentDescription = "Search")
+                        }
                     }
                 },
             )
@@ -167,6 +223,24 @@ fun FilesScreen(
                 .padding(padding),
         ) {
             when {
+                inSearch -> {
+                    SearchResults(
+                        state = state,
+                        viewModel = viewModel,
+                        listState = listState,
+                        onOpenFolder = { file ->
+                            closeSearch()
+                            viewModel.navigateTo(file)
+                        },
+                        onOpenFile = { file ->
+                            scope.launch {
+                                runCatching { viewModel.downloadToCache(context, file) }
+                                    .onSuccess { local -> openFile(context, local) }
+                                    .onFailure { snackbar.showSnackbar(it.message ?: "Download failed") }
+                            }
+                        },
+                    )
+                }
                 state.loading && state.files.isEmpty() -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()
@@ -290,6 +364,93 @@ fun FilesScreen(
 private fun pathLabel(uri: String): String {
     val path = uri.removePrefix(CrUri.MY_PREFIX).trim('/')
     return if (path.isEmpty()) "My files" else "My files / ${java.net.URLDecoder.decode(path, "UTF-8")}"
+}
+
+@Composable
+private fun SearchResults(
+    state: FilesUiState,
+    viewModel: FilesViewModel,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    onOpenFolder: (FileObject) -> Unit,
+    onOpenFile: (FileObject) -> Unit,
+) {
+    when {
+        state.searchLoading -> {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+        state.searchError != null -> {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(state.searchError ?: "Search failed", color = MaterialTheme.colorScheme.error)
+                    TextButton(onClick = { viewModel.search(state.searchQuery ?: "") }) {
+                        Text("Retry")
+                    }
+                }
+            }
+        }
+        state.searchResults.isEmpty() -> {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    "No results for \"${state.searchQuery}\"",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        else -> {
+            LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                items(state.searchResults, key = { it.file.id + it.file.path }) { hit ->
+                    val file = hit.file
+                    ListItem(
+                        modifier = Modifier.clickable {
+                            if (file.isFolder) onOpenFolder(file) else onOpenFile(file)
+                        },
+                        headlineContent = {
+                            Text(file.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        },
+                        supportingContent = {
+                            Column {
+                                Text(
+                                    pathLabel(CrUri.parent(file.path)),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                if (hit.content.isNotBlank()) {
+                                    Text(
+                                        hit.content.trim(),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
+                        },
+                        leadingContent = {
+                            Icon(
+                                if (file.isFolder) Icons.Default.Folder
+                                else Icons.AutoMirrored.Filled.InsertDriveFile,
+                                contentDescription = null,
+                                tint = if (file.isFolder) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
+                    )
+                    HorizontalDivider()
+                }
+                if (state.searchLoadingMore) {
+                    item {
+                        Row(
+                            Modifier.fillMaxWidth().padding(12.dp),
+                            horizontalArrangement = Arrangement.Center,
+                        ) { CircularProgressIndicator() }
+                    }
+                }
+            }
+        }
+    }
 }
 
 private fun openFile(context: android.content.Context, local: java.io.File) {
