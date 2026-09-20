@@ -124,6 +124,9 @@ type (
 		ThumbSupportAllExts bool `json:"thumb_support_all_exts,omitempty"`
 		// ThumbMaxSize indicates the maximum allowed size of a thumbnail. 0 indicates that no limit is set.
 		ThumbMaxSize int64 `json:"thumb_max_size,omitempty"`
+		// MaxTotalSize caps the total bytes of entities stored under this
+		// policy. Checked at upload/copy validation; 0 means unlimited.
+		MaxTotalSize int64 `json:"max_total_size,omitempty"`
 		// Whether to upload file through server's relay.
 		Relay bool `json:"relay,omitempty"`
 		// Whether to pre allocate space for file before upload in physical disk.

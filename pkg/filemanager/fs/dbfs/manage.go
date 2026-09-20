@@ -967,6 +967,23 @@ func (f *DBFS) copyFiles(ctx context.Context, targets map[Navigator][]*File, des
 		return nil, nil, nil, fmt.Errorf("copy files: failed to destination owner capacity: %w", err)
 	}
 
+	// Baseline usage of the destination policy: new entities are written in
+	// this transaction, invisible to the usage query, so copied batches are
+	// accumulated locally.
+	dstPolicy, err := f.getPreferredPolicy(ctx, destination)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("copy files: failed to get destination storage policy: %w", err)
+	}
+	var dstPolicyUsed int64
+	if dstPolicy.Settings.MaxTotalSize > 0 {
+		var used int
+		_, used, err = f.fileClient.CountEntityByStoragePolicyID(ctx, dstPolicy.ID)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("copy files: failed to get storage policy usage: %w", err)
+		}
+		dstPolicyUsed = int64(used)
+	}
+
 	dstAncestors := lo.Map(destination.AncestorsChain(), func(item *File, index int) *ent.File {
 		return item.Model
 	})
@@ -991,6 +1008,10 @@ func (f *DBFS) copyFiles(ctx context.Context, targets map[Navigator][]*File, des
 			if err := f.validateUserCapacityRaw(ctx, sizeTotal, capacity); err != nil {
 				return fs.ErrInsufficientCapacity
 			}
+			if err := f.validatePolicyCapacityRaw(sizeTotal, dstPolicy, dstPolicyUsed); err != nil {
+				return err
+			}
+			dstPolicyUsed += sizeTotal
 
 			limit -= len(targets)
 			newDstMap, diff, err := fc.Copy(ctx, &inventory.CopyParameter{

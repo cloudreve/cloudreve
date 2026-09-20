@@ -121,3 +121,30 @@ func (f *DBFS) validateUserCapacityRaw(ctx context.Context, size int64, capacity
 	}
 	return nil
 }
+
+// validatePolicyCapacity checks that storing `size` more bytes under `policy`
+// stays within the policy's MaxTotalSize cap, fetching current usage first.
+func (f *DBFS) validatePolicyCapacity(ctx context.Context, size int64, policy *ent.StoragePolicy) error {
+	if policy.Settings.MaxTotalSize <= 0 {
+		return nil
+	}
+
+	_, used, err := f.fileClient.CountEntityByStoragePolicyID(ctx, policy.ID)
+	if err != nil {
+		return fmt.Errorf("failed to get storage policy usage: %w", err)
+	}
+	return f.validatePolicyCapacityRaw(size, policy, int64(used))
+}
+
+// validatePolicyCapacityRaw validates the policy capacity against a
+// caller-supplied usage figure — needed when new entities are being written
+// inside a transaction the usage query cannot see yet. The canonical
+// ErrInsufficientCapacity is returned unwrapped so upstream errors.Is
+// checks still match; the policy detail is logged server-side.
+func (f *DBFS) validatePolicyCapacityRaw(size int64, policy *ent.StoragePolicy, used int64) error {
+	if policyCap := policy.Settings.MaxTotalSize; policyCap > 0 && used+size > policyCap {
+		f.l.Warning("storage policy %q is full (%d + %d > %d)", policy.Name, used, size, policyCap)
+		return fs.ErrInsufficientCapacity
+	}
+	return nil
+}
