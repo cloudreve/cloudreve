@@ -55,6 +55,11 @@ func (User) Fields() []ent.Field {
 		field.Int("vault_folder").
 			Optional().
 			Default(0),
+		// two_factor_backup_codes holds salt:sha256 digests of one-time
+		// recovery codes, same store format as account passwords.
+		field.JSON("two_factor_backup_codes", []string{}).
+			Sensitive().
+			Optional(),
 		field.String("avatar").
 			Optional(),
 		field.JSON("settings", &types.UserSetting{}).

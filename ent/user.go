@@ -50,6 +50,8 @@ type User struct {
 	VaultPassword string `json:"-"`
 	// VaultFolder holds the value of the "vault_folder" field.
 	VaultFolder int `json:"vault_folder,omitempty"`
+	// TwoFactorBackupCodes holds the value of the "two_factor_backup_codes" field.
+	TwoFactorBackupCodes []string `json:"-"`
 	// Avatar holds the value of the "avatar" field.
 	Avatar string `json:"avatar,omitempty"`
 	// Settings holds the value of the "settings" field.
@@ -232,7 +234,7 @@ func (*User) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case user.FieldSettings:
+		case user.FieldTwoFactorBackupCodes, user.FieldSettings:
 			values[i] = new([]byte)
 		case user.FieldID, user.FieldStorage, user.FieldCredits, user.FieldVaultFolder, user.FieldGroupUsers:
 			values[i] = new(sql.NullInt64)
@@ -353,6 +355,14 @@ func (u *User) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field vault_folder", values[i])
 			} else if value.Valid {
 				u.VaultFolder = int(value.Int64)
+			}
+		case user.FieldTwoFactorBackupCodes:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field two_factor_backup_codes", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &u.TwoFactorBackupCodes); err != nil {
+					return fmt.Errorf("unmarshal field two_factor_backup_codes: %w", err)
+				}
 			}
 		case user.FieldAvatar:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -527,6 +537,8 @@ func (u *User) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("vault_folder=")
 	builder.WriteString(fmt.Sprintf("%v", u.VaultFolder))
+	builder.WriteString(", ")
+	builder.WriteString("two_factor_backup_codes=<sensitive>")
 	builder.WriteString(", ")
 	builder.WriteString("avatar=")
 	builder.WriteString(u.Avatar)

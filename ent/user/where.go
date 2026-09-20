@@ -945,6 +945,16 @@ func VaultFolderNotNil() predicate.User {
 	return predicate.User(sql.FieldNotNull(FieldVaultFolder))
 }
 
+// TwoFactorBackupCodesIsNil applies the IsNil predicate on the "two_factor_backup_codes" field.
+func TwoFactorBackupCodesIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldTwoFactorBackupCodes))
+}
+
+// TwoFactorBackupCodesNotNil applies the NotNil predicate on the "two_factor_backup_codes" field.
+func TwoFactorBackupCodesNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldTwoFactorBackupCodes))
+}
+
 // AvatarEQ applies the EQ predicate on the "avatar" field.
 func AvatarEQ(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldAvatar, v))

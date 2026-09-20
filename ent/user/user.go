@@ -47,6 +47,8 @@ const (
 	FieldVaultPassword = "vault_password"
 	// FieldVaultFolder holds the string denoting the vault_folder field in the database.
 	FieldVaultFolder = "vault_folder"
+	// FieldTwoFactorBackupCodes holds the string denoting the two_factor_backup_codes field in the database.
+	FieldTwoFactorBackupCodes = "two_factor_backup_codes"
 	// FieldAvatar holds the string denoting the avatar field in the database.
 	FieldAvatar = "avatar"
 	// FieldSettings holds the string denoting the settings field in the database.
@@ -201,6 +203,7 @@ var Columns = []string{
 	FieldTwoFactorSecret,
 	FieldVaultPassword,
 	FieldVaultFolder,
+	FieldTwoFactorBackupCodes,
 	FieldAvatar,
 	FieldSettings,
 	FieldGroupUsers,
