@@ -51,8 +51,9 @@ type (
 		ListGrants(ctx context.Context, userID int) ([]*ent.UserGrant, error)
 		// ExpireGrants deletes expired storage grants and reverts group
 		// upgrades whose users still sit on the granted group. Users without a
-		// recorded previous group fall back to defaultGroupID.
-		ExpireGrants(ctx context.Context, defaultGroupID int) error
+		// recorded previous group fall back to defaultGroupID. It returns the
+		// grants whose group reversion actually applied.
+		ExpireGrants(ctx context.Context, defaultGroupID int) ([]*ent.UserGrant, error)
 		// ListSkus returns products ordered by weight desc then id. When
 		// onlyEnabled is set, disabled products are excluded.
 		ListSkus(ctx context.Context, onlyEnabled bool) ([]*ent.Sku, error)
@@ -319,15 +320,16 @@ func (c *vasClient) ListGrants(ctx context.Context, userID int) ([]*ent.UserGran
 		All(ctx)
 }
 
-func (c *vasClient) ExpireGrants(ctx context.Context, defaultGroupID int) error {
+func (c *vasClient) ExpireGrants(ctx context.Context, defaultGroupID int) ([]*ent.UserGrant, error) {
 	now := time.Now()
 	expired, err := c.client.UserGrant.Query().
 		Where(usergrant.ExpiresAtLT(now)).
 		All(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	var reverted []*ent.UserGrant
 	for _, g := range expired {
 		if g.Type == usergrant.TypeGroup {
 			revertTo := g.PrevGroupID
@@ -336,20 +338,24 @@ func (c *vasClient) ExpireGrants(ctx context.Context, defaultGroupID int) error 
 			}
 			// Revert only when the user still sits on the granted group —
 			// intervening group changes win.
-			if _, err := c.client.User.Update().
+			affected, err := c.client.User.Update().
 				Where(user.ID(g.UserID), user.GroupUsers(int(g.Amount))).
 				SetGroupUsers(revertTo).
-				Save(ctx); err != nil {
-				return err
+				Save(ctx)
+			if err != nil {
+				return nil, err
+			}
+			if affected > 0 {
+				reverted = append(reverted, g)
 			}
 		}
 		if _, err := c.client.UserGrant.Delete().
 			Where(usergrant.ID(g.ID)).
 			Exec(schema.SkipSoftDelete(ctx)); err != nil {
-			return err
+			return nil, err
 		}
 	}
-	return nil
+	return reverted, nil
 }
 
 func (c *vasClient) ListSkus(ctx context.Context, onlyEnabled bool) ([]*ent.Sku, error) {

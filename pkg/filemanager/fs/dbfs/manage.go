@@ -2,6 +2,7 @@ package dbfs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strconv"
@@ -697,6 +698,13 @@ func (f *DBFS) MoveOrCopy(ctx context.Context, path []*fs.URI, dst *fs.URI, isCo
 
 		if err != nil {
 			_ = inventory.Rollback(tx)
+			if errors.Is(err, fs.ErrInsufficientCapacity) {
+				extra := map[string]any{"dst": destination.Uri(true).String()}
+				if capacity, cerr := f.Capacity(ctx, destination.Owner()); cerr == nil {
+					extra["capacity"] = capacity.Total
+				}
+				f.record(ctx, types.EventUserExceedQuotaNotified, activity.Extra(extra))
+			}
 			return nil, err
 		}
 

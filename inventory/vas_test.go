@@ -165,7 +165,10 @@ func TestExpireGrants(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, int64(512), bonus)
 
-	require.NoError(t, c.ExpireGrants(ctx, 2))
+	reverted, err := c.ExpireGrants(ctx, 2)
+	require.NoError(t, err)
+	require.Len(t, reverted, 1)
+	require.Equal(t, u.ID, reverted[0].UserID)
 	require.Equal(t, group.ID, client.User.GetX(ctx, u.ID).GroupUsers)
 	require.Equal(t, 1, client.UserGrant.Query().CountX(ctx))
 }

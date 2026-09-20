@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/ent"
+	"github.com/cloudreve/Cloudreve/v4/ent/activityevent"
 	"github.com/cloudreve/Cloudreve/v4/ent/enttest"
 	entfile "github.com/cloudreve/Cloudreve/v4/ent/file"
 	"github.com/cloudreve/Cloudreve/v4/ent/storagepolicy"
@@ -32,6 +33,10 @@ func (p dedupSettingProvider) DBFS(context.Context) *setting.DBFS {
 	return &setting.DBFS{DedupScope: p.scope, MaxPageSize: 200}
 }
 
+func (p dedupSettingProvider) AuditLogEnabled(context.Context, int) bool {
+	return true
+}
+
 type stubEventHub struct{}
 
 func (stubEventHub) Subscribe(context.Context, int, string) (chan *eventhub.Event, bool, error) {
@@ -43,7 +48,7 @@ func (stubEventHub) GetSubscribers(context.Context, int) []eventhub.Subscriber {
 }
 func (stubEventHub) Close() {}
 
-func dedupUploadFixture(t *testing.T, client *ent.Client, scope string) (*ent.User, *ent.StoragePolicy, *DBFS) {
+func dedupUploadFixture(t *testing.T, client *ent.Client, scope string, maxStorage int64) (*ent.User, *ent.StoragePolicy, *DBFS) {
 	t.Helper()
 	ctx := context.Background()
 	l := logging.NewConsoleLogger(logging.LevelError)
@@ -53,7 +58,7 @@ func dedupUploadFixture(t *testing.T, client *ent.Client, scope string) (*ent.Us
 	p := client.StoragePolicy.Create().SetName("local").SetType("local").
 		SetStatus(storagepolicy.StatusActive).SetSettings(&types.PolicySetting{}).SaveX(ctx)
 	group := client.Group.Create().SetName("g").SetPermissions(&boolset.BooleanSet{}).
-		SetMaxStorage(1 << 40).SetStoragePolicies(p).SaveX(ctx)
+		SetMaxStorage(maxStorage).SetStoragePolicies(p).SaveX(ctx)
 	u := client.User.Create().SetEmail("u@example.com").SetNick("u").SetGroup(group).SaveX(ctx)
 	u.SetGroup(group)
 	client.File.Create().SetName(inventory.RootFolderName).
@@ -65,6 +70,7 @@ func dedupUploadFixture(t *testing.T, client *ent.Client, scope string) (*ent.Us
 		fileClient:          inventory.NewFileClient(client, conf.SQLiteDB, hasher),
 		userClient:          inventory.NewUserClient(client),
 		storagePolicyClient: inventory.NewStoragePolicyClient(client, nil),
+		activityClient:      inventory.NewActivityClient(client, conf.SQLiteDB),
 		settingClient:       dedupSettingProvider{scope: scope},
 		hasher:              hasher,
 		l:                   l,
@@ -109,7 +115,7 @@ func TestPrepareUploadRapid(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, client.Close()) })
 	ctx := context.Background()
 
-	u, p, f := dedupUploadFixture(t, client, "owner")
+	u, p, f := dedupUploadFixture(t, client, "owner", 1<<40)
 	existing := seedCompletedEntity(t, client, u, p, dedupTestHash, 1024)
 
 	// Normal upload without hash -> transfer session
@@ -141,10 +147,26 @@ func TestPrepareUploadRapidScopeOff(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, client.Close()) })
 	ctx := context.Background()
 
-	u, p, f := dedupUploadFixture(t, client, "off")
+	u, p, f := dedupUploadFixture(t, client, "off", 1<<40)
 	seedCompletedEntity(t, client, u, p, dedupTestHash, 1024)
 
 	s, err := f.PrepareUpload(ctx, uploadReq(t, f.hasher, u, "copy.txt", 1024, dedupTestHash))
 	require.NoError(t, err)
 	require.False(t, s.Props.RapidUploaded)
+}
+
+func TestPrepareUploadQuotaEvent(t *testing.T) {
+	client := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared")
+	t.Cleanup(func() { require.NoError(t, client.Close()) })
+	ctx := context.Background()
+
+	u, _, f := dedupUploadFixture(t, client, "owner", 1024)
+
+	_, err := f.PrepareUpload(ctx, uploadReq(t, f.hasher, u, "big.bin", 2048, ""))
+	require.ErrorIs(t, err, fs.ErrInsufficientCapacity)
+
+	ev := client.ActivityEvent.Query().
+		Where(activityevent.TypeEQ(types.EventUserExceedQuotaNotified)).OnlyX(ctx)
+	require.Equal(t, float64(2048), ev.Extra["size"])
+	require.Equal(t, float64(1024), ev.Extra["capacity"])
 }
