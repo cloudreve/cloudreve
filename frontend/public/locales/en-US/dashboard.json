@@ -1058,6 +1058,8 @@
     "selectAStorageProvider": "Select a storage provider",
     "maxSizeOfSingleFile": "Max single file size",
     "maxSizeOfSingleFileDes": "Enter 0 to disable the limit.",
+    "maxTotalSize": "Max total capacity",
+    "maxTotalSizeDes": "Maximum total bytes stored under this policy. Uploads and copies that would exceed it are rejected. 0 means unlimited.",
     "enterFileExt": "Separated by semi-colon commas, leave blank to allow all file extensions.",
     "extList": "File extension restrictions",
     "noLimit": "No limit",

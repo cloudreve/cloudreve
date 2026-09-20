@@ -253,6 +253,7 @@ export interface PolicySetting {
   thumb_exts?: string[];
   thumb_support_all_exts?: boolean;
   thumb_max_size?: number;
+  max_total_size?: number;
   relay?: boolean;
   pre_allocate?: boolean;
   media_meta_exts?: string[];

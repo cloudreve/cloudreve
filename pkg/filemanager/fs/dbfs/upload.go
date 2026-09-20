@@ -68,6 +68,9 @@ func (f *DBFS) PreValidateUpload(ctx context.Context, dst *fs.URI, files ...fs.P
 	if err := f.validateUserCapacity(ctx, total, dstFile.Owner()); err != nil {
 		return err
 	}
+	if err := f.validatePolicyCapacity(ctx, total, policy); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -160,6 +163,9 @@ func (f *DBFS) PrepareUpload(ctx context.Context, req *fs.UploadRequest, opts ..
 
 	// validate upload request
 	if err := validateNewFile(req.Props.Uri.Name(), req.Props.Size, policy); err != nil {
+		return nil, err
+	}
+	if err := f.validatePolicyCapacity(ctx, req.Props.Size, policy); err != nil {
 		return nil, err
 	}
 

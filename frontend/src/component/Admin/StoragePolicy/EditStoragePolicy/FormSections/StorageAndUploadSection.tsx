@@ -110,6 +110,16 @@ const StorageAndUploadSection = () => {
     [setPolicy],
   );
 
+  const onMaxTotalSizeChange = useCallback(
+    (e: number) => {
+      setPolicy((p: StoragePolicy) => ({
+        ...p,
+        settings: { ...p.settings, max_total_size: e === 0 ? undefined : e },
+      }));
+    },
+    [setPolicy],
+  );
+
   const fileExts = useMemo(() => {
     return values.settings?.file_type?.join() ?? "";
   }, [values.settings?.file_type]);
@@ -276,6 +286,12 @@ const StorageAndUploadSection = () => {
           <FormControl fullWidth>
             <SizeInput variant={"outlined"} required value={values.max_size ?? 0} onChange={onMaxSizeChange} />
             <NoMarginHelperText>{t("policy.maxSizeOfSingleFileDes")}</NoMarginHelperText>
+          </FormControl>
+        </SettingForm>
+        <SettingForm title={t("policy.maxTotalSize")} lgWidth={5}>
+          <FormControl fullWidth>
+            <SizeInput variant={"outlined"} value={values.settings?.max_total_size ?? 0} onChange={onMaxTotalSizeChange} />
+            <NoMarginHelperText>{t("policy.maxTotalSizeDes")}</NoMarginHelperText>
           </FormControl>
         </SettingForm>
         <SettingForm title={t("policy.extList")} lgWidth={5}>
