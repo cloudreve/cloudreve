@@ -1556,6 +1556,36 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 				}
 
+				// 私密空间
+				vault := user.Group("vault")
+				{
+					// 启用私密空间
+					vault.POST("",
+						middleware.RequiredScopes(types.ScopeUserSecurityInfoWrite),
+						controllers.FromJSON[usersvc.VaultSetupService](usersvc.VaultSetupParameterCtx{}),
+						controllers.UserVaultSetup,
+					)
+					// 解锁私密空间
+					vault.PUT("unlock",
+						middleware.RequiredScopes(types.ScopeUserSecurityInfoWrite),
+						middleware.RateLimitByIP("vault_unlock", 10, time.Hour),
+						controllers.FromJSON[usersvc.VaultUnlockService](usersvc.VaultUnlockParameterCtx{}),
+						controllers.UserVaultUnlock,
+					)
+					// 立即锁定私密空间
+					vault.DELETE("unlock",
+						middleware.RequiredScopes(types.ScopeUserSecurityInfoWrite),
+						controllers.FromJSON[usersvc.VaultUnlockService](usersvc.VaultUnlockParameterCtx{}),
+						controllers.UserVaultLock,
+					)
+					// 关闭私密空间
+					vault.DELETE("",
+						middleware.RequiredScopes(types.ScopeUserSecurityInfoWrite),
+						controllers.FromJSON[usersvc.VaultDisableService](usersvc.VaultDisableParameterCtx{}),
+						controllers.UserVaultDisable,
+					)
+				}
+
 				// 积分与兑换
 				credit := user.Group("credit")
 				{

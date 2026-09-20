@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
@@ -18,6 +19,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/auth"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs/dbfs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 	"github.com/cloudreve/Cloudreve/v4/pkg/request"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
@@ -148,6 +150,9 @@ func GetUserSettings(c *gin.Context) (*UserSettings, error) {
 	res := BuildUserSettings(u, passkeys, dep.UAParser(), grants, bindings)
 	if u.Settings.PreferredPolicy > 0 {
 		res.PreferredPolicy = hashid.EncodePolicyID(dep.HashIDEncoder(), u.Settings.PreferredPolicy)
+	}
+	if res.VaultEnabled {
+		_, res.VaultUnlocked = dep.KV().Get(dbfs.VaultUnlockCachePrefix + strconv.Itoa(u.ID))
 	}
 	return res, nil
 

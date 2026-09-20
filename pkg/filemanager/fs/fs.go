@@ -66,6 +66,10 @@ type (
 		SharedAddressTranslation(ctx context.Context, path *URI, opts ...Option) (File, *URI, error)
 		// ExecuteNavigatorHooks executes hooks of given type on a file for navigator based custom hooks.
 		ExecuteNavigatorHooks(ctx context.Context, hookType HookType, file File) error
+		// IsInPrivateSpace reports whether the file sits inside its owner's
+		// private space. Used to reject operations that must never apply to
+		// vaulted files regardless of the unlock state (e.g. sharing).
+		IsInPrivateSpace(ctx context.Context, file File) (bool, error)
 	}
 
 	FileManager interface {

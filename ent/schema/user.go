@@ -45,6 +45,16 @@ func (User) Fields() []ent.Field {
 		field.String("two_factor_secret").
 			Sensitive().
 			Optional(),
+		// vault_password gates the user's private space; same salt:digest
+		// format as the account password but independent from it.
+		field.String("vault_password").
+			Sensitive().
+			Optional(),
+		// vault_folder is the file ID of the user's private-space root
+		// folder. 0 means the feature is not set up.
+		field.Int("vault_folder").
+			Optional().
+			Default(0),
 		field.String("avatar").
 			Optional(),
 		field.JSON("settings", &types.UserSetting{}).

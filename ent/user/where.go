@@ -115,6 +115,16 @@ func TwoFactorSecret(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldTwoFactorSecret, v))
 }
 
+// VaultPassword applies equality check predicate on the "vault_password" field. It's identical to VaultPasswordEQ.
+func VaultPassword(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldVaultPassword, v))
+}
+
+// VaultFolder applies equality check predicate on the "vault_folder" field. It's identical to VaultFolderEQ.
+func VaultFolder(v int) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldVaultFolder, v))
+}
+
 // Avatar applies equality check predicate on the "avatar" field. It's identical to AvatarEQ.
 func Avatar(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldAvatar, v))
@@ -808,6 +818,131 @@ func TwoFactorSecretEqualFold(v string) predicate.User {
 // TwoFactorSecretContainsFold applies the ContainsFold predicate on the "two_factor_secret" field.
 func TwoFactorSecretContainsFold(v string) predicate.User {
 	return predicate.User(sql.FieldContainsFold(FieldTwoFactorSecret, v))
+}
+
+// VaultPasswordEQ applies the EQ predicate on the "vault_password" field.
+func VaultPasswordEQ(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldVaultPassword, v))
+}
+
+// VaultPasswordNEQ applies the NEQ predicate on the "vault_password" field.
+func VaultPasswordNEQ(v string) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldVaultPassword, v))
+}
+
+// VaultPasswordIn applies the In predicate on the "vault_password" field.
+func VaultPasswordIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldIn(FieldVaultPassword, vs...))
+}
+
+// VaultPasswordNotIn applies the NotIn predicate on the "vault_password" field.
+func VaultPasswordNotIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldVaultPassword, vs...))
+}
+
+// VaultPasswordGT applies the GT predicate on the "vault_password" field.
+func VaultPasswordGT(v string) predicate.User {
+	return predicate.User(sql.FieldGT(FieldVaultPassword, v))
+}
+
+// VaultPasswordGTE applies the GTE predicate on the "vault_password" field.
+func VaultPasswordGTE(v string) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldVaultPassword, v))
+}
+
+// VaultPasswordLT applies the LT predicate on the "vault_password" field.
+func VaultPasswordLT(v string) predicate.User {
+	return predicate.User(sql.FieldLT(FieldVaultPassword, v))
+}
+
+// VaultPasswordLTE applies the LTE predicate on the "vault_password" field.
+func VaultPasswordLTE(v string) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldVaultPassword, v))
+}
+
+// VaultPasswordContains applies the Contains predicate on the "vault_password" field.
+func VaultPasswordContains(v string) predicate.User {
+	return predicate.User(sql.FieldContains(FieldVaultPassword, v))
+}
+
+// VaultPasswordHasPrefix applies the HasPrefix predicate on the "vault_password" field.
+func VaultPasswordHasPrefix(v string) predicate.User {
+	return predicate.User(sql.FieldHasPrefix(FieldVaultPassword, v))
+}
+
+// VaultPasswordHasSuffix applies the HasSuffix predicate on the "vault_password" field.
+func VaultPasswordHasSuffix(v string) predicate.User {
+	return predicate.User(sql.FieldHasSuffix(FieldVaultPassword, v))
+}
+
+// VaultPasswordIsNil applies the IsNil predicate on the "vault_password" field.
+func VaultPasswordIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldVaultPassword))
+}
+
+// VaultPasswordNotNil applies the NotNil predicate on the "vault_password" field.
+func VaultPasswordNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldVaultPassword))
+}
+
+// VaultPasswordEqualFold applies the EqualFold predicate on the "vault_password" field.
+func VaultPasswordEqualFold(v string) predicate.User {
+	return predicate.User(sql.FieldEqualFold(FieldVaultPassword, v))
+}
+
+// VaultPasswordContainsFold applies the ContainsFold predicate on the "vault_password" field.
+func VaultPasswordContainsFold(v string) predicate.User {
+	return predicate.User(sql.FieldContainsFold(FieldVaultPassword, v))
+}
+
+// VaultFolderEQ applies the EQ predicate on the "vault_folder" field.
+func VaultFolderEQ(v int) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldVaultFolder, v))
+}
+
+// VaultFolderNEQ applies the NEQ predicate on the "vault_folder" field.
+func VaultFolderNEQ(v int) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldVaultFolder, v))
+}
+
+// VaultFolderIn applies the In predicate on the "vault_folder" field.
+func VaultFolderIn(vs ...int) predicate.User {
+	return predicate.User(sql.FieldIn(FieldVaultFolder, vs...))
+}
+
+// VaultFolderNotIn applies the NotIn predicate on the "vault_folder" field.
+func VaultFolderNotIn(vs ...int) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldVaultFolder, vs...))
+}
+
+// VaultFolderGT applies the GT predicate on the "vault_folder" field.
+func VaultFolderGT(v int) predicate.User {
+	return predicate.User(sql.FieldGT(FieldVaultFolder, v))
+}
+
+// VaultFolderGTE applies the GTE predicate on the "vault_folder" field.
+func VaultFolderGTE(v int) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldVaultFolder, v))
+}
+
+// VaultFolderLT applies the LT predicate on the "vault_folder" field.
+func VaultFolderLT(v int) predicate.User {
+	return predicate.User(sql.FieldLT(FieldVaultFolder, v))
+}
+
+// VaultFolderLTE applies the LTE predicate on the "vault_folder" field.
+func VaultFolderLTE(v int) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldVaultFolder, v))
+}
+
+// VaultFolderIsNil applies the IsNil predicate on the "vault_folder" field.
+func VaultFolderIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldVaultFolder))
+}
+
+// VaultFolderNotNil applies the NotNil predicate on the "vault_folder" field.
+func VaultFolderNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldVaultFolder))
 }
 
 // AvatarEQ applies the EQ predicate on the "avatar" field.

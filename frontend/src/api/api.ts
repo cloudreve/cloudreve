@@ -2674,6 +2674,73 @@ export function sendUnbindSso(provider: string): ThunkResponse {
   };
 }
 
+export function sendVaultSetup(password: string): ThunkResponse {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/user/vault",
+        {
+          method: "POST",
+          data: { password },
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function sendVaultUnlock(password: string): ThunkResponse {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/user/vault/unlock",
+        {
+          method: "PUT",
+          data: { password },
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function sendVaultLock(): ThunkResponse {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/user/vault/unlock",
+        {
+          method: "DELETE",
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function sendVaultDisable(password: string): ThunkResponse {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/user/vault",
+        {
+          method: "DELETE",
+          data: { password },
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
 export function sendFullTextSearch(query: string, offset?: number): ThunkResponse {
   const params = new URLSearchParams();
   params.set("query", query);

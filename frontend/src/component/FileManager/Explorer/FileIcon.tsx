@@ -3,6 +3,7 @@ import { forwardRef, memo, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { FileResponse, FileType, Metadata } from "../../../api/explorer.ts";
 import UserAvatar from "../../Common/User/UserAvatar.tsx";
+import LockClosed from "../../Icons/LockClosed.tsx";
 import ShareAndroid from "../../Icons/ShareAndroid.tsx";
 import EmojiIcon from "./EmojiIcon.tsx";
 import FileTypeIcon from "./FileTypeIcon.tsx";
@@ -75,7 +76,21 @@ const FileIcon = memo(
     }, [file, iconColor, iconProps, notLoaded]);
     const badgeContent = useMemo(() => {
       const avatarSize = variantAvatarSize[variant];
-      if (file?.metadata?.[Metadata.share_redirect]) {
+      if (file?.metadata?.[Metadata.vault]) {
+        return (
+          <Tooltip title={t("application:vault.badge")}>
+            <Avatar
+              sx={{
+                width: avatarSize,
+                height: avatarSize,
+                bgcolor: (theme) => theme.palette.background.default,
+              }}
+            >
+              <LockClosed sx={{ fontSize: `${avatarSize - 4}px!important` }} color={"action"} />
+            </Avatar>
+          </Tooltip>
+        );
+      } else if (file?.metadata?.[Metadata.share_redirect]) {
         return (
           <UserAvatar
             overwriteTextSize

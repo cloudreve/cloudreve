@@ -43,6 +43,10 @@ const (
 	FieldCredits = "credits"
 	// FieldTwoFactorSecret holds the string denoting the two_factor_secret field in the database.
 	FieldTwoFactorSecret = "two_factor_secret"
+	// FieldVaultPassword holds the string denoting the vault_password field in the database.
+	FieldVaultPassword = "vault_password"
+	// FieldVaultFolder holds the string denoting the vault_folder field in the database.
+	FieldVaultFolder = "vault_folder"
 	// FieldAvatar holds the string denoting the avatar field in the database.
 	FieldAvatar = "avatar"
 	// FieldSettings holds the string denoting the settings field in the database.
@@ -195,6 +199,8 @@ var Columns = []string{
 	FieldStorage,
 	FieldCredits,
 	FieldTwoFactorSecret,
+	FieldVaultPassword,
+	FieldVaultFolder,
 	FieldAvatar,
 	FieldSettings,
 	FieldGroupUsers,
@@ -232,6 +238,8 @@ var (
 	DefaultStorage int64
 	// DefaultCredits holds the default value on creation for the "credits" field.
 	DefaultCredits int64
+	// DefaultVaultFolder holds the default value on creation for the "vault_folder" field.
+	DefaultVaultFolder int
 	// DefaultSettings holds the default value on creation for the "settings" field.
 	DefaultSettings *types.UserSetting
 )
@@ -335,6 +343,16 @@ func ByCredits(opts ...sql.OrderTermOption) OrderOption {
 // ByTwoFactorSecret orders the results by the two_factor_secret field.
 func ByTwoFactorSecret(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldTwoFactorSecret, opts...).ToFunc()
+}
+
+// ByVaultPassword orders the results by the vault_password field.
+func ByVaultPassword(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldVaultPassword, opts...).ToFunc()
+}
+
+// ByVaultFolder orders the results by the vault_folder field.
+func ByVaultFolder(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldVaultFolder, opts...).ToFunc()
 }
 
 // ByAvatar orders the results by the avatar field.

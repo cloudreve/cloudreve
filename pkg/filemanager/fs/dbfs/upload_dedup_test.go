@@ -30,7 +30,7 @@ type dedupSettingProvider struct {
 }
 
 func (p dedupSettingProvider) DBFS(context.Context) *setting.DBFS {
-	return &setting.DBFS{DedupScope: p.scope, MaxPageSize: 200}
+	return &setting.DBFS{DedupScope: p.scope, MaxPageSize: 200, MaxRecursiveSearchedFolder: 100}
 }
 
 func (p dedupSettingProvider) AuditLogEnabled(context.Context, int) bool {

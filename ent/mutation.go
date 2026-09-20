@@ -24361,6 +24361,9 @@ type UserMutation struct {
 	credits                *int64
 	addcredits             *int64
 	two_factor_secret      *string
+	vault_password         *string
+	vault_folder           *int
+	addvault_folder        *int
 	avatar                 *string
 	settings               **types.UserSetting
 	clearedFields          map[string]struct{}
@@ -25092,6 +25095,125 @@ func (m *UserMutation) TwoFactorSecretCleared() bool {
 func (m *UserMutation) ResetTwoFactorSecret() {
 	m.two_factor_secret = nil
 	delete(m.clearedFields, user.FieldTwoFactorSecret)
+}
+
+// SetVaultPassword sets the "vault_password" field.
+func (m *UserMutation) SetVaultPassword(s string) {
+	m.vault_password = &s
+}
+
+// VaultPassword returns the value of the "vault_password" field in the mutation.
+func (m *UserMutation) VaultPassword() (r string, exists bool) {
+	v := m.vault_password
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldVaultPassword returns the old "vault_password" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldVaultPassword(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldVaultPassword is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldVaultPassword requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldVaultPassword: %w", err)
+	}
+	return oldValue.VaultPassword, nil
+}
+
+// ClearVaultPassword clears the value of the "vault_password" field.
+func (m *UserMutation) ClearVaultPassword() {
+	m.vault_password = nil
+	m.clearedFields[user.FieldVaultPassword] = struct{}{}
+}
+
+// VaultPasswordCleared returns if the "vault_password" field was cleared in this mutation.
+func (m *UserMutation) VaultPasswordCleared() bool {
+	_, ok := m.clearedFields[user.FieldVaultPassword]
+	return ok
+}
+
+// ResetVaultPassword resets all changes to the "vault_password" field.
+func (m *UserMutation) ResetVaultPassword() {
+	m.vault_password = nil
+	delete(m.clearedFields, user.FieldVaultPassword)
+}
+
+// SetVaultFolder sets the "vault_folder" field.
+func (m *UserMutation) SetVaultFolder(i int) {
+	m.vault_folder = &i
+	m.addvault_folder = nil
+}
+
+// VaultFolder returns the value of the "vault_folder" field in the mutation.
+func (m *UserMutation) VaultFolder() (r int, exists bool) {
+	v := m.vault_folder
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldVaultFolder returns the old "vault_folder" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldVaultFolder(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldVaultFolder is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldVaultFolder requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldVaultFolder: %w", err)
+	}
+	return oldValue.VaultFolder, nil
+}
+
+// AddVaultFolder adds i to the "vault_folder" field.
+func (m *UserMutation) AddVaultFolder(i int) {
+	if m.addvault_folder != nil {
+		*m.addvault_folder += i
+	} else {
+		m.addvault_folder = &i
+	}
+}
+
+// AddedVaultFolder returns the value that was added to the "vault_folder" field in this mutation.
+func (m *UserMutation) AddedVaultFolder() (r int, exists bool) {
+	v := m.addvault_folder
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearVaultFolder clears the value of the "vault_folder" field.
+func (m *UserMutation) ClearVaultFolder() {
+	m.vault_folder = nil
+	m.addvault_folder = nil
+	m.clearedFields[user.FieldVaultFolder] = struct{}{}
+}
+
+// VaultFolderCleared returns if the "vault_folder" field was cleared in this mutation.
+func (m *UserMutation) VaultFolderCleared() bool {
+	_, ok := m.clearedFields[user.FieldVaultFolder]
+	return ok
+}
+
+// ResetVaultFolder resets all changes to the "vault_folder" field.
+func (m *UserMutation) ResetVaultFolder() {
+	m.vault_folder = nil
+	m.addvault_folder = nil
+	delete(m.clearedFields, user.FieldVaultFolder)
 }
 
 // SetAvatar sets the "avatar" field.
@@ -26004,7 +26126,7 @@ func (m *UserMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 16)
+	fields := make([]string, 0, 18)
 	if m.created_at != nil {
 		fields = append(fields, user.FieldCreatedAt)
 	}
@@ -26043,6 +26165,12 @@ func (m *UserMutation) Fields() []string {
 	}
 	if m.two_factor_secret != nil {
 		fields = append(fields, user.FieldTwoFactorSecret)
+	}
+	if m.vault_password != nil {
+		fields = append(fields, user.FieldVaultPassword)
+	}
+	if m.vault_folder != nil {
+		fields = append(fields, user.FieldVaultFolder)
 	}
 	if m.avatar != nil {
 		fields = append(fields, user.FieldAvatar)
@@ -26087,6 +26215,10 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 		return m.Credits()
 	case user.FieldTwoFactorSecret:
 		return m.TwoFactorSecret()
+	case user.FieldVaultPassword:
+		return m.VaultPassword()
+	case user.FieldVaultFolder:
+		return m.VaultFolder()
 	case user.FieldAvatar:
 		return m.Avatar()
 	case user.FieldSettings:
@@ -26128,6 +26260,10 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldCredits(ctx)
 	case user.FieldTwoFactorSecret:
 		return m.OldTwoFactorSecret(ctx)
+	case user.FieldVaultPassword:
+		return m.OldVaultPassword(ctx)
+	case user.FieldVaultFolder:
+		return m.OldVaultFolder(ctx)
 	case user.FieldAvatar:
 		return m.OldAvatar(ctx)
 	case user.FieldSettings:
@@ -26234,6 +26370,20 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetTwoFactorSecret(v)
 		return nil
+	case user.FieldVaultPassword:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetVaultPassword(v)
+		return nil
+	case user.FieldVaultFolder:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetVaultFolder(v)
+		return nil
 	case user.FieldAvatar:
 		v, ok := value.(string)
 		if !ok {
@@ -26269,6 +26419,9 @@ func (m *UserMutation) AddedFields() []string {
 	if m.addcredits != nil {
 		fields = append(fields, user.FieldCredits)
 	}
+	if m.addvault_folder != nil {
+		fields = append(fields, user.FieldVaultFolder)
+	}
 	return fields
 }
 
@@ -26281,6 +26434,8 @@ func (m *UserMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedStorage()
 	case user.FieldCredits:
 		return m.AddedCredits()
+	case user.FieldVaultFolder:
+		return m.AddedVaultFolder()
 	}
 	return nil, false
 }
@@ -26303,6 +26458,13 @@ func (m *UserMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddCredits(v)
+		return nil
+	case user.FieldVaultFolder:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddVaultFolder(v)
 		return nil
 	}
 	return fmt.Errorf("unknown User numeric field %s", name)
@@ -26329,6 +26491,12 @@ func (m *UserMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(user.FieldTwoFactorSecret) {
 		fields = append(fields, user.FieldTwoFactorSecret)
+	}
+	if m.FieldCleared(user.FieldVaultPassword) {
+		fields = append(fields, user.FieldVaultPassword)
+	}
+	if m.FieldCleared(user.FieldVaultFolder) {
+		fields = append(fields, user.FieldVaultFolder)
 	}
 	if m.FieldCleared(user.FieldAvatar) {
 		fields = append(fields, user.FieldAvatar)
@@ -26367,6 +26535,12 @@ func (m *UserMutation) ClearField(name string) error {
 		return nil
 	case user.FieldTwoFactorSecret:
 		m.ClearTwoFactorSecret()
+		return nil
+	case user.FieldVaultPassword:
+		m.ClearVaultPassword()
+		return nil
+	case user.FieldVaultFolder:
+		m.ClearVaultFolder()
 		return nil
 	case user.FieldAvatar:
 		m.ClearAvatar()
@@ -26420,6 +26594,12 @@ func (m *UserMutation) ResetField(name string) error {
 		return nil
 	case user.FieldTwoFactorSecret:
 		m.ResetTwoFactorSecret()
+		return nil
+	case user.FieldVaultPassword:
+		m.ResetVaultPassword()
+		return nil
+	case user.FieldVaultFolder:
+		m.ResetVaultFolder()
 		return nil
 	case user.FieldAvatar:
 		m.ResetAvatar()

@@ -263,6 +263,9 @@ const (
 	CodeInvitationCodeRequired = 40091
 	// CodeInvitationCodeInvalid 邀请码无效、过期或已用完
 	CodeInvitationCodeInvalid = 40092
+
+	// CodeVaultLocked 私密空间未解锁
+	CodeVaultLocked = 40093
 	// CodeDBError 数据库操作失败
 	CodeDBError = 50001
 	// CodeEncryptError 加密失败

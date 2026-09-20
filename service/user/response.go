@@ -38,6 +38,10 @@ type UserSettings struct {
 	PreferredPolicy         string            `json:"preferred_policy,omitempty"`
 	OAuthGrants             []OauthGrant      `json:"oauth_grants,omitempty"`
 	LinkedAccounts          []LinkedAccount   `json:"linked_accounts,omitempty"`
+	// VaultEnabled reports whether the private space is set up.
+	VaultEnabled bool `json:"vault_enabled"`
+	// VaultUnlocked reports whether an unlock session is currently active.
+	VaultUnlocked bool `json:"vault_unlocked"`
 }
 
 // LinkedAccount is an external identity bound to the local account
@@ -68,6 +72,7 @@ func BuildUserSettings(u *ent.User, passkeys []*ent.Passkey, parser *uaparser.Pa
 		LinkedAccounts: lo.Map(bindings, func(item *ent.SsoBinding, index int) LinkedAccount {
 			return LinkedAccount{Provider: item.Provider, CreatedAt: item.CreatedAt}
 		}),
+		VaultEnabled: u.VaultFolder > 0,
 	}
 }
 

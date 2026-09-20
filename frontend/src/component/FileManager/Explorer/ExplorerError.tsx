@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { AppError, Code, Response } from "../../../api/request.ts";
 import { useAppDispatch, useAppSelector } from "../../../redux/hooks.ts";
-import { navigateToPath, retrySharePassword } from "../../../redux/thunks/filemanager.ts";
+import { navigateToPath, retrySharePassword, unlockVault } from "../../../redux/thunks/filemanager.ts";
 import { Filesystem } from "../../../util/uri.ts";
 import { FilledTextField, SecondaryButton } from "../../Common/StyledComponents.tsx";
 import ArrowLeft from "../../Icons/ArrowLeft.tsx";
@@ -37,6 +37,65 @@ const RetryPassword = () => {
         <Button
           disabled={password == ""}
           onClick={() => dispatch(retrySharePassword(fmIndex, password))}
+          variant={"contained"}
+          sx={{ ml: 1, height: "56px" }}
+        >
+          <ArrowLeft
+            sx={{
+              transform: "scaleX(-1)",
+            }}
+          />
+        </Button>
+      </Box>
+    </Box>
+  );
+};
+
+const RetryVaultUnlock = () => {
+  const { t } = useTranslation();
+  const dispatch = useAppDispatch();
+  const fmIndex = useContext(FmIndexContext);
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | undefined>(undefined);
+  const [loading, setLoading] = useState(false);
+
+  const unlock = useCallback(async () => {
+    setLoading(true);
+    setError(undefined);
+    try {
+      await dispatch(unlockVault(fmIndex, password));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : undefined);
+    } finally {
+      setLoading(false);
+    }
+  }, [dispatch, fmIndex, password]);
+
+  return (
+    <Box sx={{ textAlign: "center" }} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+      <LockClosed sx={{ fontSize: 80 }} color={"action"} />
+      <Typography color={"text.secondary"} sx={{ mt: 1 }}>
+        {t("application:vault.lockedTitle")}
+      </Typography>
+      <Box sx={{ mt: 1 }}>
+        <FilledTextField
+          variant={"filled"}
+          autoFocus
+          type={"password"}
+          value={password}
+          error={!!error}
+          helperText={error}
+          onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && password != "") {
+              unlock();
+            }
+          }}
+          label={t("application:vault.enterPassword")}
+        />
+        <Button
+          disabled={password == "" || loading}
+          onClick={unlock}
           variant={"contained"}
           sx={{ ml: 1, height: "56px" }}
         >
@@ -88,6 +147,8 @@ const ExplorerError = memo(
           );
         case Code.IncorrectPassword:
           return <RetryPassword />;
+        case Code.VaultLocked:
+          return <RetryVaultUnlock />;
         // @ts-ignore
         case Code.NodeFound:
           if (fs == Filesystem.share) {

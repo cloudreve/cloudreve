@@ -94,6 +94,10 @@ type (
 		UpdateNickname(ctx context.Context, u *ent.User, name string) (*ent.User, error)
 		// UpdatePassword updates user password.
 		UpdatePassword(ctx context.Context, u *ent.User, newPassword string) (*ent.User, error)
+		// UpdateVault sets or clears the user's private-space credential and
+		// root folder ID. passwordDigest must be produced by DigestPassword;
+		// pass an empty digest and folderID 0 to disable the vault.
+		UpdateVault(ctx context.Context, u *ent.User, passwordDigest string, folderID int) (*ent.User, error)
 		// UpdateTwoFASecret updates user two factor secret.
 		UpdateTwoFASecret(ctx context.Context, u *ent.User, secret string) (*ent.User, error)
 		// ListPasskeys list user's passkeys.
@@ -189,6 +193,16 @@ func (c *userClient) UpdatePassword(ctx context.Context, u *ent.User, newPasswor
 	}
 
 	return c.client.User.UpdateOne(u).SetPassword(digest).Save(ctx)
+}
+
+func (c *userClient) UpdateVault(ctx context.Context, u *ent.User, passwordDigest string, folderID int) (*ent.User, error) {
+	stm := c.client.User.UpdateOne(u).SetVaultFolder(folderID)
+	if passwordDigest == "" {
+		stm = stm.ClearVaultPassword()
+	} else {
+		stm = stm.SetVaultPassword(passwordDigest)
+	}
+	return stm.Save(ctx)
 }
 
 func (c *userClient) SetClient(newClient *ent.Client) TxOperator {
@@ -690,6 +704,13 @@ func IsAnonymousUser(u *ent.User) bool {
 	return u.ID == 0
 }
 
+// CheckVaultPassword verifies the private-space password against the vault
+// digest stored on the user record. Returns ErrorIncorrectPassword on
+// mismatch, same contract as CheckPassword.
+func CheckVaultPassword(u *ent.User, password string) error {
+	return CheckPassword(&ent.User{Password: u.VaultPassword}, password)
+}
+
 // CheckPassword 根据明文校验密码
 func CheckPassword(u *ent.User, password string) error {
 	// 根据存储密码拆分为 Salt 和 Digest
@@ -746,6 +767,13 @@ func withUserEagerLoading(ctx context.Context, q *ent.UserQuery) *ent.UserQuery 
 		q.WithPasskey()
 	}
 	return q
+}
+
+// DigestPassword returns the salt:digest store format used for account and
+// private-space passwords. Exported for credential writers outside this
+// package; verification goes through CheckPassword.
+func DigestPassword(password string) (string, error) {
+	return digestPassword(password)
 }
 
 func digestPassword(password string) (string, error) {

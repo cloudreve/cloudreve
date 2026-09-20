@@ -141,6 +141,7 @@ export const Code = {
   BatchOperationNotFullyCompleted: 40081,
   DomainNotLicensed: 40087,
   AnonymouseAccessDenied: 40088,
+  VaultLocked: 40093,
   CodeLoginRequired: 401,
   PermissionDenied: 403,
   NodeFound: 404,
