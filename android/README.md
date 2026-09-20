@@ -30,8 +30,12 @@ CI runs `assembleDebug` on every PR.
 - Full-text search (`GET /file/search`): query bar in the files screen,
   offset pagination, result rows show parent path + content snippet;
   folder hits navigate into place
+- Camera auto-upload: periodic WorkManager sync of new MediaStore
+  photos/videos to a configurable remote folder, Wi-Fi-only constraint,
+  media-permission gated toggle, synced/failed ID dedup, manual
+  "sync now" — settings dialog in the files top bar
 
 ## Planned next
 
-- Camera auto-upload, offline-favorite files, DocumentsProvider
+- Offline-favorite files, DocumentsProvider
 - No iOS. Ever.

@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.AlertDialog
@@ -49,6 +50,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -73,8 +75,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.launch
+import org.cloudreve.android.CloudreveApp
 import org.cloudreve.android.api.FileObject
+import org.cloudreve.android.data.CameraUploadSettings
 import org.cloudreve.android.util.CrUri
+import org.cloudreve.android.work.CameraUploadWorker
 import org.cloudreve.android.work.UploadWorker
 import java.text.DecimalFormat
 
@@ -95,6 +100,7 @@ fun FilesScreen(
     var deleteTarget by remember { mutableStateOf<FileObject?>(null) }
     var searchOpen by remember { mutableStateOf(false) }
     var searchText by remember { mutableStateOf("") }
+    var cameraSettingsOpen by remember { mutableStateOf(false) }
     val searchFocus = remember { FocusRequester() }
 
     val inSearch = state.searchQuery != null
@@ -190,6 +196,9 @@ fun FilesScreen(
                     if (!inSearch && !searchOpen) {
                         IconButton(onClick = { searchOpen = true }) {
                             Icon(Icons.Default.Search, contentDescription = "Search")
+                        }
+                        IconButton(onClick = { cameraSettingsOpen = true }) {
+                            Icon(Icons.Default.Settings, contentDescription = "Camera backup")
                         }
                         IconButton(onClick = { mkdirOpen = true }) {
                             Icon(Icons.Default.CreateNewFolder, contentDescription = "New folder")
@@ -359,6 +368,10 @@ fun FilesScreen(
             },
         )
     }
+
+    if (cameraSettingsOpen) {
+        CameraUploadDialog(onDismiss = { cameraSettingsOpen = false })
+    }
 }
 
 private fun pathLabel(uri: String): String {
@@ -452,6 +465,125 @@ private fun SearchResults(
         }
     }
 }
+
+@Composable
+private fun CameraUploadDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val app = context.applicationContext as CloudreveApp
+    val settings = app.cameraUploadSettings
+    val scope = rememberCoroutineScope()
+    val snap by settings.snapshot.collectAsState(initial = null)
+    var folderText by remember(snap?.remoteFolder) {
+        mutableStateOf(snap?.remoteFolder ?: CameraUploadSettings.DEFAULT_FOLDER)
+    }
+
+    val permLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { grants ->
+        if (grants.values.all { it }) {
+            scope.launch {
+                settings.setRemoteFolder(folderText)
+                settings.setEnabled(true)
+                CameraUploadWorker.apply(context, snap?.wifiOnly ?: true)
+            }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Camera backup") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Back up new photos & videos", Modifier.weight(1f))
+                    Switch(
+                        checked = snap?.enabled == true,
+                        onCheckedChange = { want ->
+                            if (want) {
+                                permLauncher.launch(mediaPermissions())
+                            } else {
+                                scope.launch {
+                                    settings.setEnabled(false)
+                                    CameraUploadWorker.cancel(context)
+                                }
+                            }
+                        },
+                    )
+                }
+                OutlinedTextField(
+                    value = folderText,
+                    onValueChange = { folderText = it },
+                    label = { Text("Remote folder") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Wi-Fi only", Modifier.weight(1f))
+                    Switch(
+                        checked = snap?.wifiOnly ?: true,
+                        onCheckedChange = { wifiOnly ->
+                            scope.launch {
+                                settings.setWifiOnly(wifiOnly)
+                                if (snap?.enabled == true) {
+                                    CameraUploadWorker.apply(context, wifiOnly)
+                                }
+                            }
+                        },
+                    )
+                }
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Include videos", Modifier.weight(1f))
+                    Switch(
+                        checked = snap?.includeVideos ?: true,
+                        onCheckedChange = { scope.launch { settings.setIncludeVideos(it) } },
+                    )
+                }
+                snap?.lastSyncAt?.takeIf { it > 0 }?.let {
+                    Text(
+                        "Last backup: " + java.text.DateFormat.getDateTimeInstance(
+                            java.text.DateFormat.SHORT, java.text.DateFormat.SHORT,
+                        ).format(java.util.Date(it)),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                scope.launch {
+                    settings.setRemoteFolder(folderText)
+                    CameraUploadWorker.syncNow(context, snap?.wifiOnly ?: true)
+                }
+            }) { Text("Sync now") }
+        },
+        dismissButton = {
+            TextButton(onClick = {
+                scope.launch { settings.setRemoteFolder(folderText) }
+                onDismiss()
+            }) { Text("Done") }
+        },
+    )
+}
+
+private fun mediaPermissions(): Array<String> =
+    if (android.os.Build.VERSION.SDK_INT >= 33) {
+        arrayOf(
+            android.Manifest.permission.READ_MEDIA_IMAGES,
+            android.Manifest.permission.READ_MEDIA_VIDEO,
+        )
+    } else {
+        arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+    }
 
 private fun openFile(context: android.content.Context, local: java.io.File) {
     val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", local)

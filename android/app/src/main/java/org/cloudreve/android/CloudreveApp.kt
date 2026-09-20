@@ -2,6 +2,7 @@ package org.cloudreve.android
 
 import android.app.Application
 import org.cloudreve.android.api.ApiClient
+import org.cloudreve.android.data.CameraUploadSettings
 import org.cloudreve.android.data.FileRepository
 import org.cloudreve.android.data.SessionManager
 
@@ -13,11 +14,14 @@ class CloudreveApp : Application() {
         private set
     lateinit var fileRepository: FileRepository
         private set
+    lateinit var cameraUploadSettings: CameraUploadSettings
+        private set
 
     override fun onCreate() {
         super.onCreate()
         sessionManager = SessionManager(this)
         apiClient = ApiClient(sessionManager)
         fileRepository = FileRepository(apiClient)
+        cameraUploadSettings = CameraUploadSettings(this)
     }
 }
