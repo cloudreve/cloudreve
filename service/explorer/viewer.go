@@ -358,7 +358,7 @@ func (service *WopiService) FileInfo(c *gin.Context) (*WopiFileInfo, error) {
 	info := &WopiFileInfo{
 		BaseFileName:            file.DisplayName(),
 		Version:                 hashid.EncodeEntityID(hasher, targetEntity.ID()),
-		BreadcrumbBrandName:     settings.SiteBasic(c).Name,
+		BreadcrumbBrandName:     settings.SiteBasicLocalized(c, user.Settings.Language).Name,
 		BreadcrumbBrandUrl:      siteUrl.String(),
 		FileSharingPostMessage:  file.OwnerID() == user.ID,
 		EnableShare:             file.OwnerID() == user.ID,

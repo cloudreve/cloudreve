@@ -12,6 +12,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
+	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
 	"github.com/gin-gonic/gin"
 )
 
@@ -133,18 +134,26 @@ func (service *SkuListService) List(c *gin.Context) ([]*SkuResponse, error) {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to list products", err)
 	}
 
+	lang := ""
+	if u := inventory.UserFromContext(c); u != nil {
+		lang = u.Settings.Language
+	}
+	if lang == "" {
+		lang = setting.ParseAcceptLanguage(c.GetHeader("Accept-Language"))
+	}
+
 	res := make([]*SkuResponse, 0, len(skus))
 	for _, s := range skus {
 		r := &SkuResponse{
 			ID:       hashid.EncodeSkuID(dep.HashIDEncoder(), s.ID),
-			Name:     s.Name,
+			Name:     setting.MatchLanguage(s.NameI18n, lang, s.Name),
 			Type:     string(s.Type),
 			Amount:   s.Amount,
 			Duration: s.Duration,
 			Price:    s.Price,
 			Points:   s.Points,
 			Label:    s.Label,
-			Des:      s.Des,
+			Des:      setting.MatchLanguage(s.DesI18n, lang, s.Des),
 		}
 		if s.Type == sku.TypeGroup {
 			if g, err := dep.GroupClient().GetByID(c, int(s.Amount)); err == nil {

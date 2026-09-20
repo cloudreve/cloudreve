@@ -670,6 +670,8 @@ export interface Sku {
   points?: number;
   label?: string;
   des?: string;
+  name_i18n?: { [lang: string]: string };
+  des_i18n?: { [lang: string]: string };
   enabled: boolean;
   weight: number;
   created_at?: string;

@@ -388,6 +388,8 @@
     "customFooterHTMLDes": "Custom HTML code inserted at the bottom of the page.",
     "announcement": "Announcement",
     "announcementDes": "Announcements displayed to logged-in users. Blank value will not be displayed. After this content is changed, all users will see the announcement again.",
+    "translations": "Translations",
+    "translationsDes": "Per-language overrides. Leave blank to fall back to the default value. Users see the variant matching their language setting or browser language.",
     "supportHTML": "Enter HTML or plain text.",
     "branding": "Branding",
     "smallIcon": "Small icon",

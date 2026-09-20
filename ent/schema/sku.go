@@ -33,6 +33,10 @@ func (Sku) Fields() []ent.Field {
 			Optional(),
 		field.String("des").
 			Optional(),
+		field.JSON("name_i18n", map[string]string{}).
+			Optional(),
+		field.JSON("des_i18n", map[string]string{}).
+			Optional(),
 		field.Bool("enabled").
 			Default(true),
 		field.Int("weight").

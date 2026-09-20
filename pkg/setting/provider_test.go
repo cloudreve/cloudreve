@@ -84,3 +84,53 @@ func TestDownloadURLBase(t *testing.T) {
 		require.Equal(t, "https://a.example.com", p.DownloadURLBase(ctx).String())
 	}
 }
+
+func TestLocalizedSetting(t *testing.T) {
+	ctx := context.Background()
+
+	p := NewProvider(stubAdapter{
+		"siteName":      "Cloudreve",
+		"siteName_i18n": `{"zh-CN":"云盘","zh":"简中","*":"Intl"}`,
+	})
+
+	// Exact tag wins over the bare-subtag and wildcard entries.
+	require.Equal(t, "云盘", p.Localized(ctx, "siteName", "zh-CN"))
+	// Regional request falls back to the bare primary-subtag entry.
+	require.Equal(t, "简中", p.Localized(ctx, "siteName", "zh-TW"))
+	// Bare request may match a regional entry.
+	require.Equal(t, "简中", p.Localized(ctx, "siteName", "zh"))
+	// Wildcard entry covers unmatched languages.
+	require.Equal(t, "Intl", p.Localized(ctx, "siteName", "fr-FR"))
+	// Empty lang or missing map falls back to the base value.
+	require.Equal(t, "Cloudreve", p.Localized(ctx, "siteName", ""))
+	require.Equal(t, "", p.Localized(ctx, "other", "zh-CN"))
+
+	// Without a wildcard, unmatched languages get the base value.
+	p = NewProvider(stubAdapter{"siteName": "Cloudreve", "siteName_i18n": `{"zh-CN":"云盘"}`})
+	require.Equal(t, "Cloudreve", p.Localized(ctx, "siteName", "fr-FR"))
+
+	// Malformed i18n JSON is ignored.
+	p = NewProvider(stubAdapter{"siteName": "Cloudreve", "siteName_i18n": "{bad"})
+	require.Equal(t, "Cloudreve", p.Localized(ctx, "siteName", "zh-CN"))
+}
+
+func TestSiteBasicLocalized(t *testing.T) {
+	p := NewProvider(stubAdapter{
+		"siteName":      "Cloudreve",
+		"siteName_i18n": `{"zh-CN":"云盘"}`,
+		"siteDes":       "desc",
+		"siteDes_i18n":  `{"zh-CN":"描述"}`,
+	})
+	b := p.SiteBasicLocalized(context.Background(), "zh-CN")
+	require.Equal(t, "云盘", b.Name)
+	require.Equal(t, "描述", b.Description)
+	b = p.SiteBasicLocalized(context.Background(), "")
+	require.Equal(t, "Cloudreve", b.Name)
+	require.Equal(t, "desc", b.Description)
+}
+
+func TestParseAcceptLanguage(t *testing.T) {
+	require.Equal(t, "zh-CN", ParseAcceptLanguage("zh-CN,zh;q=0.9,en;q=0.8"))
+	require.Equal(t, "en-US", ParseAcceptLanguage("en-US;q=0.7"))
+	require.Equal(t, "", ParseAcceptLanguage(""))
+}

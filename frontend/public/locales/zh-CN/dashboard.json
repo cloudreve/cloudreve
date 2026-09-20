@@ -388,6 +388,8 @@
     "customFooterHTMLDes": "在页面底部插入的自定义 HTML 代码。",
     "announcement": "站点公告",
     "announcementDes": "展示给已登录用户的公告，留空不展示。当此项内容更改时，所有用户会重新看到公告。",
+    "translations": "多语言版本",
+    "translationsDes": "按语言填写不同版本，留空则回退到默认内容。用户将看到与其语言设置或浏览器语言匹配的版本。",
     "supportHTML": "支持 HTML 代码。",
     "branding": "图标",
     "smallIcon": "小图标",

@@ -542,11 +542,11 @@ func init() {
 	// sku.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	sku.UpdateDefaultUpdatedAt = skuDescUpdatedAt.UpdateDefault.(func() time.Time)
 	// skuDescEnabled is the schema descriptor for enabled field.
-	skuDescEnabled := skuFields[8].Descriptor()
+	skuDescEnabled := skuFields[10].Descriptor()
 	// sku.DefaultEnabled holds the default value on creation for the enabled field.
 	sku.DefaultEnabled = skuDescEnabled.Default.(bool)
 	// skuDescWeight is the schema descriptor for weight field.
-	skuDescWeight := skuFields[9].Descriptor()
+	skuDescWeight := skuFields[11].Descriptor()
 	// sku.DefaultWeight holds the default value on creation for the weight field.
 	sku.DefaultWeight = skuDescWeight.Default.(int)
 	ssobindingMixin := schema.SsoBinding{}.Mixin()
