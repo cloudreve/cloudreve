@@ -440,6 +440,9 @@ const (
 	OAuthClientDesktopGUID        = "393a1839-f52e-498e-9972-e77cc2241eee"
 	OAuthClientDesktopName        = "application:oauth.desktop"
 	OAuthClientDesktopRedirectURI = "/callback/desktop"
+	OAuthClientCLIGUID            = "6326d2af-2fef-4a99-94da-1ee8ef0ca53f"
+	OAuthClientCLIName            = "Cloudreve CLI"
+	OAuthClientCLIRedirectURI     = "http://127.0.0.1/callback"
 	OAuthClientiOSGUID            = "220db97a-44a3-44f7-99b6-d767262b4daa"
 	OAuthClientiOSName            = "application:setting.iOSApp"
 	OAuthClientiOSRedirectURI     = "/callback/ios"
@@ -454,6 +457,33 @@ func migrateOAuthClient(l logging.Logger, client *ent.Client, ctx context.Contex
 		return err
 	}
 
+	if err := migrateOAuthClientCLI(l, client, ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// migrateOAuthClientCLI preserves administrator changes to an existing built-in client.
+func migrateOAuthClientCLI(l logging.Logger, client *ent.Client, ctx context.Context) error {
+	if _, err := client.OAuthClient.Query().Where(oauthclient.GUID(OAuthClientCLIGUID)).First(ctx); err == nil {
+		l.Info("Default OAuth client (GUID=%s) already exists, skip migrating.", OAuthClientCLIGUID)
+		return nil
+	} else if !ent.IsNotFound(err) {
+		return fmt.Errorf("failed to query default CLI OAuth client: %w", err)
+	}
+
+	if _, err := client.OAuthClient.Create().
+		SetGUID(OAuthClientCLIGUID).
+		SetSecret("").
+		SetName(OAuthClientCLIName).
+		SetRedirectUris([]string{OAuthClientCLIRedirectURI}).
+		SetScopes([]string{"profile", "email", "openid", "offline_access", "UserInfo.Write", "Workflow.Write", "Files.Write", "Shares.Write"}).
+		SetProps(&types.OAuthClientProps{Icon: "/static/img/cloudreve.svg", RefreshTokenTTL: 7776000}).
+		SetIsEnabled(true).
+		Save(ctx); err != nil {
+		return fmt.Errorf("failed to create default CLI OAuth client: %w", err)
+	}
 	return nil
 }
 

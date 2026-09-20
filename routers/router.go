@@ -400,6 +400,11 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					controllers.FromJSON[oauth.GrantService](oauth.GrantParamCtx{}),
 					controllers.GrantAppConsent,
 				)
+				oauthRouter.POST("consent/deny",
+					middleware.LoginRequired(),
+					controllers.FromJSON[oauth.GrantService](oauth.GrantParamCtx{}),
+					controllers.DenyAppConsent,
+				)
 				oauthRouter.POST("token",
 					middleware.RateLimitByIP("oauth_token", 20, time.Minute),
 					controllers.FromForm[oauth.ExchangeTokenService](oauth.ExchangeTokenParamCtx{}),

@@ -55,7 +55,8 @@ func BuildAppRegistration(app *ent.OAuthClient, grant *ent.OAuthGrant) *AppRegis
 }
 
 type GrantResponse struct {
-	Code  string `json:"code"`
+	Code  string `json:"code,omitempty"`
+	Error string `json:"error,omitempty"`
 	State string `json:"state"`
 }
 
