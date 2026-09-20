@@ -29,6 +29,7 @@ type UserSettings struct {
 	VersionRetentionMax     int               `json:"version_retention_max,omitempty"`
 	Paswordless             bool              `json:"passwordless"`
 	TwoFAEnabled            bool              `json:"two_fa_enabled"`
+	TwoFABackupCount        int               `json:"two_factor_backup_count"`
 	Passkeys                []Passkey         `json:"passkeys,omitempty"`
 	DisableViewSync         bool              `json:"disable_view_sync"`
 	ShareLinksInProfile     string            `json:"share_links_in_profile"`
@@ -38,6 +39,10 @@ type UserSettings struct {
 	PreferredPolicy         string            `json:"preferred_policy,omitempty"`
 	OAuthGrants             []OauthGrant      `json:"oauth_grants,omitempty"`
 	LinkedAccounts          []LinkedAccount   `json:"linked_accounts,omitempty"`
+	// VaultEnabled reports whether the private space is set up.
+	VaultEnabled bool `json:"vault_enabled"`
+	// VaultUnlocked reports whether an unlock session is currently active.
+	VaultUnlocked bool `json:"vault_unlocked"`
 }
 
 // LinkedAccount is an external identity bound to the local account
@@ -53,6 +58,7 @@ func BuildUserSettings(u *ent.User, passkeys []*ent.Passkey, parser *uaparser.Pa
 		VersionRetentionExt:     u.Settings.VersionRetentionExt,
 		VersionRetentionMax:     u.Settings.VersionRetentionMax,
 		TwoFAEnabled:            u.TwoFactorSecret != "",
+		TwoFABackupCount:        len(u.TwoFactorBackupCodes),
 		Paswordless:             u.Password == "",
 		Passkeys: lo.Map(passkeys, func(item *ent.Passkey, index int) Passkey {
 			return BuildPasskey(item)
@@ -68,6 +74,7 @@ func BuildUserSettings(u *ent.User, passkeys []*ent.Passkey, parser *uaparser.Pa
 		LinkedAccounts: lo.Map(bindings, func(item *ent.SsoBinding, index int) LinkedAccount {
 			return LinkedAccount{Provider: item.Provider, CreatedAt: item.CreatedAt}
 		}),
+		VaultEnabled: u.VaultFolder > 0,
 	}
 }
 

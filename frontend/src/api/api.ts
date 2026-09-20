@@ -1519,6 +1519,23 @@ export function get2FAInitSecret(): ThunkResponse<string> {
   };
 }
 
+export function regenerate2FABackupCodes(two_fa_code: string): ThunkResponse<string[]> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/user/setting/2fa/backup`,
+        {
+          method: "PUT",
+          data: { two_fa_code },
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
 export function sendPreparePasskeyRegistration(): ThunkResponse<PasskeyCredentialOption> {
   return async (dispatch, _getState) => {
     return await dispatch(
@@ -2665,6 +2682,73 @@ export function sendUnbindSso(provider: string): ThunkResponse {
         `/user/setting/sso_binding/${provider}`,
         {
           method: "DELETE",
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function sendVaultSetup(password: string): ThunkResponse {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/user/vault",
+        {
+          method: "POST",
+          data: { password },
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function sendVaultUnlock(password: string): ThunkResponse {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/user/vault/unlock",
+        {
+          method: "PUT",
+          data: { password },
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function sendVaultLock(): ThunkResponse {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/user/vault/unlock",
+        {
+          method: "DELETE",
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function sendVaultDisable(password: string): ThunkResponse {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/user/vault",
+        {
+          method: "DELETE",
+          data: { password },
         },
         {
           ...defaultOpts,

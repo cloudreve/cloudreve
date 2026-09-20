@@ -29,6 +29,7 @@ type (
 		Expire          int      `json:"expire"`
 		ShareView       bool     `json:"share_view"`
 		ShowReadMe      bool     `json:"show_readme"`
+		HideReadMe      bool     `json:"hide_readme"`
 		AllowUpload     bool     `json:"allow_upload"`
 		AllowEdit       bool     `json:"allow_edit"`
 		PreviewOnly     bool     `json:"preview_only"`
@@ -127,6 +128,7 @@ func (service *ShareCreateService) Upsert(c *gin.Context, existed int) (string, 
 		ExistedShareID:  existed,
 		ShareView:       service.ShareView,
 		ShowReadMe:      service.ShowReadMe,
+		HideReadMe:      service.HideReadMe,
 		AllowUpload:     service.AllowUpload,
 		AllowEdit:       service.AllowEdit,
 		PreviewOnly:     service.PreviewOnly,

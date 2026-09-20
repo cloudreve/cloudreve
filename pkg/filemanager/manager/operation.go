@@ -333,6 +333,14 @@ func (l *manager) CreateOrUpdateShare(ctx context.Context, paths []*fs.URI, args
 			return nil, serializer.NewError(serializer.CodeNoPermissionErr, "cannot share symbolic file", nil)
 		}
 
+		// Files in the owner's private space are never shareable, even while
+		// the vault is unlocked.
+		if inside, err := l.fs.IsInPrivateSpace(ctx, file); err != nil {
+			return nil, serializer.NewError(serializer.CodeDBError, "failed to check private space", err)
+		} else if inside {
+			return nil, serializer.NewError(serializer.CodeNoPermissionErr, "files in private space cannot be shared", nil)
+		}
+
 		if _, ok := seen[file.ID()]; !ok {
 			seen[file.ID()] = struct{}{}
 			files = append(files, file)
@@ -373,6 +381,7 @@ func (l *manager) CreateOrUpdateShare(ctx context.Context, paths []*fs.URI, args
 	props := &types.ShareProps{
 		ShareView:   args.ShareView,
 		ShowReadMe:  args.ShowReadMe,
+		HideReadMe:  args.HideReadMe && args.ShowReadMe,
 		AllowUpload: args.AllowUpload || args.AllowEdit,
 		AllowEdit:   args.AllowEdit,
 		PreviewOnly: args.PreviewOnly,

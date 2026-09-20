@@ -90,6 +90,7 @@ export interface Share {
   source_uri?: string;
   password?: string;
   show_readme?: boolean;
+  hide_readme?: boolean;
   allow_upload?: boolean;
   allow_edit?: boolean;
   preview_only?: boolean;
@@ -179,6 +180,7 @@ export const Metadata = {
   thumbDisabled: "thumb:disabled",
   restore_uri: "sys:restore_uri",
   expected_collect_time: "sys:expected_collect_time",
+  vault: "sys:vault",
   full_text_index: "sys:fulltext_index",
   preferred_policy: "sys:preferred_policy",
 
@@ -359,6 +361,7 @@ export interface ShareCreateService {
   expire?: number;
   share_view?: boolean;
   show_readme?: boolean;
+  hide_readme?: boolean;
   allow_upload?: boolean;
   allow_edit?: boolean;
   preview_only?: boolean;

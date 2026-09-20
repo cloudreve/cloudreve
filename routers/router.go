@@ -1541,6 +1541,13 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 					// 获得二步验证初始化信息
 					setting.GET("2fa", controllers.UserInit2FA)
+					// 重新生成二步验证备用代码
+					setting.PUT("2fa/backup",
+						middleware.RequiredScopes(types.ScopeUserSecurityInfoWrite),
+						middleware.RateLimitByIP("backup_2fa", 5, time.Hour),
+						controllers.FromJSON[usersvc.Backup2FAService](usersvc.Backup2FAParameterCtx{}),
+						controllers.UserBackup2FA,
+					)
 					// 请求更换邮箱（向新地址发送确认链接）
 					setting.POST("email",
 						middleware.RequiredScopes(types.ScopeUserSecurityInfoWrite),
@@ -1553,6 +1560,36 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 						middleware.RequiredScopes(types.ScopeUserSecurityInfoWrite),
 						controllers.FromUri[usersvc.SsoUnbindService](usersvc.SsoUnbindParameterCtx{}),
 						controllers.UserUnbindSso,
+					)
+				}
+
+				// 私密空间
+				vault := user.Group("vault")
+				{
+					// 启用私密空间
+					vault.POST("",
+						middleware.RequiredScopes(types.ScopeUserSecurityInfoWrite),
+						controllers.FromJSON[usersvc.VaultSetupService](usersvc.VaultSetupParameterCtx{}),
+						controllers.UserVaultSetup,
+					)
+					// 解锁私密空间
+					vault.PUT("unlock",
+						middleware.RequiredScopes(types.ScopeUserSecurityInfoWrite),
+						middleware.RateLimitByIP("vault_unlock", 10, time.Hour),
+						controllers.FromJSON[usersvc.VaultUnlockService](usersvc.VaultUnlockParameterCtx{}),
+						controllers.UserVaultUnlock,
+					)
+					// 立即锁定私密空间
+					vault.DELETE("unlock",
+						middleware.RequiredScopes(types.ScopeUserSecurityInfoWrite),
+						controllers.FromJSON[usersvc.VaultUnlockService](usersvc.VaultUnlockParameterCtx{}),
+						controllers.UserVaultLock,
+					)
+					// 关闭私密空间
+					vault.DELETE("",
+						middleware.RequiredScopes(types.ScopeUserSecurityInfoWrite),
+						controllers.FromJSON[usersvc.VaultDisableService](usersvc.VaultDisableParameterCtx{}),
+						controllers.UserVaultDisable,
 					)
 				}
 

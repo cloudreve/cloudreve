@@ -70,7 +70,10 @@
       "sso_token_invalid": "Failed to verify the identity response.",
       "sso_no_email": "The identity provider did not return an email address.",
       "sso_account_unavailable": "No account is available for this identity. Registration may be restricted."
-    }
+    },
+    "inputBackupCode": "Enter one of your recovery codes",
+    "useBackupCode": "Use a recovery code instead",
+    "use2FACode": "Use authenticator code instead"
   },
   "oauth": {
     "authorize": "Authorize Application",
@@ -688,7 +691,9 @@
     "deleteViewSetting": "Delete view setting",
     "shareTargets": "Share targets",
     "shareTargetsCount_one": "{{count}} file selected",
-    "shareTargetsCount_other": "{{count}} files selected"
+    "shareTargetsCount_other": "{{count}} files selected",
+    "hideReadme": "Hide readme file",
+    "hideReadmeDes": "Keep the README file itself out of the share listing. Visitors still see the rendered readme."
   },
   "uploader": {
     "fileCopyName": "Copy of ",
@@ -772,6 +777,25 @@
     "concurrentTaskNumber": "Concurrent task limit",
     "dropFileHere": "Drop file to upload",
     "etaSuffix": ", ETA {{eta}}"
+  },
+  "vault": {
+    "title": "Private space",
+    "description": "Files in your private space are hidden from browsing and search until you unlock it with a separate password. Vault files cannot be shared or accessed via WebDAV.",
+    "enable": "Enable private space",
+    "enabled": "Private space enabled",
+    "disable": "Disable",
+    "disabled": "Private space disabled",
+    "disableDescription": "Disabling removes the lock; the folder and its contents remain as regular files.",
+    "confirmDisable": "Confirm disable",
+    "setPassword": "Set vault password",
+    "confirmPassword": "Vault password",
+    "enterPassword": "Vault password",
+    "lockNow": "Lock now",
+    "locked": "Private space locked",
+    "unlocked": "Unlocked",
+    "lockedState": "Locked",
+    "lockedTitle": "This folder is in your private space. Unlock to continue.",
+    "badge": "Private space"
   },
   "share": {
     "statistics": "Statistics",
@@ -1125,7 +1149,11 @@
     "deleteTagDes": "Remove tag \"{{name}}\" from {{count}} file(s)? The files themselves are kept.",
     "tagUpdated": "Tag updated",
     "tagDeleted": "Tag deleted",
-    "tagNameInvalid": "Tag name cannot be empty or contain \":\""
+    "tagNameInvalid": "Tag name cannot be empty or contain \":\"",
+    "backup2FACodes": "Recovery codes",
+    "backupCodesDes": "Recovery codes let you sign in when your authenticator is unavailable. Generating a new batch invalidates all previous codes.",
+    "backupCodesWarning": "Save these codes now. Each can be used once and they will not be shown again.",
+    "copyCodes": "Copy codes"
   },
   "vas": {
     "points": "Points",

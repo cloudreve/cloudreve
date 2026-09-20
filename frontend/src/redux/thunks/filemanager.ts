@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { getFileInfo, getFileList, getUserCapacity, sendPatchViewSync } from "../../api/api.ts";
+import { getFileInfo, getFileList, getUserCapacity, sendPatchViewSync, sendVaultUnlock } from "../../api/api.ts";
 import { ExplorerView, FileResponse, FileType, ListResponse, Metadata } from "../../api/explorer.ts";
 import { getActionOpt } from "../../component/FileManager/ContextMenu/useActionDisplayOpt.ts";
 import { ListViewColumnSetting } from "../../component/FileManager/Explorer/ListView/Column.tsx";
@@ -500,6 +500,15 @@ export function retrySharePassword(index: number, password: string): AppThunk {
 
     console.log(crUri.toString());
     dispatch(navigateToPath(index, crUri.toString()));
+  };
+}
+
+// unlockVault verifies the private-space password and retries the current
+// listing once the unlock session is opened server-side.
+export function unlockVault(index: number, password: string): AppThunk<Promise<void>> {
+  return async (dispatch, _getState) => {
+    await dispatch(sendVaultUnlock(password));
+    dispatch(refreshFileList(index));
   };
 }
 

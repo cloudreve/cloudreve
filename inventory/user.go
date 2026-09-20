@@ -94,8 +94,18 @@ type (
 		UpdateNickname(ctx context.Context, u *ent.User, name string) (*ent.User, error)
 		// UpdatePassword updates user password.
 		UpdatePassword(ctx context.Context, u *ent.User, newPassword string) (*ent.User, error)
+		// UpdateVault sets or clears the user's private-space credential and
+		// root folder ID. passwordDigest must be produced by DigestPassword;
+		// pass an empty digest and folderID 0 to disable the vault.
+		UpdateVault(ctx context.Context, u *ent.User, passwordDigest string, folderID int) (*ent.User, error)
 		// UpdateTwoFASecret updates user two factor secret.
 		UpdateTwoFASecret(ctx context.Context, u *ent.User, secret string) (*ent.User, error)
+		// UpdateTwoFABackupCodes replaces the stored one-time recovery code
+		// digests (salt:digest store format, same as account passwords).
+		UpdateTwoFABackupCodes(ctx context.Context, u *ent.User, digests []string) (*ent.User, error)
+		// ConsumeTwoFABackupCode verifies a plaintext recovery code against the
+		// stored digests; on match the digest is removed and true is returned.
+		ConsumeTwoFABackupCode(ctx context.Context, u *ent.User, code string) (bool, error)
 		// ListPasskeys list user's passkeys.
 		ListPasskeys(ctx context.Context, uid int) ([]*ent.Passkey, error)
 		// AddPasskey add passkey to user.
@@ -176,10 +186,55 @@ func (c *userClient) UpdateAvatar(ctx context.Context, u *ent.User, avatar strin
 }
 
 func (c *userClient) UpdateTwoFASecret(ctx context.Context, u *ent.User, secret string) (*ent.User, error) {
+	// Recovery codes are bound to the 2FA lifecycle: they are invalidated
+	// whenever the secret is cleared or rotated.
+	stm := c.client.User.UpdateOne(u).ClearTwoFactorBackupCodes()
 	if secret == "" {
-		return c.client.User.UpdateOne(u).ClearTwoFactorSecret().Save(ctx)
+		return stm.ClearTwoFactorSecret().Save(ctx)
 	}
-	return c.client.User.UpdateOne(u).SetTwoFactorSecret(secret).Save(ctx)
+	return stm.SetTwoFactorSecret(secret).Save(ctx)
+}
+
+func (c *userClient) UpdateTwoFABackupCodes(ctx context.Context, u *ent.User, digests []string) (*ent.User, error) {
+	if len(digests) == 0 {
+		return c.client.User.UpdateOne(u).ClearTwoFactorBackupCodes().Save(ctx)
+	}
+	return c.client.User.UpdateOne(u).SetTwoFactorBackupCodes(digests).Save(ctx)
+}
+
+func (c *userClient) ConsumeTwoFABackupCode(ctx context.Context, u *ent.User, code string) (bool, error) {
+	normalized := normalizeBackupCode(code)
+	if normalized == "" {
+		return false, nil
+	}
+
+	remaining := make([]string, 0, len(u.TwoFactorBackupCodes))
+	matched := false
+	for _, digest := range u.TwoFactorBackupCodes {
+		if !matched && CheckPassword(&ent.User{Password: digest}, normalized) == nil {
+			matched = true
+			continue
+		}
+		remaining = append(remaining, digest)
+	}
+	if !matched {
+		return false, nil
+	}
+	if _, err := c.UpdateTwoFABackupCodes(ctx, u, remaining); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// normalizeBackupCode strips separators and case so users can enter codes
+// with or without the display hyphenation.
+func normalizeBackupCode(code string) string {
+	return strings.ToLower(strings.Map(func(r rune) rune {
+		if r == '-' || r == ' ' {
+			return -1
+		}
+		return r
+	}, code))
 }
 
 func (c *userClient) UpdatePassword(ctx context.Context, u *ent.User, newPassword string) (*ent.User, error) {
@@ -189,6 +244,16 @@ func (c *userClient) UpdatePassword(ctx context.Context, u *ent.User, newPasswor
 	}
 
 	return c.client.User.UpdateOne(u).SetPassword(digest).Save(ctx)
+}
+
+func (c *userClient) UpdateVault(ctx context.Context, u *ent.User, passwordDigest string, folderID int) (*ent.User, error) {
+	stm := c.client.User.UpdateOne(u).SetVaultFolder(folderID)
+	if passwordDigest == "" {
+		stm = stm.ClearVaultPassword()
+	} else {
+		stm = stm.SetVaultPassword(passwordDigest)
+	}
+	return stm.Save(ctx)
 }
 
 func (c *userClient) SetClient(newClient *ent.Client) TxOperator {
@@ -690,6 +755,13 @@ func IsAnonymousUser(u *ent.User) bool {
 	return u.ID == 0
 }
 
+// CheckVaultPassword verifies the private-space password against the vault
+// digest stored on the user record. Returns ErrorIncorrectPassword on
+// mismatch, same contract as CheckPassword.
+func CheckVaultPassword(u *ent.User, password string) error {
+	return CheckPassword(&ent.User{Password: u.VaultPassword}, password)
+}
+
 // CheckPassword 根据明文校验密码
 func CheckPassword(u *ent.User, password string) error {
 	// 根据存储密码拆分为 Salt 和 Digest
@@ -746,6 +818,14 @@ func withUserEagerLoading(ctx context.Context, q *ent.UserQuery) *ent.UserQuery 
 		q.WithPasskey()
 	}
 	return q
+}
+
+// DigestPassword returns the salt:digest store format used for account
+// passwords, private-space passwords, and 2FA recovery codes. Exported for
+// credential writers outside this package; verification goes through
+// CheckPassword.
+func DigestPassword(password string) (string, error) {
+	return digestPassword(password)
 }
 
 func digestPassword(password string) (string, error) {

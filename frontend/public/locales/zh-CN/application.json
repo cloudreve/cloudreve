@@ -70,7 +70,10 @@
       "sso_token_invalid": "身份响应验证失败。",
       "sso_no_email": "身份提供方未返回邮箱地址。",
       "sso_account_unavailable": "此身份没有可用账号，注册可能受限。"
-    }
+    },
+    "inputBackupCode": "请输入您的备用恢复代码",
+    "useBackupCode": "改用备用恢复代码",
+    "use2FACode": "改用验证器验证码"
   },
   "oauth": {
     "authorize": "授权应用",
@@ -688,7 +691,9 @@
     "deleteViewSetting": "删除视图设置",
     "shareTargets": "分享对象",
     "shareTargetsCount_one": "已选择 {{count}} 个项目",
-    "shareTargetsCount_other": "已选择 {{count}} 个项目"
+    "shareTargetsCount_other": "已选择 {{count}} 个项目",
+    "hideReadme": "隐藏 README 文件",
+    "hideReadmeDes": "在分享文件列表中隐藏 README 文件本身，访客仍可看到渲染后的说明内容。"
   },
   "uploader": {
     "fileCopyName": "副本_",
@@ -772,6 +777,25 @@
     "concurrentTaskNumber": "同时上传的任务数量",
     "dropFileHere": "松开鼠标开始上传",
     "etaSuffix": "，预计剩余 {{eta}}"
+  },
+  "vault": {
+    "title": "私密空间",
+    "description": "私密空间中的文件在解锁前不会出现在浏览与搜索结果中，使用独立密码解锁。空间内文件无法分享，也无法通过 WebDAV 访问。",
+    "enable": "启用私密空间",
+    "enabled": "私密空间已启用",
+    "disable": "关闭",
+    "disabled": "私密空间已关闭",
+    "disableDescription": "关闭将解除锁定；文件夹及其内容会保留为普通文件。",
+    "confirmDisable": "确认关闭",
+    "setPassword": "设置私密空间密码",
+    "confirmPassword": "私密空间密码",
+    "enterPassword": "私密空间密码",
+    "lockNow": "立即锁定",
+    "locked": "私密空间已锁定",
+    "unlocked": "已解锁",
+    "lockedState": "已锁定",
+    "lockedTitle": "此文件夹位于私密空间内，请解锁后继续。",
+    "badge": "私密空间"
   },
   "share": {
     "statistics": "统计",
@@ -1125,7 +1149,11 @@
     "deleteTagDes": "将标签「{{name}}」从 {{count}} 个文件中移除？文件本身不会被删除。",
     "tagUpdated": "标签已更新",
     "tagDeleted": "标签已删除",
-    "tagNameInvalid": "标签名不能为空或包含「:」"
+    "tagNameInvalid": "标签名不能为空或包含「:」",
+    "backup2FACodes": "备用恢复代码",
+    "backupCodesDes": "当验证器不可用时，可使用备用恢复代码登录。重新生成将使所有旧代码失效。",
+    "backupCodesWarning": "请立即保存这些代码。每个代码仅可使用一次，且不会再次显示。",
+    "copyCodes": "复制代码"
   },
   "vas": {
     "points": "积分",

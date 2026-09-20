@@ -58,6 +58,11 @@ func TestMasterRouteWiring(t *testing.T) {
 		"GET /api/v4/session/qq/login",
 		"GET /api/v4/session/qq/callback",
 		"DELETE /api/v4/user/setting/sso_binding/:provider",
+		"POST /api/v4/user/vault",
+		"PUT /api/v4/user/vault/unlock",
+		"DELETE /api/v4/user/vault/unlock",
+		"DELETE /api/v4/user/vault",
+		"PUT /api/v4/user/setting/2fa/backup",
 		"GET /f/:id/:name",
 	}
 	for _, e := range expected {

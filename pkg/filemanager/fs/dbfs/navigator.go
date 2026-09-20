@@ -52,6 +52,7 @@ var (
 	ErrFileCountLimitedReached = serializer.NewError(serializer.CodeFileCountLimitedReached, "Walked file count reached limit", nil)
 	ErrSymbolicFolderFound     = serializer.NewError(serializer.CodeNoPermissionErr, "Symbolic folder cannot be walked into", nil)
 	ErrLoginRequired           = serializer.NewError(serializer.CodeCheckLogin, "Login required", nil)
+	ErrVaultLocked             = serializer.NewError(serializer.CodeVaultLocked, "Private space is locked", nil)
 
 	fullOrderByOption          = []string{"name", "size", "updated_at", "created_at"}
 	searchLimitedOrderByOption = []string{"created_at"}

@@ -287,6 +287,9 @@ type (
 		ShareView bool `json:"share_view,omitempty"`
 		// Whether to automatically show readme file in share view
 		ShowReadMe bool `json:"show_read_me,omitempty"`
+		// Whether to hide the readme file itself from the share listing
+		// (only meaningful together with ShowReadMe)
+		HideReadMe bool `json:"hide_readme,omitempty"`
 		// Whether share visitors can upload new files into the shared folder
 		AllowUpload bool `json:"allow_upload,omitempty"`
 		// Whether share visitors can rename, move and delete files (implies upload)

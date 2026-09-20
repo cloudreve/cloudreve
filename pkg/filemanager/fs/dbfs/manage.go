@@ -768,6 +768,14 @@ func (f *DBFS) GetFileFromDirectLink(ctx context.Context, dl *ent.DirectLink) (f
 		return nil, serializer.NewError(serializer.CodeNotFound, "direct link not found", err)
 	}
 
+	// Files inside a private space are never served through direct links;
+	// there is no session to carry an unlock state.
+	if inside, err := f.fileInVault(ctx, file, f.vaultRootID(ctx, fileModel.OwnerID)); err != nil {
+		return nil, err
+	} else if inside {
+		return nil, fs.ErrDirectLinkInvalid
+	}
+
 	return file, nil
 }
 
@@ -797,6 +805,10 @@ func (f *DBFS) TraverseFile(ctx context.Context, fileID int) (fs.File, error) {
 
 	if root.Name() != inventory.RootFolderName {
 		rootUri = newTrashUri(root.Name())
+	}
+
+	if err := f.requireVaultAccess(ctx, file); err != nil {
+		return nil, err
 	}
 
 	navigator, err := f.getNavigator(ctx, rootUri)

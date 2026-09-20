@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/cloudreve/Cloudreve/v4/ent/credittxn"
 	"github.com/cloudreve/Cloudreve/v4/ent/davaccount"
@@ -250,6 +251,71 @@ func (uu *UserUpdate) SetNillableTwoFactorSecret(s *string) *UserUpdate {
 // ClearTwoFactorSecret clears the value of the "two_factor_secret" field.
 func (uu *UserUpdate) ClearTwoFactorSecret() *UserUpdate {
 	uu.mutation.ClearTwoFactorSecret()
+	return uu
+}
+
+// SetVaultPassword sets the "vault_password" field.
+func (uu *UserUpdate) SetVaultPassword(s string) *UserUpdate {
+	uu.mutation.SetVaultPassword(s)
+	return uu
+}
+
+// SetNillableVaultPassword sets the "vault_password" field if the given value is not nil.
+func (uu *UserUpdate) SetNillableVaultPassword(s *string) *UserUpdate {
+	if s != nil {
+		uu.SetVaultPassword(*s)
+	}
+	return uu
+}
+
+// ClearVaultPassword clears the value of the "vault_password" field.
+func (uu *UserUpdate) ClearVaultPassword() *UserUpdate {
+	uu.mutation.ClearVaultPassword()
+	return uu
+}
+
+// SetVaultFolder sets the "vault_folder" field.
+func (uu *UserUpdate) SetVaultFolder(i int) *UserUpdate {
+	uu.mutation.ResetVaultFolder()
+	uu.mutation.SetVaultFolder(i)
+	return uu
+}
+
+// SetNillableVaultFolder sets the "vault_folder" field if the given value is not nil.
+func (uu *UserUpdate) SetNillableVaultFolder(i *int) *UserUpdate {
+	if i != nil {
+		uu.SetVaultFolder(*i)
+	}
+	return uu
+}
+
+// AddVaultFolder adds i to the "vault_folder" field.
+func (uu *UserUpdate) AddVaultFolder(i int) *UserUpdate {
+	uu.mutation.AddVaultFolder(i)
+	return uu
+}
+
+// ClearVaultFolder clears the value of the "vault_folder" field.
+func (uu *UserUpdate) ClearVaultFolder() *UserUpdate {
+	uu.mutation.ClearVaultFolder()
+	return uu
+}
+
+// SetTwoFactorBackupCodes sets the "two_factor_backup_codes" field.
+func (uu *UserUpdate) SetTwoFactorBackupCodes(s []string) *UserUpdate {
+	uu.mutation.SetTwoFactorBackupCodes(s)
+	return uu
+}
+
+// AppendTwoFactorBackupCodes appends s to the "two_factor_backup_codes" field.
+func (uu *UserUpdate) AppendTwoFactorBackupCodes(s []string) *UserUpdate {
+	uu.mutation.AppendTwoFactorBackupCodes(s)
+	return uu
+}
+
+// ClearTwoFactorBackupCodes clears the value of the "two_factor_backup_codes" field.
+func (uu *UserUpdate) ClearTwoFactorBackupCodes() *UserUpdate {
+	uu.mutation.ClearTwoFactorBackupCodes()
 	return uu
 }
 
@@ -925,6 +991,32 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if uu.mutation.TwoFactorSecretCleared() {
 		_spec.ClearField(user.FieldTwoFactorSecret, field.TypeString)
+	}
+	if value, ok := uu.mutation.VaultPassword(); ok {
+		_spec.SetField(user.FieldVaultPassword, field.TypeString, value)
+	}
+	if uu.mutation.VaultPasswordCleared() {
+		_spec.ClearField(user.FieldVaultPassword, field.TypeString)
+	}
+	if value, ok := uu.mutation.VaultFolder(); ok {
+		_spec.SetField(user.FieldVaultFolder, field.TypeInt, value)
+	}
+	if value, ok := uu.mutation.AddedVaultFolder(); ok {
+		_spec.AddField(user.FieldVaultFolder, field.TypeInt, value)
+	}
+	if uu.mutation.VaultFolderCleared() {
+		_spec.ClearField(user.FieldVaultFolder, field.TypeInt)
+	}
+	if value, ok := uu.mutation.TwoFactorBackupCodes(); ok {
+		_spec.SetField(user.FieldTwoFactorBackupCodes, field.TypeJSON, value)
+	}
+	if value, ok := uu.mutation.AppendedTwoFactorBackupCodes(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, user.FieldTwoFactorBackupCodes, value)
+		})
+	}
+	if uu.mutation.TwoFactorBackupCodesCleared() {
+		_spec.ClearField(user.FieldTwoFactorBackupCodes, field.TypeJSON)
 	}
 	if value, ok := uu.mutation.Avatar(); ok {
 		_spec.SetField(user.FieldAvatar, field.TypeString, value)
@@ -1782,6 +1874,71 @@ func (uuo *UserUpdateOne) ClearTwoFactorSecret() *UserUpdateOne {
 	return uuo
 }
 
+// SetVaultPassword sets the "vault_password" field.
+func (uuo *UserUpdateOne) SetVaultPassword(s string) *UserUpdateOne {
+	uuo.mutation.SetVaultPassword(s)
+	return uuo
+}
+
+// SetNillableVaultPassword sets the "vault_password" field if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableVaultPassword(s *string) *UserUpdateOne {
+	if s != nil {
+		uuo.SetVaultPassword(*s)
+	}
+	return uuo
+}
+
+// ClearVaultPassword clears the value of the "vault_password" field.
+func (uuo *UserUpdateOne) ClearVaultPassword() *UserUpdateOne {
+	uuo.mutation.ClearVaultPassword()
+	return uuo
+}
+
+// SetVaultFolder sets the "vault_folder" field.
+func (uuo *UserUpdateOne) SetVaultFolder(i int) *UserUpdateOne {
+	uuo.mutation.ResetVaultFolder()
+	uuo.mutation.SetVaultFolder(i)
+	return uuo
+}
+
+// SetNillableVaultFolder sets the "vault_folder" field if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableVaultFolder(i *int) *UserUpdateOne {
+	if i != nil {
+		uuo.SetVaultFolder(*i)
+	}
+	return uuo
+}
+
+// AddVaultFolder adds i to the "vault_folder" field.
+func (uuo *UserUpdateOne) AddVaultFolder(i int) *UserUpdateOne {
+	uuo.mutation.AddVaultFolder(i)
+	return uuo
+}
+
+// ClearVaultFolder clears the value of the "vault_folder" field.
+func (uuo *UserUpdateOne) ClearVaultFolder() *UserUpdateOne {
+	uuo.mutation.ClearVaultFolder()
+	return uuo
+}
+
+// SetTwoFactorBackupCodes sets the "two_factor_backup_codes" field.
+func (uuo *UserUpdateOne) SetTwoFactorBackupCodes(s []string) *UserUpdateOne {
+	uuo.mutation.SetTwoFactorBackupCodes(s)
+	return uuo
+}
+
+// AppendTwoFactorBackupCodes appends s to the "two_factor_backup_codes" field.
+func (uuo *UserUpdateOne) AppendTwoFactorBackupCodes(s []string) *UserUpdateOne {
+	uuo.mutation.AppendTwoFactorBackupCodes(s)
+	return uuo
+}
+
+// ClearTwoFactorBackupCodes clears the value of the "two_factor_backup_codes" field.
+func (uuo *UserUpdateOne) ClearTwoFactorBackupCodes() *UserUpdateOne {
+	uuo.mutation.ClearTwoFactorBackupCodes()
+	return uuo
+}
+
 // SetAvatar sets the "avatar" field.
 func (uuo *UserUpdateOne) SetAvatar(s string) *UserUpdateOne {
 	uuo.mutation.SetAvatar(s)
@@ -2484,6 +2641,32 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 	}
 	if uuo.mutation.TwoFactorSecretCleared() {
 		_spec.ClearField(user.FieldTwoFactorSecret, field.TypeString)
+	}
+	if value, ok := uuo.mutation.VaultPassword(); ok {
+		_spec.SetField(user.FieldVaultPassword, field.TypeString, value)
+	}
+	if uuo.mutation.VaultPasswordCleared() {
+		_spec.ClearField(user.FieldVaultPassword, field.TypeString)
+	}
+	if value, ok := uuo.mutation.VaultFolder(); ok {
+		_spec.SetField(user.FieldVaultFolder, field.TypeInt, value)
+	}
+	if value, ok := uuo.mutation.AddedVaultFolder(); ok {
+		_spec.AddField(user.FieldVaultFolder, field.TypeInt, value)
+	}
+	if uuo.mutation.VaultFolderCleared() {
+		_spec.ClearField(user.FieldVaultFolder, field.TypeInt)
+	}
+	if value, ok := uuo.mutation.TwoFactorBackupCodes(); ok {
+		_spec.SetField(user.FieldTwoFactorBackupCodes, field.TypeJSON, value)
+	}
+	if value, ok := uuo.mutation.AppendedTwoFactorBackupCodes(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, user.FieldTwoFactorBackupCodes, value)
+		})
+	}
+	if uuo.mutation.TwoFactorBackupCodesCleared() {
+		_spec.ClearField(user.FieldTwoFactorBackupCodes, field.TypeJSON)
 	}
 	if value, ok := uuo.mutation.Avatar(); ok {
 		_spec.SetField(user.FieldAvatar, field.TypeString, value)

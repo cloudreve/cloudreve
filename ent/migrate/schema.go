@@ -787,6 +787,9 @@ var (
 		{Name: "storage", Type: field.TypeInt64, Default: 0},
 		{Name: "credits", Type: field.TypeInt64, Default: 0},
 		{Name: "two_factor_secret", Type: field.TypeString, Nullable: true},
+		{Name: "vault_password", Type: field.TypeString, Nullable: true},
+		{Name: "vault_folder", Type: field.TypeInt, Nullable: true, Default: 0},
+		{Name: "two_factor_backup_codes", Type: field.TypeJSON, Nullable: true},
 		{Name: "avatar", Type: field.TypeString, Nullable: true},
 		{Name: "settings", Type: field.TypeJSON, Nullable: true},
 		{Name: "group_users", Type: field.TypeInt},
@@ -799,7 +802,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "users_groups_users",
-				Columns:    []*schema.Column{UsersColumns[16]},
+				Columns:    []*schema.Column{UsersColumns[19]},
 				RefColumns: []*schema.Column{GroupsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
