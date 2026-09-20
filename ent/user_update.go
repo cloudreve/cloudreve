@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/cloudreve/Cloudreve/v4/ent/credittxn"
 	"github.com/cloudreve/Cloudreve/v4/ent/davaccount"
@@ -297,6 +298,24 @@ func (uu *UserUpdate) AddVaultFolder(i int) *UserUpdate {
 // ClearVaultFolder clears the value of the "vault_folder" field.
 func (uu *UserUpdate) ClearVaultFolder() *UserUpdate {
 	uu.mutation.ClearVaultFolder()
+	return uu
+}
+
+// SetTwoFactorBackupCodes sets the "two_factor_backup_codes" field.
+func (uu *UserUpdate) SetTwoFactorBackupCodes(s []string) *UserUpdate {
+	uu.mutation.SetTwoFactorBackupCodes(s)
+	return uu
+}
+
+// AppendTwoFactorBackupCodes appends s to the "two_factor_backup_codes" field.
+func (uu *UserUpdate) AppendTwoFactorBackupCodes(s []string) *UserUpdate {
+	uu.mutation.AppendTwoFactorBackupCodes(s)
+	return uu
+}
+
+// ClearTwoFactorBackupCodes clears the value of the "two_factor_backup_codes" field.
+func (uu *UserUpdate) ClearTwoFactorBackupCodes() *UserUpdate {
+	uu.mutation.ClearTwoFactorBackupCodes()
 	return uu
 }
 
@@ -987,6 +1006,17 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if uu.mutation.VaultFolderCleared() {
 		_spec.ClearField(user.FieldVaultFolder, field.TypeInt)
+	}
+	if value, ok := uu.mutation.TwoFactorBackupCodes(); ok {
+		_spec.SetField(user.FieldTwoFactorBackupCodes, field.TypeJSON, value)
+	}
+	if value, ok := uu.mutation.AppendedTwoFactorBackupCodes(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, user.FieldTwoFactorBackupCodes, value)
+		})
+	}
+	if uu.mutation.TwoFactorBackupCodesCleared() {
+		_spec.ClearField(user.FieldTwoFactorBackupCodes, field.TypeJSON)
 	}
 	if value, ok := uu.mutation.Avatar(); ok {
 		_spec.SetField(user.FieldAvatar, field.TypeString, value)
@@ -1891,6 +1921,24 @@ func (uuo *UserUpdateOne) ClearVaultFolder() *UserUpdateOne {
 	return uuo
 }
 
+// SetTwoFactorBackupCodes sets the "two_factor_backup_codes" field.
+func (uuo *UserUpdateOne) SetTwoFactorBackupCodes(s []string) *UserUpdateOne {
+	uuo.mutation.SetTwoFactorBackupCodes(s)
+	return uuo
+}
+
+// AppendTwoFactorBackupCodes appends s to the "two_factor_backup_codes" field.
+func (uuo *UserUpdateOne) AppendTwoFactorBackupCodes(s []string) *UserUpdateOne {
+	uuo.mutation.AppendTwoFactorBackupCodes(s)
+	return uuo
+}
+
+// ClearTwoFactorBackupCodes clears the value of the "two_factor_backup_codes" field.
+func (uuo *UserUpdateOne) ClearTwoFactorBackupCodes() *UserUpdateOne {
+	uuo.mutation.ClearTwoFactorBackupCodes()
+	return uuo
+}
+
 // SetAvatar sets the "avatar" field.
 func (uuo *UserUpdateOne) SetAvatar(s string) *UserUpdateOne {
 	uuo.mutation.SetAvatar(s)
@@ -2608,6 +2656,17 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 	}
 	if uuo.mutation.VaultFolderCleared() {
 		_spec.ClearField(user.FieldVaultFolder, field.TypeInt)
+	}
+	if value, ok := uuo.mutation.TwoFactorBackupCodes(); ok {
+		_spec.SetField(user.FieldTwoFactorBackupCodes, field.TypeJSON, value)
+	}
+	if value, ok := uuo.mutation.AppendedTwoFactorBackupCodes(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, user.FieldTwoFactorBackupCodes, value)
+		})
+	}
+	if uuo.mutation.TwoFactorBackupCodesCleared() {
+		_spec.ClearField(user.FieldTwoFactorBackupCodes, field.TypeJSON)
 	}
 	if value, ok := uuo.mutation.Avatar(); ok {
 		_spec.SetField(user.FieldAvatar, field.TypeString, value)

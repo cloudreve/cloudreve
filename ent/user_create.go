@@ -231,6 +231,12 @@ func (uc *UserCreate) SetNillableVaultFolder(i *int) *UserCreate {
 	return uc
 }
 
+// SetTwoFactorBackupCodes sets the "two_factor_backup_codes" field.
+func (uc *UserCreate) SetTwoFactorBackupCodes(s []string) *UserCreate {
+	uc.mutation.SetTwoFactorBackupCodes(s)
+	return uc
+}
+
 // SetAvatar sets the "avatar" field.
 func (uc *UserCreate) SetAvatar(s string) *UserCreate {
 	uc.mutation.SetAvatar(s)
@@ -674,6 +680,10 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := uc.mutation.VaultFolder(); ok {
 		_spec.SetField(user.FieldVaultFolder, field.TypeInt, value)
 		_node.VaultFolder = value
+	}
+	if value, ok := uc.mutation.TwoFactorBackupCodes(); ok {
+		_spec.SetField(user.FieldTwoFactorBackupCodes, field.TypeJSON, value)
+		_node.TwoFactorBackupCodes = value
 	}
 	if value, ok := uc.mutation.Avatar(); ok {
 		_spec.SetField(user.FieldAvatar, field.TypeString, value)
@@ -1194,6 +1204,24 @@ func (u *UserUpsert) ClearVaultFolder() *UserUpsert {
 	return u
 }
 
+// SetTwoFactorBackupCodes sets the "two_factor_backup_codes" field.
+func (u *UserUpsert) SetTwoFactorBackupCodes(v []string) *UserUpsert {
+	u.Set(user.FieldTwoFactorBackupCodes, v)
+	return u
+}
+
+// UpdateTwoFactorBackupCodes sets the "two_factor_backup_codes" field to the value that was provided on create.
+func (u *UserUpsert) UpdateTwoFactorBackupCodes() *UserUpsert {
+	u.SetExcluded(user.FieldTwoFactorBackupCodes)
+	return u
+}
+
+// ClearTwoFactorBackupCodes clears the value of the "two_factor_backup_codes" field.
+func (u *UserUpsert) ClearTwoFactorBackupCodes() *UserUpsert {
+	u.SetNull(user.FieldTwoFactorBackupCodes)
+	return u
+}
+
 // SetAvatar sets the "avatar" field.
 func (u *UserUpsert) SetAvatar(v string) *UserUpsert {
 	u.Set(user.FieldAvatar, v)
@@ -1557,6 +1585,27 @@ func (u *UserUpsertOne) UpdateVaultFolder() *UserUpsertOne {
 func (u *UserUpsertOne) ClearVaultFolder() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
 		s.ClearVaultFolder()
+	})
+}
+
+// SetTwoFactorBackupCodes sets the "two_factor_backup_codes" field.
+func (u *UserUpsertOne) SetTwoFactorBackupCodes(v []string) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetTwoFactorBackupCodes(v)
+	})
+}
+
+// UpdateTwoFactorBackupCodes sets the "two_factor_backup_codes" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateTwoFactorBackupCodes() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateTwoFactorBackupCodes()
+	})
+}
+
+// ClearTwoFactorBackupCodes clears the value of the "two_factor_backup_codes" field.
+func (u *UserUpsertOne) ClearTwoFactorBackupCodes() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearTwoFactorBackupCodes()
 	})
 }
 
@@ -2102,6 +2151,27 @@ func (u *UserUpsertBulk) UpdateVaultFolder() *UserUpsertBulk {
 func (u *UserUpsertBulk) ClearVaultFolder() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
 		s.ClearVaultFolder()
+	})
+}
+
+// SetTwoFactorBackupCodes sets the "two_factor_backup_codes" field.
+func (u *UserUpsertBulk) SetTwoFactorBackupCodes(v []string) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetTwoFactorBackupCodes(v)
+	})
+}
+
+// UpdateTwoFactorBackupCodes sets the "two_factor_backup_codes" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateTwoFactorBackupCodes() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateTwoFactorBackupCodes()
+	})
+}
+
+// ClearTwoFactorBackupCodes clears the value of the "two_factor_backup_codes" field.
+func (u *UserUpsertBulk) ClearTwoFactorBackupCodes() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearTwoFactorBackupCodes()
 	})
 }
 

@@ -42,10 +42,12 @@ import AppsListOutlined from "../../../Icons/AppsListOutlined.tsx";
 import Dismiss from "../../../Icons/Dismiss.tsx";
 import Edit from "../../../Icons/Edit.tsx";
 import LockClosed from "../../../Icons/LockClosed.tsx";
+import LockClosedKey from "../../../Icons/LockClosedKey.tsx";
 import Open from "../../../Icons/Open.tsx";
 import ShieldLock from "../../../Icons/ShieldLock.tsx";
 import { ProfileSettingProps } from "../ProfileSetting.tsx";
 import SettingForm from "../SettingForm.tsx";
+import Backup2FACodesDialog from "./Backup2FACodesDialog.tsx";
 import Disable2FADialog from "./Disable2FADialog.tsx";
 import Enable2FADialog from "./Enable2FADialog.tsx";
 import PasskeyList from "./PasskeyList.tsx";
@@ -415,6 +417,7 @@ const SecuritySetting = ({ setting, setSetting }: ProfileSettingProps) => {
   const [repeatPassword, setRepeatPassword] = useState("");
   const [enable2FAOpen, setEnable2FAOpen] = useState(false);
   const [disable2FAOpen, setDisable2FAOpen] = useState(false);
+  const [backup2FAOpen, setBackup2FAOpen] = useState(false);
 
   const submitResetPassword = () => {
     if (!resetPwdFormRef.current) {
@@ -581,6 +584,17 @@ const SecuritySetting = ({ setting, setSetting }: ProfileSettingProps) => {
         >
           {t(`setting.${setting.two_fa_enabled ? "disable" : "enable"}2FA`)}
         </SecondaryButton>
+        {setting.two_fa_enabled && (
+          <SecondaryButton
+            sx={{ mt: 1, ml: 1 }}
+            variant={"outlined"}
+            startIcon={<LockClosedKey />}
+            onClick={() => setBackup2FAOpen(true)}
+          >
+            {t("setting.backup2FACodes")}
+            {typeof setting.two_factor_backup_count === "number" && ` (${setting.two_factor_backup_count})`}
+          </SecondaryButton>
+        )}
       </SettingForm>
       {authEnabled && (
         <SettingForm title={t("setting.hardwareAuthenticator")}>
@@ -623,6 +637,11 @@ const SecuritySetting = ({ setting, setSetting }: ProfileSettingProps) => {
         open={disable2FAOpen}
         onClose={() => setDisable2FAOpen(false)}
         on2FADisabled={on2FAChange(false)}
+      />
+      <Backup2FACodesDialog
+        open={backup2FAOpen}
+        onClose={() => setBackup2FAOpen(false)}
+        onCodesRegenerated={(count) => setSetting({ ...setting, two_factor_backup_count: count })}
       />
     </Stack>
   );

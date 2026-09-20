@@ -29,6 +29,7 @@ type UserSettings struct {
 	VersionRetentionMax     int               `json:"version_retention_max,omitempty"`
 	Paswordless             bool              `json:"passwordless"`
 	TwoFAEnabled            bool              `json:"two_fa_enabled"`
+	TwoFABackupCount        int               `json:"two_factor_backup_count"`
 	Passkeys                []Passkey         `json:"passkeys,omitempty"`
 	DisableViewSync         bool              `json:"disable_view_sync"`
 	ShareLinksInProfile     string            `json:"share_links_in_profile"`
@@ -57,6 +58,7 @@ func BuildUserSettings(u *ent.User, passkeys []*ent.Passkey, parser *uaparser.Pa
 		VersionRetentionExt:     u.Settings.VersionRetentionExt,
 		VersionRetentionMax:     u.Settings.VersionRetentionMax,
 		TwoFAEnabled:            u.TwoFactorSecret != "",
+		TwoFABackupCount:        len(u.TwoFactorBackupCodes),
 		Paswordless:             u.Password == "",
 		Passkeys: lo.Map(passkeys, func(item *ent.Passkey, index int) Passkey {
 			return BuildPasskey(item)
