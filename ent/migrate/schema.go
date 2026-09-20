@@ -578,6 +578,7 @@ var (
 		{Name: "downloads", Type: field.TypeInt, Default: 0},
 		{Name: "expires", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"mysql": "datetime"}},
 		{Name: "remain_downloads", Type: field.TypeInt, Nullable: true},
+		{Name: "price_points", Type: field.TypeInt, Default: 0},
 		{Name: "props", Type: field.TypeJSON, Nullable: true},
 		{Name: "file_shares", Type: field.TypeInt, Nullable: true},
 		{Name: "user_shares", Type: field.TypeInt, Nullable: true},
@@ -590,15 +591,53 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "shares_files_shares",
-				Columns:    []*schema.Column{SharesColumns[10]},
+				Columns:    []*schema.Column{SharesColumns[11]},
 				RefColumns: []*schema.Column{FilesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "shares_users_shares",
-				Columns:    []*schema.Column{SharesColumns[11]},
+				Columns:    []*schema.Column{SharesColumns[12]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
+			},
+		},
+	}
+	// SharePurchasesColumns holds the columns for the "share_purchases" table.
+	SharePurchasesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "points", Type: field.TypeInt},
+		{Name: "ticket", Type: field.TypeString, Unique: true},
+		{Name: "share_id", Type: field.TypeInt},
+		{Name: "buyer_id", Type: field.TypeInt},
+	}
+	// SharePurchasesTable holds the schema information for the "share_purchases" table.
+	SharePurchasesTable = &schema.Table{
+		Name:       "share_purchases",
+		Columns:    SharePurchasesColumns,
+		PrimaryKey: []*schema.Column{SharePurchasesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "share_purchases_shares_purchases",
+				Columns:    []*schema.Column{SharePurchasesColumns[6]},
+				RefColumns: []*schema.Column{SharesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "share_purchases_users_share_purchases",
+				Columns:    []*schema.Column{SharePurchasesColumns[7]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "sharepurchase_share_id_buyer_id",
+				Unique:  true,
+				Columns: []*schema.Column{SharePurchasesColumns[6], SharePurchasesColumns[7]},
 			},
 		},
 	}
@@ -831,6 +870,7 @@ var (
 		PasskeysTable,
 		SettingsTable,
 		SharesTable,
+		SharePurchasesTable,
 		SkusTable,
 		StoragePoliciesTable,
 		TasksTable,
@@ -860,6 +900,8 @@ func init() {
 	PasskeysTable.ForeignKeys[0].RefTable = UsersTable
 	SharesTable.ForeignKeys[0].RefTable = FilesTable
 	SharesTable.ForeignKeys[1].RefTable = UsersTable
+	SharePurchasesTable.ForeignKeys[0].RefTable = SharesTable
+	SharePurchasesTable.ForeignKeys[1].RefTable = UsersTable
 	StoragePoliciesTable.ForeignKeys[0].RefTable = NodesTable
 	TasksTable.ForeignKeys[0].RefTable = UsersTable
 	UsersTable.ForeignKeys[0].RefTable = GroupsTable

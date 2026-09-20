@@ -72,6 +72,7 @@ func (User) Edges() []ent.Edge {
 		edge.To("credit_txns", CreditTxn.Type),
 		edge.To("redeemed_codes", GiftCode.Type),
 		edge.To("grants", UserGrant.Type),
+		edge.To("share_purchases", SharePurchase.Type),
 	}
 }
 

@@ -95,6 +95,9 @@ export interface Share {
   preview_only?: boolean;
   upload_only?: boolean;
   note?: string;
+  price?: number;
+  paid?: boolean;
+  purchase_ticket?: string;
 }
 
 export enum PolicyType {
@@ -347,6 +350,7 @@ export interface ShareCreateService {
   preview_only?: boolean;
   upload_only?: boolean;
   note?: string;
+  price_points?: number;
 }
 
 export interface CreateFileService {
@@ -366,6 +370,7 @@ export interface FileURLService extends MultipleUriService {
   skip_error?: boolean;
   use_primary_site_url?: boolean;
   archive?: boolean;
+  purchase_ticket?: string;
 }
 
 export interface FileURLResponse {

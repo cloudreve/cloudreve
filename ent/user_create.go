@@ -21,6 +21,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/oauthgrant"
 	"github.com/cloudreve/Cloudreve/v4/ent/passkey"
 	"github.com/cloudreve/Cloudreve/v4/ent/share"
+	"github.com/cloudreve/Cloudreve/v4/ent/sharepurchase"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
 	"github.com/cloudreve/Cloudreve/v4/ent/usergrant"
@@ -401,6 +402,21 @@ func (uc *UserCreate) AddGrants(u ...*UserGrant) *UserCreate {
 		ids[i] = u[i].ID
 	}
 	return uc.AddGrantIDs(ids...)
+}
+
+// AddSharePurchaseIDs adds the "share_purchases" edge to the SharePurchase entity by IDs.
+func (uc *UserCreate) AddSharePurchaseIDs(ids ...int) *UserCreate {
+	uc.mutation.AddSharePurchaseIDs(ids...)
+	return uc
+}
+
+// AddSharePurchases adds the "share_purchases" edges to the SharePurchase entity.
+func (uc *UserCreate) AddSharePurchases(s ...*SharePurchase) *UserCreate {
+	ids := make([]int, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return uc.AddSharePurchaseIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -797,6 +813,22 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(usergrant.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := uc.mutation.SharePurchasesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SharePurchasesTable,
+			Columns: []string{user.SharePurchasesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(sharepurchase.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

@@ -10,6 +10,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/credittxn"
 	"github.com/cloudreve/Cloudreve/v4/ent/giftcode"
 	"github.com/cloudreve/Cloudreve/v4/ent/schema"
+	"github.com/cloudreve/Cloudreve/v4/ent/sharepurchase"
 	"github.com/cloudreve/Cloudreve/v4/ent/sku"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
 	"github.com/cloudreve/Cloudreve/v4/ent/usergrant"
@@ -66,6 +67,17 @@ type (
 		// grant. Fails with ErrInsufficientPoints when the balance cannot
 		// cover the price, leaving the grant unapplied.
 		PurchaseSku(ctx context.Context, userID int, sku *ent.Sku) error
+		// PurchaseShare atomically debits the share's points price from the
+		// buyer, credits the owner income (price times scoreRate fraction),
+		// and records the purchase row. Idempotent: an existing purchase for
+		// the same (share, buyer) is returned without debiting again.
+		PurchaseShare(ctx context.Context, share *ent.Share, buyerID int, scoreRate float64) (*ent.SharePurchase, error)
+		// SharePurchase returns the purchase row for (share, buyer), or
+		// ent.NotFound when the buyer has not purchased.
+		SharePurchase(ctx context.Context, shareID, buyerID int) (*ent.SharePurchase, error)
+		// SharePurchaseByTicket resolves a resume ticket to its purchase row,
+		// scoped to the given share so tickets cannot cross shares.
+		SharePurchaseByTicket(ctx context.Context, shareID int, ticket string) (*ent.SharePurchase, error)
 	}
 
 	CreateGiftCodeParams struct {
@@ -415,6 +427,76 @@ func (c *vasClient) PurchaseSku(ctx context.Context, userID int, s *ent.Sku) err
 	}
 
 	return Commit(tx)
+}
+
+func (c *vasClient) PurchaseShare(ctx context.Context, s *ent.Share, buyerID int, scoreRate float64) (*ent.SharePurchase, error) {
+	if existing, err := c.SharePurchase(ctx, s.ID, buyerID); err == nil {
+		return existing, nil
+	} else if !ent.IsNotFound(err) {
+		return nil, err
+	}
+
+	price := int64(s.PricePoints)
+	if scoreRate < 0 {
+		scoreRate = 0
+	}
+	if scoreRate > 1 {
+		scoreRate = 1
+	}
+	income := int64(float64(price) * scoreRate)
+
+	txVc, tx, txCtx, err := WithTx(ctx, c)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := txVc.CreditAdjust(txCtx, buyerID, -price, credittxn.TypePurchase,
+		strconv.Itoa(s.ID), "share purchase"); err != nil {
+		_ = Rollback(tx)
+		return nil, err
+	}
+
+	purchase, err := txVc.client.SharePurchase.Create().
+		SetShareID(s.ID).
+		SetBuyerID(buyerID).
+		SetPoints(s.PricePoints).
+		SetTicket(newGiftCodeString()).
+		Save(txCtx)
+	if err != nil {
+		_ = Rollback(tx)
+		// Concurrent buyer already committed — their purchase wins.
+		if existing, qErr := c.SharePurchase(ctx, s.ID, buyerID); qErr == nil {
+			return existing, nil
+		}
+		return nil, err
+	}
+
+	if income > 0 && s.Edges.User != nil && s.Edges.User.ID != buyerID {
+		if err := txVc.CreditAdjust(txCtx, s.Edges.User.ID, income, credittxn.TypeShareIncome,
+			strconv.Itoa(s.ID), "share sale"); err != nil {
+			return nil, Rollback(tx)
+		}
+	}
+
+	if err := Commit(tx); err != nil {
+		return nil, err
+	}
+	return purchase, nil
+}
+
+func (c *vasClient) SharePurchase(ctx context.Context, shareID, buyerID int) (*ent.SharePurchase, error) {
+	return c.client.SharePurchase.Query().
+		Where(sharepurchase.ShareID(shareID), sharepurchase.BuyerID(buyerID)).
+		Only(ctx)
+}
+
+func (c *vasClient) SharePurchaseByTicket(ctx context.Context, shareID int, ticket string) (*ent.SharePurchase, error) {
+	if ticket == "" {
+		return nil, &ent.NotFoundError{}
+	}
+	return c.client.SharePurchase.Query().
+		Where(sharepurchase.ShareID(shareID), sharepurchase.Ticket(ticket)).
+		Only(ctx)
 }
 
 func newGiftCodeString() string {

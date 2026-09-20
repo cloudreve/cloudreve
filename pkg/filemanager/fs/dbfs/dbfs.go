@@ -43,6 +43,9 @@ type (
 	// IsDownloadCtxKey marks the request as an explicit file download (as
 	// opposed to an inline preview fetch). Navigator hooks consult it.
 	IsDownloadCtxKey struct{}
+	// PurchaseTicketCtxKey carries a paid-share resume ticket used to
+	// restore download access after session loss.
+	PurchaseTicketCtxKey struct{}
 	// ExpectedSourceIDsCtxKey carries source-file identity preconditions
 	// for move/copy/rename: a []int positionally aligned with the source
 	// URI list. An entry of 0 disables the check for that position (#3565).
@@ -947,7 +950,7 @@ func (f *DBFS) getNavigator(ctx context.Context, path *fs.URI, requiredCapabilit
 		case constants.FileSystemMy:
 			n = NewMyNavigator(f.user, f.fileClient, f.userClient, f.l, config, f.hasher)
 		case constants.FileSystemShare:
-			n = NewShareNavigator(f.user, f.fileClient, f.shareClient, f.aclClient, f.l, config, f.hasher)
+			n = NewShareNavigator(f.user, f.fileClient, f.shareClient, f.aclClient, f.vasClient, f.l, config, f.hasher)
 		case constants.FileSystemTrash:
 			n = NewTrashNavigator(f.user, f.fileClient, f.l, config, f.hasher)
 		case constants.FileSystemSharedWithMe:

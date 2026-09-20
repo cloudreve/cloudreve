@@ -31,12 +31,16 @@ const (
 	FieldExpires = "expires"
 	// FieldRemainDownloads holds the string denoting the remain_downloads field in the database.
 	FieldRemainDownloads = "remain_downloads"
+	// FieldPricePoints holds the string denoting the price_points field in the database.
+	FieldPricePoints = "price_points"
 	// FieldProps holds the string denoting the props field in the database.
 	FieldProps = "props"
 	// EdgeUser holds the string denoting the user edge name in mutations.
 	EdgeUser = "user"
 	// EdgeFile holds the string denoting the file edge name in mutations.
 	EdgeFile = "file"
+	// EdgePurchases holds the string denoting the purchases edge name in mutations.
+	EdgePurchases = "purchases"
 	// Table holds the table name of the share in the database.
 	Table = "shares"
 	// UserTable is the table that holds the user relation/edge.
@@ -53,6 +57,13 @@ const (
 	FileInverseTable = "files"
 	// FileColumn is the table column denoting the file relation/edge.
 	FileColumn = "file_shares"
+	// PurchasesTable is the table that holds the purchases relation/edge.
+	PurchasesTable = "share_purchases"
+	// PurchasesInverseTable is the table name for the SharePurchase entity.
+	// It exists in this package in order to avoid circular dependency with the "sharepurchase" package.
+	PurchasesInverseTable = "share_purchases"
+	// PurchasesColumn is the table column denoting the purchases relation/edge.
+	PurchasesColumn = "share_id"
 )
 
 // Columns holds all SQL columns for share fields.
@@ -66,6 +77,7 @@ var Columns = []string{
 	FieldDownloads,
 	FieldExpires,
 	FieldRemainDownloads,
+	FieldPricePoints,
 	FieldProps,
 }
 
@@ -109,6 +121,10 @@ var (
 	DefaultViews int
 	// DefaultDownloads holds the default value on creation for the "downloads" field.
 	DefaultDownloads int
+	// DefaultPricePoints holds the default value on creation for the "price_points" field.
+	DefaultPricePoints int
+	// PricePointsValidator is a validator for the "price_points" field. It is called by the builders before save.
+	PricePointsValidator func(int) error
 )
 
 // OrderOption defines the ordering options for the Share queries.
@@ -159,6 +175,11 @@ func ByRemainDownloads(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRemainDownloads, opts...).ToFunc()
 }
 
+// ByPricePoints orders the results by the price_points field.
+func ByPricePoints(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPricePoints, opts...).ToFunc()
+}
+
 // ByUserField orders the results by user field.
 func ByUserField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -170,6 +191,20 @@ func ByUserField(field string, opts ...sql.OrderTermOption) OrderOption {
 func ByFileField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborTerms(s, newFileStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByPurchasesCount orders the results by purchases count.
+func ByPurchasesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newPurchasesStep(), opts...)
+	}
+}
+
+// ByPurchases orders the results by purchases terms.
+func ByPurchases(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newPurchasesStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 func newUserStep() *sqlgraph.Step {
@@ -184,5 +219,12 @@ func newFileStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(FileInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, FileTable, FileColumn),
+	)
+}
+func newPurchasesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(PurchasesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, PurchasesTable, PurchasesColumn),
 	)
 }

@@ -939,6 +939,12 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				controllers.FromQuery[sharesvc.ShareInfoService](sharesvc.ShareInfoParamCtx{}),
 				controllers.GetShare,
 			)
+			// Purchase a paid share with credits
+			share.POST("purchase/:id",
+				middleware.LoginRequired(),
+				middleware.HashID(hashid.ShareID),
+				controllers.PurchaseShare,
+			)
 			// List my shares
 			share.GET("",
 				middleware.LoginRequired(),

@@ -25,6 +25,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/schema"
 	"github.com/cloudreve/Cloudreve/v4/ent/setting"
 	"github.com/cloudreve/Cloudreve/v4/ent/share"
+	"github.com/cloudreve/Cloudreve/v4/ent/sharepurchase"
 	"github.com/cloudreve/Cloudreve/v4/ent/sku"
 	"github.com/cloudreve/Cloudreve/v4/ent/storagepolicy"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
@@ -483,6 +484,35 @@ func init() {
 	shareDescDownloads := shareFields[2].Descriptor()
 	// share.DefaultDownloads holds the default value on creation for the downloads field.
 	share.DefaultDownloads = shareDescDownloads.Default.(int)
+	// shareDescPricePoints is the schema descriptor for price_points field.
+	shareDescPricePoints := shareFields[5].Descriptor()
+	// share.DefaultPricePoints holds the default value on creation for the price_points field.
+	share.DefaultPricePoints = shareDescPricePoints.Default.(int)
+	// share.PricePointsValidator is a validator for the "price_points" field. It is called by the builders before save.
+	share.PricePointsValidator = shareDescPricePoints.Validators[0].(func(int) error)
+	sharepurchaseMixin := schema.SharePurchase{}.Mixin()
+	sharepurchaseMixinHooks0 := sharepurchaseMixin[0].Hooks()
+	sharepurchase.Hooks[0] = sharepurchaseMixinHooks0[0]
+	sharepurchaseMixinInters0 := sharepurchaseMixin[0].Interceptors()
+	sharepurchase.Interceptors[0] = sharepurchaseMixinInters0[0]
+	sharepurchaseMixinFields0 := sharepurchaseMixin[0].Fields()
+	_ = sharepurchaseMixinFields0
+	sharepurchaseFields := schema.SharePurchase{}.Fields()
+	_ = sharepurchaseFields
+	// sharepurchaseDescCreatedAt is the schema descriptor for created_at field.
+	sharepurchaseDescCreatedAt := sharepurchaseMixinFields0[0].Descriptor()
+	// sharepurchase.DefaultCreatedAt holds the default value on creation for the created_at field.
+	sharepurchase.DefaultCreatedAt = sharepurchaseDescCreatedAt.Default.(func() time.Time)
+	// sharepurchaseDescUpdatedAt is the schema descriptor for updated_at field.
+	sharepurchaseDescUpdatedAt := sharepurchaseMixinFields0[1].Descriptor()
+	// sharepurchase.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	sharepurchase.DefaultUpdatedAt = sharepurchaseDescUpdatedAt.Default.(func() time.Time)
+	// sharepurchase.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	sharepurchase.UpdateDefaultUpdatedAt = sharepurchaseDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// sharepurchaseDescTicket is the schema descriptor for ticket field.
+	sharepurchaseDescTicket := sharepurchaseFields[3].Descriptor()
+	// sharepurchase.TicketValidator is a validator for the "ticket" field. It is called by the builders before save.
+	sharepurchase.TicketValidator = sharepurchaseDescTicket.Validators[0].(func(string) error)
 	skuMixin := schema.Sku{}.Mixin()
 	skuMixinHooks0 := skuMixin[0].Hooks()
 	sku.Hooks[0] = skuMixinHooks0[0]

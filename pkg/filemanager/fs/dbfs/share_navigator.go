@@ -38,13 +38,14 @@ var shareNavigatorCapability = &boolset.BooleanSet{}
 
 // NewShareNavigator creates a navigator for user's "shared" file system.
 func NewShareNavigator(u *ent.User, fileClient inventory.FileClient, shareClient inventory.ShareClient,
-	aclClient inventory.AclClient, l logging.Logger, config *setting.DBFS, hasher hashid.Encoder) Navigator {
+	aclClient inventory.AclClient, vasClient inventory.VasClient, l logging.Logger, config *setting.DBFS, hasher hashid.Encoder) Navigator {
 	n := &shareNavigator{
 		user:        u,
 		l:           l,
 		fileClient:  fileClient,
 		shareClient: shareClient,
 		aclClient:   aclClient,
+		vasClient:   vasClient,
 		config:      config,
 	}
 	n.baseNavigator = newBaseNavigator(fileClient, defaultFilter, u, hasher, config)
@@ -70,8 +71,12 @@ type (
 		// shared file matching the acting user. nil means no entry matched —
 		// capabilities then fall back to share props.
 		aclCaps        *boolset.BooleanSet
+		vasClient      inventory.VasClient
 		disableRecycle bool
 		persist        func()
+		// sharePaid is resolved at Root() and persisted with the navigator
+		// state: free shares, the owner, and buyers/ticket holders are true.
+		sharePaid bool
 	}
 
 	shareNavigatorState struct {
@@ -81,6 +86,7 @@ type (
 		Share           *ent.Share
 		Owner           *ent.User
 		AclCaps         *boolset.BooleanSet
+		SharePaid       bool
 	}
 )
 
@@ -94,6 +100,7 @@ func (n *shareNavigator) PersistState(kv cache.Driver, key string) {
 			Share:           n.share,
 			Owner:           n.owner,
 			AclCaps:         n.aclCaps,
+			SharePaid:       n.sharePaid,
 		}, ContextHintTTL)
 	}
 }
@@ -107,6 +114,7 @@ func (n *shareNavigator) RestoreState(s State) error {
 		n.share = state.Share
 		n.aclCaps = state.AclCaps
 		n.owner = state.Owner
+		n.sharePaid = state.SharePaid
 		return nil
 	}
 
@@ -150,6 +158,7 @@ func (n *shareNavigator) Root(ctx context.Context, path *fs.URI) (*File, error) 
 
 	// Share must be assigned before capabilities are derived from its props.
 	n.share = share
+	n.sharePaid = n.checkSharePaid(ctx, share)
 
 	// Resolve per-file ACL entries for non-owner visitors; matched rows
 	// replace the share-props capability set for this user.
@@ -316,7 +325,9 @@ func (n *shareNavigator) shareCapabilities() *boolset.BooleanSet {
 	// Matched ACL entries fully define a non-owner visitor's capabilities;
 	// when no entry matched (nil) share props apply as the link default.
 	if n.aclCaps != nil && n.owner != nil && n.user.ID != n.owner.ID {
-		return aclPermsToCapabilities(n.aclCaps)
+		bs := aclPermsToCapabilities(n.aclCaps)
+		n.stripUnpaid(bs)
+		return bs
 	}
 
 	bs := &boolset.BooleanSet{}
@@ -365,7 +376,17 @@ func (n *shareNavigator) shareCapabilities() *boolset.BooleanSet {
 		boolset.Set(int(NavigatorCapabilitySoftDelete), true, bs)
 	}
 
+	n.stripUnpaid(bs)
 	return bs
+}
+
+// stripUnpaid removes download/thumbnail capabilities for visitors who have
+// not paid for a priced share; listing stays so the paywall can render.
+func (n *shareNavigator) stripUnpaid(bs *boolset.BooleanSet) {
+	if n.share != nil && n.share.PricePoints > 0 && !n.sharePaid {
+		boolset.Set(int(NavigatorCapabilityDownloadFile), false, bs)
+		boolset.Set(int(NavigatorCapabilityGenerateThumb), false, bs)
+	}
 }
 
 // aclPermsToCapabilities maps ACL permission bits (read/create/update/delete)
@@ -401,7 +422,7 @@ func aclPermsToCapabilities(perms *boolset.BooleanSet) *boolset.BooleanSet {
 	if perms.Enabled(int(types.AclPermDelete)) {
 		boolset.Sets(map[NavigatorCapability]bool{
 			NavigatorCapabilityDeleteFile: true,
-			NavigatorCapabilitySoftDelete:  true,
+			NavigatorCapabilitySoftDelete: true,
 		}, bs)
 	}
 	return bs
@@ -431,6 +452,11 @@ func (n *shareNavigator) FollowTx(ctx context.Context) (func(), error) {
 func (n *shareNavigator) ExecuteHook(ctx context.Context, hookType fs.HookType, file *File) error {
 	switch hookType {
 	case fs.HookTypeBeforeDownload:
+		// Priced shares deny every entity fetch — previews included — until
+		// the visitor holds a purchase or a valid resume ticket.
+		if n.share != nil && n.share.PricePoints > 0 && !n.sharePaid {
+			return ErrNotPurchased
+		}
 		// Preview-only shares deny explicit downloads but still allow
 		// entity fetches for inline viewers.
 		if n.share != nil && n.share.Props != nil && n.share.Props.PreviewOnly {
@@ -443,6 +469,36 @@ func (n *shareNavigator) ExecuteHook(ctx context.Context, hookType fs.HookType, 
 		}
 	}
 	return nil
+}
+
+// checkSharePaid resolves whether the acting user may fetch entities of a
+// priced share. Free shares, the owner, existing buyers, and holders of a
+// valid resume ticket pass; everyone else — including anonymous users
+// without a ticket — is denied.
+func (n *shareNavigator) checkSharePaid(ctx context.Context, share *ent.Share) bool {
+	if share.PricePoints <= 0 || n.user.ID == share.Edges.User.ID {
+		return true
+	}
+	// Groups with the share-free bit (staff/VIP) bypass the paywall.
+	if n.user.Edges.Group != nil &&
+		n.user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionShareFree)) {
+		return true
+	}
+	if n.vasClient == nil {
+		return false
+	}
+	if ticket, ok := ctx.Value(PurchaseTicketCtxKey{}).(string); ok && ticket != "" {
+		if _, err := n.vasClient.SharePurchaseByTicket(ctx, share.ID, ticket); err == nil {
+			return true
+		}
+	}
+	if inventory.IsAnonymousUser(n.user) {
+		return false
+	}
+	if _, err := n.vasClient.SharePurchase(ctx, share.ID, n.user.ID); err == nil {
+		return true
+	}
+	return false
 }
 
 func (n *shareNavigator) Walk(ctx context.Context, levelFiles []*File, limit, depth int, f WalkFunc) error {

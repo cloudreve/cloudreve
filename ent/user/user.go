@@ -73,6 +73,8 @@ const (
 	EdgeRedeemedCodes = "redeemed_codes"
 	// EdgeGrants holds the string denoting the grants edge name in mutations.
 	EdgeGrants = "grants"
+	// EdgeSharePurchases holds the string denoting the share_purchases edge name in mutations.
+	EdgeSharePurchases = "share_purchases"
 	// Table holds the table name of the user in the database.
 	Table = "users"
 	// GroupTable is the table that holds the group relation/edge.
@@ -159,6 +161,13 @@ const (
 	GrantsInverseTable = "user_grants"
 	// GrantsColumn is the table column denoting the grants relation/edge.
 	GrantsColumn = "user_id"
+	// SharePurchasesTable is the table that holds the share_purchases relation/edge.
+	SharePurchasesTable = "share_purchases"
+	// SharePurchasesInverseTable is the table name for the SharePurchase entity.
+	// It exists in this package in order to avoid circular dependency with the "sharepurchase" package.
+	SharePurchasesInverseTable = "share_purchases"
+	// SharePurchasesColumn is the table column denoting the share_purchases relation/edge.
+	SharePurchasesColumn = "buyer_id"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -489,6 +498,20 @@ func ByGrants(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newGrantsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// BySharePurchasesCount orders the results by share_purchases count.
+func BySharePurchasesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newSharePurchasesStep(), opts...)
+	}
+}
+
+// BySharePurchases orders the results by share_purchases terms.
+func BySharePurchases(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newSharePurchasesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newGroupStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -571,5 +594,12 @@ func newGrantsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(GrantsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, GrantsTable, GrantsColumn),
+	)
+}
+func newSharePurchasesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(SharePurchasesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, SharePurchasesTable, SharePurchasesColumn),
 	)
 }

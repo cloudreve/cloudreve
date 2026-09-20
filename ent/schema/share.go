@@ -31,6 +31,10 @@ func (Share) Fields() []ent.Field {
 		field.Int("remain_downloads").
 			Nillable().
 			Optional(),
+		// Points price visitors must pay before downloading. 0 = free share.
+		field.Int("price_points").
+			Default(0).
+			NonNegative(),
 		field.JSON("props", &types.ShareProps{}).Optional(),
 	}
 }
@@ -42,6 +46,7 @@ func (Share) Edges() []ent.Edge {
 			Ref("shares").Unique(),
 		edge.From("file", File.Type).
 			Ref("shares").Unique(),
+		edge.To("purchases", SharePurchase.Type),
 	}
 }
 

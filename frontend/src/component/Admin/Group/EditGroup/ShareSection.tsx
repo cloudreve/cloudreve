@@ -37,6 +37,26 @@ const ShareSection = () => {
     [setGroup],
   );
 
+  const onShareSellChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setGroup((p: GroupEnt) => ({
+        ...p,
+        permissions: new Boolset(p.permissions).set(GroupPermission.share_sell, e.target.checked).toString(),
+      }));
+    },
+    [setGroup],
+  );
+
+  const onShareFreeChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setGroup((p: GroupEnt) => ({
+        ...p,
+        permissions: new Boolset(p.permissions).set(GroupPermission.share_free, e.target.checked).toString(),
+      }));
+    },
+    [setGroup],
+  );
+
   const onSetExplicitUserChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setGroup((p: GroupEnt) => ({
@@ -68,10 +88,25 @@ const ShareSection = () => {
             </FormControl>
           </SettingForm>
         )}
+        {values?.id != AnonymousGroupID && (
+          <SettingForm lgWidth={5}>
+            <FormControl fullWidth>
+              <FormControlLabel
+                control={
+                  <Switch checked={permission.enabled(GroupPermission.share_sell)} onChange={onShareSellChange} />
+                }
+                label={t("group.shareSell")}
+              />
+              <NoMarginHelperText>{t("group.shareSellDes")}</NoMarginHelperText>
+            </FormControl>
+          </SettingForm>
+        )}
         <SettingForm lgWidth={5}>
           <FormControl fullWidth>
             <FormControlLabel
-              control={<Switch checked={false} />}
+              control={
+                <Switch checked={permission.enabled(GroupPermission.share_free)} onChange={onShareFreeChange} />
+              }
               label={
                 <Box sx={{ display: "flex", alignItems: "center" }}>
                   {t("group.shareFree")}

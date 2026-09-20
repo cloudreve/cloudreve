@@ -502,6 +502,10 @@
     "policyGroupDefault": "用户组默认"
   },
   "modals": {
+    "paidShare": "付费分享",
+    "paidSharePrice": "{{price}} 积分",
+    "paidShareDes": "访客需使用积分购买此分享后才能下载。设置为 0 表示免费分享。",
+    "paidSharePriceLabel": "价格（积分）",
     "includePasswordInShareLink": "在链接中包含密码",
     "includePasswordInShareLinkDes": "勾选后，分享链接中会包含密码，通过此链接访问时不需要再输入密码。",
     "showFileName": "显示文件名",
@@ -806,7 +810,11 @@
     "preview": "预览",
     "incorrectPassword": "密码不正确",
     "shareNotExist": "分享不存在或已过期",
-    "copyLinkToClipboard": "复制链接到剪切板"
+    "copyLinkToClipboard": "复制链接到剪切板",
+    "paidShareDes": "此分享为付费分享，需支付 {{price}} 积分购买后才能下载。",
+    "purchaseForPoints": "支付 {{price}} 积分购买",
+    "signInToPurchase": "登录后购买",
+    "yourBalance": "余额：{{credits}} 积分"
   },
   "download": {
     "noFilesFound": "没有找到任何文件",

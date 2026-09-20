@@ -24,6 +24,7 @@ import { Code } from "../../../Common/Code.tsx";
 import { FilledTextField, SmallFormControlLabel } from "../../../Common/StyledComponents.tsx";
 import BookInformation from "../../../Icons/BookInformation.tsx";
 import ClockArrowDownload from "../../../Icons/ClockArrowDownload.tsx";
+import CoinStack from "../../../Icons/CoinStack.tsx";
 import Edit from "../../../Icons/Edit.tsx";
 import Eye from "../../../Icons/Eye.tsx";
 import EyeOff from "../../../Icons/EyeOff.tsx";
@@ -91,6 +92,7 @@ export interface ShareSetting {
   note?: string;
   downloads?: boolean;
   expires?: boolean;
+  price_points?: number;
 
   downloads_val: valueOption;
   expires_val: valueOption;
@@ -239,6 +241,40 @@ const ShareSettingContent = ({ setting, file, editing, onSettingChange }: ShareS
               }}
               value={setting.note ?? ""}
               onChange={(e) => onSettingChange({ ...setting, note: e.target.value })}
+            />
+          </FormControl>
+        </AccordionDetails>
+      </Accordion>
+      <Accordion expanded={expanded === "price"} onChange={handleExpand("price")}>
+        <AccordionSummary aria-controls="panel-price-content" id="panel-price-header">
+          <StyledListItemButton>
+            <ListItemIcon>
+              <CoinStack />
+            </ListItemIcon>
+            <ListItemText
+              primary={t("application:modals.paidShare")}
+              secondary={setting.price_points ? t("application:modals.paidSharePrice", { price: setting.price_points }) : undefined}
+            />
+          </StyledListItemButton>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            {t("application:modals.paidShareDes")}
+          </Typography>
+          <FormControl variant="standard" fullWidth>
+            <FilledTextField
+              label={t("application:modals.paidSharePriceLabel")}
+              type="number"
+              slotProps={{
+                htmlInput: {
+                  min: 0,
+                },
+              }}
+              value={setting.price_points ?? 0}
+              onChange={(e) => {
+                const v = Math.max(0, Math.floor(Number(e.target.value) || 0));
+                onSettingChange({ ...setting, price_points: v > 0 ? v : undefined });
+              }}
             />
           </FormControl>
         </AccordionDetails>

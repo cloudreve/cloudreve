@@ -52,6 +52,8 @@ type Tx struct {
 	Setting *SettingClient
 	// Share is the client for interacting with the Share builders.
 	Share *ShareClient
+	// SharePurchase is the client for interacting with the SharePurchase builders.
+	SharePurchase *SharePurchaseClient
 	// Sku is the client for interacting with the Sku builders.
 	Sku *SkuClient
 	// StoragePolicy is the client for interacting with the StoragePolicy builders.
@@ -212,6 +214,7 @@ func (tx *Tx) init() {
 	tx.Passkey = NewPasskeyClient(tx.config)
 	tx.Setting = NewSettingClient(tx.config)
 	tx.Share = NewShareClient(tx.config)
+	tx.SharePurchase = NewSharePurchaseClient(tx.config)
 	tx.Sku = NewSkuClient(tx.config)
 	tx.StoragePolicy = NewStoragePolicyClient(tx.config)
 	tx.Task = NewTaskClient(tx.config)

@@ -34,6 +34,8 @@ type (
 		UploadOnly      bool   `json:"upload_only"`
 		// Optional owner-defined note shown on My Shares (#3570).
 		Note string `json:"note" binding:"omitempty,max=255"`
+		// Points price visitors must pay before downloading. 0 = free share.
+		PricePoints int `json:"price_points" binding:"omitempty,min=0"`
 	}
 	ShareCreateParamCtx struct{}
 
@@ -81,6 +83,10 @@ func (service *ShareCreateService) Upsert(c *gin.Context, existed int) (string, 
 		return "", serializer.NewError(serializer.CodeGroupNotAllowed, "Group permission denied", nil)
 	}
 
+	if service.PricePoints > 0 && !user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionShareSell)) {
+		return "", serializer.NewError(serializer.CodeGroupNotAllowed, "Group permission denied for paid share", nil)
+	}
+
 	uri, err := fs.NewUriFromString(service.Uri)
 	if err != nil {
 		return "", serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
@@ -105,6 +111,7 @@ func (service *ShareCreateService) Upsert(c *gin.Context, existed int) (string, 
 		PreviewOnly:     service.PreviewOnly,
 		UploadOnly:      service.UploadOnly,
 		Note:            service.Note,
+		PricePoints:     service.PricePoints,
 	})
 	if err != nil {
 		return "", err

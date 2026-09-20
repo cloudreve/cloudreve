@@ -95,6 +95,11 @@ func RemainDownloads(v int) predicate.Share {
 	return predicate.Share(sql.FieldEQ(FieldRemainDownloads, v))
 }
 
+// PricePoints applies equality check predicate on the "price_points" field. It's identical to PricePointsEQ.
+func PricePoints(v int) predicate.Share {
+	return predicate.Share(sql.FieldEQ(FieldPricePoints, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Share {
 	return predicate.Share(sql.FieldEQ(FieldCreatedAt, v))
@@ -480,6 +485,46 @@ func RemainDownloadsNotNil() predicate.Share {
 	return predicate.Share(sql.FieldNotNull(FieldRemainDownloads))
 }
 
+// PricePointsEQ applies the EQ predicate on the "price_points" field.
+func PricePointsEQ(v int) predicate.Share {
+	return predicate.Share(sql.FieldEQ(FieldPricePoints, v))
+}
+
+// PricePointsNEQ applies the NEQ predicate on the "price_points" field.
+func PricePointsNEQ(v int) predicate.Share {
+	return predicate.Share(sql.FieldNEQ(FieldPricePoints, v))
+}
+
+// PricePointsIn applies the In predicate on the "price_points" field.
+func PricePointsIn(vs ...int) predicate.Share {
+	return predicate.Share(sql.FieldIn(FieldPricePoints, vs...))
+}
+
+// PricePointsNotIn applies the NotIn predicate on the "price_points" field.
+func PricePointsNotIn(vs ...int) predicate.Share {
+	return predicate.Share(sql.FieldNotIn(FieldPricePoints, vs...))
+}
+
+// PricePointsGT applies the GT predicate on the "price_points" field.
+func PricePointsGT(v int) predicate.Share {
+	return predicate.Share(sql.FieldGT(FieldPricePoints, v))
+}
+
+// PricePointsGTE applies the GTE predicate on the "price_points" field.
+func PricePointsGTE(v int) predicate.Share {
+	return predicate.Share(sql.FieldGTE(FieldPricePoints, v))
+}
+
+// PricePointsLT applies the LT predicate on the "price_points" field.
+func PricePointsLT(v int) predicate.Share {
+	return predicate.Share(sql.FieldLT(FieldPricePoints, v))
+}
+
+// PricePointsLTE applies the LTE predicate on the "price_points" field.
+func PricePointsLTE(v int) predicate.Share {
+	return predicate.Share(sql.FieldLTE(FieldPricePoints, v))
+}
+
 // PropsIsNil applies the IsNil predicate on the "props" field.
 func PropsIsNil() predicate.Share {
 	return predicate.Share(sql.FieldIsNull(FieldProps))
@@ -528,6 +573,29 @@ func HasFile() predicate.Share {
 func HasFileWith(preds ...predicate.File) predicate.Share {
 	return predicate.Share(func(s *sql.Selector) {
 		step := newFileStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasPurchases applies the HasEdge predicate on the "purchases" edge.
+func HasPurchases() predicate.Share {
+	return predicate.Share(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, PurchasesTable, PurchasesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasPurchasesWith applies the HasEdge predicate on the "purchases" edge with a given conditions (other predicates).
+func HasPurchasesWith(preds ...predicate.SharePurchase) predicate.Share {
+	return predicate.Share(func(s *sql.Selector) {
+		step := newPurchasesStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

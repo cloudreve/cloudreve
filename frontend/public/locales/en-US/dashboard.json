@@ -1316,6 +1316,8 @@
     "allowCreateShareLinkDes": "If disabled, users cannot create sharing links.",
     "shareFree": "Free share link",
     "shareFreeDes": "When enabled, users can access all paid sharing links without purchasing.",
+    "shareSell": "Sell share links",
+    "shareSellDes": "When enabled, users can set a points price on share links they create.",
     "fileManagement": "File management",
     "allowWabDAV": "WebDAV",
     "allowWabDAVDes": "If disabled, users cannot connect to the storage via the WebDAV protocol",

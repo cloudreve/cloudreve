@@ -366,6 +366,7 @@ func (l *manager) CreateOrUpdateShare(ctx context.Context, path *fs.URI, args *C
 		RemainDownloads: args.RemainDownloads,
 		Existed:         existed,
 		Props:           props,
+		PricePoints:     args.PricePoints,
 	})
 
 	if err != nil {

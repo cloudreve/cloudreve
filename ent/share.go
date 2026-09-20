@@ -37,6 +37,8 @@ type Share struct {
 	Expires *time.Time `json:"expires,omitempty"`
 	// RemainDownloads holds the value of the "remain_downloads" field.
 	RemainDownloads *int `json:"remain_downloads,omitempty"`
+	// PricePoints holds the value of the "price_points" field.
+	PricePoints int `json:"price_points,omitempty"`
 	// Props holds the value of the "props" field.
 	Props *types.ShareProps `json:"props,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -53,9 +55,11 @@ type ShareEdges struct {
 	User *User `json:"user,omitempty"`
 	// File holds the value of the file edge.
 	File *File `json:"file,omitempty"`
+	// Purchases holds the value of the purchases edge.
+	Purchases []*SharePurchase `json:"purchases,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // UserOrErr returns the User value or an error if the edge
@@ -84,6 +88,15 @@ func (e ShareEdges) FileOrErr() (*File, error) {
 	return nil, &NotLoadedError{edge: "file"}
 }
 
+// PurchasesOrErr returns the Purchases value or an error if the edge
+// was not loaded in eager-loading.
+func (e ShareEdges) PurchasesOrErr() ([]*SharePurchase, error) {
+	if e.loadedTypes[2] {
+		return e.Purchases, nil
+	}
+	return nil, &NotLoadedError{edge: "purchases"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Share) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -91,7 +104,7 @@ func (*Share) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case share.FieldProps:
 			values[i] = new([]byte)
-		case share.FieldID, share.FieldViews, share.FieldDownloads, share.FieldRemainDownloads:
+		case share.FieldID, share.FieldViews, share.FieldDownloads, share.FieldRemainDownloads, share.FieldPricePoints:
 			values[i] = new(sql.NullInt64)
 		case share.FieldPassword:
 			values[i] = new(sql.NullString)
@@ -173,6 +186,12 @@ func (s *Share) assignValues(columns []string, values []any) error {
 				s.RemainDownloads = new(int)
 				*s.RemainDownloads = int(value.Int64)
 			}
+		case share.FieldPricePoints:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field price_points", values[i])
+			} else if value.Valid {
+				s.PricePoints = int(value.Int64)
+			}
 		case share.FieldProps:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field props", values[i])
@@ -216,6 +235,11 @@ func (s *Share) QueryUser() *UserQuery {
 // QueryFile queries the "file" edge of the Share entity.
 func (s *Share) QueryFile() *FileQuery {
 	return NewShareClient(s.config).QueryFile(s)
+}
+
+// QueryPurchases queries the "purchases" edge of the Share entity.
+func (s *Share) QueryPurchases() *SharePurchaseQuery {
+	return NewShareClient(s.config).QueryPurchases(s)
 }
 
 // Update returns a builder for updating this Share.
@@ -271,6 +295,9 @@ func (s *Share) String() string {
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")
+	builder.WriteString("price_points=")
+	builder.WriteString(fmt.Sprintf("%v", s.PricePoints))
+	builder.WriteString(", ")
 	builder.WriteString("props=")
 	builder.WriteString(fmt.Sprintf("%v", s.Props))
 	builder.WriteByte(')')
@@ -287,6 +314,12 @@ func (e *Share) SetUser(v *User) {
 func (e *Share) SetFile(v *File) {
 	e.Edges.File = v
 	e.Edges.loadedTypes[1] = true
+}
+
+// SetPurchases manually set the edge as loaded state.
+func (e *Share) SetPurchases(v []*SharePurchase) {
+	e.Edges.Purchases = v
+	e.Edges.loadedTypes[2] = true
 }
 
 // Shares is a parsable slice of Share.

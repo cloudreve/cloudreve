@@ -268,6 +268,9 @@ type (
 		// Announcement returns the site-wide markdown announcement shown to
 		// logged-in users. "" disables the announcement modal.
 		Announcement(ctx context.Context) string
+		// ShareScoreRate returns the fraction (0..1) of a paid share's
+		// points price the owner receives as income.
+		ShareScoreRate(ctx context.Context) float64
 	}
 	UseFirstSiteUrlCtxKey = struct{}
 )
@@ -930,6 +933,10 @@ func (s *settingProvider) ForgotPasswordCaptchaEnabled(ctx context.Context) bool
 
 func (s *settingProvider) AbuseCaptchaEnabled(ctx context.Context) bool {
 	return s.getBoolean(ctx, "abuse_captcha", true)
+}
+
+func (s *settingProvider) ShareScoreRate(ctx context.Context) float64 {
+	return s.getFloat64(ctx, "share_score_rate", 100) / 100
 }
 
 func (s *settingProvider) AuthnEnabled(ctx context.Context) bool {

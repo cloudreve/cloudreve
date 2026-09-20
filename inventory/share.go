@@ -69,6 +69,7 @@ type (
 		OwnerID         int
 		FileID          int
 		Props           *types.ShareProps
+		PricePoints     int
 	}
 
 	ListShareArgs struct {
@@ -133,6 +134,7 @@ func (c *shareClient) Upsert(ctx context.Context, params *CreateShareParams) (*e
 			createQuery.SetProps(params.Props)
 		}
 
+		createQuery.SetPricePoints(params.PricePoints)
 		return createQuery.Save(ctx)
 	}
 
@@ -151,6 +153,9 @@ func (c *shareClient) Upsert(ctx context.Context, params *CreateShareParams) (*e
 	}
 	if params.Props != nil {
 		query.SetProps(params.Props)
+	}
+	if params.PricePoints > 0 {
+		query.SetPricePoints(params.PricePoints)
 	}
 
 	return query.Save(ctx)
