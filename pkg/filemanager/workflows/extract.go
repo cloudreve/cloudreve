@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	iofs "io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -64,6 +65,12 @@ const (
 	ProgressTypeExtractCount = "extract_count"
 	ProgressTypeExtractSize  = "extract_size"
 	ProgressTypeDownload     = "download"
+
+	// maxExtractEntries bounds the number of archive entries a single
+	// extraction task will process. Archives with more entries than this
+	// abort — a decompression bomb with millions of tiny entries would
+	// otherwise flood the file table.
+	maxExtractEntries int64 = 100_000
 
 	SummaryKeySrc         = "src"
 	SummaryKeySrcPhysical = "src_physical"
@@ -212,15 +219,16 @@ func (m *ExtractArchiveTask) createSlaveExtractTask(ctx context.Context, dep dep
 	}
 
 	payload := &SlaveExtractArchiveTaskState{
-		FileName: archiveFile.DisplayName(),
-		Entity:   entityModel,
-		Policy:   policy,
-		Encoding: m.state.Encoding,
-		Dst:      m.state.Dst,
-		UserID:   user.ID,
-		Password: m.state.Password,
-		FileMask: m.state.FileMask,
-		Volumes:  m.resolveVolumeEntities(ctx, fm, uri.DirUri(), archiveFile.DisplayName(), entityModel),
+		FileName:     archiveFile.DisplayName(),
+		Entity:       entityModel,
+		Policy:       policy,
+		Encoding:     m.state.Encoding,
+		Dst:          m.state.Dst,
+		UserID:       user.ID,
+		ExtractLimit: user.Edges.Group.Settings.DecompressSize,
+		Password:     m.state.Password,
+		FileMask:     m.state.FileMask,
+		Volumes:      m.resolveVolumeEntities(ctx, fm, uri.DirUri(), archiveFile.DisplayName(), entityModel),
 	}
 
 	payloadStr, err := json.Marshal(payload)
@@ -424,6 +432,13 @@ func (m *ExtractArchiveTask) masterExtractArchive(ctx context.Context, dep depen
 			return nil
 		}
 
+		// Decompression-bomb guard: abort when cumulative output or entry
+		// count exceeds the group's bounds.
+		sizeLimit := user.Edges.Group.Settings.DecompressSize
+		if err := checkExtractGuards(m.progress, sizeLimit); err != nil {
+			return err
+		}
+
 		if f.FileInfo.IsDir() {
 			_, err := fm.Create(ctx, savePath, types.FileTypeFolder)
 			if err != nil {
@@ -439,6 +454,13 @@ func (m *ExtractArchiveTask) masterExtractArchive(ctx context.Context, dep depen
 		if err != nil {
 			m.l.Warning("Failed to open file %q in archive file: %s, skipping...", rawPath, err)
 			return nil
+		}
+
+		if sizeLimit > 0 {
+			// Declared entry sizes are advisory; cap the stream at the
+			// remaining budget so understated sizes cannot overrun.
+			remaining := sizeLimit - atomic.LoadInt64(&m.progress[ProgressTypeExtractSize].Current)
+			fileStream = &cappedFile{File: fileStream, remaining: remaining}
 		}
 
 		fileData := &fs.UploadRequest{
@@ -660,6 +682,7 @@ type (
 		Encoding        string                 `json:"encoding,omitempty"`
 		Dst             string                 `json:"dst,omitempty"`
 		UserID          int                    `json:"user_id"`
+		ExtractLimit    int64                  `json:"extract_limit,omitempty"`
 		TempPath        string                 `json:"temp_path,omitempty"`
 		TempZipFilePath string                 `json:"temp_zip_file_path,omitempty"`
 		ProcessedCursor string                 `json:"processed_cursor,omitempty"`
@@ -870,6 +893,10 @@ func (m *SlaveExtractArchiveTask) Do(ctx context.Context) (task.Status, error) {
 			return nil
 		}
 
+		if err := checkExtractGuards(m.progress, m.state.ExtractLimit); err != nil {
+			return err
+		}
+
 		if f.FileInfo.IsDir() {
 			_, err := fm.Create(ctx, savePath, types.FileTypeFolder, fs.WithNode(m.node), fs.WithStatelessUserID(m.state.UserID))
 			if err != nil {
@@ -885,6 +912,11 @@ func (m *SlaveExtractArchiveTask) Do(ctx context.Context) (task.Status, error) {
 		if err != nil {
 			m.l.Warning("Failed to open file %q in archive file: %s, skipping...", rawPath, err)
 			return nil
+		}
+
+		if m.state.ExtractLimit > 0 {
+			remaining := m.state.ExtractLimit - atomic.LoadInt64(&m.progress[ProgressTypeExtractSize].Current)
+			fileStream = &cappedFile{File: fileStream, remaining: remaining}
 		}
 
 		fileData := &fs.UploadRequest{
@@ -946,4 +978,56 @@ func isFileInMask(path string, mask []string) bool {
 	}
 
 	return false
+}
+
+// errExtractSizeLimit aborts extraction when cumulative decompressed output
+// exceeds the group's DecompressSize bound. It carries CriticalErr so retries
+// do not reprocess the same bomb.
+var errExtractSizeLimit = fmt.Errorf("extracted size exceeds the decompress limit: %w", queue.CriticalErr)
+
+// checkExtractGuards enforces the decompression-bomb bounds before an archive
+// entry is written: cumulative output size (declared, from the shared progress
+// counter) and total entry count. A returned error aborts the task as a
+// critical failure — no retry will change the outcome.
+func checkExtractGuards(progress queue.Progresses, sizeLimit int64) error {
+	if sizeLimit > 0 {
+		current := atomic.LoadInt64(&progress[ProgressTypeExtractSize].Current)
+		if current >= sizeLimit {
+			return fmt.Errorf("%w (%d >= %d)", errExtractSizeLimit, current, sizeLimit)
+		}
+	}
+	if count := atomic.LoadInt64(&progress[ProgressTypeExtractCount].Current); count >= maxExtractEntries {
+		return fmt.Errorf("archive exceeds the entry limit %d: %w", maxExtractEntries, queue.CriticalErr)
+	}
+	return nil
+}
+
+// cappedFile bounds a single archive entry's stream at `remaining`
+// bytes. Declared entry sizes are advisory — a crafted archive can understate
+// them — so the stream itself is capped; reading past the budget fails the
+// upload and aborts extraction.
+type cappedFile struct {
+	iofs.File
+	remaining int64
+}
+
+func (c *cappedFile) Read(p []byte) (int, error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
+	if c.remaining <= 0 {
+		// Budget exhausted: an entry ending exactly at the boundary must
+		// still see EOF, while any further data fails the upload.
+		n, err := c.File.Read(p[:1])
+		if n > 0 {
+			return 0, errExtractSizeLimit
+		}
+		return 0, err
+	}
+	if int64(len(p)) > c.remaining {
+		p = p[:c.remaining]
+	}
+	n, err := c.File.Read(p)
+	c.remaining -= int64(n)
+	return n, err
 }
