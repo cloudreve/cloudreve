@@ -4,7 +4,7 @@ import {
   DirectLink,
   FileResponse,
   Share,
-  StoragePolicy,
+  StoragePolicyBrief,
   Viewer,
   ViewerSession,
 } from "../api/explorer.ts";
@@ -284,7 +284,7 @@ export interface GlobalStateSlice {
   uploadRawFiles?: File[];
   uploadRawPromiseId?: string[];
 
-  policyOptionCache?: StoragePolicy[];
+  policyOptionCache?: StoragePolicyBrief[];
 
   // Search popup
   searchPopupOpen?: boolean;
@@ -429,7 +429,7 @@ export const globalStateSlice = createSlice({
     closeRemoteDownloadDialog: (state) => {
       state.remoteDownloadDialogOpen = false;
     },
-    setPolicyOptionCache: (state, action: PayloadAction<StoragePolicy[] | undefined>) => {
+    setPolicyOptionCache: (state, action: PayloadAction<StoragePolicyBrief[] | undefined>) => {
       state.policyOptionCache = action.payload;
     },
     resetDialogs: (state) => {
