@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"math/rand/v2"
 	"net/url"
 	"sort"
 	"strconv"
@@ -260,6 +261,15 @@ type (
 		// DownloadCDNRoutes returns the configured alternative download
 		// endpoints users can pick from (e.g. CDN mirrors of the site).
 		DownloadCDNRoutes(ctx context.Context) []CDNRoute
+		// DownloadCDNShuffle returns true if generated download URLs should be
+		// distributed randomly across the site URL and all CDN routes.
+		DownloadCDNShuffle(ctx context.Context) bool
+		// DownloadURLBase returns the base URL used when generating file
+		// download URLs. With `download_cdn_shuffle` enabled and CDN routes
+		// configured, an endpoint is picked uniformly at random from the
+		// primary site URL plus all routes; otherwise it falls back to
+		// SiteURL. A context pinned by UseFirstSiteUrl always returns SiteURL.
+		DownloadURLBase(ctx context.Context) *url.URL
 		// AuditLogEnabled returns true if the given audit event type is
 		// recorded. An empty/unset list records everything.
 		AuditLogEnabled(ctx context.Context, eventType int) bool
@@ -1062,6 +1072,32 @@ func (s *settingProvider) DownloadCDNRoutes(ctx context.Context) []CDNRoute {
 		routes = append(routes, CDNRoute{Name: strings.TrimSpace(name), URL: u})
 	}
 	return routes
+}
+
+func (s *settingProvider) DownloadCDNShuffle(ctx context.Context) bool {
+	return s.getBoolean(ctx, "download_cdn_shuffle", false)
+}
+
+func (s *settingProvider) DownloadURLBase(ctx context.Context) *url.URL {
+	if _, pinned := ctx.Value(UseFirstSiteUrlCtxKey{}).(bool); pinned {
+		return s.SiteURL(ctx)
+	}
+	if !s.DownloadCDNShuffle(ctx) {
+		return s.SiteURL(ctx)
+	}
+	routes := s.DownloadCDNRoutes(ctx)
+	if len(routes) == 0 {
+		return s.SiteURL(ctx)
+	}
+
+	pool := make([]*url.URL, 0, len(routes)+1)
+	pool = append(pool, s.SiteURL(ctx))
+	for _, r := range routes {
+		if u, err := url.Parse(r.URL); err == nil && u.Scheme != "" && u.Host != "" {
+			pool = append(pool, u)
+		}
+	}
+	return pool[rand.IntN(len(pool))]
 }
 
 func (s *settingProvider) ShareDefaults(ctx context.Context) *ShareDefaults {

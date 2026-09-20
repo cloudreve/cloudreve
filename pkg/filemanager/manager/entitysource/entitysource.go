@@ -612,7 +612,13 @@ func (f *entitySource) Url(ctx context.Context, opts ...EntitySourceOption) (*En
 	// 4. The entity is encrypted and internal proxy not disabled by option
 	handlerCapability := f.handler.Capabilities()
 	if f.ShouldInternalProxy() {
+		// Download URLs may be distributed across the site URL and
+		// configured CDN routes (#173); preview/thumb URLs stay on the
+		// resolved site URL to avoid cross-origin viewer breakage.
 		siteUrl := f.settings.SiteURL(ctx)
+		if f.o.IsDownload {
+			siteUrl = f.settings.DownloadURLBase(ctx)
+		}
 		base := routes.MasterFileContentUrl(
 			siteUrl,
 			hashid.EncodeEntityID(f.hasher, f.e.ID()),

@@ -207,6 +207,7 @@ Order = user-visible value first; each ships with backend + UI + tests.
 - #3454 (PG FK on upload) is **Pro-only** — `audit_logs` doesn't exist in this codebase. When B.5 adds our own audit log: insert the audit row in the same tx *after* the file row, never before.
 - [x] `desloppify` pass — 73 review items dispositioned (46 fixed, 27 honestly skipped), strict score 77.1 (was 18.9); scorecard lives in README. `security-reviewer` pass done incrementally per batch (OAuth secrets, SSRF, process exec, path safety)
 - [x] Tag management page (upstream #2962) — owner-scoped `tag:` metadata stats/rename/recolor/delete in `inventory.FileClient`, `GET/PATCH/DELETE /file/tag` routes, Settings → Tags tab with merge-on-rename semantics
+- [x] Download URL shuffling (#173) — `download_cdn_shuffle` distributes generated download URLs randomly across the site URL + `download_cdn_routes` endpoints (`setting.DownloadURLBase`, honors `UseFirstSiteUrl`); covers entity downloads, archive sessions, and redirect-type direct links; manual route picker hidden client-side while active
 
 ## 6. Phase D — desktop, all platforms
 

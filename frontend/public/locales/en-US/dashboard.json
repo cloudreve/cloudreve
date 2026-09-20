@@ -854,6 +854,8 @@
     "ssoRegisterEnabledDes": "Automatically create a local account when a user signs in via SSO for the first time. The sign-up email filter below also applies.",
     "downloadCdnRoutes": "Download CDN routes",
     "downloadCdnRoutesDes": "Alternative download endpoints offered to users, one per line in name=url format (e.g. Line 1=https://cdn1.example.com). Routes must proxy the full request path and query back to this site so signed URLs stay valid; CORS headers are required for in-browser downloads.",
+    "downloadCdnShuffle": "Shuffle download routes",
+    "downloadCdnShuffleDes": "Randomly distribute each generated download link across the site URL and all configured CDN routes, so batch exports to download managers hit different endpoints. The manual route picker is hidden while enabled.",
     "ssoAutoRedirect": "Auto redirect to SSO",
     "ssoAutoRedirectDes": "Skip the login form and send visitors straight to the identity provider. Append <0>?nosso=1</0> to the login URL to reach the password form (e.g. for admin recovery).",
     "ssoCallbackUrl": "Callback URL",
