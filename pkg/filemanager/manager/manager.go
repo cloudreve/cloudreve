@@ -131,6 +131,9 @@ type (
 		UploadOnly      bool
 		Note            string
 		PricePoints     int
+		// ListedPublicly includes the share in the public share directory.
+		// Normalized to false for password-protected shares at creation.
+		ListedPublicly bool
 	}
 
 	FullTextSearchResults struct {

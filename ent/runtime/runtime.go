@@ -495,6 +495,10 @@ func init() {
 	share.DefaultPricePoints = shareDescPricePoints.Default.(int)
 	// share.PricePointsValidator is a validator for the "price_points" field. It is called by the builders before save.
 	share.PricePointsValidator = shareDescPricePoints.Validators[0].(func(int) error)
+	// shareDescListedPublicly is the schema descriptor for listed_publicly field.
+	shareDescListedPublicly := shareFields[6].Descriptor()
+	// share.DefaultListedPublicly holds the default value on creation for the listed_publicly field.
+	share.DefaultListedPublicly = shareDescListedPublicly.Default.(bool)
 	sharepurchaseMixin := schema.SharePurchase{}.Mixin()
 	sharepurchaseMixinHooks0 := sharepurchaseMixin[0].Hooks()
 	sharepurchase.Hooks[0] = sharepurchaseMixinHooks0[0]

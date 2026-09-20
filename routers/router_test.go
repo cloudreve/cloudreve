@@ -55,6 +55,7 @@ func TestMasterRouteWiring(t *testing.T) {
 		"PATCH /api/v4/file/tag",
 		"DELETE /api/v4/file/tag",
 		"POST /api/v4/share/purchase/:id",
+		"GET /api/v4/share/listed",
 		"GET /api/v4/session/qq/login",
 		"GET /api/v4/session/qq/callback",
 		"DELETE /api/v4/user/setting/sso_binding/:provider",

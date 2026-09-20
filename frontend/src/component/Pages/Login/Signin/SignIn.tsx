@@ -1,10 +1,10 @@
 import { ArrowBackIos } from "@mui/icons-material";
 import { LoadingButton } from "@mui/lab";
-import { Box, Button, Typography } from "@mui/material";
+import { Box, Button, Link, Typography } from "@mui/material";
 import { enqueueSnackbar } from "notistack";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link as RouterLink } from "react-router-dom";
 import { CSSTransition, SwitchTransition } from "react-transition-group";
 import {
   getOauthAppRegistration,
@@ -538,6 +538,13 @@ const SignIn = ({ oauthConsent }: SignInProps) => {
     <Box>
       <PageTitle title={isOAuthFlow ? t("oauth.authorize") : t("login.signIn")} />
       <EmailLogin oauthConsent={oauthConsent} />
+      {!isOAuthFlow && (
+        <Box sx={{ mt: 2, textAlign: "center" }}>
+          <Link component={RouterLink} to="/discover" variant="body2">
+            {t("login.browsePublicShares")}
+          </Link>
+        </Box>
+      )}
     </Box>
   );
 };

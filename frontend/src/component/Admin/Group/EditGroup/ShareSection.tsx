@@ -57,6 +57,16 @@ const ShareSection = () => {
     [setGroup],
   );
 
+  const onSharePublicListChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setGroup((p: GroupEnt) => ({
+        ...p,
+        permissions: new Boolset(p.permissions).set(GroupPermission.share_public_list, e.target.checked).toString(),
+      }));
+    },
+    [setGroup],
+  );
+
   const onSetExplicitUserChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setGroup((p: GroupEnt) => ({
@@ -127,6 +137,22 @@ const ShareSection = () => {
             <NoMarginHelperText>{t("group.allowDownloadShareDes")}</NoMarginHelperText>
           </FormControl>
         </SettingForm>
+        {values?.id != AnonymousGroupID && (
+          <SettingForm lgWidth={5}>
+            <FormControl fullWidth>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={permission.enabled(GroupPermission.share_public_list)}
+                    onChange={onSharePublicListChange}
+                  />
+                }
+                label={t("group.sharePublicList")}
+              />
+              <NoMarginHelperText>{t("group.sharePublicListDes")}</NoMarginHelperText>
+            </FormControl>
+          </SettingForm>
+        )}
         {values?.id != AnonymousGroupID && (
           <SettingForm lgWidth={5}>
             <FormControl fullWidth>

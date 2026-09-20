@@ -35,6 +35,10 @@ func (Share) Fields() []ent.Field {
 		field.Int("price_points").
 			Default(0).
 			NonNegative(),
+		// Listed in the public share directory. Never settable on
+		// password-protected shares; enforced at the service layer.
+		field.Bool("listed_publicly").
+			Default(false),
 		field.JSON("props", &types.ShareProps{}).Optional(),
 	}
 }

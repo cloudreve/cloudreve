@@ -339,15 +339,16 @@ type Share struct {
 	Size              int64           `json:"size"`
 
 	// Only viewable by owner
-	IsPrivate   bool   `json:"is_private,omitempty"`
-	Password    string `json:"password,omitempty"`
-	ShareView   bool   `json:"share_view,omitempty"`
-	AllowUpload bool   `json:"allow_upload,omitempty"`
-	AllowEdit   bool   `json:"allow_edit,omitempty"`
-	PreviewOnly bool   `json:"preview_only,omitempty"`
-	UploadOnly  bool   `json:"upload_only,omitempty"`
-	Note        string `json:"note,omitempty"`
-	HideReadMe  bool   `json:"hide_readme,omitempty"`
+	IsPrivate      bool   `json:"is_private,omitempty"`
+	Password       string `json:"password,omitempty"`
+	ListedPublicly bool   `json:"listed_publicly,omitempty"`
+	ShareView      bool   `json:"share_view,omitempty"`
+	AllowUpload    bool   `json:"allow_upload,omitempty"`
+	AllowEdit      bool   `json:"allow_edit,omitempty"`
+	PreviewOnly    bool   `json:"preview_only,omitempty"`
+	UploadOnly     bool   `json:"upload_only,omitempty"`
+	Note           string `json:"note,omitempty"`
+	HideReadMe     bool   `json:"hide_readme,omitempty"`
 
 	// Only viewable if explicitly unlocked by owner
 	SourceUri string `json:"source_uri,omitempty"`
@@ -408,6 +409,7 @@ func BuildShare(ctx context.Context, s *ent.Share, base *url.URL, hasher hashid.
 
 	if requester.ID == owner.ID {
 		res.IsPrivate = s.Password != ""
+		res.ListedPublicly = s.ListedPublicly
 		res.ShareView = s.Props != nil && s.Props.ShareView
 		if s.Props != nil {
 			res.AllowUpload = s.Props.AllowUpload

@@ -188,6 +188,20 @@ func (su *ShareUpdate) AddPricePoints(i int) *ShareUpdate {
 	return su
 }
 
+// SetListedPublicly sets the "listed_publicly" field.
+func (su *ShareUpdate) SetListedPublicly(b bool) *ShareUpdate {
+	su.mutation.SetListedPublicly(b)
+	return su
+}
+
+// SetNillableListedPublicly sets the "listed_publicly" field if the given value is not nil.
+func (su *ShareUpdate) SetNillableListedPublicly(b *bool) *ShareUpdate {
+	if b != nil {
+		su.SetListedPublicly(*b)
+	}
+	return su
+}
+
 // SetProps sets the "props" field.
 func (su *ShareUpdate) SetProps(tp *types.ShareProps) *ShareUpdate {
 	su.mutation.SetProps(tp)
@@ -438,6 +452,9 @@ func (su *ShareUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := su.mutation.AddedPricePoints(); ok {
 		_spec.AddField(share.FieldPricePoints, field.TypeInt, value)
+	}
+	if value, ok := su.mutation.ListedPublicly(); ok {
+		_spec.SetField(share.FieldListedPublicly, field.TypeBool, value)
 	}
 	if value, ok := su.mutation.Props(); ok {
 		_spec.SetField(share.FieldProps, field.TypeJSON, value)
@@ -769,6 +786,20 @@ func (suo *ShareUpdateOne) AddPricePoints(i int) *ShareUpdateOne {
 	return suo
 }
 
+// SetListedPublicly sets the "listed_publicly" field.
+func (suo *ShareUpdateOne) SetListedPublicly(b bool) *ShareUpdateOne {
+	suo.mutation.SetListedPublicly(b)
+	return suo
+}
+
+// SetNillableListedPublicly sets the "listed_publicly" field if the given value is not nil.
+func (suo *ShareUpdateOne) SetNillableListedPublicly(b *bool) *ShareUpdateOne {
+	if b != nil {
+		suo.SetListedPublicly(*b)
+	}
+	return suo
+}
+
 // SetProps sets the "props" field.
 func (suo *ShareUpdateOne) SetProps(tp *types.ShareProps) *ShareUpdateOne {
 	suo.mutation.SetProps(tp)
@@ -1049,6 +1080,9 @@ func (suo *ShareUpdateOne) sqlSave(ctx context.Context) (_node *Share, err error
 	}
 	if value, ok := suo.mutation.AddedPricePoints(); ok {
 		_spec.AddField(share.FieldPricePoints, field.TypeInt, value)
+	}
+	if value, ok := suo.mutation.ListedPublicly(); ok {
+		_spec.SetField(share.FieldListedPublicly, field.TypeBool, value)
 	}
 	if value, ok := suo.mutation.Props(); ok {
 		_spec.SetField(share.FieldProps, field.TypeJSON, value)

@@ -100,6 +100,11 @@ func PricePoints(v int) predicate.Share {
 	return predicate.Share(sql.FieldEQ(FieldPricePoints, v))
 }
 
+// ListedPublicly applies equality check predicate on the "listed_publicly" field. It's identical to ListedPubliclyEQ.
+func ListedPublicly(v bool) predicate.Share {
+	return predicate.Share(sql.FieldEQ(FieldListedPublicly, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Share {
 	return predicate.Share(sql.FieldEQ(FieldCreatedAt, v))
@@ -523,6 +528,16 @@ func PricePointsLT(v int) predicate.Share {
 // PricePointsLTE applies the LTE predicate on the "price_points" field.
 func PricePointsLTE(v int) predicate.Share {
 	return predicate.Share(sql.FieldLTE(FieldPricePoints, v))
+}
+
+// ListedPubliclyEQ applies the EQ predicate on the "listed_publicly" field.
+func ListedPubliclyEQ(v bool) predicate.Share {
+	return predicate.Share(sql.FieldEQ(FieldListedPublicly, v))
+}
+
+// ListedPubliclyNEQ applies the NEQ predicate on the "listed_publicly" field.
+func ListedPubliclyNEQ(v bool) predicate.Share {
+	return predicate.Share(sql.FieldNEQ(FieldListedPublicly, v))
 }
 
 // PropsIsNil applies the IsNil predicate on the "props" field.

@@ -71,6 +71,7 @@
       "sso_no_email": "身份提供方未返回邮箱地址。",
       "sso_account_unavailable": "此身份没有可用账号，注册可能受限。"
     },
+    "browsePublicShares": "浏览公开分享",
     "inputBackupCode": "请输入您的备用恢复代码",
     "useBackupCode": "改用备用恢复代码",
     "use2FACode": "改用验证器验证码"
@@ -168,7 +169,8 @@
     "myProfile": "个人主页",
     "dashboard": "管理面板",
     "addAccount": "添加账号",
-    "signedOut": "已退出登录"
+    "signedOut": "已退出登录",
+    "discover": "发现"
   },
   "fileManager": {
     "continueInDesktop": "授权成功，请在桌面客户端中继续操作。",
@@ -692,6 +694,8 @@
     "shareTargets": "分享对象",
     "shareTargetsCount_one": "已选择 {{count}} 个项目",
     "shareTargetsCount_other": "已选择 {{count}} 个项目",
+    "publicListing": "收录到公开目录",
+    "publicListingDes": "将此分享显示在“发现”页，任何人（包括未登录访客）可见。带密码的分享不可用。",
     "hideReadme": "隐藏 README 文件",
     "hideReadmeDes": "在分享文件列表中隐藏 README 文件本身，访客仍可看到渲染后的说明内容。"
   },
@@ -1196,5 +1200,8 @@
   "announcement": {
     "title": "公告",
     "dontShowAgain": "不再显示"
+  },
+  "discover": {
+    "searchPlaceholder": "搜索公开分享"
   }
 }

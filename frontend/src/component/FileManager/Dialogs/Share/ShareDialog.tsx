@@ -67,6 +67,7 @@ const shareToSetting = (share: ShareModel, t: TFunction): ShareSetting => {
     preview_only: share.preview_only,
     upload_only: share.upload_only,
     note: share.note,
+    listed_publicly: share.listed_publicly,
     price_points: share.price && share.price > 0 ? share.price : undefined,
     downloads: share.remain_downloads != undefined && share.remain_downloads > 0,
 

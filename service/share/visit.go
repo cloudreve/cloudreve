@@ -248,3 +248,47 @@ func (s *ListShareService) ListInUserProfile(c *gin.Context, uid int) (*ListShar
 	base := dep.SettingProvider().SiteURL(ctx)
 	return BuildListShareResponse(ctx, res, hasher, base, user, false), nil
 }
+
+type (
+	// ListPublicShareService lists shares opted into the public directory.
+	// Anonymous-accessible; only non-expired, non-password shares surface.
+	ListPublicShareService struct {
+		PageSize       int    `form:"page_size" binding:"required,min=10,max=100"`
+		Query          string `form:"query" binding:"omitempty,max=100"`
+		OrderBy        string `form:"order_by"`
+		OrderDirection string `form:"order_direction"`
+		NextPageToken  string `form:"next_page_token"`
+	}
+	ListPublicShareParamCtx struct{}
+)
+
+func (s *ListPublicShareService) ListPublic(c *gin.Context) (*ListShareResponse, error) {
+	dep := dependency.FromContext(c)
+	user := inventory.UserFromContext(c)
+	shareClient := dep.ShareClient()
+
+	args := &inventory.ListShareArgs{
+		PaginationArgs: &inventory.PaginationArgs{
+			UseCursorPagination: true,
+			PageToken:           s.NextPageToken,
+			PageSize:            s.PageSize,
+			Order:               inventory.OrderDirection(s.OrderDirection),
+			OrderBy:             s.OrderBy,
+		},
+		ListedOnly: true,
+		Query:      strings.TrimSpace(s.Query),
+	}
+
+	ctx := context.WithValue(c, inventory.LoadShareUser{}, true)
+	ctx = context.WithValue(ctx, inventory.LoadShareFile{}, true)
+	ctx = context.WithValue(ctx, inventory.LoadShareFiles{}, true)
+	res, err := shareClient.List(ctx, args)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to list shares", err)
+	}
+
+	base := dep.SettingProvider().SiteURL(ctx)
+	// unlocked=true: listed shares carry no password, and the anonymous
+	// share/info endpoint already exposes the same fields to visitors.
+	return BuildListShareResponse(ctx, res, dep.HashIDEncoder(), base, user, true), nil
+}

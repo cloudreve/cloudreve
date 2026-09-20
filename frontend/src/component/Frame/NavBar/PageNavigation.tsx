@@ -22,6 +22,8 @@ import DataHistogram from "../../Icons/DataHistogram.tsx";
 import DataHistogramFilled from "../../Icons/DataHistogramFilled.tsx";
 import Folder from "../../Icons/Folder.tsx";
 import FolderOutlined from "../../Icons/FolderOutlined.tsx";
+import Globe from "../../Icons/Globe.tsx";
+import GlobeFilled from "../../Icons/GlobeFilled.tsx";
 import HomeOutlined from "../../Icons/HomeOutlined.tsx";
 import Payment from "../../Icons/Payment.tsx";
 import PaymentFilled from "../../Icons/PaymentFilled.tsx";
@@ -90,6 +92,13 @@ const ShopNavigationItem: NavigationItem = {
   label: "navbar.shop",
   icon: [BuildingShopFilled, BuildingShop],
   path: "/shop",
+};
+
+// Public share directory — rendered for anonymous visitors too.
+const DiscoverNavigationItem: NavigationItem = {
+  label: "navbar.discover",
+  icon: [GlobeFilled, Globe],
+  path: "/discover",
 };
 
 export const SideNavItemComponent = ({ item }: { item: NavigationItem }) => {
@@ -273,6 +282,7 @@ const PageNavigation = () => {
 
   return (
     <>
+      <SideNavItemComponent item={DiscoverNavigationItem} />
       {isLogin && (
         <Box>
           <>

@@ -362,6 +362,9 @@ const (
 	// GroupPermissionShareSell allows members to set a points price on
 	// shares they create (paid shares).
 	GroupPermissionShareSell
+	// GroupPermissionSharePublicList allows members to list their shares in
+	// the public share directory exposed to anonymous visitors.
+	GroupPermissionSharePublicList
 )
 
 // AclPermission is a bit position in an ACL entry's permission bitmask.
