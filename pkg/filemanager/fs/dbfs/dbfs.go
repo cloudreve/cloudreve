@@ -993,7 +993,9 @@ func (f *DBFS) getNavigator(ctx context.Context, path *fs.URI, requiredCapabilit
 		}
 	}
 
-	return res, nil
+	// Wrap with the private-space gate. The check must re-evaluate on every
+	// call, so the wrapper is applied per request rather than cached.
+	return &vaultNavigator{Navigator: res, fs: f, roots: map[int]int{}}, nil
 }
 
 func (f *DBFS) navigatorId(path *fs.URI) string {

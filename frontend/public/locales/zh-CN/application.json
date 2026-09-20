@@ -773,6 +773,25 @@
     "dropFileHere": "松开鼠标开始上传",
     "etaSuffix": "，预计剩余 {{eta}}"
   },
+  "vault": {
+    "title": "私密空间",
+    "description": "私密空间中的文件在解锁前不会出现在浏览与搜索结果中，使用独立密码解锁。空间内文件无法分享，也无法通过 WebDAV 访问。",
+    "enable": "启用私密空间",
+    "enabled": "私密空间已启用",
+    "disable": "关闭",
+    "disabled": "私密空间已关闭",
+    "disableDescription": "关闭将解除锁定；文件夹及其内容会保留为普通文件。",
+    "confirmDisable": "确认关闭",
+    "setPassword": "设置私密空间密码",
+    "confirmPassword": "私密空间密码",
+    "enterPassword": "私密空间密码",
+    "lockNow": "立即锁定",
+    "locked": "私密空间已锁定",
+    "unlocked": "已解锁",
+    "lockedState": "已锁定",
+    "lockedTitle": "此文件夹位于私密空间内，请解锁后继续。",
+    "badge": "私密空间"
+  },
   "share": {
     "statistics": "统计",
     "expireAt": "<0></0>过期",

@@ -207,6 +207,7 @@ Order = user-visible value first; each ships with backend + UI + tests.
 - #3454 (PG FK on upload) is **Pro-only** — `audit_logs` doesn't exist in this codebase. When B.5 adds our own audit log: insert the audit row in the same tx *after* the file row, never before.
 - [x] `desloppify` pass — 73 review items dispositioned (46 fixed, 27 honestly skipped), strict score 77.1 (was 18.9); scorecard lives in README. `security-reviewer` pass done incrementally per batch (OAuth secrets, SSRF, process exec, path safety)
 - [x] Tag management page (upstream #2962) — owner-scoped `tag:` metadata stats/rename/recolor/delete in `inventory.FileClient`, `GET/PATCH/DELETE /file/tag` routes, Settings → Tags tab with merge-on-rename semantics
+- [x] Private space / vault (upstream #3447) — opt-in root folder flagged `sys:vault`; ancestry-based membership (zero flag maintenance; chain-less search results resolved lazily via `file_children`); `vaultNavigator` decorator gating `To`/`Children`/`Walk`/`ExecuteHook`; separate vault password (`salt:sha256`, sensitive) + 30-min cache-backed unlock session, unlock rate-limited 10/h; vault content never shareable and never direct-linkable; search filtered while locked; `vault_enabled`/`vault_unlocked` in user settings; unlock prompt in `ExplorerError`, Private space section in security settings, lock badge on vault folder (#195)
 
 ## 6. Phase D — desktop, all platforms
 

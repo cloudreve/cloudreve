@@ -151,6 +151,8 @@ export interface UserSettings {
   preferred_policy?: string;
   oauth_grants?: OAuthGrant[];
   linked_accounts?: LinkedAccount[];
+  vault_enabled: boolean;
+  vault_unlocked: boolean;
 }
 
 export interface LinkedAccount {

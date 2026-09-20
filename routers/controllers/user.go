@@ -382,6 +382,50 @@ func UserUnbindSso(c *gin.Context) {
 	c.JSON(200, serializer.Response{})
 }
 
+// UserVaultSetup enables the caller's private space.
+func UserVaultSetup(c *gin.Context) {
+	service := ParametersFromContext[*user.VaultSetupService](c, user.VaultSetupParameterCtx{})
+	err := service.Setup(c)
+	if respondErr(c, err) {
+		return
+	}
+
+	c.JSON(200, serializer.Response{})
+}
+
+// UserVaultUnlock opens the caller's private-space unlock session.
+func UserVaultUnlock(c *gin.Context) {
+	service := ParametersFromContext[*user.VaultUnlockService](c, user.VaultUnlockParameterCtx{})
+	err := service.Unlock(c)
+	if respondErr(c, err) {
+		return
+	}
+
+	c.JSON(200, serializer.Response{})
+}
+
+// UserVaultLock closes the caller's private-space unlock session.
+func UserVaultLock(c *gin.Context) {
+	service := ParametersFromContext[*user.VaultUnlockService](c, user.VaultUnlockParameterCtx{})
+	err := service.Lock(c)
+	if respondErr(c, err) {
+		return
+	}
+
+	c.JSON(200, serializer.Response{})
+}
+
+// UserVaultDisable turns off the caller's private space.
+func UserVaultDisable(c *gin.Context) {
+	service := ParametersFromContext[*user.VaultDisableService](c, user.VaultDisableParameterCtx{})
+	err := service.Disable(c)
+	if respondErr(c, err) {
+		return
+	}
+
+	c.JSON(200, serializer.Response{})
+}
+
 // UserSSOExchange trades the one-time ticket for a session token pair.
 func UserSSOExchange(c *gin.Context) {
 	service := ParametersFromContext[*user.SSOExchangeService](c, user.SSOExchangeParameterCtx{})

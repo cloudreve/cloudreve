@@ -773,6 +773,25 @@
     "dropFileHere": "Drop file to upload",
     "etaSuffix": ", ETA {{eta}}"
   },
+  "vault": {
+    "title": "Private space",
+    "description": "Files in your private space are hidden from browsing and search until you unlock it with a separate password. Vault files cannot be shared or accessed via WebDAV.",
+    "enable": "Enable private space",
+    "enabled": "Private space enabled",
+    "disable": "Disable",
+    "disabled": "Private space disabled",
+    "disableDescription": "Disabling removes the lock; the folder and its contents remain as regular files.",
+    "confirmDisable": "Confirm disable",
+    "setPassword": "Set vault password",
+    "confirmPassword": "Vault password",
+    "enterPassword": "Vault password",
+    "lockNow": "Lock now",
+    "locked": "Private space locked",
+    "unlocked": "Unlocked",
+    "lockedState": "Locked",
+    "lockedTitle": "This folder is in your private space. Unlock to continue.",
+    "badge": "Private space"
+  },
   "share": {
     "statistics": "Statistics",
     "expireAt": "Expire <0></0>",

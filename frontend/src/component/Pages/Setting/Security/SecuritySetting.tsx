@@ -10,6 +10,7 @@ import {
   ListItemSecondaryAction,
   Stack,
   styled,
+  Typography,
   useMediaQuery,
   useTheme,
 } from "@mui/material";
@@ -17,7 +18,14 @@ import { useSnackbar } from "notistack";
 import React, { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { sendRevokeOAuthGrant, sendUnbindSso, sendUpdateUserSetting } from "../../../../api/api.ts";
+import {
+  sendRevokeOAuthGrant,
+  sendUnbindSso,
+  sendUpdateUserSetting,
+  sendVaultDisable,
+  sendVaultLock,
+  sendVaultSetup,
+} from "../../../../api/api.ts";
 import { LinkedAccount, OAuthGrant, Passkey, UserSettings } from "../../../../api/user.ts";
 import { useAppDispatch, useAppSelector } from "../../../../redux/hooks.ts";
 import { confirmOperation } from "../../../../redux/thunks/dialog.ts";
@@ -33,7 +41,9 @@ import TimeBadge from "../../../Common/TimeBadge.tsx";
 import AppsListOutlined from "../../../Icons/AppsListOutlined.tsx";
 import Dismiss from "../../../Icons/Dismiss.tsx";
 import Edit from "../../../Icons/Edit.tsx";
+import LockClosed from "../../../Icons/LockClosed.tsx";
 import Open from "../../../Icons/Open.tsx";
+import ShieldLock from "../../../Icons/ShieldLock.tsx";
 import { ProfileSettingProps } from "../ProfileSetting.tsx";
 import SettingForm from "../SettingForm.tsx";
 import Disable2FADialog from "./Disable2FADialog.tsx";
@@ -227,6 +237,162 @@ const LinkedAccountItem = ({
         </LoadingButton>
       </ListItemSecondaryAction>
     </StyledOAuthGrantListItem>
+  );
+};
+
+const VaultSetting = ({ setting, setSetting }: ProfileSettingProps) => {
+  const { t } = useTranslation();
+  const dispatch = useAppDispatch();
+  const { enqueueSnackbar } = useSnackbar();
+  const [password, setPassword] = useState("");
+  const [repeat, setRepeat] = useState("");
+  const [showDisable, setShowDisable] = useState(false);
+  const [disablePassword, setDisablePassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const notify = (variant: "success" | "warning", message: string) =>
+    enqueueSnackbar({ variant, message, action: DefaultCloseAction });
+
+  const onSetup = () => {
+    if (password !== repeat) {
+      notify("warning", t("login.passwordNotMatch"));
+      return;
+    }
+    setLoading(true);
+    dispatch(sendVaultSetup(password))
+      .then(() => {
+        setSetting({ ...setting, vault_enabled: true });
+        setPassword("");
+        setRepeat("");
+        notify("success", t("vault.enabled"));
+      })
+      .finally(() => setLoading(false));
+  };
+
+  const onLock = () => {
+    setLoading(true);
+    dispatch(sendVaultLock())
+      .then(() => {
+        setSetting({ ...setting, vault_unlocked: false });
+        notify("success", t("vault.locked"));
+      })
+      .finally(() => setLoading(false));
+  };
+
+  const onDisable = () => {
+    setLoading(true);
+    dispatch(sendVaultDisable(disablePassword))
+      .then(() => {
+        setSetting({ ...setting, vault_enabled: false, vault_unlocked: false });
+        setShowDisable(false);
+        setDisablePassword("");
+        notify("success", t("vault.disabled"));
+      })
+      .finally(() => setLoading(false));
+  };
+
+  return (
+    <SettingForm
+      title={
+        <Box>
+          {t("vault.title")}
+          {setting.vault_enabled && (
+            <SquareChip
+              sx={{
+                ml: 1,
+                height: "initial",
+                fontSize: (theme) => theme.typography.caption.fontSize,
+              }}
+              color={setting.vault_unlocked ? "success" : "default"}
+              size={"small"}
+              variant={"outlined"}
+              label={t(`vault.${setting.vault_unlocked ? "unlocked" : "lockedState"}`)}
+            />
+          )}
+        </Box>
+      }
+      lgWidth={5}
+    >
+      <Typography variant={"body2"} color={"text.secondary"}>
+        {t("vault.description")}
+      </Typography>
+      {!setting.vault_enabled && (
+        <Stack spacing={2} sx={{ mt: 2 }}>
+          <DenseFilledTextField
+            required
+            label={t("vault.setPassword")}
+            fullWidth
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            inputProps={{ type: "password", minLength: 6, maxLength: 128 }}
+          />
+          <DenseFilledTextField
+            required
+            label={t("login.repeatPassword")}
+            fullWidth
+            value={repeat}
+            onChange={(e) => setRepeat(e.target.value)}
+            inputProps={{ type: "password", minLength: 6, maxLength: 128 }}
+          />
+          <Box>
+            <LoadingButton
+              variant={"contained"}
+              onClick={onSetup}
+              loading={loading}
+              disabled={password.length < 6}
+              startIcon={<ShieldLock />}
+            >
+              <span>{t("vault.enable")}</span>
+            </LoadingButton>
+          </Box>
+        </Stack>
+      )}
+      {setting.vault_enabled && (
+        <Box sx={{ mt: 1 }}>
+          <Stack direction={"row"} spacing={1}>
+            {setting.vault_unlocked && (
+              <SecondaryButton variant={"contained"} onClick={onLock} disabled={loading} startIcon={<LockClosed />}>
+                {t("vault.lockNow")}
+              </SecondaryButton>
+            )}
+            <SecondaryButton
+              variant={"contained"}
+              color={"error"}
+              onClick={() => setShowDisable(!showDisable)}
+              startIcon={<Dismiss />}
+            >
+              {t("vault.disable")}
+            </SecondaryButton>
+          </Stack>
+          <Collapse in={showDisable} unmountOnExit>
+            <Stack spacing={2} sx={{ mt: 2 }}>
+              <Typography variant={"body2"} color={"text.secondary"}>
+                {t("vault.disableDescription")}
+              </Typography>
+              <DenseFilledTextField
+                required
+                label={t("vault.confirmPassword")}
+                fullWidth
+                value={disablePassword}
+                onChange={(e) => setDisablePassword(e.target.value)}
+                inputProps={{ type: "password" }}
+              />
+              <Box>
+                <LoadingButton
+                  variant={"contained"}
+                  color={"error"}
+                  onClick={onDisable}
+                  loading={loading}
+                  disabled={disablePassword == ""}
+                >
+                  <span>{t("vault.confirmDisable")}</span>
+                </LoadingButton>
+              </Box>
+            </Stack>
+          </Collapse>
+        </Box>
+      )}
+    </SettingForm>
   );
 };
 
@@ -451,6 +617,7 @@ const SecuritySetting = ({ setting, setSetting }: ProfileSettingProps) => {
           )}
         </SettingForm>
       )}
+      <VaultSetting setting={setting} setSetting={setSetting} />
       <Enable2FADialog open={enable2FAOpen} onClose={() => setEnable2FAOpen(false)} on2FAEnabled={on2FAChange(true)} />
       <Disable2FADialog
         open={disable2FAOpen}

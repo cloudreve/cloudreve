@@ -685,8 +685,12 @@ func init() {
 	userDescCredits := userFields[8].Descriptor()
 	// user.DefaultCredits holds the default value on creation for the credits field.
 	user.DefaultCredits = userDescCredits.Default.(int64)
+	// userDescVaultFolder is the schema descriptor for vault_folder field.
+	userDescVaultFolder := userFields[11].Descriptor()
+	// user.DefaultVaultFolder holds the default value on creation for the vault_folder field.
+	user.DefaultVaultFolder = userDescVaultFolder.Default.(int)
 	// userDescSettings is the schema descriptor for settings field.
-	userDescSettings := userFields[11].Descriptor()
+	userDescSettings := userFields[13].Descriptor()
 	// user.DefaultSettings holds the default value on creation for the settings field.
 	user.DefaultSettings = userDescSettings.Default.(*types.UserSetting)
 	usergrantMixin := schema.UserGrant{}.Mixin()
