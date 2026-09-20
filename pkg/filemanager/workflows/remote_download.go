@@ -86,6 +86,7 @@ const (
 
 	SummaryKeySrcMultiple    = "src_multiple"
 	SummaryKeySrcDstPolicyID = "dst_policy_id"
+	SummaryKeyDstPolicyName  = "dst_policy_name"
 	SummaryKeyFailed         = "failed"
 	SummaryKeyTotal          = "total"
 )

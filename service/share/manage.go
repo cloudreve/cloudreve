@@ -38,6 +38,10 @@ type (
 		Note string `json:"note" binding:"omitempty,max=255"`
 		// Points price visitors must pay before downloading. 0 = free share.
 		PricePoints int `json:"price_points" binding:"omitempty,min=0"`
+		// ListedPublicly opts the share into the public share directory.
+		// Requires the group's public-listing permission and is rejected on
+		// password-protected shares.
+		ListedPublicly bool `json:"listed_publicly"`
 	}
 	ShareCreateParamCtx struct{}
 
@@ -89,6 +93,15 @@ func (service *ShareCreateService) Upsert(c *gin.Context, existed int) (string, 
 		return "", serializer.NewError(serializer.CodeGroupNotAllowed, "Group permission denied for paid share", nil)
 	}
 
+	if service.ListedPublicly {
+		if !user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionSharePublicList)) {
+			return "", serializer.NewError(serializer.CodeGroupNotAllowed, "Group permission denied for public share listing", nil)
+		}
+		if service.IsPrivate {
+			return "", serializer.NewError(serializer.CodeParamErr, "password-protected shares cannot be publicly listed", nil)
+		}
+	}
+
 	rawUris := service.Uris
 	if len(rawUris) == 0 && service.Uri != "" {
 		rawUris = []string{service.Uri}
@@ -135,6 +148,7 @@ func (service *ShareCreateService) Upsert(c *gin.Context, existed int) (string, 
 		UploadOnly:      service.UploadOnly,
 		Note:            service.Note,
 		PricePoints:     service.PricePoints,
+		ListedPublicly:  service.ListedPublicly,
 	})
 	if err != nil {
 		return "", err

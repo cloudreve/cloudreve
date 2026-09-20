@@ -33,6 +33,8 @@ const (
 	FieldRemainDownloads = "remain_downloads"
 	// FieldPricePoints holds the string denoting the price_points field in the database.
 	FieldPricePoints = "price_points"
+	// FieldListedPublicly holds the string denoting the listed_publicly field in the database.
+	FieldListedPublicly = "listed_publicly"
 	// FieldProps holds the string denoting the props field in the database.
 	FieldProps = "props"
 	// EdgeUser holds the string denoting the user edge name in mutations.
@@ -85,6 +87,7 @@ var Columns = []string{
 	FieldExpires,
 	FieldRemainDownloads,
 	FieldPricePoints,
+	FieldListedPublicly,
 	FieldProps,
 }
 
@@ -138,6 +141,8 @@ var (
 	DefaultPricePoints int
 	// PricePointsValidator is a validator for the "price_points" field. It is called by the builders before save.
 	PricePointsValidator func(int) error
+	// DefaultListedPublicly holds the default value on creation for the "listed_publicly" field.
+	DefaultListedPublicly bool
 )
 
 // OrderOption defines the ordering options for the Share queries.
@@ -191,6 +196,11 @@ func ByRemainDownloads(opts ...sql.OrderTermOption) OrderOption {
 // ByPricePoints orders the results by the price_points field.
 func ByPricePoints(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPricePoints, opts...).ToFunc()
+}
+
+// ByListedPublicly orders the results by the listed_publicly field.
+func ByListedPublicly(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldListedPublicly, opts...).ToFunc()
 }
 
 // ByUserField orders the results by user field.

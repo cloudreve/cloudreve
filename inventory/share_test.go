@@ -3,6 +3,7 @@ package inventory
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/enttest"
@@ -114,6 +115,87 @@ func TestShareUpsertFileIDs(t *testing.T) {
 	loaded, err = shareClient.GetByID(loadCtx, single.ID)
 	require.NoError(t, err)
 	require.Empty(t, loaded.Edges.Files)
+}
+
+func TestShareClientListListedOnly(t *testing.T) {
+	client := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared")
+	t.Cleanup(func() { require.NoError(t, client.Close()) })
+	ctx := context.Background()
+
+	permissions := &boolset.BooleanSet{}
+	boolset.Set(types.GroupPermissionShare, true, permissions)
+	group := client.Group.Create().SetName("g").SetPermissions(permissions).SaveX(ctx)
+	owner := client.User.Create().SetEmail("owner@example.com").SetNick("owner").SetGroup(group).SaveX(ctx)
+	root := client.File.Create().SetName(RootFolderName).SetType(int(types.FileTypeFolder)).SetOwner(owner).SaveX(ctx)
+	mkfile := func(name string) *ent.File {
+		return client.File.Create().SetName(name).SetType(int(types.FileTypeFile)).SetOwner(owner).SetParent(root).SaveX(ctx)
+	}
+
+	shareClient := NewShareClient(client, conf.SQLiteDB, nil)
+	past := time.Now().Add(-time.Hour)
+
+	// Visible: listed, no password, unexpired.
+	listed, err := shareClient.Upsert(ctx, &CreateShareParams{
+		OwnerID: owner.ID, FileID: mkfile("public-report.pdf").ID, ListedPublicly: true,
+	})
+	require.NoError(t, err)
+	// Hidden: not opted in.
+	_, err = shareClient.Upsert(ctx, &CreateShareParams{
+		OwnerID: owner.ID, FileID: mkfile("private-notes.txt").ID,
+	})
+	require.NoError(t, err)
+	// Hidden: opted in but password-protected (e.g. edited private later).
+	_, err = shareClient.Upsert(ctx, &CreateShareParams{
+		OwnerID: owner.ID, FileID: mkfile("secret.zip").ID, Password: "pw", ListedPublicly: true,
+	})
+	require.NoError(t, err)
+	// Hidden: opted in but expired.
+	_, err = shareClient.Upsert(ctx, &CreateShareParams{
+		OwnerID: owner.ID, FileID: mkfile("old.zip").ID, ListedPublicly: true, Expires: &past,
+	})
+	require.NoError(t, err)
+	// Visible via covered-file name match (multi-file share).
+	anchor := mkfile("bundle")
+	multi, err := shareClient.Upsert(ctx, &CreateShareParams{
+		OwnerID:        owner.ID,
+		FileID:         anchor.ID,
+		FileIDs:        []int{anchor.ID, mkfile("quarterly-figures.xlsx").ID},
+		ListedPublicly: true,
+	})
+	require.NoError(t, err)
+
+	listArgs := func(query string) *ListShareArgs {
+		return &ListShareArgs{
+			PaginationArgs: &PaginationArgs{PageSize: 20},
+			ListedOnly:     true,
+			Query:          query,
+		}
+	}
+	ids := func(res *ListShareResult) []int {
+		out := make([]int, 0, len(res.Shares))
+		for _, s := range res.Shares {
+			out = append(out, s.ID)
+		}
+		return out
+	}
+
+	res, err := shareClient.List(ctx, listArgs(""))
+	require.NoError(t, err)
+	require.ElementsMatch(t, []int{listed.ID, multi.ID}, ids(res))
+
+	// Case-insensitive substring match on anchor name.
+	res, err = shareClient.List(ctx, listArgs("REPORT"))
+	require.NoError(t, err)
+	require.Equal(t, []int{listed.ID}, ids(res))
+
+	// Covered-file name match surfaces the multi-file share.
+	res, err = shareClient.List(ctx, listArgs("quarterly"))
+	require.NoError(t, err)
+	require.Equal(t, []int{multi.ID}, ids(res))
+
+	res, err = shareClient.List(ctx, listArgs("nonexistent"))
+	require.NoError(t, err)
+	require.Empty(t, res.Shares)
 }
 
 func TestShareClientRevalidatesOwnerGroup(t *testing.T) {

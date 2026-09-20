@@ -93,9 +93,11 @@ const TaskSummaryTitle = ({ type, summary, isInDashboard = false }: TaskSummaryT
         <Trans
           i18nKey="setting.importFileTo"
           values={{
-            policy: policyOption
-              ? policyOption.find((p) => p.id == summary?.props.dst_policy_id)?.name ?? "Unknown"
-              : "",
+            policy:
+              summary?.props.dst_policy_name ||
+              (policyOption
+                ? policyOption.find((p) => p.id == summary?.props.dst_policy_id)?.name ?? "Unknown"
+                : "Unknown"),
           }}
           components={[
             <StyledFileBadge

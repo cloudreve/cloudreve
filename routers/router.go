@@ -967,6 +967,12 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				controllers.FromQuery[sharesvc.ShareInfoService](sharesvc.ShareInfoParamCtx{}),
 				controllers.GetShare,
 			)
+			// Public share directory listing (anonymous-accessible)
+			share.GET("listed",
+				middleware.RateLimitByIP("share_listed", 60, time.Minute),
+				controllers.FromQuery[sharesvc.ListPublicShareService](sharesvc.ListPublicShareParamCtx{}),
+				controllers.ListPublicShares,
+			)
 			// Purchase a paid share with credits
 			share.POST("purchase/:id",
 				middleware.LoginRequired(),

@@ -1407,7 +1407,9 @@
     "new": "New group",
     "editGroup": "Edit {{group}}",
     "switchablePolicies": "Switchable storage policies",
-    "switchablePoliciesDes": "Policies members of this group can freely switch to. The default policy above is always available."
+    "switchablePoliciesDes": "Policies members of this group can freely switch to. The default policy above is always available.",
+    "sharePublicList": "Public share directory",
+    "sharePublicListDes": "When enabled, users can opt their share links into the public directory (Discover page). Password-protected shares cannot be listed."
   },
   "user": {
     "createdAt": "Created at",

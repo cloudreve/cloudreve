@@ -423,8 +423,15 @@ func (service *ImportWorkflowService) CreateImportTask(c *gin.Context) (*TaskRes
 		return nil, serializer.NewError(serializer.CodeParamErr, "Invalid destination", err)
 	}
 
+	// Resolve policy name for the task summary; best-effort, the task itself
+	// validates the policy at execution time.
+	var policyName string
+	if policy, err := dep.StoragePolicyClient().GetPolicyByID(c, service.PolicyID); err == nil {
+		policyName = policy.Name
+	}
+
 	// Create task
-	t, err := workflows.NewImportTask(c, owner, service.Src, service.Recursive, dst.Join(service.Dst).String(), service.PolicyID)
+	t, err := workflows.NewImportTask(c, owner, service.Src, service.Recursive, dst.Join(service.Dst).String(), service.PolicyID, policyName)
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeCreateTaskError, "Failed to create task", err)
 	}

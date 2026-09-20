@@ -1407,7 +1407,9 @@
     "new": "新建用户组",
     "editGroup": "编辑 {{group}}",
     "switchablePolicies": "可切换存储策略",
-    "switchablePoliciesDes": "该组成员可以自由切换使用的存储策略。上方默认策略始终可用。"
+    "switchablePoliciesDes": "该组成员可以自由切换使用的存储策略。上方默认策略始终可用。",
+    "sharePublicList": "公开分享目录",
+    "sharePublicListDes": "开启后，用户可以将分享链接收录到公开目录（发现页）。带密码的分享无法被收录。"
   },
   "user": {
     "createdAt": "创建时间",

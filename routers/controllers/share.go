@@ -68,6 +68,22 @@ func ListShare(c *gin.Context) {
 	}
 }
 
+// ListPublicShares lists shares opted into the public directory.
+// Anonymous-accessible.
+func ListPublicShares(c *gin.Context) {
+	service := ParametersFromContext[*share.ListPublicShareService](c, share.ListPublicShareParamCtx{})
+	resp, err := service.ListPublic(c)
+	if respondErr(c, err) {
+		return
+	}
+
+	if resp != nil {
+		c.JSON(200, serializer.Response{
+			Data: resp,
+		})
+	}
+}
+
 // DeleteShare 删除分享
 func DeleteShare(c *gin.Context) {
 	err := share.DeleteShare(c, hashid.FromContext(c))

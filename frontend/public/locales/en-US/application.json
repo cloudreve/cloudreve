@@ -71,6 +71,7 @@
       "sso_no_email": "The identity provider did not return an email address.",
       "sso_account_unavailable": "No account is available for this identity. Registration may be restricted."
     },
+    "browsePublicShares": "Browse public shares",
     "inputBackupCode": "Enter one of your recovery codes",
     "useBackupCode": "Use a recovery code instead",
     "use2FACode": "Use authenticator code instead"
@@ -168,7 +169,8 @@
     "myProfile": "My profile",
     "dashboard": "Dashboard",
     "addAccount": "Add account",
-    "signedOut": "Signed out"
+    "signedOut": "Signed out",
+    "discover": "Discover"
   },
   "fileManager": {
     "continueInDesktop": "Authorization successful, please continue in the desktop client.",
@@ -692,6 +694,8 @@
     "shareTargets": "Share targets",
     "shareTargetsCount_one": "{{count}} file selected",
     "shareTargetsCount_other": "{{count}} files selected",
+    "publicListing": "List in public directory",
+    "publicListingDes": "Show this share on the Discover page, visible to anyone including anonymous visitors. Not available for password-protected shares.",
     "hideReadme": "Hide readme file",
     "hideReadmeDes": "Keep the README file itself out of the share listing. Visitors still see the rendered readme."
   },
@@ -1196,5 +1200,8 @@
   "announcement": {
     "title": "Announcement",
     "dontShowAgain": "Don't show this again"
+  },
+  "discover": {
+    "searchPlaceholder": "Search public shares"
   }
 }

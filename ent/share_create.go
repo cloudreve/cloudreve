@@ -152,6 +152,20 @@ func (sc *ShareCreate) SetNillablePricePoints(i *int) *ShareCreate {
 	return sc
 }
 
+// SetListedPublicly sets the "listed_publicly" field.
+func (sc *ShareCreate) SetListedPublicly(b bool) *ShareCreate {
+	sc.mutation.SetListedPublicly(b)
+	return sc
+}
+
+// SetNillableListedPublicly sets the "listed_publicly" field if the given value is not nil.
+func (sc *ShareCreate) SetNillableListedPublicly(b *bool) *ShareCreate {
+	if b != nil {
+		sc.SetListedPublicly(*b)
+	}
+	return sc
+}
+
 // SetProps sets the "props" field.
 func (sc *ShareCreate) SetProps(tp *types.ShareProps) *ShareCreate {
 	sc.mutation.SetProps(tp)
@@ -289,6 +303,10 @@ func (sc *ShareCreate) defaults() error {
 		v := share.DefaultPricePoints
 		sc.mutation.SetPricePoints(v)
 	}
+	if _, ok := sc.mutation.ListedPublicly(); !ok {
+		v := share.DefaultListedPublicly
+		sc.mutation.SetListedPublicly(v)
+	}
 	return nil
 }
 
@@ -313,6 +331,9 @@ func (sc *ShareCreate) check() error {
 		if err := share.PricePointsValidator(v); err != nil {
 			return &ValidationError{Name: "price_points", err: fmt.Errorf(`ent: validator failed for field "Share.price_points": %w`, err)}
 		}
+	}
+	if _, ok := sc.mutation.ListedPublicly(); !ok {
+		return &ValidationError{Name: "listed_publicly", err: errors.New(`ent: missing required field "Share.listed_publicly"`)}
 	}
 	return nil
 }
@@ -383,6 +404,10 @@ func (sc *ShareCreate) createSpec() (*Share, *sqlgraph.CreateSpec) {
 	if value, ok := sc.mutation.PricePoints(); ok {
 		_spec.SetField(share.FieldPricePoints, field.TypeInt, value)
 		_node.PricePoints = value
+	}
+	if value, ok := sc.mutation.ListedPublicly(); ok {
+		_spec.SetField(share.FieldListedPublicly, field.TypeBool, value)
+		_node.ListedPublicly = value
 	}
 	if value, ok := sc.mutation.Props(); ok {
 		_spec.SetField(share.FieldProps, field.TypeJSON, value)
@@ -650,6 +675,18 @@ func (u *ShareUpsert) AddPricePoints(v int) *ShareUpsert {
 	return u
 }
 
+// SetListedPublicly sets the "listed_publicly" field.
+func (u *ShareUpsert) SetListedPublicly(v bool) *ShareUpsert {
+	u.Set(share.FieldListedPublicly, v)
+	return u
+}
+
+// UpdateListedPublicly sets the "listed_publicly" field to the value that was provided on create.
+func (u *ShareUpsert) UpdateListedPublicly() *ShareUpsert {
+	u.SetExcluded(share.FieldListedPublicly)
+	return u
+}
+
 // SetProps sets the "props" field.
 func (u *ShareUpsert) SetProps(v *types.ShareProps) *ShareUpsert {
 	u.Set(share.FieldProps, v)
@@ -878,6 +915,20 @@ func (u *ShareUpsertOne) AddPricePoints(v int) *ShareUpsertOne {
 func (u *ShareUpsertOne) UpdatePricePoints() *ShareUpsertOne {
 	return u.Update(func(s *ShareUpsert) {
 		s.UpdatePricePoints()
+	})
+}
+
+// SetListedPublicly sets the "listed_publicly" field.
+func (u *ShareUpsertOne) SetListedPublicly(v bool) *ShareUpsertOne {
+	return u.Update(func(s *ShareUpsert) {
+		s.SetListedPublicly(v)
+	})
+}
+
+// UpdateListedPublicly sets the "listed_publicly" field to the value that was provided on create.
+func (u *ShareUpsertOne) UpdateListedPublicly() *ShareUpsertOne {
+	return u.Update(func(s *ShareUpsert) {
+		s.UpdateListedPublicly()
 	})
 }
 
@@ -1283,6 +1334,20 @@ func (u *ShareUpsertBulk) AddPricePoints(v int) *ShareUpsertBulk {
 func (u *ShareUpsertBulk) UpdatePricePoints() *ShareUpsertBulk {
 	return u.Update(func(s *ShareUpsert) {
 		s.UpdatePricePoints()
+	})
+}
+
+// SetListedPublicly sets the "listed_publicly" field.
+func (u *ShareUpsertBulk) SetListedPublicly(v bool) *ShareUpsertBulk {
+	return u.Update(func(s *ShareUpsert) {
+		s.SetListedPublicly(v)
+	})
+}
+
+// UpdateListedPublicly sets the "listed_publicly" field to the value that was provided on create.
+func (u *ShareUpsertBulk) UpdateListedPublicly() *ShareUpsertBulk {
+	return u.Update(func(s *ShareUpsert) {
+		s.UpdateListedPublicly()
 	})
 }
 

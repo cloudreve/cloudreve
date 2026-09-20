@@ -1,6 +1,6 @@
 import i18next from "i18next";
 import { enqueueSnackbar } from "notistack";
-import { getUserInfo, sendSignout } from "../../api/api.ts";
+import { getAllowedPolicies, getUserInfo, sendSignout } from "../../api/api.ts";
 import { LoginResponse, User } from "../../api/user.ts";
 import { DefaultCloseAction } from "../../component/Common/Snackbar/snackbar.tsx";
 import { router } from "../../router";
@@ -43,7 +43,12 @@ export function setTargetSession(session: LoginResponse): AppThunk {
     dispatch(setDrawerWidth(SessionManager.getWithFallback(UserSettings.DrawerWidth)));
     dispatch(setDarkMode(SessionManager.get(UserSettings.PreferredDarkMode)));
     // TODO: clear fm cache
-    dispatch(setPolicyOptionCache());
+    // Populate the policy id→name cache used by task summaries (e.g.
+    // import tasks show the source policy). Fire-and-forget so a slow or
+    // failing request never blocks login.
+    dispatch(getAllowedPolicies())
+      .then((policies) => dispatch(setPolicyOptionCache(policies)))
+      .catch(() => {});
     dispatch(clearSessionCache({ index: 0, value: undefined }));
     refreshTimeZone();
   };

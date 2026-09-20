@@ -94,7 +94,7 @@ import {
 } from "./explorer.ts";
 import { AppError, Code, CrHeaders, defaultOpts, isRequestAbortedError, send, ThunkResponse } from "./request.ts";
 import { CreateDavAccountService, DavAccount, ListDavAccountsResponse, ListDavAccountsService } from "./setting.ts";
-import { ListShareResponse, ListShareService } from "./share.ts";
+import { ListPublicShareService, ListShareResponse, ListShareService } from "./share.ts";
 import { CaptchaResponse, SiteConfig } from "./site.ts";
 import {
   AppRegistration,
@@ -1311,6 +1311,25 @@ export function getShares(req: ListShareService): ThunkResponse<ListShareRespons
     return await dispatch(
       send(
         "/share",
+        {
+          method: "GET",
+          params: req,
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+// getPublicShares lists shares opted into the public directory. No auth
+// required; anonymous visitors get the same response shape.
+export function getPublicShares(req: ListPublicShareService): ThunkResponse<ListShareResponse> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/share/listed",
         {
           method: "GET",
           params: req,

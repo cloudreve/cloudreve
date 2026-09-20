@@ -111,6 +111,7 @@ export const GroupPermission = {
   admin_events: 27,
   admin_reports: 28,
   share_sell: 29,
+  share_public_list: 30,
 };
 
 // Delegated admin section bits — is_admin implies all of them.

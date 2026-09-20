@@ -29,6 +29,7 @@ import Edit from "../../../Icons/Edit.tsx";
 import Eye from "../../../Icons/Eye.tsx";
 import EyeOff from "../../../Icons/EyeOff.tsx";
 import FolderAdd from "../../../Icons/FolderAdd.tsx";
+import Globe from "../../../Icons/Globe.tsx";
 import RenameOutlined from "../../../Icons/RenameOutlined.tsx";
 import TableSettingsOutlined from "../../../Icons/TableSettings.tsx";
 import Timer from "../../../Icons/Timer.tsx";
@@ -91,6 +92,7 @@ export interface ShareSetting {
   preview_only?: boolean;
   upload_only?: boolean;
   note?: string;
+  listed_publicly?: boolean;
   downloads?: boolean;
   expires?: boolean;
   price_points?: number;
@@ -146,7 +148,14 @@ const ShareSettingContent = ({ setting, file, editing, onSettingChange }: ShareS
   };
 
   const handleCheck = (
-    prop: "is_private" | "share_view" | "show_readme" | "preview_only" | "expires" | "downloads",
+    prop:
+      | "is_private"
+      | "share_view"
+      | "show_readme"
+      | "preview_only"
+      | "expires"
+      | "downloads"
+      | "listed_publicly",
   ) => () => {
     if (!setting[prop]) {
       handleExpand(prop)(null, true);
@@ -279,6 +288,24 @@ const ShareSettingContent = ({ setting, file, editing, onSettingChange }: ShareS
             />
           </FormControl>
         </AccordionDetails>
+      </Accordion>
+      <Accordion expanded={expanded === "listed_publicly"} onChange={handleExpand("listed_publicly")}>
+        <AccordionSummary aria-controls="panel-listed-content" id="panel-listed-header">
+          <StyledListItemButton>
+            <ListItemIcon>
+              <Globe />
+            </ListItemIcon>
+            <ListItemText primary={t("application:modals.publicListing")} />
+            <ListItemSecondaryAction>
+              <Checkbox
+                checked={!!setting.listed_publicly}
+                disabled={!!setting.is_private}
+                onChange={handleCheck("listed_publicly")}
+              />
+            </ListItemSecondaryAction>
+          </StyledListItemButton>
+        </AccordionSummary>
+        <AccordionDetails>{t("application:modals.publicListingDes")}</AccordionDetails>
       </Accordion>
       <Accordion expanded={expanded === "preview_only"} onChange={handleExpand("preview_only")}>
         <AccordionSummary aria-controls="panel1a-content" id="panel1a-header">

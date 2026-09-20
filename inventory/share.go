@@ -74,6 +74,8 @@ type (
 		FileIDs     []int
 		Props       *types.ShareProps
 		PricePoints int
+		// ListedPublicly lists the share in the public share directory.
+		ListedPublicly bool
 	}
 
 	ListShareArgs struct {
@@ -82,6 +84,12 @@ type (
 		FileID     int
 		PublicOnly bool
 		ShareIDs   []int
+		// ListedOnly restricts to shares opted into the public directory
+		// (listed_publicly = true, no password, not expired).
+		ListedOnly bool
+		// Query filters ListedOnly shares by (partial, case-insensitive)
+		// name of the anchor or any covered file.
+		Query string
 	}
 	ListShareResult struct {
 		*PaginationResults
@@ -139,6 +147,7 @@ func (c *shareClient) Upsert(ctx context.Context, params *CreateShareParams) (*e
 		}
 
 		createQuery.SetPricePoints(params.PricePoints)
+		createQuery.SetListedPublicly(params.ListedPublicly)
 		return createQuery.Save(ctx)
 	}
 
@@ -160,6 +169,9 @@ func (c *shareClient) Upsert(ctx context.Context, params *CreateShareParams) (*e
 	}
 	if params.PricePoints > 0 {
 		query.SetPricePoints(params.PricePoints)
+	}
+	if params.ListedPublicly {
+		query.SetListedPublicly(true)
 	}
 	if len(params.FileIDs) > 1 {
 		query.AddFileIDs(params.FileIDs...)
@@ -396,6 +408,22 @@ func (c *shareClient) listQuery(args *ListShareArgs) *ent.ShareQuery {
 
 	if args.PublicOnly {
 		query.Where(share.PasswordIsNil())
+	}
+
+	if args.ListedOnly {
+		// Defense-in-depth: the directory requires both the opt-in flag and
+		// no password, so a share edited private later still drops out.
+		query.Where(
+			share.ListedPublicly(true),
+			share.PasswordIsNil(),
+			share.Or(share.ExpiresIsNil(), share.ExpiresGT(time.Now())),
+		)
+		if args.Query != "" {
+			query.Where(share.Or(
+				share.HasFileWith(file.NameContainsFold(args.Query)),
+				share.HasFilesWith(file.NameContainsFold(args.Query)),
+			))
+		}
 	}
 
 	if args.FileID > 0 {

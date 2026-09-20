@@ -205,8 +205,8 @@ Order = user-visible value first; each ships with backend + UI + tests.
 - Own security review on top of upstream fixes: session/token entropy audit, SSRF guard re-test (NAT64 class), rate limiting on auth endpoints
 - Fix upstream bug backlog by impact: ~~#3574 OOM~~ (done — paged tree walk + batched delete), ~~#3118/#3005 WebDAV large-file~~ (done — Content-Range assembly into one session; non-local policies get honest 501; single-PUT giant-file 500s are proxy/client timeouts, not fixable server-side), ~~#3375 SMTP auth discovery~~ (done — `smtp_auth` setting)
 - #3454 (PG FK on upload) is **Pro-only** — `audit_logs` doesn't exist in this codebase. When B.5 adds our own audit log: insert the audit row in the same tx *after* the file row, never before.
+- [x] #198 (upstream #3581) — "import files" task shows source storage policy "unknown": `ImportTaskState.PolicyName` baked at creation (resolved best-effort via `StoragePolicyClient`), summary emits `dst_policy_name` so admin views of other users' tasks work without a policy lookup; `policyOptionCache` retyped to `StoragePolicyBrief[]` and populated from `getAllowedPolicies()` at session init as fallback for legacy tasks
 - [x] #199 (upstream #3584) — markdown editor lag: root cause was per-keystroke React re-renders (changedValue state fed back into the editor's initial-markdown prop) re-running every plugin's `update()` hook (RealmWithPlugins has a dep-less effect). `MarkdownEditor` is now `memo`'d with a `useMemo`'d plugins array + stable `translation`; `MarkdownViewer` keeps edits in a ref (read at save) and passes the immutable loaded content — zero re-renders per keystroke
-- [ ] #198 (upstream #3581) — "import files" task shows source storage policy "unknown": check task props → policy name resolution in admin import path (Pro report, likely same code path in CE)
 - [ ] #200 (upstream #3586) — Pro crash on SIGHUP; log shows a clean signal-driven shutdown, no stack trace — watch for a CE repro, likely not actionable yet
 - [x] `desloppify` pass — 73 review items dispositioned (46 fixed, 27 honestly skipped), strict score 77.1 (was 18.9); scorecard lives in README. `security-reviewer` pass done incrementally per batch (OAuth secrets, SSRF, process exec, path safety)
 - [x] Tag management page (upstream #2962) — owner-scoped `tag:` metadata stats/rename/recolor/delete in `inventory.FileClient`, `GET/PATCH/DELETE /file/tag` routes, Settings → Tags tab with merge-on-rename semantics
@@ -215,6 +215,7 @@ Order = user-visible value first; each ships with backend + UI + tests.
 - [x] Saved share links (#147) — `POST /file/create` accepts `type: share` + `share_id`/`share_password`, materializing a symbolic shortcut (`sys:shared_redirect`) that lists under My Files and Shared with me; "Save to my files" in the share popover + "Save share link" dialog on /shares
 - [x] Share `hide_readme` option (upstream #2729 item 6) — `ShareProps.HideReadMe` (only meaningful with `ShowReadMe`); share navigator filters `README.md`/`README.txt` (case-insensitive) from listings while direct-path resolution stays open for the readme viewer; `detectReadMe` URI fallback now probes unconditionally; owner-only `hide_readme` on share responses; Share dialog nested checkbox
 - [x] 2FA recovery codes (upstream #2729 item 3) — `user.two_factor_backup_codes` sensitive JSON of `salt:sha256` digests; `PUT /user/setting/2fa/backup` regenerates 10 one-time codes behind a valid TOTP (rate-limited 5/h); `Verify2FA` falls back to single-use code consumption on TOTP failure; codes invalidated on secret rotation/disable; login phase gains a recovery-code input mode; security settings show remaining count + regenerate dialog
+- [x] Public share directory (upstream #2729 items 4+5) — `share.listed_publicly` opt-in column gated by new `GroupPermissionSharePublicList` group bit; rejected on password-protected shares at the service layer and normalized off at creation; `GET /share/listed` anonymous endpoint (rate-limited 60/min/IP, cursor pagination) listing only non-expired passwordless listed shares with case-insensitive name search across anchor + covered files; `listed_publicly` owner-visible in share responses; `/discover` page (anonymous-visible nav item + sign-in link), admin group Share section switch, en+zh locales
 
 ## 6. Phase D — desktop, all platforms
 
@@ -224,10 +225,11 @@ Goal: Windows + macOS + Linux from the `desktop/` tree in this repo.
 |---|---|---|---|
 | Placeholders/hydration | cfapi (keep) | File Provider ext (Swift bridge) | FUSE (`fuser`) or plain sync folder |
 | Shell integration | shellext (keep) | Finder sync extension | Nautilus/Dolphin plugin (later) |
-| Notifications | win32_notif → replace | `tauri-plugin-notification` (all platforms) | same |
+| Notifications | win32_notif | `mac_notification_sys` | `notify_rust` |
 | Sync core | shared: `cloudreve-api`, `inventory`, `tasks`, `uploader`, `drive/sync` | same | same |
 
-- Port order: (1) strip `win32_notif`→tauri notifications (all platforms benefit), (2) abstract `drive/` behind a `HydrationProvider` trait (cfapi impl on Windows, stub→FUSE on Linux, FileProvider on macOS), (3) CI matrix build all 3, (4) MSIX→also ship .dmg/.AppImage/.deb.
+- Status: (1) notifications already per-OS (`win32_notif` / `notify_rust` / `mac_notification_sys`) — no abstraction needed; (2) hydration abstracted via `drive/placeholder` cfg swap — `cfapi` on Windows, `placeholder_non_windows` full-sync adapter elsewhere (FUSE / File Provider still open); (3) CI matrix builds + tests all 3 OSes; (4) packaging: `desktop-release.yml` on `desktop-v*` tags ships .msi/.exe (Windows), .dmg (macOS), .deb/.AppImage (Linux) — MSIX deferred (needs store signing).
+- Verified on Linux: `cargo test --workspace` green (49 tests), `cargo tauri build` produces working .deb + .AppImage.
 - Feature fallback on Linux/macOS until providers land: full sync without placeholders (download-on-access still works via sync engine).
 
 ## 7. Phase E — Android app (native, no iOS)

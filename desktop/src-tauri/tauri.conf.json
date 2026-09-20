@@ -6,8 +6,8 @@
   "build": {
     "frontendDist": "../ui/dist",
     "devUrl": "http://localhost:5173",
-    "beforeDevCommand": "yarn run dev",
-    "beforeBuildCommand": "yarn run build"
+    "beforeDevCommand": "yarn --cwd ui run dev",
+    "beforeBuildCommand": "yarn --cwd ui run build"
   },
   "app": {
     "enableGTKAppId": true,
@@ -38,7 +38,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": [],
+    "targets": "all",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

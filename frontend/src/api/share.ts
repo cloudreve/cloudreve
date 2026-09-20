@@ -22,6 +22,11 @@ export interface ListShareService {
   next_page_token?: string;
 }
 
+// Public directory listing — anonymous-accessible, optional name search.
+export interface ListPublicShareService extends ListShareService {
+  query?: string;
+}
+
 export interface ListShareResponse {
   shares: Share[];
   pagination: PaginationResults;

@@ -32,6 +32,7 @@ type (
 	}
 	ImportTaskState struct {
 		PolicyID         int             `json:"policy_id"`
+		PolicyName       string          `json:"policy_name,omitempty"`
 		Src              string          `json:"src"`
 		Recursive        bool            `json:"is_recursive"`
 		Dst              string          `json:"dst"`
@@ -55,12 +56,13 @@ func init() {
 	queue.RegisterResumableTaskFactory(queue.ImportTaskType, NewImportTaskFromModel)
 }
 
-func NewImportTask(ctx context.Context, u *ent.User, src string, recursive bool, dst string, policyID int) (queue.Task, error) {
+func NewImportTask(ctx context.Context, u *ent.User, src string, recursive bool, dst string, policyID int, policyName string) (queue.Task, error) {
 	state := &ImportTaskState{
-		Src:       src,
-		Recursive: recursive,
-		Dst:       dst,
-		PolicyID:  policyID,
+		Src:        src,
+		Recursive:  recursive,
+		Dst:        dst,
+		PolicyID:   policyID,
+		PolicyName: policyName,
 	}
 	stateBytes, err := json.Marshal(state)
 	if err != nil {
@@ -235,6 +237,7 @@ func (m *ImportTask) Summarize(hasher hashid.Encoder) *queue.Summary {
 			SummaryKeySrcStr:         m.state.Src,
 			SummaryKeyFailed:         m.state.Failed,
 			SummaryKeySrcDstPolicyID: hashid.EncodePolicyID(hasher, m.state.PolicyID),
+			SummaryKeyDstPolicyName:  m.state.PolicyName,
 		},
 	}
 }
