@@ -54,6 +54,17 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <service
+            android:name=".tile.SyncTileService"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:icon="@mipmap/ic_launcher"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
         <provider
             android:name=".provider.CloudreveDocumentsProvider"
             android:authorities="${applicationId}.documents"
