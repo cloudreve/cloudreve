@@ -381,6 +381,7 @@ func (l *manager) CreateOrUpdateShare(ctx context.Context, paths []*fs.URI, args
 	props := &types.ShareProps{
 		ShareView:   args.ShareView,
 		ShowReadMe:  args.ShowReadMe,
+		HideReadMe:  args.HideReadMe && args.ShowReadMe,
 		AllowUpload: args.AllowUpload || args.AllowEdit,
 		AllowEdit:   args.AllowEdit,
 		PreviewOnly: args.PreviewOnly,

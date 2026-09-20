@@ -691,7 +691,9 @@
     "deleteViewSetting": "Delete view setting",
     "shareTargets": "Share targets",
     "shareTargetsCount_one": "{{count}} file selected",
-    "shareTargetsCount_other": "{{count}} files selected"
+    "shareTargetsCount_other": "{{count}} files selected",
+    "hideReadme": "Hide readme file",
+    "hideReadmeDes": "Keep the README file itself out of the share listing. Visitors still see the rendered readme."
   },
   "uploader": {
     "fileCopyName": "Copy of ",
