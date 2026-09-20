@@ -225,10 +225,11 @@ Goal: Windows + macOS + Linux from the `desktop/` tree in this repo.
 |---|---|---|---|
 | Placeholders/hydration | cfapi (keep) | File Provider ext (Swift bridge) | FUSE (`fuser`) or plain sync folder |
 | Shell integration | shellext (keep) | Finder sync extension | Nautilus/Dolphin plugin (later) |
-| Notifications | win32_notif → replace | `tauri-plugin-notification` (all platforms) | same |
+| Notifications | win32_notif | `mac_notification_sys` | `notify_rust` |
 | Sync core | shared: `cloudreve-api`, `inventory`, `tasks`, `uploader`, `drive/sync` | same | same |
 
-- Port order: (1) strip `win32_notif`→tauri notifications (all platforms benefit), (2) abstract `drive/` behind a `HydrationProvider` trait (cfapi impl on Windows, stub→FUSE on Linux, FileProvider on macOS), (3) CI matrix build all 3, (4) MSIX→also ship .dmg/.AppImage/.deb.
+- Status: (1) notifications already per-OS (`win32_notif` / `notify_rust` / `mac_notification_sys`) — no abstraction needed; (2) hydration abstracted via `drive/placeholder` cfg swap — `cfapi` on Windows, `placeholder_non_windows` full-sync adapter elsewhere (FUSE / File Provider still open); (3) CI matrix builds + tests all 3 OSes; (4) packaging: `desktop-release.yml` on `desktop-v*` tags ships .msi/.exe (Windows), .dmg (macOS), .deb/.AppImage (Linux) — MSIX deferred (needs store signing).
+- Verified on Linux: `cargo test --workspace` green (49 tests), `cargo tauri build` produces working .deb + .AppImage.
 - Feature fallback on Linux/macOS until providers land: full sync without placeholders (download-on-access still works via sync engine).
 
 ## 7. Phase E — Android app (native, no iOS)
