@@ -42,7 +42,7 @@ import {
 import "@mdxeditor/editor/style.css";
 import { Box } from "@mui/material";
 import i18next from "i18next";
-import { useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import "./editor.css";
 
@@ -89,29 +89,12 @@ const MarkdownEditor = (props: MarkdownEditorProps) => {
       setNsLoaded(true);
     });
   }, []);
-  return (
-    <Box
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        minHeight: props.displayOnly ? "100%" : "calc(100vh - 200px)",
-      }}
-      onKeyDown={(e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === "s") {
-          e.preventDefault();
-          props.onSaveShortcut?.();
-        }
-      }}
-    >
-      {nsLoaded && (
-        <MDXEditor
-          className={props.darkMode ? "dark-theme dark-editor" : undefined}
-          translation={(key, _defaultValue, interpolations) => {
-            return t("markdown_editor:" + key, interpolations);
-          }}
-          readOnly={props.readOnly}
-          onChange={props.onChange}
-          plugins={[
+
+  // MDXEditor invokes plugin.update() for every plugin on every render;
+  // keeping the array referentially stable lets the realm suppress
+  // downstream updates for unchanged params.
+  const plugins = useMemo(
+    () => [
             diffSourcePlugin({
               diffMarkdown: props.initialValue,
               viewMode: "rich-text",
@@ -244,7 +227,43 @@ const MarkdownEditor = (props: MarkdownEditorProps) => {
               directiveDescriptors: [AdmonitionDirectiveDescriptor],
             }),
             markdownShortcutPlugin(),
-          ]}
+          ],
+    [
+      props.displayOnly,
+      props.initialValue,
+      props.imageUploadHandler,
+      props.imagePreviewHandler,
+      props.imageAutocompleteSuggestions,
+    ],
+  );
+
+  const translation = useCallback(
+    (key: string, _defaultValue: string, interpolations?: Record<string, unknown>) =>
+      t("markdown_editor:" + key, interpolations),
+    [t],
+  );
+
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        minHeight: props.displayOnly ? "100%" : "calc(100vh - 200px)",
+      }}
+      onKeyDown={(e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+          e.preventDefault();
+          props.onSaveShortcut?.();
+        }
+      }}
+    >
+      {nsLoaded && (
+        <MDXEditor
+          className={props.darkMode ? "dark-theme dark-editor" : undefined}
+          translation={translation}
+          readOnly={props.readOnly}
+          onChange={props.onChange}
+          plugins={plugins}
           contentEditableClassName={props.darkMode ? "markdown-body-dark" : "markdown-body-light"}
           markdown={props.value}
         />
@@ -265,4 +284,7 @@ const MarkdownEditor = (props: MarkdownEditorProps) => {
   );
 };
 
-export default MarkdownEditor;
+// Memoized: the parent re-renders on every keystroke (changedValue state);
+// re-rendering MDXEditor re-runs every plugin's update() hook, which is the
+// dominant source of typing lag on large documents.
+export default memo(MarkdownEditor);
