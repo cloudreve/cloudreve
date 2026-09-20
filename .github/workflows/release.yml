@@ -1,5 +1,10 @@
 name: Release
 
+# One `v*` tag produces ONE GitHub release containing every platform:
+#   - server binaries + archives + checksums (GoReleaser) + GHCR docker images
+#   - desktop bundles: Linux .deb/.AppImage, Windows NSIS, macOS .dmg/.app.tar.gz
+#   - Android release APK + AAB (signed with ANDROID_KEYSTORE_* secrets when set)
+# The desktop-* / android-v* tags still exist for platform-only releases.
 on:
   push:
     tags: ['v*']
@@ -9,21 +14,17 @@ permissions:
   packages: write
 
 jobs:
-  goreleaser:
+  server:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: yarn
-          cache-dependency-path: frontend/yarn.lock
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-          cache: true
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
@@ -31,11 +32,120 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: goreleaser/goreleaser-action@v6
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: '~> v2'
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_OPTIONS: --max-old-space-size=8192
+
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: desktop/ui/yarn.lock
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev libgtk-3-dev librsvg2-dev patchelf libfuse2 fuse3
+
+      - name: Install UI dependencies
+        working-directory: desktop/ui
+        run: yarn install --frozen-lockfile
+
+      - name: Install tauri-cli
+        run: cargo install tauri-cli --version "^2" --locked
+
+      - name: Build desktop bundles
+        working-directory: desktop
+        run: cargo tauri build
+
+      - name: Publish bundles to GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -e
+          for _ in $(seq 1 90); do
+            gh release view "$TAG" >/dev/null 2>&1 && break
+            sleep 20
+          done
+          gh release view "$TAG" >/dev/null
+          FILES=$(find desktop/target/release/bundle -type f \
+            \( -name '*.deb' -o -name '*.AppImage' -o -name '*.msi' \
+               -o -name '*.exe' -o -name '*.dmg' -o -name '*.app.tar.gz' \))
+          [ -n "$FILES" ]
+          echo "$FILES" | while read -r f; do
+            name="cloudreve-desktop-$(basename "$f")"
+            cp "$f" "$name"
+            gh release upload "$TAG" "$name" --clobber
+          done
+
+  android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    env:
+      KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Decode release keystore
+        if: ${{ env.KEYSTORE_B64 != '' }}
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          {
+            echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/release.keystore"
+            echo "ANDROID_KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
+            echo "ANDROID_KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}"
+            echo "ANDROID_KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}"
+          } >> "$GITHUB_ENV"
+
+      - name: Build release APK + AAB
+        run: ./gradlew :app:assembleRelease :app:bundleRelease --console=plain
+
+      - name: Publish APK + AAB to GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -e
+          for _ in $(seq 1 90); do
+            gh release view "$TAG" >/dev/null 2>&1 && break
+            sleep 20
+          done
+          gh release view "$TAG" >/dev/null
+          APK=$(find app/build/outputs/apk/release -name 'app-release*.apk' | head -1)
+          AAB=$(find app/build/outputs/bundle/release -name 'app-release*.aab' | head -1)
+          cp "$APK" "cloudreve-android-${TAG}.apk"
+          cp "$AAB" "cloudreve-android-${TAG}.aab"
+          gh release upload "$TAG" \
+            "cloudreve-android-${TAG}.apk" \
+            "cloudreve-android-${TAG}.aab" --clobber
