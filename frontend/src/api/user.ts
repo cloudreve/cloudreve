@@ -335,6 +335,8 @@ export interface UserGrant {
 export interface CreditInfo {
   credits: number;
   storage_bonus: number;
+  // Remaining direct-link allowance in bytes; -1 means unlimited.
+  dl_traffic: number;
   grants: UserGrant[];
 }
 
@@ -355,7 +357,7 @@ export interface CreditTxnList {
 export interface ShopSku {
   id: string;
   name: string;
-  type: "storage" | "group";
+  type: "storage" | "group" | "traffic";
   amount: number;
   group?: string;
   group_id?: string;

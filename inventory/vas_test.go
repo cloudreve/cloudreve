@@ -245,6 +245,56 @@ func TestPurchaseSku(t *testing.T) {
 	require.Equal(t, int64(1024), bonus)
 }
 
+func TestPurchaseTrafficSku(t *testing.T) {
+	ctx := context.Background()
+	client, c := newVasClient(t)
+	group, u := vasFixture(t, client)
+	require.NoError(t, c.CreditAdjust(ctx, u.ID, 500, credittxn.TypeAdjust, "", "seed"))
+
+	// Start the user with a finite allowance — unlimited users stay unlimited.
+	require.NoError(t, client.User.UpdateOne(u).SetDlTraffic(100).Exec(ctx))
+
+	points := int64(200)
+	trafficSku, err := c.UpsertSku(ctx, &ent.Sku{
+		Name: "1GB traffic", Type: sku.TypeTraffic, Amount: 1024,
+		Points: &points, Enabled: true,
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, c.PurchaseSku(ctx, u.ID, trafficSku))
+	u = client.User.GetX(ctx, u.ID)
+	require.Equal(t, int64(300), u.Credits)
+	require.Equal(t, int64(1124), u.DlTraffic)
+
+	// Unlimited users remain unlimited after purchase.
+	u2 := client.User.Create().SetEmail("u2@example.com").SetNick("u2").SetGroup(group).SaveX(ctx)
+	require.NoError(t, c.CreditAdjust(ctx, u2.ID, 500, credittxn.TypeAdjust, "", "seed"))
+	require.NoError(t, c.PurchaseSku(ctx, u2.ID, trafficSku))
+	require.Equal(t, int64(-1), client.User.GetX(ctx, u2.ID).DlTraffic)
+}
+
+func TestRedeemTrafficGiftCode(t *testing.T) {
+	ctx := context.Background()
+	client, c := newVasClient(t)
+	group, u := vasFixture(t, client)
+	require.NoError(t, client.User.UpdateOne(u).SetDlTraffic(10).Exec(ctx))
+
+	codes, err := c.CreateGiftCodes(ctx, &CreateGiftCodeParams{
+		Type: giftcode.TypeTraffic, Amount: 2048, Qty: 2,
+	})
+	require.NoError(t, err)
+
+	_, err = c.RedeemGiftCode(ctx, u.ID, codes[0].Code)
+	require.NoError(t, err)
+	require.Equal(t, int64(2058), client.User.GetX(ctx, u.ID).DlTraffic)
+
+	// Unlimited redeemer keeps unlimited balance.
+	u2 := client.User.Create().SetEmail("u2@example.com").SetNick("u2").SetGroup(group).SaveX(ctx)
+	_, err = c.RedeemGiftCode(ctx, u2.ID, codes[1].Code)
+	require.NoError(t, err)
+	require.Equal(t, int64(-1), client.User.GetX(ctx, u2.ID).DlTraffic)
+}
+
 func paidShareFixture(t *testing.T, client *ent.Client, price int) (*ent.User, *ent.User, *ent.Share) {
 	return paidShareFixtureN(t, client, price, 0)
 }

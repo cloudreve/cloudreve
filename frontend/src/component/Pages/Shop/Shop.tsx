@@ -19,6 +19,7 @@ import PageHeader, { PageTabQuery } from "../PageHeader.tsx";
 export enum ShopPageTab {
   Membership = "membership",
   Storage = "storage",
+  Traffic = "traffic",
   Redeem = "redeem",
 }
 
@@ -45,6 +46,7 @@ const Shop = () => {
     () => [
       { label: t("application:shop.memberships"), value: ShopPageTab.Membership },
       { label: t("application:shop.storagePacks"), value: ShopPageTab.Storage },
+      { label: t("application:shop.trafficPacks"), value: ShopPageTab.Traffic },
       { label: t("application:shop.redeem"), value: ShopPageTab.Redeem },
     ],
     [],
@@ -53,7 +55,11 @@ const Shop = () => {
   const filtered = useMemo(
     () =>
       (skus ?? []).filter((s) =>
-        tab === ShopPageTab.Membership ? s.type === "group" : s.type === "storage",
+        tab === ShopPageTab.Membership
+          ? s.type === "group"
+          : tab === ShopPageTab.Traffic
+            ? s.type === "traffic"
+            : s.type === "storage",
       ),
     [skus, tab],
   );
@@ -70,7 +76,7 @@ const Shop = () => {
 
   const skuSubtitle = (s: ShopSku) => {
     const parts = [
-      s.type === "storage" ? sizeToString(s.amount) : s.group,
+      s.type === "group" ? s.group : sizeToString(s.amount),
       s.duration > 0 ? formatDuration(dayjs.duration(s.duration, "seconds")) : t("shop.permanent"),
     ];
     return parts.filter(Boolean).join(" · ");

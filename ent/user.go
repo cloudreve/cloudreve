@@ -46,6 +46,8 @@ type User struct {
 	Storage int64 `json:"storage,omitempty"`
 	// Credits holds the value of the "credits" field.
 	Credits int64 `json:"credits,omitempty"`
+	// DlTraffic holds the value of the "dl_traffic" field.
+	DlTraffic int64 `json:"dl_traffic,omitempty"`
 	// TwoFactorSecret holds the value of the "two_factor_secret" field.
 	TwoFactorSecret string `json:"-"`
 	// VaultPassword holds the value of the "vault_password" field.
@@ -238,7 +240,7 @@ func (*User) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case user.FieldTwoFactorBackupCodes, user.FieldSettings:
 			values[i] = new([]byte)
-		case user.FieldID, user.FieldStorage, user.FieldCredits, user.FieldVaultFolder, user.FieldGroupUsers:
+		case user.FieldID, user.FieldStorage, user.FieldCredits, user.FieldDlTraffic, user.FieldVaultFolder, user.FieldGroupUsers:
 			values[i] = new(sql.NullInt64)
 		case user.FieldEmail, user.FieldPhone, user.FieldNick, user.FieldPassword, user.FieldStatus, user.FieldBanReason, user.FieldTwoFactorSecret, user.FieldVaultPassword, user.FieldAvatar:
 			values[i] = new(sql.NullString)
@@ -346,6 +348,12 @@ func (u *User) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field credits", values[i])
 			} else if value.Valid {
 				u.Credits = value.Int64
+			}
+		case user.FieldDlTraffic:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field dl_traffic", values[i])
+			} else if value.Valid {
+				u.DlTraffic = value.Int64
 			}
 		case user.FieldTwoFactorSecret:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -544,6 +552,9 @@ func (u *User) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("credits=")
 	builder.WriteString(fmt.Sprintf("%v", u.Credits))
+	builder.WriteString(", ")
+	builder.WriteString("dl_traffic=")
+	builder.WriteString(fmt.Sprintf("%v", u.DlTraffic))
 	builder.WriteString(", ")
 	builder.WriteString("two_factor_secret=<sensitive>")
 	builder.WriteString(", ")

@@ -254,6 +254,27 @@ func (uu *UserUpdate) AddCredits(i int64) *UserUpdate {
 	return uu
 }
 
+// SetDlTraffic sets the "dl_traffic" field.
+func (uu *UserUpdate) SetDlTraffic(i int64) *UserUpdate {
+	uu.mutation.ResetDlTraffic()
+	uu.mutation.SetDlTraffic(i)
+	return uu
+}
+
+// SetNillableDlTraffic sets the "dl_traffic" field if the given value is not nil.
+func (uu *UserUpdate) SetNillableDlTraffic(i *int64) *UserUpdate {
+	if i != nil {
+		uu.SetDlTraffic(*i)
+	}
+	return uu
+}
+
+// AddDlTraffic adds i to the "dl_traffic" field.
+func (uu *UserUpdate) AddDlTraffic(i int64) *UserUpdate {
+	uu.mutation.AddDlTraffic(i)
+	return uu
+}
+
 // SetTwoFactorSecret sets the "two_factor_secret" field.
 func (uu *UserUpdate) SetTwoFactorSecret(s string) *UserUpdate {
 	uu.mutation.SetTwoFactorSecret(s)
@@ -1016,6 +1037,12 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := uu.mutation.AddedCredits(); ok {
 		_spec.AddField(user.FieldCredits, field.TypeInt64, value)
+	}
+	if value, ok := uu.mutation.DlTraffic(); ok {
+		_spec.SetField(user.FieldDlTraffic, field.TypeInt64, value)
+	}
+	if value, ok := uu.mutation.AddedDlTraffic(); ok {
+		_spec.AddField(user.FieldDlTraffic, field.TypeInt64, value)
 	}
 	if value, ok := uu.mutation.TwoFactorSecret(); ok {
 		_spec.SetField(user.FieldTwoFactorSecret, field.TypeString, value)
@@ -1905,6 +1932,27 @@ func (uuo *UserUpdateOne) AddCredits(i int64) *UserUpdateOne {
 	return uuo
 }
 
+// SetDlTraffic sets the "dl_traffic" field.
+func (uuo *UserUpdateOne) SetDlTraffic(i int64) *UserUpdateOne {
+	uuo.mutation.ResetDlTraffic()
+	uuo.mutation.SetDlTraffic(i)
+	return uuo
+}
+
+// SetNillableDlTraffic sets the "dl_traffic" field if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableDlTraffic(i *int64) *UserUpdateOne {
+	if i != nil {
+		uuo.SetDlTraffic(*i)
+	}
+	return uuo
+}
+
+// AddDlTraffic adds i to the "dl_traffic" field.
+func (uuo *UserUpdateOne) AddDlTraffic(i int64) *UserUpdateOne {
+	uuo.mutation.AddDlTraffic(i)
+	return uuo
+}
+
 // SetTwoFactorSecret sets the "two_factor_secret" field.
 func (uuo *UserUpdateOne) SetTwoFactorSecret(s string) *UserUpdateOne {
 	uuo.mutation.SetTwoFactorSecret(s)
@@ -2697,6 +2745,12 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 	}
 	if value, ok := uuo.mutation.AddedCredits(); ok {
 		_spec.AddField(user.FieldCredits, field.TypeInt64, value)
+	}
+	if value, ok := uuo.mutation.DlTraffic(); ok {
+		_spec.SetField(user.FieldDlTraffic, field.TypeInt64, value)
+	}
+	if value, ok := uuo.mutation.AddedDlTraffic(); ok {
+		_spec.AddField(user.FieldDlTraffic, field.TypeInt64, value)
 	}
 	if value, ok := uuo.mutation.TwoFactorSecret(); ok {
 		_spec.SetField(user.FieldTwoFactorSecret, field.TypeString, value)

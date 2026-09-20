@@ -7,7 +7,8 @@ import (
 )
 
 // GiftCode holds the schema definition for admin-generated redemption codes.
-// A code grants credits, a storage bonus, or a group upgrade when redeemed.
+// A code grants credits, a storage bonus, a direct-link traffic pack, or a
+// group upgrade when redeemed.
 // Redemption is claimed atomically by updating used_by_id from NULL.
 type GiftCode struct {
 	ent.Schema
@@ -19,7 +20,7 @@ func (GiftCode) Fields() []ent.Field {
 		field.String("code").
 			Unique(),
 		field.Enum("type").
-			Values("points", "storage", "group"),
+			Values("points", "storage", "group", "traffic"),
 		field.Int64("amount"),
 		field.Int64("duration").
 			Optional(),

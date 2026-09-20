@@ -808,6 +808,20 @@ func RedirectDirectLink(c *gin.Context, name string, download bool) error {
 		return serializer.NewError(serializer.CodeNotFound, "direct link not found", err)
 	}
 
+	// Direct-link traffic allowance: the owner's dl_traffic balance is
+	// charged the file's size once, at redirect time, since the actual
+	// bytes are served by a signed entity URL after this point.
+	owner := dl.Edges.File.Edges.Owner
+	if owner != nil {
+		ok, err := dep.UserClient().ConsumeDirectTraffic(c, owner.ID, dl.Edges.File.Size)
+		if err != nil {
+			return serializer.NewError(serializer.CodeDBError, "Failed to check direct link traffic", err)
+		}
+		if !ok {
+			return serializer.NewError(serializer.CodeInsufficientTraffic, "Direct link traffic exhausted", nil)
+		}
+	}
+
 	m := manager.NewFileManager(dep, dl.Edges.File.Edges.Owner)
 	defer m.Recycle()
 

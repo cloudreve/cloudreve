@@ -203,6 +203,20 @@ func (uc *UserCreate) SetNillableCredits(i *int64) *UserCreate {
 	return uc
 }
 
+// SetDlTraffic sets the "dl_traffic" field.
+func (uc *UserCreate) SetDlTraffic(i int64) *UserCreate {
+	uc.mutation.SetDlTraffic(i)
+	return uc
+}
+
+// SetNillableDlTraffic sets the "dl_traffic" field if the given value is not nil.
+func (uc *UserCreate) SetNillableDlTraffic(i *int64) *UserCreate {
+	if i != nil {
+		uc.SetDlTraffic(*i)
+	}
+	return uc
+}
+
 // SetTwoFactorSecret sets the "two_factor_secret" field.
 func (uc *UserCreate) SetTwoFactorSecret(s string) *UserCreate {
 	uc.mutation.SetTwoFactorSecret(s)
@@ -546,6 +560,10 @@ func (uc *UserCreate) defaults() error {
 		v := user.DefaultCredits
 		uc.mutation.SetCredits(v)
 	}
+	if _, ok := uc.mutation.DlTraffic(); !ok {
+		v := user.DefaultDlTraffic
+		uc.mutation.SetDlTraffic(v)
+	}
 	if _, ok := uc.mutation.VaultFolder(); !ok {
 		v := user.DefaultVaultFolder
 		uc.mutation.SetVaultFolder(v)
@@ -599,6 +617,9 @@ func (uc *UserCreate) check() error {
 	}
 	if _, ok := uc.mutation.Credits(); !ok {
 		return &ValidationError{Name: "credits", err: errors.New(`ent: missing required field "User.credits"`)}
+	}
+	if _, ok := uc.mutation.DlTraffic(); !ok {
+		return &ValidationError{Name: "dl_traffic", err: errors.New(`ent: missing required field "User.dl_traffic"`)}
 	}
 	if _, ok := uc.mutation.GroupUsers(); !ok {
 		return &ValidationError{Name: "group_users", err: errors.New(`ent: missing required field "User.group_users"`)}
@@ -691,6 +712,10 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := uc.mutation.Credits(); ok {
 		_spec.SetField(user.FieldCredits, field.TypeInt64, value)
 		_node.Credits = value
+	}
+	if value, ok := uc.mutation.DlTraffic(); ok {
+		_spec.SetField(user.FieldDlTraffic, field.TypeInt64, value)
+		_node.DlTraffic = value
 	}
 	if value, ok := uc.mutation.TwoFactorSecret(); ok {
 		_spec.SetField(user.FieldTwoFactorSecret, field.TypeString, value)
@@ -1185,6 +1210,24 @@ func (u *UserUpsert) AddCredits(v int64) *UserUpsert {
 	return u
 }
 
+// SetDlTraffic sets the "dl_traffic" field.
+func (u *UserUpsert) SetDlTraffic(v int64) *UserUpsert {
+	u.Set(user.FieldDlTraffic, v)
+	return u
+}
+
+// UpdateDlTraffic sets the "dl_traffic" field to the value that was provided on create.
+func (u *UserUpsert) UpdateDlTraffic() *UserUpsert {
+	u.SetExcluded(user.FieldDlTraffic)
+	return u
+}
+
+// AddDlTraffic adds v to the "dl_traffic" field.
+func (u *UserUpsert) AddDlTraffic(v int64) *UserUpsert {
+	u.Add(user.FieldDlTraffic, v)
+	return u
+}
+
 // SetTwoFactorSecret sets the "two_factor_secret" field.
 func (u *UserUpsert) SetTwoFactorSecret(v string) *UserUpsert {
 	u.Set(user.FieldTwoFactorSecret, v)
@@ -1577,6 +1620,27 @@ func (u *UserUpsertOne) AddCredits(v int64) *UserUpsertOne {
 func (u *UserUpsertOne) UpdateCredits() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateCredits()
+	})
+}
+
+// SetDlTraffic sets the "dl_traffic" field.
+func (u *UserUpsertOne) SetDlTraffic(v int64) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetDlTraffic(v)
+	})
+}
+
+// AddDlTraffic adds v to the "dl_traffic" field.
+func (u *UserUpsertOne) AddDlTraffic(v int64) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.AddDlTraffic(v)
+	})
+}
+
+// UpdateDlTraffic sets the "dl_traffic" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateDlTraffic() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateDlTraffic()
 	})
 }
 
@@ -2164,6 +2228,27 @@ func (u *UserUpsertBulk) AddCredits(v int64) *UserUpsertBulk {
 func (u *UserUpsertBulk) UpdateCredits() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateCredits()
+	})
+}
+
+// SetDlTraffic sets the "dl_traffic" field.
+func (u *UserUpsertBulk) SetDlTraffic(v int64) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetDlTraffic(v)
+	})
+}
+
+// AddDlTraffic adds v to the "dl_traffic" field.
+func (u *UserUpsertBulk) AddDlTraffic(v int64) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.AddDlTraffic(v)
+	})
+}
+
+// UpdateDlTraffic sets the "dl_traffic" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateDlTraffic() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateDlTraffic()
 	})
 }
 

@@ -91,6 +91,13 @@ type (
 		// ReleaseStorage unconditionally subtracts size bytes from user uid's
 		// storage. Used to undo a previous ReserveStorage on failure paths.
 		ReleaseStorage(ctx context.Context, uid int, size int64) error
+		// ConsumeDirectTraffic atomically subtracts size bytes from user
+		// uid's dl_traffic allowance. Unlimited users (-1) always pass; a
+		// limited balance that cannot cover size reports false.
+		ConsumeDirectTraffic(ctx context.Context, uid int, size int64) (bool, error)
+		// AddDirectTraffic credits size bytes to user uid's dl_traffic
+		// allowance. Unlimited users (-1) are unaffected.
+		AddDirectTraffic(ctx context.Context, uid int, size int64) error
 		// UpdateAvatar updates user avatar.
 		UpdateAvatar(ctx context.Context, u *ent.User, avatar string) (*ent.User, error)
 		// UpdateNickname updates user nickname.
@@ -411,6 +418,39 @@ func (c *userClient) ReleaseStorage(ctx context.Context, uid int, size int64) er
 		return nil
 	}
 	return c.client.User.Update().Where(user.ID(uid)).AddStorage(-size).Exec(ctx)
+}
+
+// ConsumeDirectTraffic implements UserClient.ConsumeDirectTraffic.
+func (c *userClient) ConsumeDirectTraffic(ctx context.Context, uid int, size int64) (bool, error) {
+	if size <= 0 {
+		return true, nil
+	}
+	u, err := c.client.User.Query().Where(user.ID(uid)).Select(user.FieldDlTraffic).First(ctx)
+	if err != nil {
+		return false, err
+	}
+	if u.DlTraffic < 0 {
+		return true, nil
+	}
+	n, err := c.client.User.Update().
+		Where(user.ID(uid), user.DlTrafficGTE(size)).
+		AddDlTraffic(-size).
+		Save(ctx)
+	if err != nil {
+		return false, err
+	}
+	return n > 0, nil
+}
+
+// AddDirectTraffic implements UserClient.AddDirectTraffic.
+func (c *userClient) AddDirectTraffic(ctx context.Context, uid int, size int64) error {
+	if size <= 0 {
+		return nil
+	}
+	return c.client.User.Update().
+		Where(user.ID(uid), user.DlTrafficGTE(0)).
+		AddDlTraffic(size).
+		Exec(ctx)
 }
 
 func (c *userClient) CalculateStorage(ctx context.Context, uid int) (int64, error) {

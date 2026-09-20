@@ -115,6 +115,11 @@ func Credits(v int64) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldCredits, v))
 }
 
+// DlTraffic applies equality check predicate on the "dl_traffic" field. It's identical to DlTrafficEQ.
+func DlTraffic(v int64) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldDlTraffic, v))
+}
+
 // TwoFactorSecret applies equality check predicate on the "two_factor_secret" field. It's identical to TwoFactorSecretEQ.
 func TwoFactorSecret(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldTwoFactorSecret, v))
@@ -823,6 +828,46 @@ func CreditsLT(v int64) predicate.User {
 // CreditsLTE applies the LTE predicate on the "credits" field.
 func CreditsLTE(v int64) predicate.User {
 	return predicate.User(sql.FieldLTE(FieldCredits, v))
+}
+
+// DlTrafficEQ applies the EQ predicate on the "dl_traffic" field.
+func DlTrafficEQ(v int64) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldDlTraffic, v))
+}
+
+// DlTrafficNEQ applies the NEQ predicate on the "dl_traffic" field.
+func DlTrafficNEQ(v int64) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldDlTraffic, v))
+}
+
+// DlTrafficIn applies the In predicate on the "dl_traffic" field.
+func DlTrafficIn(vs ...int64) predicate.User {
+	return predicate.User(sql.FieldIn(FieldDlTraffic, vs...))
+}
+
+// DlTrafficNotIn applies the NotIn predicate on the "dl_traffic" field.
+func DlTrafficNotIn(vs ...int64) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldDlTraffic, vs...))
+}
+
+// DlTrafficGT applies the GT predicate on the "dl_traffic" field.
+func DlTrafficGT(v int64) predicate.User {
+	return predicate.User(sql.FieldGT(FieldDlTraffic, v))
+}
+
+// DlTrafficGTE applies the GTE predicate on the "dl_traffic" field.
+func DlTrafficGTE(v int64) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldDlTraffic, v))
+}
+
+// DlTrafficLT applies the LT predicate on the "dl_traffic" field.
+func DlTrafficLT(v int64) predicate.User {
+	return predicate.User(sql.FieldLT(FieldDlTraffic, v))
+}
+
+// DlTrafficLTE applies the LTE predicate on the "dl_traffic" field.
+func DlTrafficLTE(v int64) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldDlTraffic, v))
 }
 
 // TwoFactorSecretEQ applies the EQ predicate on the "two_factor_secret" field.

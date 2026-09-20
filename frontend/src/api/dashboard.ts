@@ -640,7 +640,7 @@ export interface UpsertOAuthClientService {
 export interface GiftCode {
   id: number;
   code: string;
-  type: "points" | "storage" | "group";
+  type: "points" | "storage" | "group" | "traffic";
   amount: number;
   duration?: number;
   used_by_id?: number;
@@ -664,7 +664,7 @@ export interface GiftCodeListResponse {
 export interface Sku {
   id: number;
   name: string;
-  type: "storage" | "group";
+  type: "storage" | "group" | "traffic";
   amount: number;
   duration?: number;
   price?: number;
@@ -702,7 +702,7 @@ export interface ActivityEventListResponse {
 }
 
 export interface CreateGiftCodeService {
-  type: "points" | "storage" | "group";
+  type: "points" | "storage" | "group" | "traffic";
   amount: number;
   duration?: number;
   qty: number;

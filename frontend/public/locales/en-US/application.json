@@ -1143,6 +1143,8 @@
     "finance": "Finance",
     "creditBalance": "Credit Balance",
     "storageBonus": "Storage Bonus",
+    "dlTraffic": "Direct Link Traffic",
+    "dlTrafficUnlimited": "Unlimited",
     "activeGrants": "Active Benefits",
     "grantStorage": "Storage",
     "grantGroup": "Group",
@@ -1200,6 +1202,7 @@
   "shop": {
     "memberships": "Memberships",
     "storagePacks": "Storage packs",
+    "trafficPacks": "Traffic packs",
     "redeem": "Redeem",
     "balance": "Balance: {{credits}} pts",
     "purchased": "Purchased {{name}}",

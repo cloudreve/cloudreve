@@ -75,6 +75,14 @@ const FinanceSetting = () => {
                 <Typography variant="h4">{sizeToString(info.storage_bonus)}</Typography>
               </Paper>
             )}
+            <Paper variant="outlined" sx={{ p: 2, minWidth: 200 }}>
+              <Typography variant="subtitle2" color="text.secondary">
+                {t("setting.dlTraffic")}
+              </Typography>
+              <Typography variant="h4">
+                {info.dl_traffic < 0 ? t("setting.dlTrafficUnlimited") : sizeToString(info.dl_traffic)}
+              </Typography>
+            </Paper>
           </Stack>
 
           {info.grants.length > 0 && (

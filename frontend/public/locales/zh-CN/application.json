@@ -1143,6 +1143,8 @@
     "finance": "财务",
     "creditBalance": "积分余额",
     "storageBonus": "容量加成",
+    "dlTraffic": "直链流量",
+    "dlTrafficUnlimited": "不限",
     "activeGrants": "生效中的权益",
     "grantStorage": "容量",
     "grantGroup": "用户组",
@@ -1200,6 +1202,7 @@
   "shop": {
     "memberships": "会员",
     "storagePacks": "容量包",
+    "trafficPacks": "流量包",
     "redeem": "兑换",
     "balance": "余额：{{credits}} 积分",
     "purchased": "已购买 {{name}}",

@@ -42,7 +42,7 @@ import { NoMarginHelperText } from "../Settings.tsx";
 const DAY_SECONDS = 86400;
 
 export interface SkuTableProps {
-  type: "storage" | "group";
+  type: "storage" | "group" | "traffic";
 }
 
 interface SkuForm {
@@ -64,7 +64,7 @@ const emptyForm = (type: string): SkuForm => ({
   id: 0,
   name: "",
   amount: 0,
-  durationDays: type === "storage" ? 365 : 30,
+  durationDays: type === "group" ? 30 : type === "storage" ? 365 : 0,
   price: 0,
   allowPoints: false,
   points: 0,
@@ -133,7 +133,8 @@ const SkuTable = ({ type }: SkuTableProps) => {
         name: form.name,
         type,
         amount: form.amount,
-        duration: Math.max(0, form.durationDays) * DAY_SECONDS,
+        // Traffic packs are permanent; duration is not applicable.
+        duration: type === "traffic" ? 0 : Math.max(0, form.durationDays) * DAY_SECONDS,
         price: Math.max(0, form.price),
         points: form.allowPoints ? Math.max(1, form.points) : undefined,
         label: form.label || undefined,
@@ -155,13 +156,17 @@ const SkuTable = ({ type }: SkuTableProps) => {
     dispatch(adminDeleteSku(id)).then(load);
   };
 
-  const amountLabel = (s: Sku) => (type === "storage" ? sizeToString(s.amount) : groupName(s.amount));
+  const amountLabel = (s: Sku) => (type === "group" ? groupName(s.amount) : sizeToString(s.amount));
 
   return (
     <Stack spacing={2}>
       <Box>
         <SecondaryButton variant="contained" startIcon={<Add />} onClick={() => openEdit()}>
-          {type === "storage" ? t("vas.addStoragePack") : t("vas.addMembership")}
+          {type === "group"
+            ? t("vas.addMembership")
+            : type === "traffic"
+              ? t("vas.addTrafficPack")
+              : t("vas.addStoragePack")}
         </SecondaryButton>
       </Box>
 
@@ -171,7 +176,7 @@ const SkuTable = ({ type }: SkuTableProps) => {
             <TableHead>
               <TableRow>
                 <NoWrapCell>{t("vas.name")}</NoWrapCell>
-                <NoWrapCell>{type === "storage" ? t("vas.size") : t("vas.group")}</NoWrapCell>
+                <NoWrapCell>{type === "group" ? t("vas.group") : t("vas.size")}</NoWrapCell>
                 <NoWrapCell>{t("vas.duration")}</NoWrapCell>
                 <NoWrapCell>{t("vas.price")}</NoWrapCell>
                 <NoWrapCell>{t("vas.priceCredits")}</NoWrapCell>
@@ -226,7 +231,13 @@ const SkuTable = ({ type }: SkuTableProps) => {
       </StyledTableContainerPaper>
 
       <Dialog open={!!form} onClose={() => setForm(undefined)} maxWidth="sm" fullWidth>
-        <DialogTitle>{type === "storage" ? t("vas.editStoragePack") : t("vas.editMembership")}</DialogTitle>
+        <DialogTitle>
+          {type === "group"
+            ? t("vas.editMembership")
+            : type === "traffic"
+              ? t("vas.editTrafficPack")
+              : t("vas.editStoragePack")}
+        </DialogTitle>
         <DialogContent>
           {form && (
             <Stack spacing={2} sx={{ mt: 1 }}>
@@ -243,17 +254,7 @@ const SkuTable = ({ type }: SkuTableProps) => {
                 />
               </SettingForm>
 
-              {type === "storage" ? (
-                <SettingForm title={t("vas.size")}>
-                  <DenseFilledTextField
-                    fullWidth
-                    type="number"
-                    value={form.amount}
-                    onChange={(e) => setForm({ ...form, amount: parseInt(e.target.value) || 0 })}
-                  />
-                  <NoMarginHelperText>{t("vas.packSizeDes")}</NoMarginHelperText>
-                </SettingForm>
-              ) : (
+              {type === "group" ? (
                 <SettingForm title={t("vas.purchasableGroups")}>
                   <FormControl fullWidth size="small">
                     <InputLabel>{t("vas.purchasableGroups")}</InputLabel>
@@ -271,8 +272,21 @@ const SkuTable = ({ type }: SkuTableProps) => {
                   </FormControl>
                   <NoMarginHelperText>{t("vas.groupDes")}</NoMarginHelperText>
                 </SettingForm>
+              ) : (
+                <SettingForm title={type === "traffic" ? t("vas.trafficSize") : t("vas.size")}>
+                  <DenseFilledTextField
+                    fullWidth
+                    type="number"
+                    value={form.amount}
+                    onChange={(e) => setForm({ ...form, amount: parseInt(e.target.value) || 0 })}
+                  />
+                  <NoMarginHelperText>
+                    {type === "traffic" ? t("vas.trafficSizeDes") : t("vas.packSizeDes")}
+                  </NoMarginHelperText>
+                </SettingForm>
               )}
 
+              {type !== "traffic" && (
               <SettingForm title={t("vas.durationDay")}>
                 <DenseFilledTextField
                   fullWidth
@@ -284,6 +298,7 @@ const SkuTable = ({ type }: SkuTableProps) => {
                   {type === "storage" ? t("vas.durationDayDes") : t("vas.durationGroupDes")}
                 </NoMarginHelperText>
               </SettingForm>
+              )}
 
               <SettingForm title={t("vas.priceYuan")}>
                 <DenseFilledTextField

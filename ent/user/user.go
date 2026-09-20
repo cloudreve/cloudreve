@@ -43,6 +43,8 @@ const (
 	FieldStorage = "storage"
 	// FieldCredits holds the string denoting the credits field in the database.
 	FieldCredits = "credits"
+	// FieldDlTraffic holds the string denoting the dl_traffic field in the database.
+	FieldDlTraffic = "dl_traffic"
 	// FieldTwoFactorSecret holds the string denoting the two_factor_secret field in the database.
 	FieldTwoFactorSecret = "two_factor_secret"
 	// FieldVaultPassword holds the string denoting the vault_password field in the database.
@@ -203,6 +205,7 @@ var Columns = []string{
 	FieldLastLogin,
 	FieldStorage,
 	FieldCredits,
+	FieldDlTraffic,
 	FieldTwoFactorSecret,
 	FieldVaultPassword,
 	FieldVaultFolder,
@@ -246,6 +249,8 @@ var (
 	DefaultStorage int64
 	// DefaultCredits holds the default value on creation for the "credits" field.
 	DefaultCredits int64
+	// DefaultDlTraffic holds the default value on creation for the "dl_traffic" field.
+	DefaultDlTraffic int64
 	// DefaultVaultFolder holds the default value on creation for the "vault_folder" field.
 	DefaultVaultFolder int
 	// DefaultSettings holds the default value on creation for the "settings" field.
@@ -351,6 +356,11 @@ func ByStorage(opts ...sql.OrderTermOption) OrderOption {
 // ByCredits orders the results by the credits field.
 func ByCredits(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCredits, opts...).ToFunc()
+}
+
+// ByDlTraffic orders the results by the dl_traffic field.
+func ByDlTraffic(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDlTraffic, opts...).ToFunc()
 }
 
 // ByTwoFactorSecret orders the results by the two_factor_secret field.

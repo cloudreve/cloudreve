@@ -235,6 +235,8 @@ func (c *vasClient) RedeemGiftCode(ctx context.Context, userID int, code string)
 		err = txVc.createGrant(ctx, userID, usergrant.TypeStorage, gc.Amount, gc.Duration, 0)
 	case giftcode.TypeGroup:
 		err = txVc.applyGroupCode(ctx, userID, gc)
+	case giftcode.TypeTraffic:
+		err = txVc.client.User.Update().Where(user.ID(userID), user.DlTrafficGTE(0)).AddDlTraffic(gc.Amount).Exec(ctx)
 	}
 	if err != nil {
 		_ = Rollback(tx)
@@ -431,6 +433,10 @@ func (c *vasClient) PurchaseSku(ctx context.Context, userID int, s *ent.Sku) err
 		err = txVc.createGrant(ctx, userID, usergrant.TypeStorage, s.Amount, s.Duration, 0)
 	case sku.TypeGroup:
 		err = txVc.applyGroupGrant(ctx, userID, int(s.Amount), s.Duration)
+	case sku.TypeTraffic:
+		// Traffic packs are permanent additions to dl_traffic; duration
+		// does not apply. Unlimited balances stay unlimited.
+		err = txVc.client.User.Update().Where(user.ID(userID), user.DlTrafficGTE(0)).AddDlTraffic(s.Amount).Exec(ctx)
 	}
 	if err != nil {
 		return Rollback(tx)

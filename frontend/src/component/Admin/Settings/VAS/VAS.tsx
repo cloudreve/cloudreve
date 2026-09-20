@@ -200,6 +200,20 @@ const VAS = () => {
 
         <SettingSection>
           <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center" }}>
+            {t("settings.trafficProductSettings")}
+          </Typography>
+          <SettingSectionContent>
+            <SettingForm lgWidth={12}>
+              <FormControl fullWidth>
+                <SkuTable type="traffic" />
+                <NoMarginHelperText>{t("settings.trafficProductsDes")}</NoMarginHelperText>
+              </FormControl>
+            </SettingForm>
+          </SettingSectionContent>
+        </SettingSection>
+
+        <SettingSection>
+          <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center" }}>
             {t("giftCodes.giftCodesSettings")}
           </Typography>
           <SettingSectionContent>

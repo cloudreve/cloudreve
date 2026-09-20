@@ -42,7 +42,7 @@ type (
 
 	// CreateGiftCodeService generates qty codes sharing one grant definition.
 	CreateGiftCodeService struct {
-		Type     giftcode.Type `json:"type" binding:"required,oneof=points storage group"`
+		Type     giftcode.Type `json:"type" binding:"required,oneof=points storage group traffic"`
 		Amount   int64         `json:"amount" binding:"required,min=1"`
 		Duration int64         `json:"duration" binding:"omitempty,min=0"`
 		Qty      int           `json:"qty" binding:"required,min=1,max=500"`

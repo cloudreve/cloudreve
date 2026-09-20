@@ -68,7 +68,7 @@ const GiftCodes = () => {
   const [pagination, setPagination] = useState<PaginationParams>({ page: 1, perPage: 10 });
 
   // Generate form state
-  const [genType, setGenType] = useState<"points" | "storage" | "group">("points");
+  const [genType, setGenType] = useState<"points" | "storage" | "group" | "traffic">("points");
   const [genAmount, setGenAmount] = useState(100);
   const [genGroup, setGenGroup] = useState(0);
   const [genDuration, setGenDuration] = useState(0);
@@ -126,6 +126,7 @@ const GiftCodes = () => {
       case "points":
         return `${gc.amount}`;
       case "storage":
+      case "traffic":
         return sizeToString(gc.amount);
       case "group":
         return `#${gc.amount}`;
@@ -213,6 +214,7 @@ const GiftCodes = () => {
                   <MenuItem value="points">{t("giftCodes.giftCodeTypePoints")}</MenuItem>
                   <MenuItem value="storage">{t("giftCodes.giftCodeTypeStorage")}</MenuItem>
                   <MenuItem value="group">{t("giftCodes.giftCodeTypeGroup")}</MenuItem>
+                  <MenuItem value="traffic">{t("giftCodes.giftCodeTypeTraffic")}</MenuItem>
                 </Select>
               </FormControl>
             </SettingForm>
@@ -226,7 +228,11 @@ const GiftCodes = () => {
                   onChange={(e) => setGenAmount(parseInt(e.target.value) || 0)}
                 />
                 <NoMarginHelperText>
-                  {genType === "points" ? t("giftCodes.giftCodePointsAmountHelp") : t("vas.packSizeDes")}
+                  {genType === "points"
+                    ? t("giftCodes.giftCodePointsAmountHelp")
+                    : genType === "traffic"
+                      ? t("vas.trafficSizeDes")
+                      : t("vas.packSizeDes")}
                 </NoMarginHelperText>
               </SettingForm>
             ) : (

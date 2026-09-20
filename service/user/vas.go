@@ -63,7 +63,10 @@ type (
 	CreditResponse struct {
 		Credits      int64            `json:"credits"`
 		StorageBonus int64            `json:"storage_bonus"`
-		Grants       []*ent.UserGrant `json:"grants"`
+		// DlTraffic is the remaining direct-link allowance in bytes;
+		// -1 means unlimited.
+		DlTraffic int64            `json:"dl_traffic"`
+		Grants    []*ent.UserGrant `json:"grants"`
 	}
 
 	CreditTxnListResponse struct {
@@ -75,6 +78,12 @@ type (
 func (service *CreditService) Get(c *gin.Context) (*CreditResponse, error) {
 	dep := dependency.FromContext(c)
 	u := inventory.UserFromContext(c)
+
+	// Re-read the user: balances may have just changed (e.g. after a
+	// purchase) while the context still carries the pre-request snapshot.
+	if fresh, err := dep.UserClient().GetByID(c, u.ID); err == nil {
+		u = fresh
+	}
 
 	bonus, err := dep.VasClient().StorageBonus(c, u.ID)
 	if err != nil {
@@ -89,6 +98,7 @@ func (service *CreditService) Get(c *gin.Context) (*CreditResponse, error) {
 	return &CreditResponse{
 		Credits:      u.Credits,
 		StorageBonus: bonus,
+		DlTraffic:    u.DlTraffic,
 		Grants:       grants,
 	}, nil
 }

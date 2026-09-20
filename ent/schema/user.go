@@ -49,6 +49,12 @@ func (User) Fields() []ent.Field {
 		// credit_txns and applied under the users-row lock.
 		field.Int64("credits").
 			Default(0),
+		// dl_traffic is the remaining direct-link download allowance in
+		// bytes. -1 means unlimited (the default), preserving pre-feature
+		// behavior; >=0 is decremented by the entity size on each
+		// direct-link download.
+		field.Int64("dl_traffic").
+			Default(-1),
 		field.String("two_factor_secret").
 			Sensitive().
 			Optional(),
