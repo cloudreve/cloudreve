@@ -7,6 +7,7 @@ import { EntityType, FileResponse, Metadata } from "../../../../api/explorer.ts"
 import { useAppDispatch } from "../../../../redux/hooks.ts";
 import { loadFileThumb } from "../../../../redux/thunks/file.ts";
 import { getFileLinkedUri } from "../../../../util";
+import { fetchMotionPhotoVideoUrl, isMotionPhotoCandidate } from "../../../../util/motionPhoto.ts";
 import { FileManagerIndex } from "../../../FileManager/FileManager.tsx";
 import { LRUCache } from "../../../../util/lru.ts";
 import FacebookCircularProgress from "../../../Common/CircularProgress.tsx";
@@ -154,12 +155,32 @@ export default function Photo({
       });
   }, []);
 
-  const loadLivePhoto = async (file: FileResponse, imgUrl: string) => {
-    if (!file.metadata?.[Metadata.live_photo]) {
+  const attachLivePhotoPlayer = (file: FileResponse, imgUrl: string, videoUrl: string) => {
+    const imgElement = document.getElementById(file.id);
+    if (!imgElement || !mountedRef.current) {
       return;
     }
+    const player = LivePhotosKit.Player(imgElement as HTMLElement);
+    playerRef.current = player;
+    player.photoSrc = imgUrl;
+    player.videoSrc = videoUrl;
+    player.proactivelyLoadsVideo = true;
+  };
 
+  const loadLivePhoto = async (file: FileResponse, imgUrl: string) => {
     try {
+      if (!file.metadata?.[Metadata.live_photo]) {
+        // Android Motion Photo: a JPEG with an MP4 appended at EOF (#89).
+        if (!isMotionPhotoCandidate(file.name, file.size)) {
+          return;
+        }
+        const videoUrl = await fetchMotionPhotoVideoUrl(imgUrl);
+        if (videoUrl) {
+          attachLivePhotoPlayer(file, imgUrl, videoUrl);
+        }
+        return;
+      }
+
       const fileExtended = await dispatch(
         getFileInfo(
           {
@@ -183,14 +204,7 @@ export default function Photo({
         }),
       );
 
-      const imgElement = document.getElementById(file.id);
-      if (imgElement) {
-        const player = LivePhotosKit.Player(imgElement as HTMLElement);
-        playerRef.current = player;
-        player.photoSrc = imgUrl;
-        player.videoSrc = livePhotoEntityUrl.urls[0].url;
-        player.proactivelyLoadsVideo = true;
-      }
+      attachLivePhotoPlayer(file, imgUrl, livePhotoEntityUrl.urls[0].url);
     } catch (e) {
       console.error("Failed to load live photo:", e);
     }
