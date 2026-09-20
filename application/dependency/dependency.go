@@ -114,6 +114,8 @@ type Dep interface {
 	ActivityClient() inventory.ActivityClient
 	// AbuseReportClient Get a singleton inventory.AbuseReportClient instance for the abuse review queue.
 	AbuseReportClient() inventory.AbuseReportClient
+	// SsoBindingClient Get a singleton inventory.SsoBindingClient instance for external identity bindings.
+	SsoBindingClient() inventory.SsoBindingClient
 	// TaskClient Get a singleton inventory.TaskClient instance for access DB task store.
 	TaskClient() inventory.TaskClient
 	// ForkWithLogger create a shallow copy of dependency with a new correlated logger, used as per-request dep.
@@ -174,6 +176,7 @@ type dependency struct {
 	vasClient             inventory.VasClient
 	activityClient        inventory.ActivityClient
 	abuseReportClient     inventory.AbuseReportClient
+	ssoBindingClient      inventory.SsoBindingClient
 	settingProvider       setting.Provider
 	userClient            inventory.UserClient
 	groupClient           inventory.GroupClient
@@ -868,6 +871,15 @@ func (d *dependency) AbuseReportClient() inventory.AbuseReportClient {
 
 	d.abuseReportClient = inventory.NewAbuseReportClient(d.DBClient())
 	return d.abuseReportClient
+}
+
+func (d *dependency) SsoBindingClient() inventory.SsoBindingClient {
+	if d.ssoBindingClient != nil {
+		return d.ssoBindingClient
+	}
+
+	d.ssoBindingClient = inventory.NewSsoBindingClient(d.DBClient(), d.ConfigProvider().Database().Type)
+	return d.ssoBindingClient
 }
 
 func (d *dependency) TaskClient() inventory.TaskClient {

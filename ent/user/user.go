@@ -75,6 +75,8 @@ const (
 	EdgeGrants = "grants"
 	// EdgeSharePurchases holds the string denoting the share_purchases edge name in mutations.
 	EdgeSharePurchases = "share_purchases"
+	// EdgeSSOBindings holds the string denoting the sso_bindings edge name in mutations.
+	EdgeSSOBindings = "sso_bindings"
 	// Table holds the table name of the user in the database.
 	Table = "users"
 	// GroupTable is the table that holds the group relation/edge.
@@ -168,6 +170,13 @@ const (
 	SharePurchasesInverseTable = "share_purchases"
 	// SharePurchasesColumn is the table column denoting the share_purchases relation/edge.
 	SharePurchasesColumn = "buyer_id"
+	// SSOBindingsTable is the table that holds the sso_bindings relation/edge.
+	SSOBindingsTable = "sso_bindings"
+	// SSOBindingsInverseTable is the table name for the SsoBinding entity.
+	// It exists in this package in order to avoid circular dependency with the "ssobinding" package.
+	SSOBindingsInverseTable = "sso_bindings"
+	// SSOBindingsColumn is the table column denoting the sso_bindings relation/edge.
+	SSOBindingsColumn = "user_id"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -512,6 +521,20 @@ func BySharePurchases(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newSharePurchasesStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// BySSOBindingsCount orders the results by sso_bindings count.
+func BySSOBindingsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newSSOBindingsStep(), opts...)
+	}
+}
+
+// BySSOBindings orders the results by sso_bindings terms.
+func BySSOBindings(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newSSOBindingsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newGroupStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -601,5 +624,12 @@ func newSharePurchasesStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(SharePurchasesInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, SharePurchasesTable, SharePurchasesColumn),
+	)
+}
+func newSSOBindingsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(SSOBindingsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, SSOBindingsTable, SSOBindingsColumn),
 	)
 }

@@ -12,6 +12,7 @@ import GroupSelectionInput from "../../Common/GroupSelectionInput.tsx";
 import SharesInput from "../../Common/SharesInput.tsx";
 import { NoMarginHelperText, SettingSection, SettingSectionContent } from "../Settings.tsx";
 import { SettingContext } from "../SettingWrapper.tsx";
+import QQConnectSettings from "./QQConnectSettings.tsx";
 import SSOSettings from "./SSOSettings.tsx";
 
 const UserSession = () => {
@@ -302,6 +303,9 @@ const UserSession = () => {
           <SettingSectionContent>
             <SettingForm lgWidth={5}>
               <SSOSettings />
+            </SettingForm>
+            <SettingForm lgWidth={5}>
+              <QQConnectSettings />
             </SettingForm>
           </SettingSectionContent>
         </SettingSection>

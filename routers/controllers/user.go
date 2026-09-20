@@ -358,6 +358,30 @@ func UserSSOCallback(c *gin.Context) {
 	service.SSOCallback(c)
 }
 
+// UserQQLogin redirects the browser to the QQ Connect authorization page.
+func UserQQLogin(c *gin.Context) {
+	service := ParametersFromContext[*user.QQLoginService](c, user.QQLoginParameterCtx{})
+	service.Login(c)
+}
+
+// UserQQCallback completes the QQ Connect flow and redirects either to the
+// SPA ticket handoff or, for link mode, back to the security settings tab.
+func UserQQCallback(c *gin.Context) {
+	service := ParametersFromContext[*user.QQCallbackService](c, user.QQCallbackParameterCtx{})
+	service.Callback(c)
+}
+
+// UserUnbindSso removes the caller's external-account binding at a provider.
+func UserUnbindSso(c *gin.Context) {
+	service := ParametersFromContext[*user.SsoUnbindService](c, user.SsoUnbindParameterCtx{})
+	err := service.Delete(c)
+	if respondErr(c, err) {
+		return
+	}
+
+	c.JSON(200, serializer.Response{})
+}
+
 // UserSSOExchange trades the one-time ticket for a session token pair.
 func UserSSOExchange(c *gin.Context) {
 	service := ParametersFromContext[*user.SSOExchangeService](c, user.SSOExchangeParameterCtx{})

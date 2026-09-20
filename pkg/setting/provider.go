@@ -251,6 +251,7 @@ type (
 		ExposeUserEmail(ctx context.Context) bool
 		// SSO returns the inbound single sign-on (OIDC) settings.
 		SSO(ctx context.Context) *SSO
+		QQConnect(ctx context.Context) *QQConnect
 		// EmailFilter returns the sign-up email restriction settings.
 		EmailFilter(ctx context.Context) *EmailFilter
 		// ShareDefaults returns the site-wide share defaults applied when a
@@ -982,6 +983,15 @@ func (s *settingProvider) SSO(ctx context.Context) *SSO {
 		Scopes:          strings.Join(scopeList, " "),
 		RegisterEnabled: s.getBoolean(ctx, "sso_register_enabled", true),
 		AutoRedirect:    s.getBoolean(ctx, "sso_auto_redirect", false),
+	}
+}
+
+func (s *settingProvider) QQConnect(ctx context.Context) *QQConnect {
+	return &QQConnect{
+		Enabled:         s.getBoolean(ctx, "qq_connect_enabled", false),
+		AppID:           s.getString(ctx, "qq_connect_app_id", ""),
+		AppSecret:       s.getString(ctx, "qq_connect_app_secret", ""),
+		RegisterEnabled: s.getBoolean(ctx, "qq_connect_register_enabled", true),
 	}
 }
 

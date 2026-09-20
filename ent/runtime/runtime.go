@@ -27,6 +27,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/share"
 	"github.com/cloudreve/Cloudreve/v4/ent/sharepurchase"
 	"github.com/cloudreve/Cloudreve/v4/ent/sku"
+	"github.com/cloudreve/Cloudreve/v4/ent/ssobinding"
 	"github.com/cloudreve/Cloudreve/v4/ent/storagepolicy"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
@@ -540,6 +541,61 @@ func init() {
 	skuDescWeight := skuFields[9].Descriptor()
 	// sku.DefaultWeight holds the default value on creation for the weight field.
 	sku.DefaultWeight = skuDescWeight.Default.(int)
+	ssobindingMixin := schema.SsoBinding{}.Mixin()
+	ssobindingMixinHooks0 := ssobindingMixin[0].Hooks()
+	ssobinding.Hooks[0] = ssobindingMixinHooks0[0]
+	ssobindingMixinInters0 := ssobindingMixin[0].Interceptors()
+	ssobinding.Interceptors[0] = ssobindingMixinInters0[0]
+	ssobindingMixinFields0 := ssobindingMixin[0].Fields()
+	_ = ssobindingMixinFields0
+	ssobindingFields := schema.SsoBinding{}.Fields()
+	_ = ssobindingFields
+	// ssobindingDescCreatedAt is the schema descriptor for created_at field.
+	ssobindingDescCreatedAt := ssobindingMixinFields0[0].Descriptor()
+	// ssobinding.DefaultCreatedAt holds the default value on creation for the created_at field.
+	ssobinding.DefaultCreatedAt = ssobindingDescCreatedAt.Default.(func() time.Time)
+	// ssobindingDescUpdatedAt is the schema descriptor for updated_at field.
+	ssobindingDescUpdatedAt := ssobindingMixinFields0[1].Descriptor()
+	// ssobinding.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	ssobinding.DefaultUpdatedAt = ssobindingDescUpdatedAt.Default.(func() time.Time)
+	// ssobinding.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	ssobinding.UpdateDefaultUpdatedAt = ssobindingDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// ssobindingDescProvider is the schema descriptor for provider field.
+	ssobindingDescProvider := ssobindingFields[0].Descriptor()
+	// ssobinding.ProviderValidator is a validator for the "provider" field. It is called by the builders before save.
+	ssobinding.ProviderValidator = func() func(string) error {
+		validators := ssobindingDescProvider.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(provider string) error {
+			for _, fn := range fns {
+				if err := fn(provider); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// ssobindingDescSubject is the schema descriptor for subject field.
+	ssobindingDescSubject := ssobindingFields[1].Descriptor()
+	// ssobinding.SubjectValidator is a validator for the "subject" field. It is called by the builders before save.
+	ssobinding.SubjectValidator = func() func(string) error {
+		validators := ssobindingDescSubject.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(subject string) error {
+			for _, fn := range fns {
+				if err := fn(subject); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
 	storagepolicyMixin := schema.StoragePolicy{}.Mixin()
 	storagepolicyMixinHooks0 := storagepolicyMixin[0].Hooks()
 	storagepolicy.Hooks[0] = storagepolicyMixinHooks0[0]

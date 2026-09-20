@@ -37,9 +37,17 @@ type UserSettings struct {
 	TrashRetention          int               `json:"trash_retention,omitempty"`
 	PreferredPolicy         string            `json:"preferred_policy,omitempty"`
 	OAuthGrants             []OauthGrant      `json:"oauth_grants,omitempty"`
+	LinkedAccounts          []LinkedAccount   `json:"linked_accounts,omitempty"`
 }
 
-func BuildUserSettings(u *ent.User, passkeys []*ent.Passkey, parser *uaparser.Parser, grants []*ent.OAuthGrant) *UserSettings {
+// LinkedAccount is an external identity bound to the local account
+// (e.g. a QQ Connect openid). Subject is masked in the response.
+type LinkedAccount struct {
+	Provider  string    `json:"provider"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func BuildUserSettings(u *ent.User, passkeys []*ent.Passkey, parser *uaparser.Parser, grants []*ent.OAuthGrant, bindings []*ent.SsoBinding) *UserSettings {
 	return &UserSettings{
 		VersionRetentionEnabled: u.Settings.VersionRetention,
 		VersionRetentionExt:     u.Settings.VersionRetentionExt,
@@ -56,6 +64,9 @@ func BuildUserSettings(u *ent.User, passkeys []*ent.Passkey, parser *uaparser.Pa
 		TrashRetention:      u.Settings.TrashRetention,
 		OAuthGrants: lo.Map(grants, func(item *ent.OAuthGrant, index int) OauthGrant {
 			return BuildOauthGrant(item)
+		}),
+		LinkedAccounts: lo.Map(bindings, func(item *ent.SsoBinding, index int) LinkedAccount {
+			return LinkedAccount{Provider: item.Provider, CreatedAt: item.CreatedAt}
 		}),
 	}
 }

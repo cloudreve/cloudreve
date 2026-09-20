@@ -17,8 +17,8 @@ import { useSnackbar } from "notistack";
 import React, { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { sendRevokeOAuthGrant, sendUpdateUserSetting } from "../../../../api/api.ts";
-import { OAuthGrant, Passkey, UserSettings } from "../../../../api/user.ts";
+import { sendRevokeOAuthGrant, sendUnbindSso, sendUpdateUserSetting } from "../../../../api/api.ts";
+import { LinkedAccount, OAuthGrant, Passkey, UserSettings } from "../../../../api/user.ts";
 import { useAppDispatch, useAppSelector } from "../../../../redux/hooks.ts";
 import { confirmOperation } from "../../../../redux/thunks/dialog.ts";
 import SessionManager from "../../../../session";
@@ -161,6 +161,75 @@ const OAuthGrantItem = ({ grant, onRevoked }: { grant: OAuthGrant; onRevoked: (c
   );
 };
 
+const linkedAccountProviderName = (t: (key: string) => string, provider: string): string => {
+  switch (provider) {
+    case "qq":
+      return t("setting.providerQQ");
+    default:
+      return provider;
+  }
+};
+
+const LinkedAccountItem = ({
+  account,
+  onUnlinked,
+}: {
+  account: LinkedAccount;
+  onUnlinked: (provider: string) => void;
+}) => {
+  const { t } = useTranslation();
+  const theme = useTheme();
+  const dispatch = useAppDispatch();
+  const [loading, setLoading] = useState(false);
+
+  const onUnbind = () => {
+    dispatch(confirmOperation(t("setting.unlinkAccountConfirm"))).then(() => {
+      setLoading(true);
+      dispatch(sendUnbindSso(account.provider))
+        .then(() => {
+          onUnlinked(account.provider);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    });
+  };
+
+  return (
+    <StyledOAuthGrantListItem sx={{ pr: "150px" }}>
+      <ListItemAvatar>
+        <Avatar sx={{ bgcolor: theme.palette.primary.main }}>
+          {account.provider === "qq" ? <Icon icon="ri:qq-fill" style={{ fontSize: 24 }} /> : <AppsListOutlined />}
+        </Avatar>
+      </ListItemAvatar>
+      <StyledListItemText
+        primary={linkedAccountProviderName(t, account.provider)}
+        secondaryTypographyProps={{
+          variant: "caption",
+        }}
+        secondary={
+          <Trans
+            i18nKey={"setting.linkedAt"}
+            ns={"application"}
+            components={[<TimeBadge key="0" datetime={account.created_at} variant={"inherit"} />]}
+          />
+        }
+      />
+      <ListItemSecondaryAction>
+        <LoadingButton
+          loading={loading}
+          variant={"outlined"}
+          onClick={onUnbind}
+          startIcon={<Dismiss />}
+          color={"error"}
+        >
+          <span>{t("setting.unlinkAccount")}</span>
+        </LoadingButton>
+      </ListItemSecondaryAction>
+    </StyledOAuthGrantListItem>
+  );
+};
+
 const SecuritySetting = ({ setting, setSetting }: ProfileSettingProps) => {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -170,6 +239,7 @@ const SecuritySetting = ({ setting, setSetting }: ProfileSettingProps) => {
   const navigate = useNavigate();
 
   const authEnabled = useAppSelector((s) => s.siteConfig.login.config.authn);
+  const qqConnectEnabled = useAppSelector((s) => s.siteConfig.login.config.qq_connect_enabled);
 
   const resetPwdFormRef = React.createRef<HTMLFormElement>();
   const [showResetPassword, setShowResetPassword] = useState(false);
@@ -245,6 +315,13 @@ const SecuritySetting = ({ setting, setSetting }: ProfileSettingProps) => {
     setSetting({
       ...setting,
       oauth_grants: setting.oauth_grants?.filter((x) => x.client_id != clientId),
+    });
+  };
+
+  const onAccountUnlinked = (provider: string) => {
+    setSetting({
+      ...setting,
+      linked_accounts: setting.linked_accounts?.filter((x) => x.provider != provider),
     });
   };
 
@@ -351,6 +428,27 @@ const SecuritySetting = ({ setting, setSetting }: ProfileSettingProps) => {
               <OAuthGrantItem key={grant.client_id} grant={grant} onRevoked={onOAuthGrantRevoked} />
             ))}
           </List>
+        </SettingForm>
+      )}
+      {(qqConnectEnabled || (setting.linked_accounts && setting.linked_accounts.length > 0)) && (
+        <SettingForm title={t("setting.linkedAccounts")} lgWidth={5}>
+          <List disablePadding>
+            {setting.linked_accounts?.map((account) => (
+              <LinkedAccountItem key={account.provider} account={account} onUnlinked={onAccountUnlinked} />
+            ))}
+          </List>
+          {qqConnectEnabled && !setting.linked_accounts?.some((a) => a.provider === "qq") && (
+            <SecondaryButton
+              sx={{ mt: 1 }}
+              variant={"contained"}
+              startIcon={<Icon icon="ri:qq-fill" />}
+              onClick={() => {
+                window.location.href = "/api/v4/session/qq/login?link=1";
+              }}
+            >
+              {t("setting.linkQQAccount")}
+            </SecondaryButton>
+          )}
         </SettingForm>
       )}
       <Enable2FADialog open={enable2FAOpen} onClose={() => setEnable2FAOpen(false)} on2FAEnabled={on2FAChange(true)} />

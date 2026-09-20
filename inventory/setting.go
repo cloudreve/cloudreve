@@ -566,6 +566,10 @@ var DefaultSettings = map[string]string{
 	"sso_scopes":                                 "",
 	"sso_register_enabled":                       "1",
 	"sso_auto_redirect":                          "0",
+	"qq_connect_enabled":                         "0",
+	"qq_connect_app_id":                          "",
+	"qq_connect_app_secret":                      "",
+	"qq_connect_register_enabled":                "1",
 	"download_cdn_routes":                        "",
 	"email_filter_mode":                          "0",
 	"email_filter_list":                          "",
@@ -731,6 +735,7 @@ var RedactedSettings = map[string]struct{}{
 	"secret_key":               {},
 	"oidc_signing_private_key": {},
 	"sso_client_secret":        {},
+	"qq_connect_app_secret":    {},
 }
 
 func init() {

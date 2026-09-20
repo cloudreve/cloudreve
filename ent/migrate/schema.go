@@ -664,6 +664,42 @@ var (
 		Columns:    SkusColumns,
 		PrimaryKey: []*schema.Column{SkusColumns[0]},
 	}
+	// SSOBindingsColumns holds the columns for the "sso_bindings" table.
+	SSOBindingsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "provider", Type: field.TypeString, Size: 32},
+		{Name: "subject", Type: field.TypeString, Size: 128},
+		{Name: "user_id", Type: field.TypeInt},
+	}
+	// SSOBindingsTable holds the schema information for the "sso_bindings" table.
+	SSOBindingsTable = &schema.Table{
+		Name:       "sso_bindings",
+		Columns:    SSOBindingsColumns,
+		PrimaryKey: []*schema.Column{SSOBindingsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "sso_bindings_users_sso_bindings",
+				Columns:    []*schema.Column{SSOBindingsColumns[6]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "ssobinding_provider_subject",
+				Unique:  true,
+				Columns: []*schema.Column{SSOBindingsColumns[4], SSOBindingsColumns[5]},
+			},
+			{
+				Name:    "ssobinding_user_id_provider",
+				Unique:  true,
+				Columns: []*schema.Column{SSOBindingsColumns[6], SSOBindingsColumns[4]},
+			},
+		},
+	}
 	// StoragePoliciesColumns holds the columns for the "storage_policies" table.
 	StoragePoliciesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -872,6 +908,7 @@ var (
 		SharesTable,
 		SharePurchasesTable,
 		SkusTable,
+		SSOBindingsTable,
 		StoragePoliciesTable,
 		TasksTable,
 		UsersTable,
@@ -902,6 +939,7 @@ func init() {
 	SharesTable.ForeignKeys[1].RefTable = UsersTable
 	SharePurchasesTable.ForeignKeys[0].RefTable = SharesTable
 	SharePurchasesTable.ForeignKeys[1].RefTable = UsersTable
+	SSOBindingsTable.ForeignKeys[0].RefTable = UsersTable
 	StoragePoliciesTable.ForeignKeys[0].RefTable = NodesTable
 	TasksTable.ForeignKeys[0].RefTable = UsersTable
 	UsersTable.ForeignKeys[0].RefTable = GroupsTable

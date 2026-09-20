@@ -33,6 +33,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/share"
 	"github.com/cloudreve/Cloudreve/v4/ent/sharepurchase"
 	"github.com/cloudreve/Cloudreve/v4/ent/sku"
+	"github.com/cloudreve/Cloudreve/v4/ent/ssobinding"
 	"github.com/cloudreve/Cloudreve/v4/ent/storagepolicy"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
@@ -73,6 +74,7 @@ const (
 	TypeShare          = "Share"
 	TypeSharePurchase  = "SharePurchase"
 	TypeSku            = "Sku"
+	TypeSsoBinding     = "SsoBinding"
 	TypeStoragePolicy  = "StoragePolicy"
 	TypeTask           = "Task"
 	TypeUser           = "User"
@@ -20617,6 +20619,681 @@ func (m *SkuMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown Sku edge %s", name)
 }
 
+// SsoBindingMutation represents an operation that mutates the SsoBinding nodes in the graph.
+type SsoBindingMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *int
+	created_at    *time.Time
+	updated_at    *time.Time
+	deleted_at    *time.Time
+	provider      *string
+	subject       *string
+	clearedFields map[string]struct{}
+	user          *int
+	cleareduser   bool
+	done          bool
+	oldValue      func(context.Context) (*SsoBinding, error)
+	predicates    []predicate.SsoBinding
+}
+
+var _ ent.Mutation = (*SsoBindingMutation)(nil)
+
+// ssobindingOption allows management of the mutation configuration using functional options.
+type ssobindingOption func(*SsoBindingMutation)
+
+// newSsoBindingMutation creates new mutation for the SsoBinding entity.
+func newSsoBindingMutation(c config, op Op, opts ...ssobindingOption) *SsoBindingMutation {
+	m := &SsoBindingMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeSsoBinding,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withSsoBindingID sets the ID field of the mutation.
+func withSsoBindingID(id int) ssobindingOption {
+	return func(m *SsoBindingMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *SsoBinding
+		)
+		m.oldValue = func(ctx context.Context) (*SsoBinding, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().SsoBinding.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withSsoBinding sets the old SsoBinding of the mutation.
+func withSsoBinding(node *SsoBinding) ssobindingOption {
+	return func(m *SsoBindingMutation) {
+		m.oldValue = func(context.Context) (*SsoBinding, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m SsoBindingMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m SsoBindingMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *SsoBindingMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *SsoBindingMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().SsoBinding.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *SsoBindingMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *SsoBindingMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the SsoBinding entity.
+// If the SsoBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SsoBindingMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *SsoBindingMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *SsoBindingMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *SsoBindingMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the SsoBinding entity.
+// If the SsoBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SsoBindingMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *SsoBindingMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (m *SsoBindingMutation) SetDeletedAt(t time.Time) {
+	m.deleted_at = &t
+}
+
+// DeletedAt returns the value of the "deleted_at" field in the mutation.
+func (m *SsoBindingMutation) DeletedAt() (r time.Time, exists bool) {
+	v := m.deleted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeletedAt returns the old "deleted_at" field's value of the SsoBinding entity.
+// If the SsoBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SsoBindingMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
+	}
+	return oldValue.DeletedAt, nil
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (m *SsoBindingMutation) ClearDeletedAt() {
+	m.deleted_at = nil
+	m.clearedFields[ssobinding.FieldDeletedAt] = struct{}{}
+}
+
+// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
+func (m *SsoBindingMutation) DeletedAtCleared() bool {
+	_, ok := m.clearedFields[ssobinding.FieldDeletedAt]
+	return ok
+}
+
+// ResetDeletedAt resets all changes to the "deleted_at" field.
+func (m *SsoBindingMutation) ResetDeletedAt() {
+	m.deleted_at = nil
+	delete(m.clearedFields, ssobinding.FieldDeletedAt)
+}
+
+// SetProvider sets the "provider" field.
+func (m *SsoBindingMutation) SetProvider(s string) {
+	m.provider = &s
+}
+
+// Provider returns the value of the "provider" field in the mutation.
+func (m *SsoBindingMutation) Provider() (r string, exists bool) {
+	v := m.provider
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProvider returns the old "provider" field's value of the SsoBinding entity.
+// If the SsoBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SsoBindingMutation) OldProvider(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProvider is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProvider requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProvider: %w", err)
+	}
+	return oldValue.Provider, nil
+}
+
+// ResetProvider resets all changes to the "provider" field.
+func (m *SsoBindingMutation) ResetProvider() {
+	m.provider = nil
+}
+
+// SetSubject sets the "subject" field.
+func (m *SsoBindingMutation) SetSubject(s string) {
+	m.subject = &s
+}
+
+// Subject returns the value of the "subject" field in the mutation.
+func (m *SsoBindingMutation) Subject() (r string, exists bool) {
+	v := m.subject
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubject returns the old "subject" field's value of the SsoBinding entity.
+// If the SsoBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SsoBindingMutation) OldSubject(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubject is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubject requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubject: %w", err)
+	}
+	return oldValue.Subject, nil
+}
+
+// ResetSubject resets all changes to the "subject" field.
+func (m *SsoBindingMutation) ResetSubject() {
+	m.subject = nil
+}
+
+// SetUserID sets the "user_id" field.
+func (m *SsoBindingMutation) SetUserID(i int) {
+	m.user = &i
+}
+
+// UserID returns the value of the "user_id" field in the mutation.
+func (m *SsoBindingMutation) UserID() (r int, exists bool) {
+	v := m.user
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUserID returns the old "user_id" field's value of the SsoBinding entity.
+// If the SsoBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SsoBindingMutation) OldUserID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUserID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUserID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUserID: %w", err)
+	}
+	return oldValue.UserID, nil
+}
+
+// ResetUserID resets all changes to the "user_id" field.
+func (m *SsoBindingMutation) ResetUserID() {
+	m.user = nil
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (m *SsoBindingMutation) ClearUser() {
+	m.cleareduser = true
+	m.clearedFields[ssobinding.FieldUserID] = struct{}{}
+}
+
+// UserCleared reports if the "user" edge to the User entity was cleared.
+func (m *SsoBindingMutation) UserCleared() bool {
+	return m.cleareduser
+}
+
+// UserIDs returns the "user" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// UserID instead. It exists only for internal usage by the builders.
+func (m *SsoBindingMutation) UserIDs() (ids []int) {
+	if id := m.user; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetUser resets all changes to the "user" edge.
+func (m *SsoBindingMutation) ResetUser() {
+	m.user = nil
+	m.cleareduser = false
+}
+
+// Where appends a list predicates to the SsoBindingMutation builder.
+func (m *SsoBindingMutation) Where(ps ...predicate.SsoBinding) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the SsoBindingMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *SsoBindingMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.SsoBinding, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *SsoBindingMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *SsoBindingMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (SsoBinding).
+func (m *SsoBindingMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *SsoBindingMutation) Fields() []string {
+	fields := make([]string, 0, 6)
+	if m.created_at != nil {
+		fields = append(fields, ssobinding.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, ssobinding.FieldUpdatedAt)
+	}
+	if m.deleted_at != nil {
+		fields = append(fields, ssobinding.FieldDeletedAt)
+	}
+	if m.provider != nil {
+		fields = append(fields, ssobinding.FieldProvider)
+	}
+	if m.subject != nil {
+		fields = append(fields, ssobinding.FieldSubject)
+	}
+	if m.user != nil {
+		fields = append(fields, ssobinding.FieldUserID)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *SsoBindingMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case ssobinding.FieldCreatedAt:
+		return m.CreatedAt()
+	case ssobinding.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case ssobinding.FieldDeletedAt:
+		return m.DeletedAt()
+	case ssobinding.FieldProvider:
+		return m.Provider()
+	case ssobinding.FieldSubject:
+		return m.Subject()
+	case ssobinding.FieldUserID:
+		return m.UserID()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *SsoBindingMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case ssobinding.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case ssobinding.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case ssobinding.FieldDeletedAt:
+		return m.OldDeletedAt(ctx)
+	case ssobinding.FieldProvider:
+		return m.OldProvider(ctx)
+	case ssobinding.FieldSubject:
+		return m.OldSubject(ctx)
+	case ssobinding.FieldUserID:
+		return m.OldUserID(ctx)
+	}
+	return nil, fmt.Errorf("unknown SsoBinding field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *SsoBindingMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case ssobinding.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case ssobinding.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case ssobinding.FieldDeletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeletedAt(v)
+		return nil
+	case ssobinding.FieldProvider:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProvider(v)
+		return nil
+	case ssobinding.FieldSubject:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubject(v)
+		return nil
+	case ssobinding.FieldUserID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUserID(v)
+		return nil
+	}
+	return fmt.Errorf("unknown SsoBinding field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *SsoBindingMutation) AddedFields() []string {
+	var fields []string
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *SsoBindingMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *SsoBindingMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown SsoBinding numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *SsoBindingMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(ssobinding.FieldDeletedAt) {
+		fields = append(fields, ssobinding.FieldDeletedAt)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *SsoBindingMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *SsoBindingMutation) ClearField(name string) error {
+	switch name {
+	case ssobinding.FieldDeletedAt:
+		m.ClearDeletedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown SsoBinding nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *SsoBindingMutation) ResetField(name string) error {
+	switch name {
+	case ssobinding.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case ssobinding.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case ssobinding.FieldDeletedAt:
+		m.ResetDeletedAt()
+		return nil
+	case ssobinding.FieldProvider:
+		m.ResetProvider()
+		return nil
+	case ssobinding.FieldSubject:
+		m.ResetSubject()
+		return nil
+	case ssobinding.FieldUserID:
+		m.ResetUserID()
+		return nil
+	}
+	return fmt.Errorf("unknown SsoBinding field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *SsoBindingMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.user != nil {
+		edges = append(edges, ssobinding.EdgeUser)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *SsoBindingMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case ssobinding.EdgeUser:
+		if id := m.user; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *SsoBindingMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *SsoBindingMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *SsoBindingMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.cleareduser {
+		edges = append(edges, ssobinding.EdgeUser)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *SsoBindingMutation) EdgeCleared(name string) bool {
+	switch name {
+	case ssobinding.EdgeUser:
+		return m.cleareduser
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *SsoBindingMutation) ClearEdge(name string) error {
+	switch name {
+	case ssobinding.EdgeUser:
+		m.ClearUser()
+		return nil
+	}
+	return fmt.Errorf("unknown SsoBinding unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *SsoBindingMutation) ResetEdge(name string) error {
+	switch name {
+	case ssobinding.EdgeUser:
+		m.ResetUser()
+		return nil
+	}
+	return fmt.Errorf("unknown SsoBinding edge %s", name)
+}
+
 // StoragePolicyMutation represents an operation that mutates the StoragePolicy nodes in the graph.
 type StoragePolicyMutation struct {
 	config
@@ -23486,6 +24163,9 @@ type UserMutation struct {
 	share_purchases        map[int]struct{}
 	removedshare_purchases map[int]struct{}
 	clearedshare_purchases bool
+	sso_bindings           map[int]struct{}
+	removedsso_bindings    map[int]struct{}
+	clearedsso_bindings    bool
 	done                   bool
 	oldValue               func(context.Context) (*User, error)
 	predicates             []predicate.User
@@ -24997,6 +25677,60 @@ func (m *UserMutation) ResetSharePurchases() {
 	m.removedshare_purchases = nil
 }
 
+// AddSSOBindingIDs adds the "sso_bindings" edge to the SsoBinding entity by ids.
+func (m *UserMutation) AddSSOBindingIDs(ids ...int) {
+	if m.sso_bindings == nil {
+		m.sso_bindings = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.sso_bindings[ids[i]] = struct{}{}
+	}
+}
+
+// ClearSSOBindings clears the "sso_bindings" edge to the SsoBinding entity.
+func (m *UserMutation) ClearSSOBindings() {
+	m.clearedsso_bindings = true
+}
+
+// SSOBindingsCleared reports if the "sso_bindings" edge to the SsoBinding entity was cleared.
+func (m *UserMutation) SSOBindingsCleared() bool {
+	return m.clearedsso_bindings
+}
+
+// RemoveSSOBindingIDs removes the "sso_bindings" edge to the SsoBinding entity by IDs.
+func (m *UserMutation) RemoveSSOBindingIDs(ids ...int) {
+	if m.removedsso_bindings == nil {
+		m.removedsso_bindings = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.sso_bindings, ids[i])
+		m.removedsso_bindings[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedSSOBindings returns the removed IDs of the "sso_bindings" edge to the SsoBinding entity.
+func (m *UserMutation) RemovedSSOBindingsIDs() (ids []int) {
+	for id := range m.removedsso_bindings {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// SSOBindingsIDs returns the "sso_bindings" edge IDs in the mutation.
+func (m *UserMutation) SSOBindingsIDs() (ids []int) {
+	for id := range m.sso_bindings {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetSSOBindings resets all changes to the "sso_bindings" edge.
+func (m *UserMutation) ResetSSOBindings() {
+	m.sso_bindings = nil
+	m.clearedsso_bindings = false
+	m.removedsso_bindings = nil
+}
+
 // Where appends a list predicates to the UserMutation builder.
 func (m *UserMutation) Where(ps ...predicate.User) {
 	m.predicates = append(m.predicates, ps...)
@@ -25463,7 +26197,7 @@ func (m *UserMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
-	edges := make([]string, 0, 13)
+	edges := make([]string, 0, 14)
 	if m.group != nil {
 		edges = append(edges, user.EdgeGroup)
 	}
@@ -25502,6 +26236,9 @@ func (m *UserMutation) AddedEdges() []string {
 	}
 	if m.share_purchases != nil {
 		edges = append(edges, user.EdgeSharePurchases)
+	}
+	if m.sso_bindings != nil {
+		edges = append(edges, user.EdgeSSOBindings)
 	}
 	return edges
 }
@@ -25586,13 +26323,19 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case user.EdgeSSOBindings:
+		ids := make([]ent.Value, 0, len(m.sso_bindings))
+		for id := range m.sso_bindings {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 13)
+	edges := make([]string, 0, 14)
 	if m.removedfiles != nil {
 		edges = append(edges, user.EdgeFiles)
 	}
@@ -25628,6 +26371,9 @@ func (m *UserMutation) RemovedEdges() []string {
 	}
 	if m.removedshare_purchases != nil {
 		edges = append(edges, user.EdgeSharePurchases)
+	}
+	if m.removedsso_bindings != nil {
+		edges = append(edges, user.EdgeSSOBindings)
 	}
 	return edges
 }
@@ -25708,13 +26454,19 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case user.EdgeSSOBindings:
+		ids := make([]ent.Value, 0, len(m.removedsso_bindings))
+		for id := range m.removedsso_bindings {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 13)
+	edges := make([]string, 0, 14)
 	if m.clearedgroup {
 		edges = append(edges, user.EdgeGroup)
 	}
@@ -25754,6 +26506,9 @@ func (m *UserMutation) ClearedEdges() []string {
 	if m.clearedshare_purchases {
 		edges = append(edges, user.EdgeSharePurchases)
 	}
+	if m.clearedsso_bindings {
+		edges = append(edges, user.EdgeSSOBindings)
+	}
 	return edges
 }
 
@@ -25787,6 +26542,8 @@ func (m *UserMutation) EdgeCleared(name string) bool {
 		return m.clearedgrants
 	case user.EdgeSharePurchases:
 		return m.clearedshare_purchases
+	case user.EdgeSSOBindings:
+		return m.clearedsso_bindings
 	}
 	return false
 }
@@ -25844,6 +26601,9 @@ func (m *UserMutation) ResetEdge(name string) error {
 		return nil
 	case user.EdgeSharePurchases:
 		m.ResetSharePurchases()
+		return nil
+	case user.EdgeSSOBindings:
+		m.ResetSSOBindings()
 		return nil
 	}
 	return fmt.Errorf("unknown User edge %s", name)

@@ -30,6 +30,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/share"
 	"github.com/cloudreve/Cloudreve/v4/ent/sharepurchase"
 	"github.com/cloudreve/Cloudreve/v4/ent/sku"
+	"github.com/cloudreve/Cloudreve/v4/ent/ssobinding"
 	"github.com/cloudreve/Cloudreve/v4/ent/storagepolicy"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
@@ -659,6 +660,33 @@ func (f TraverseSku) Traverse(ctx context.Context, q ent.Query) error {
 	return fmt.Errorf("unexpected query type %T. expect *ent.SkuQuery", q)
 }
 
+// The SsoBindingFunc type is an adapter to allow the use of ordinary function as a Querier.
+type SsoBindingFunc func(context.Context, *ent.SsoBindingQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f SsoBindingFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.SsoBindingQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.SsoBindingQuery", q)
+}
+
+// The TraverseSsoBinding type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseSsoBinding func(context.Context, *ent.SsoBindingQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseSsoBinding) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseSsoBinding) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.SsoBindingQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.SsoBindingQuery", q)
+}
+
 // The StoragePolicyFunc type is an adapter to allow the use of ordinary function as a Querier.
 type StoragePolicyFunc func(context.Context, *ent.StoragePolicyQuery) (ent.Value, error)
 
@@ -812,6 +840,8 @@ func NewQuery(q ent.Query) (Query, error) {
 		return &query[*ent.SharePurchaseQuery, predicate.SharePurchase, sharepurchase.OrderOption]{typ: ent.TypeSharePurchase, tq: q}, nil
 	case *ent.SkuQuery:
 		return &query[*ent.SkuQuery, predicate.Sku, sku.OrderOption]{typ: ent.TypeSku, tq: q}, nil
+	case *ent.SsoBindingQuery:
+		return &query[*ent.SsoBindingQuery, predicate.SsoBinding, ssobinding.OrderOption]{typ: ent.TypeSsoBinding, tq: q}, nil
 	case *ent.StoragePolicyQuery:
 		return &query[*ent.StoragePolicyQuery, predicate.StoragePolicy, storagepolicy.OrderOption]{typ: ent.TypeStoragePolicy, tq: q}, nil
 	case *ent.TaskQuery:

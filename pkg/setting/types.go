@@ -85,6 +85,16 @@ type SSO struct {
 	AutoRedirect    bool
 }
 
+// QQConnect holds the QQ互联 (connect.qq.com) OAuth2 application config.
+// Unlike the generic OIDC consumer, QQ Connect has no discovery document or
+// id_token; identity resolves through /oauth2.0/me openid.
+type QQConnect struct {
+	Enabled         bool
+	AppID           string
+	AppSecret       string
+	RegisterEnabled bool
+}
+
 type EmailFilterMode int
 
 const (

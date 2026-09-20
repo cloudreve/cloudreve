@@ -69,6 +69,9 @@ type SharePurchase func(*sql.Selector)
 // Sku is the predicate function for sku builders.
 type Sku func(*sql.Selector)
 
+// SsoBinding is the predicate function for ssobinding builders.
+type SsoBinding func(*sql.Selector)
+
 // StoragePolicy is the predicate function for storagepolicy builders.
 type StoragePolicy func(*sql.Selector)
 

@@ -261,6 +261,18 @@ func (f SkuFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) 
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SkuMutation", m)
 }
 
+// The SsoBindingFunc type is an adapter to allow the use of ordinary
+// function as SsoBinding mutator.
+type SsoBindingFunc func(context.Context, *ent.SsoBindingMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f SsoBindingFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.SsoBindingMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SsoBindingMutation", m)
+}
+
 // The StoragePolicyFunc type is an adapter to allow the use of ordinary
 // function as StoragePolicy mutator.
 type StoragePolicyFunc func(context.Context, *ent.StoragePolicyMutation) (ent.Value, error)

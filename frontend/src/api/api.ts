@@ -2606,6 +2606,22 @@ export function sendRevokeOAuthGrant(grant_id: string): ThunkResponse {
   };
 }
 
+export function sendUnbindSso(provider: string): ThunkResponse {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        `/user/setting/sso_binding/${provider}`,
+        {
+          method: "DELETE",
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
 export function sendFullTextSearch(query: string, offset?: number): ThunkResponse {
   const params = new URLSearchParams();
   params.set("query", query);

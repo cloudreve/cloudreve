@@ -1214,6 +1214,29 @@ func HasSharePurchasesWith(preds ...predicate.SharePurchase) predicate.User {
 	})
 }
 
+// HasSSOBindings applies the HasEdge predicate on the "sso_bindings" edge.
+func HasSSOBindings() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, SSOBindingsTable, SSOBindingsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasSSOBindingsWith applies the HasEdge predicate on the "sso_bindings" edge with a given conditions (other predicates).
+func HasSSOBindingsWith(preds ...predicate.SsoBinding) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newSSOBindingsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.User) predicate.User {
 	return predicate.User(sql.AndPredicates(predicates...))

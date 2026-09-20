@@ -140,7 +140,12 @@ func GetUserSettings(c *gin.Context) (*UserSettings, error) {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get user OAuth grants", err)
 	}
 
-	res := BuildUserSettings(u, passkeys, dep.UAParser(), grants)
+	bindings, err := dep.SsoBindingClient().ListByUser(c, u.ID)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get user linked accounts", err)
+	}
+
+	res := BuildUserSettings(u, passkeys, dep.UAParser(), grants, bindings)
 	if u.Settings.PreferredPolicy > 0 {
 		res.PreferredPolicy = hashid.EncodePolicyID(dep.HashIDEncoder(), u.Settings.PreferredPolicy)
 	}
