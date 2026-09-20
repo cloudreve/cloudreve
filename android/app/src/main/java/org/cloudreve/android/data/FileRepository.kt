@@ -109,22 +109,28 @@ class FileRepository(private val api: ApiClient) {
             mimeType = mime,
         )
 
-        val urls = session.uploadUrls
-        if (urls.isNullOrEmpty()) {
-            // Zero-chunk policies (e.g. rapid-upload hit) need nothing further.
-            return session
-        }
+        if (session.rapidUploaded) return session
 
-        val svc = api.service()
+        val urls = session.uploadUrls
+        // Local/slave policies return no presigned URLs: chunks go to the
+        // conventional POST /api/v4/file/upload/{session}/{index} endpoint and
+        // the server completes the session once every chunk has landed.
+        val conventional = urls.isNullOrEmpty()
         val chunkSize = if (session.chunkSize > 0) session.chunkSize else localFile.length().coerceAtLeast(1)
+        val totalChunks = ((localFile.length() + chunkSize - 1) / chunkSize).toInt().coerceAtLeast(1)
+        val svc = api.service()
         var sent = 0L
         localFile.inputStream().buffered().use { input ->
             val buffer = ByteArray(chunkSize.coerceAtMost(64L * 1024 * 1024).toInt())
-            var index = 0
-            while (true) {
+            for (index in 0 until totalChunks) {
                 val read = input.readNBytes(buffer, 0, buffer.size)
-                if (read <= 0 || index >= urls.size) break
-                val target = resolveUrl(urls[index])
+                if (index == 0 && read == 0 && localFile.length() > 0) break
+                val target = if (conventional) {
+                    session_serverBase() + "/api/v4/file/upload/${session.sessionId}/$index"
+                } else {
+                    if (index >= urls!!.size) break
+                    resolveUrl(urls[index])
+                }
                 val body = buffer.copyOf(read)
                     .toRequestBody(mime.toMediaTypeOrNull())
                 val resp = if (target.contains("/file/upload/")) {
@@ -138,8 +144,8 @@ class FileRepository(private val api: ApiClient) {
                 }
                 resp.body()?.close()
                 sent += read
-                index++
                 onProgress(sent, localFile.length())
+                if (read <= 0) break
             }
         }
 

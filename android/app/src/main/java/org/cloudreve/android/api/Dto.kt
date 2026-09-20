@@ -149,6 +149,7 @@ data class UploadSessionResponse(
     val uri: String = "",
     @SerialName("storage_policy") val storagePolicy: StoragePolicy? = null,
     @SerialName("callback_secret") val callbackSecret: String = "",
+    @SerialName("rapid_uploaded") val rapidUploaded: Boolean = false,
 )
 
 @Serializable
