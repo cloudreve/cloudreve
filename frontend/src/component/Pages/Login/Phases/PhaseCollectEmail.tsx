@@ -10,6 +10,7 @@ import MailOutlined from "../../../Icons/MailOutlined.tsx";
 import PasskeyLoginButton from "../Signin/PasskeyLoginButton.tsx";
 import QQLoginButton from "../Signin/QQLoginButton.tsx";
 import SSOLoginButton from "../Signin/SSOLoginButton.tsx";
+import WeChatLoginButton from "../Signin/WeChatLoginButton.tsx";
 import { Control } from "../Signin/SignIn.tsx";
 
 export const LegalLinks = () => {
@@ -105,6 +106,7 @@ const PhaseCollectEmail = ({ email, setEmail, control, onOAuthPasskeyLogin }: Ph
             {authn && <PasskeyLoginButton autoComplete onLoginSuccess={onOAuthPasskeyLogin} />}
             <SSOLoginButton />
             <QQLoginButton />
+            <WeChatLoginButton />
           </Stack>
           <LegalLinks />
         </>

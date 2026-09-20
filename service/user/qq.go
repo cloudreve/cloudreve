@@ -268,7 +268,7 @@ func (service *QQCallbackService) Callback(c *gin.Context) {
 func (service *SsoUnbindService) Delete(c *gin.Context) error {
 	dep := dependency.FromContext(c)
 	u := inventory.UserFromContext(c)
-	if service.Provider != inventory.SsoProviderQQ {
+	if service.Provider != inventory.SsoProviderQQ && service.Provider != inventory.SsoProviderWeChat {
 		return serializer.NewError(serializer.CodeParamErr, "Unknown provider", nil)
 	}
 

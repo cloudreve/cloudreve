@@ -54,6 +54,7 @@ type SiteConfig struct {
 	SSODisplayName   string              `json:"sso_display_name,omitempty"`
 	SSOAutoRedirect  bool                `json:"sso_auto_redirect,omitempty"`
 	QQConnectEnabled bool                `json:"qq_connect_enabled,omitempty"`
+	WeChatEnabled    bool                `json:"wechat_connect_enabled,omitempty"`
 
 	// DownloadCDNRoutes exposes configured CDN mirror endpoints so clients
 	// can offer a download-route picker (#2987).
@@ -136,6 +137,7 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 		legalDocs := settings.LegalDocuments(c)
 		sso := settings.SSO(c)
 		qq := settings.QQConnect(c)
+		wx := settings.WeChatConnect(c)
 		return &SiteConfig{
 			LoginCaptcha:     settings.LoginCaptchaEnabled(c),
 			RegCaptcha:       settings.RegCaptchaEnabled(c),
@@ -149,6 +151,7 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 			SSODisplayName:   sso.DisplayName,
 			SSOAutoRedirect:  sso.AutoRedirect,
 			QQConnectEnabled: qq.Enabled && qq.AppID != "",
+			WeChatEnabled:    wx.Enabled && wx.AppID != "",
 		}, nil
 	case "explorer":
 		explorerSettings := settings.ExplorerFrontendSettings(c)

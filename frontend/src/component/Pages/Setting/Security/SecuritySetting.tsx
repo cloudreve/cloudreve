@@ -177,6 +177,8 @@ const linkedAccountProviderName = (t: (key: string) => string, provider: string)
   switch (provider) {
     case "qq":
       return t("setting.providerQQ");
+    case "wechat":
+      return t("setting.providerWeChat");
     default:
       return provider;
   }
@@ -211,7 +213,13 @@ const LinkedAccountItem = ({
     <StyledOAuthGrantListItem sx={{ pr: "150px" }}>
       <ListItemAvatar>
         <Avatar sx={{ bgcolor: theme.palette.primary.main }}>
-          {account.provider === "qq" ? <Icon icon="ri:qq-fill" style={{ fontSize: 24 }} /> : <AppsListOutlined />}
+          {account.provider === "qq" ? (
+            <Icon icon="ri:qq-fill" style={{ fontSize: 24 }} />
+          ) : account.provider === "wechat" ? (
+            <Icon icon="ri:wechat-fill" style={{ fontSize: 24 }} />
+          ) : (
+            <AppsListOutlined />
+          )}
         </Avatar>
       </ListItemAvatar>
       <StyledListItemText
@@ -408,6 +416,7 @@ const SecuritySetting = ({ setting, setSetting }: ProfileSettingProps) => {
 
   const authEnabled = useAppSelector((s) => s.siteConfig.login.config.authn);
   const qqConnectEnabled = useAppSelector((s) => s.siteConfig.login.config.qq_connect_enabled);
+  const wechatConnectEnabled = useAppSelector((s) => s.siteConfig.login.config.wechat_connect_enabled);
 
   const resetPwdFormRef = React.createRef<HTMLFormElement>();
   const [showResetPassword, setShowResetPassword] = useState(false);
@@ -610,7 +619,7 @@ const SecuritySetting = ({ setting, setSetting }: ProfileSettingProps) => {
           </List>
         </SettingForm>
       )}
-      {(qqConnectEnabled || (setting.linked_accounts && setting.linked_accounts.length > 0)) && (
+      {(qqConnectEnabled || wechatConnectEnabled || (setting.linked_accounts && setting.linked_accounts.length > 0)) && (
         <SettingForm title={t("setting.linkedAccounts")} lgWidth={5}>
           <List disablePadding>
             {setting.linked_accounts?.map((account) => (
@@ -627,6 +636,18 @@ const SecuritySetting = ({ setting, setSetting }: ProfileSettingProps) => {
               }}
             >
               {t("setting.linkQQAccount")}
+            </SecondaryButton>
+          )}
+          {wechatConnectEnabled && !setting.linked_accounts?.some((a) => a.provider === "wechat") && (
+            <SecondaryButton
+              sx={{ mt: 1 }}
+              variant={"contained"}
+              startIcon={<Icon icon="ri:wechat-fill" />}
+              onClick={() => {
+                window.location.href = "/api/v4/session/wechat/login?link=1";
+              }}
+            >
+              {t("setting.linkWeChatAccount")}
             </SecondaryButton>
           )}
         </SettingForm>

@@ -14,6 +14,7 @@ import { NoMarginHelperText, SettingSection, SettingSectionContent } from "../Se
 import { SettingContext } from "../SettingWrapper.tsx";
 import QQConnectSettings from "./QQConnectSettings.tsx";
 import SSOSettings from "./SSOSettings.tsx";
+import WeChatConnectSettings from "./WeChatConnectSettings.tsx";
 
 const UserSession = () => {
   const { t } = useTranslation("dashboard");
@@ -306,6 +307,9 @@ const UserSession = () => {
             </SettingForm>
             <SettingForm lgWidth={5}>
               <QQConnectSettings />
+            </SettingForm>
+            <SettingForm lgWidth={5}>
+              <WeChatConnectSettings />
             </SettingForm>
           </SettingSectionContent>
         </SettingSection>

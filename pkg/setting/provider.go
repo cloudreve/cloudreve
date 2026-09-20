@@ -261,6 +261,7 @@ type (
 		// SSO returns the inbound single sign-on (OIDC) settings.
 		SSO(ctx context.Context) *SSO
 		QQConnect(ctx context.Context) *QQConnect
+		WeChatConnect(ctx context.Context) *WeChatConnect
 		// EmailFilter returns the sign-up email restriction settings.
 		EmailFilter(ctx context.Context) *EmailFilter
 		// ShareDefaults returns the site-wide share defaults applied when a
@@ -1011,6 +1012,15 @@ func (s *settingProvider) QQConnect(ctx context.Context) *QQConnect {
 		AppID:           s.getString(ctx, "qq_connect_app_id", ""),
 		AppSecret:       s.getString(ctx, "qq_connect_app_secret", ""),
 		RegisterEnabled: s.getBoolean(ctx, "qq_connect_register_enabled", true),
+	}
+}
+
+func (s *settingProvider) WeChatConnect(ctx context.Context) *WeChatConnect {
+	return &WeChatConnect{
+		Enabled:         s.getBoolean(ctx, "wechat_connect_enabled", false),
+		AppID:           s.getString(ctx, "wechat_connect_app_id", ""),
+		AppSecret:       s.getString(ctx, "wechat_connect_app_secret", ""),
+		RegisterEnabled: s.getBoolean(ctx, "wechat_connect_register_enabled", true),
 	}
 }
 

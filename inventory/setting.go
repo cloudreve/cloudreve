@@ -570,6 +570,10 @@ var DefaultSettings = map[string]string{
 	"qq_connect_app_id":                          "",
 	"qq_connect_app_secret":                      "",
 	"qq_connect_register_enabled":                "1",
+	"wechat_connect_enabled":                     "0",
+	"wechat_connect_app_id":                      "",
+	"wechat_connect_app_secret":                  "",
+	"wechat_connect_register_enabled":            "1",
 	"upload_dedup_scope":                         "owner",
 	"download_cdn_routes":                        "",
 	"download_cdn_shuffle":                       "0",
@@ -742,6 +746,7 @@ var RedactedSettings = map[string]struct{}{
 	"oidc_signing_private_key": {},
 	"sso_client_secret":        {},
 	"qq_connect_app_secret":    {},
+	"wechat_connect_app_secret": {},
 }
 
 func init() {

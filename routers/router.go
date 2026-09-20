@@ -355,6 +355,19 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				)
 			}
 
+			// WeChat Open Platform scan login (non-OIDC OAuth2 provider)
+			wechatRouter := session.Group("wechat")
+			{
+				wechatRouter.GET("login",
+					controllers.FromQuery[usersvc.WeChatLoginService](usersvc.WeChatLoginParameterCtx{}),
+					controllers.UserWeChatLogin,
+				)
+				wechatRouter.GET("callback",
+					controllers.FromQuery[usersvc.WeChatCallbackService](usersvc.WeChatCallbackParameterCtx{}),
+					controllers.UserWeChatCallback,
+				)
+			}
+
 			oauthRouter := session.Group("oauth")
 			{
 				oauthRouter.GET("app/:app_id",

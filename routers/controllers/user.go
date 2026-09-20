@@ -385,6 +385,19 @@ func UserQQCallback(c *gin.Context) {
 	service.Callback(c)
 }
 
+// UserWeChatLogin redirects the browser to the WeChat scan authorization page.
+func UserWeChatLogin(c *gin.Context) {
+	service := ParametersFromContext[*user.WeChatLoginService](c, user.WeChatLoginParameterCtx{})
+	service.Login(c)
+}
+
+// UserWeChatCallback completes the WeChat flow and redirects either to the
+// SPA ticket handoff or, for link mode, back to the security settings tab.
+func UserWeChatCallback(c *gin.Context) {
+	service := ParametersFromContext[*user.WeChatCallbackService](c, user.WeChatCallbackParameterCtx{})
+	service.Callback(c)
+}
+
 // UserUnbindSso removes the caller's external-account binding at a provider.
 func UserUnbindSso(c *gin.Context) {
 	service := ParametersFromContext[*user.SsoUnbindService](c, user.SsoUnbindParameterCtx{})

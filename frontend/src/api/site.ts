@@ -33,6 +33,7 @@ export interface SiteConfig {
   sso_display_name?: string;
   sso_auto_redirect?: boolean;
   qq_connect_enabled?: boolean;
+  wechat_connect_enabled?: boolean;
   download_cdn_routes?: { name: string; url: string }[];
   download_cdn_shuffle?: boolean;
   abuse_captcha?: boolean;

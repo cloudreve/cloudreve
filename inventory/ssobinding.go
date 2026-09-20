@@ -29,7 +29,8 @@ type (
 // SsoProvider enumerates the external sign-in providers that can appear in
 // sso_binding rows.
 const (
-	SsoProviderQQ = "qq"
+	SsoProviderQQ     = "qq"
+	SsoProviderWeChat = "wechat"
 )
 
 var (

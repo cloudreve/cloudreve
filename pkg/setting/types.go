@@ -95,6 +95,16 @@ type QQConnect struct {
 	RegisterEnabled bool
 }
 
+// WeChatConnect holds the WeChat Open Platform (open.weixin.qq.com) scan
+// login config. Identity resolves through the token response's unionid,
+// falling back to openid.
+type WeChatConnect struct {
+	Enabled         bool
+	AppID           string
+	AppSecret       string
+	RegisterEnabled bool
+}
+
 type EmailFilterMode int
 
 const (
