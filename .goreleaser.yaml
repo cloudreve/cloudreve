@@ -1,5 +1,7 @@
 version: 2
 
+project_name: cloudreve
+
 before:
   hooks:
     - go mod tidy
