@@ -42,8 +42,20 @@ class MainActivity : ComponentActivity() {
         handleShareIntent(intent)
     }
 
-    // Share-sheet target: queue incoming files to the account root.
+    // Share-sheet target + OAuth deep link.
     private fun handleShareIntent(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_VIEW) {
+            val data = intent.data
+            if (data?.scheme == "cloudreve" && data.host == "mount") {
+                val code = data.getQueryParameter("code")
+                val state = data.getQueryParameter("state") ?: ""
+                if (!code.isNullOrEmpty()) {
+                    (application as CloudreveApp).oauthCallback.value =
+                        CloudreveApp.OAuthCallback(code, state)
+                }
+            }
+            return
+        }
         val uris = when (intent?.action) {
             Intent.ACTION_SEND -> listOfNotNull(
                 @Suppress("DEPRECATION")
