@@ -1,6 +1,7 @@
 import { LoadingButton } from "@mui/lab";
 import { Box, Button, ButtonGroup, ListItemText, Menu, useTheme } from "@mui/material";
 import React, { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+
 import { useTranslation } from "react-i18next";
 import { closeMarkdownViewer } from "../../../redux/globalStateSlice.ts";
 import { useAppDispatch, useAppSelector } from "../../../redux/hooks.ts";
@@ -29,7 +30,10 @@ const MarkdownViewer = () => {
   const supportUpdate = canUpdate(displayOpt);
   const [loading, setLoading] = useState(false);
   const [value, setValue] = useState("");
-  const [changedValue, setChangedValue] = useState("");
+  // Edits are only read at save time; a ref keeps per-keystroke updates from
+  // re-rendering the viewer (and transitively re-running every MDXEditor
+  // plugin update hook).
+  const changedValue = useRef("");
   const [loaded, setLoaded] = useState(false);
   const [saved, setSaved] = useState(true);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -68,7 +72,7 @@ const MarkdownViewer = () => {
       .then((res) => {
         const content = new TextDecoder().decode(res);
         setValue(content);
-        setChangedValue(content);
+        changedValue.current = content;
         setLoaded(true);
       })
       .catch(() => {
@@ -106,7 +110,7 @@ const MarkdownViewer = () => {
       }
 
       setLoading(true);
-      dispatch(saveMarkdown(changedValue, viewerState.file, viewerState.version, saveAs))
+      dispatch(saveMarkdown(changedValue.current, viewerState.file, viewerState.version, saveAs))
         .then(() => {
           setSaved(true);
         })
@@ -114,11 +118,11 @@ const MarkdownViewer = () => {
           setLoading(false);
         });
     },
-    [changedValue, viewerState],
+    [viewerState],
   );
 
   const onChange = useCallback((v: string) => {
-    setChangedValue(v);
+    changedValue.current = v;
     setSaved(false);
   }, []);
 
@@ -197,11 +201,11 @@ const MarkdownViewer = () => {
       {loaded && (
         <Suspense fallback={<ViewerLoading />}>
           <MarkdownEditor
-            value={changedValue}
+            value={value}
             readOnly={!supportUpdate}
             darkMode={theme.palette.mode === "dark"}
             initialValue={value}
-            onChange={(v) => onChange(v as string)}
+            onChange={onChange}
             onSaveShortcut={onSaveShortcut}
             imagePreviewHandler={imagePreviewHandler}
             imageAutocompleteSuggestions={imageAutocompleteSuggestions}
