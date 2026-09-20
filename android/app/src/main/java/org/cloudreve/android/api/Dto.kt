@@ -173,6 +173,18 @@ data class ShareCreateRequest(
 )
 
 @Serializable
+data class SearchHit(
+    val file: FileObject = FileObject(),
+    val content: String = "",
+)
+
+@Serializable
+data class SearchResponse(
+    val hits: List<SearchHit> = emptyList(),
+    val total: Long = 0,
+)
+
+@Serializable
 data class SiteConfig(
     val authn: Boolean = false,
     @SerialName("register_enabled") val registerEnabled: Boolean = false,

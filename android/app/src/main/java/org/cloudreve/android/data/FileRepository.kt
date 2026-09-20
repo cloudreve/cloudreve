@@ -10,6 +10,7 @@ import org.cloudreve.android.api.FileObject
 import org.cloudreve.android.api.FileUrlRequest
 import org.cloudreve.android.api.ListFileResponse
 import org.cloudreve.android.api.RenameFileRequest
+import org.cloudreve.android.api.SearchResponse
 import org.cloudreve.android.api.ShareCreateRequest
 import org.cloudreve.android.api.UploadSessionResponse
 import org.cloudreve.android.util.CrUri
@@ -57,6 +58,9 @@ class FileRepository(private val api: ApiClient) {
         val base = api.serverBase()
         return "$base/s/$id"
     }
+
+    suspend fun search(query: String, offset: Int = 0): SearchResponse =
+        api.service().searchFiles(query = query, offset = offset).unwrap()
 
     suspend fun mkdir(uri: String) {
         api.service().createFile(CreateFileRequest(uri = uri, type = "folder")).unwrapEmpty()

@@ -66,6 +66,12 @@ interface ApiService {
     @GET("api/v4/file/thumb")
     suspend fun thumb(@Query("uri") uri: String): Response<ApiResponse<ThumbResponse>>
 
+    @GET("api/v4/file/search")
+    suspend fun searchFiles(
+        @Query("query") query: String,
+        @Query("offset") offset: Int = 0,
+    ): Response<ApiResponse<SearchResponse>>
+
     @PUT("api/v4/share")
     suspend fun createShare(@Body request: ShareCreateRequest): Response<ApiResponse<String>>
 }

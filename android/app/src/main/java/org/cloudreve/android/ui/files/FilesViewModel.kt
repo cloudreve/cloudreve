@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.cloudreve.android.api.FileObject
+import org.cloudreve.android.api.SearchHit
 import org.cloudreve.android.data.FileRepository
 import org.cloudreve.android.util.CrUri
 import java.io.File
@@ -21,6 +22,12 @@ data class FilesUiState(
     val nextToken: String? = null,
     val error: String? = null,
     val snackbar: String? = null,
+    val searchQuery: String? = null,
+    val searchResults: List<SearchHit> = emptyList(),
+    val searchTotal: Long = 0,
+    val searchLoading: Boolean = false,
+    val searchLoadingMore: Boolean = false,
+    val searchError: String? = null,
 )
 
 class FilesViewModel(private val repo: FileRepository) : ViewModel() {
@@ -76,6 +83,59 @@ class FilesViewModel(private val repo: FileRepository) : ViewModel() {
         _state.value = _state.value.copy(currentUri = CrUri.parent(cur))
         refresh()
         return true
+    }
+
+    fun search(query: String) {
+        val q = query.trim()
+        if (q.isEmpty()) return
+        _state.value = _state.value.copy(
+            searchQuery = q,
+            searchResults = emptyList(),
+            searchTotal = 0,
+            searchLoading = true,
+            searchError = null,
+        )
+        viewModelScope.launch {
+            try {
+                val res = repo.search(q, 0)
+                _state.value = _state.value.copy(
+                    searchLoading = false,
+                    searchResults = res.hits,
+                    searchTotal = res.total,
+                )
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(searchLoading = false, searchError = e.message)
+            }
+        }
+    }
+
+    fun searchMore() {
+        val s = _state.value
+        val q = s.searchQuery ?: return
+        if (s.searchLoadingMore || s.searchResults.size >= s.searchTotal) return
+        _state.value = s.copy(searchLoadingMore = true)
+        viewModelScope.launch {
+            try {
+                val res = repo.search(q, s.searchResults.size)
+                _state.value = _state.value.copy(
+                    searchLoadingMore = false,
+                    searchResults = _state.value.searchResults + res.hits,
+                )
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(searchLoadingMore = false, snackbar = e.message)
+            }
+        }
+    }
+
+    fun clearSearch() {
+        _state.value = _state.value.copy(
+            searchQuery = null,
+            searchResults = emptyList(),
+            searchTotal = 0,
+            searchLoading = false,
+            searchLoadingMore = false,
+            searchError = null,
+        )
     }
 
     fun mkdir(name: String) {

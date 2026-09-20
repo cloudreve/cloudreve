@@ -254,6 +254,7 @@ pub struct FileThumbResponse {
     pub url: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub expires: Option<String>,
+    #[serde(default)]
     pub obfuscated: bool,
 }
 
@@ -574,4 +575,33 @@ pub enum FileEvent {
     ReconnectRequired,
     /// Batch of file events with data
     Event(Vec<FileEventData>),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::FileThumbResponse;
+
+    #[test]
+    fn thumb_response_without_obfuscated_field_deserializes() {
+        // The CE server's /file/thumb response carries only `url`/`expires`;
+        // a missing `obfuscated` flag must not fail deserialization — otherwise
+        // every thumbnail request errors out and Explorer shows no thumbnails
+        // for online-only placeholders.
+        let res: FileThumbResponse =
+            serde_json::from_str(r#"{"url":"https://example.com/t.jpg","expires":null}"#)
+                .expect("response without `obfuscated` must deserialize");
+        assert!(!res.obfuscated);
+        assert_eq!(res.url, "https://example.com/t.jpg");
+        assert!(res.expires.is_none());
+    }
+
+    #[test]
+    fn thumb_response_with_obfuscated_field_deserializes() {
+        let res: FileThumbResponse = serde_json::from_str(
+            r#"{"url":"abc","expires":"2026-01-01T00:00:00Z","obfuscated":true}"#,
+        )
+        .expect("response with `obfuscated` must deserialize");
+        assert!(res.obfuscated);
+        assert_eq!(res.expires.as_deref(), Some("2026-01-01T00:00:00Z"));
+    }
 }
