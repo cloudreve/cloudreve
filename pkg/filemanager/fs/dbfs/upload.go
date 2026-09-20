@@ -140,10 +140,13 @@ func (f *DBFS) PrepareUpload(ctx context.Context, req *fs.UploadRequest, opts ..
 	var (
 		policy *ent.StoragePolicy
 	)
-	if req.ImportFrom == nil {
-		policy, err = f.getPreferredPolicy(ctx, ancestor)
-	} else {
+	isThumb := req.Props.EntityType != nil && *req.Props.EntityType == types.EntityTypeThumbnail
+	if req.ImportFrom != nil || (isThumb && req.Props.PreferredStoragePolicy != 0) {
+		// Imports and server-designated thumbnail targets name their policy
+		// explicitly instead of inheriting the ancestor's preference.
 		policy, err = f.storagePolicyClient.GetPolicyByID(ctx, req.Props.PreferredStoragePolicy)
+	} else {
+		policy, err = f.getPreferredPolicy(ctx, ancestor)
 	}
 	if err != nil {
 		return nil, err
