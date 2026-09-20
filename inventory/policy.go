@@ -37,6 +37,9 @@ type (
 		// group: the allowed_policies set plus the legacy single-policy
 		// default. Returns the set in stable id order.
 		ListByGroup(ctx context.Context, group *ent.Group) ([]*ent.StoragePolicy, error)
+		// ListByGroups unions ListByGroup over every group a user belongs to
+		// (primary + memberships). Returns the set in stable id order.
+		ListByGroups(ctx context.Context, groups []*ent.Group) ([]*ent.StoragePolicy, error)
 		// ResolveLoadBalance picks a concrete child of a load_balance policy
 		// by its configured weights. Suspended, missing, and nested
 		// load_balance children are skipped; the pick is weighted over the
@@ -173,12 +176,42 @@ func (c *storagePolicyClient) GetByGroup(ctx context.Context, group *ent.Group) 
 	return res, nil
 }
 
+func (c *storagePolicyClient) ListByGroups(ctx context.Context, groups []*ent.Group) ([]*ent.StoragePolicy, error) {
+	res := []*ent.StoragePolicy{}
+	for _, g := range groups {
+		if g == nil {
+			continue
+		}
+		allowed, err := c.ListByGroup(ctx, g)
+		if err != nil {
+			return nil, err
+		}
+		for _, p := range allowed {
+			if !lo.ContainsBy(res, func(x *ent.StoragePolicy) bool { return x.ID == p.ID }) {
+				res = append(res, p)
+			}
+		}
+	}
+	sort.Slice(res, func(i, j int) bool { return res[i].ID < res[j].ID })
+	return res, nil
+}
+
 func (c *storagePolicyClient) ListByGroup(ctx context.Context, group *ent.Group) ([]*ent.StoragePolicy, error) {
-	allowed, err := withStoragePolicyEagerLoading(ctx, c.client.Group.QueryAllowedPolicies(group)).
-		Where(storagepolicy.StatusEQ(storagepolicy.StatusActive)).
-		All(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("list allowed storage policies: %w", err)
+	var allowed []*ent.StoragePolicy
+	if group.ID == 0 {
+		// Synthetic merged group (EffectiveGroup) — allowed_policies are
+		// already materialized on the edge; nothing to query by ID.
+		allowed = lo.Filter(group.Edges.AllowedPolicies, func(p *ent.StoragePolicy, _ int) bool {
+			return p.Status == storagepolicy.StatusActive
+		})
+	} else {
+		var err error
+		allowed, err = withStoragePolicyEagerLoading(ctx, c.client.Group.QueryAllowedPolicies(group)).
+			Where(storagepolicy.StatusEQ(storagepolicy.StatusActive)).
+			All(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("list allowed storage policies: %w", err)
+		}
 	}
 
 	// The legacy storage_policy_id default is always part of the allowed set.

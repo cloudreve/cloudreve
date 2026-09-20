@@ -397,6 +397,48 @@ var (
 			},
 		},
 	}
+	// GroupMembershipsColumns holds the columns for the "group_memberships" table.
+	GroupMembershipsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "expires", Type: field.TypeTime, Nullable: true},
+		{Name: "group_id", Type: field.TypeInt},
+		{Name: "user_id", Type: field.TypeInt},
+	}
+	// GroupMembershipsTable holds the schema information for the "group_memberships" table.
+	GroupMembershipsTable = &schema.Table{
+		Name:       "group_memberships",
+		Columns:    GroupMembershipsColumns,
+		PrimaryKey: []*schema.Column{GroupMembershipsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "group_memberships_groups_memberships",
+				Columns:    []*schema.Column{GroupMembershipsColumns[5]},
+				RefColumns: []*schema.Column{GroupsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "group_memberships_users_memberships",
+				Columns:    []*schema.Column{GroupMembershipsColumns[6]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "groupmembership_user_id_group_id",
+				Unique:  true,
+				Columns: []*schema.Column{GroupMembershipsColumns[6], GroupMembershipsColumns[5]},
+			},
+			{
+				Name:    "groupmembership_expires",
+				Unique:  false,
+				Columns: []*schema.Column{GroupMembershipsColumns[4]},
+			},
+		},
+	}
 	// InvitationCodesColumns holds the columns for the "invitation_codes" table.
 	InvitationCodesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -939,6 +981,7 @@ var (
 		FsEventsTable,
 		GiftCodesTable,
 		GroupsTable,
+		GroupMembershipsTable,
 		InvitationCodesTable,
 		MetadataTable,
 		NodesTable,
@@ -973,6 +1016,8 @@ func init() {
 	FsEventsTable.ForeignKeys[0].RefTable = UsersTable
 	GiftCodesTable.ForeignKeys[0].RefTable = UsersTable
 	GroupsTable.ForeignKeys[0].RefTable = StoragePoliciesTable
+	GroupMembershipsTable.ForeignKeys[0].RefTable = GroupsTable
+	GroupMembershipsTable.ForeignKeys[1].RefTable = UsersTable
 	MetadataTable.ForeignKeys[0].RefTable = FilesTable
 	OauthGrantsTable.ForeignKeys[0].RefTable = OauthClientsTable
 	OauthGrantsTable.ForeignKeys[1].RefTable = UsersTable

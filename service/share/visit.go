@@ -106,7 +106,7 @@ func (s *ShareInfoService) Get(c *gin.Context) (*explorer.Share, error) {
 	// buyer, or bearer of a valid resume ticket.
 	if share.PricePoints > 0 {
 		paid := share.Edges.User.ID == u.ID ||
-			(u.Edges.Group != nil && u.Edges.Group.Permissions.Enabled(int(types.GroupPermissionShareFree)))
+			(inventory.EffectiveGroup(u) != nil && inventory.EffectiveGroup(u).Permissions.Enabled(int(types.GroupPermissionShareFree)))
 		purchaseTicket := ""
 		if !paid {
 			vasClient := dep.VasClient()

@@ -1525,7 +1525,9 @@
     "invitationCodeCopy": "Copy",
     "invitationCodeDefaultGroup": "Default",
     "noInvitationCodes": "No invitation codes yet.",
-    "loadMore": "Load more"
+    "loadMore": "Load more",
+    "additionalGroups": "Additional groups",
+    "additionalGroupsDes": "Extra group memberships on top of the primary group. Permissions, quotas and storage policies are unioned across all groups."
   },
   "file": {
     "deleteXFiles": "Delete {{num}} files",

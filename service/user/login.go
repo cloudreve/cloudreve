@@ -150,7 +150,7 @@ func (service *UserLoginService) Login(c *gin.Context) (*ent.User, string, error
 		err = banError(expectedUser, "This account has been blocked")
 	} else if expectedUser.Status == user.StatusInactive {
 		err = serializer.NewError(serializer.CodeUserNotActivated, "This account is not activated", nil)
-	} else if ipErr := checkLoginIPWhitelist(c.ClientIP(), expectedUser.Edges.Group); ipErr != nil {
+	} else if ipErr := checkLoginIPWhitelist(c.ClientIP(), inventory.EffectiveGroup(expectedUser)); ipErr != nil {
 		err = ipErr
 	}
 

@@ -19,6 +19,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/fsevent"
 	"github.com/cloudreve/Cloudreve/v4/ent/giftcode"
 	"github.com/cloudreve/Cloudreve/v4/ent/group"
+	"github.com/cloudreve/Cloudreve/v4/ent/groupmembership"
 	"github.com/cloudreve/Cloudreve/v4/ent/oauthgrant"
 	"github.com/cloudreve/Cloudreve/v4/ent/passkey"
 	"github.com/cloudreve/Cloudreve/v4/ent/predicate"
@@ -552,6 +553,21 @@ func (uu *UserUpdate) AddCreditTxns(c ...*CreditTxn) *UserUpdate {
 	return uu.AddCreditTxnIDs(ids...)
 }
 
+// AddMembershipIDs adds the "memberships" edge to the GroupMembership entity by IDs.
+func (uu *UserUpdate) AddMembershipIDs(ids ...int) *UserUpdate {
+	uu.mutation.AddMembershipIDs(ids...)
+	return uu
+}
+
+// AddMemberships adds the "memberships" edges to the GroupMembership entity.
+func (uu *UserUpdate) AddMemberships(g ...*GroupMembership) *UserUpdate {
+	ids := make([]int, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return uu.AddMembershipIDs(ids...)
+}
+
 // AddRedeemedCodeIDs adds the "redeemed_codes" edge to the GiftCode entity by IDs.
 func (uu *UserUpdate) AddRedeemedCodeIDs(ids ...int) *UserUpdate {
 	uu.mutation.AddRedeemedCodeIDs(ids...)
@@ -810,6 +826,27 @@ func (uu *UserUpdate) RemoveCreditTxns(c ...*CreditTxn) *UserUpdate {
 		ids[i] = c[i].ID
 	}
 	return uu.RemoveCreditTxnIDs(ids...)
+}
+
+// ClearMemberships clears all "memberships" edges to the GroupMembership entity.
+func (uu *UserUpdate) ClearMemberships() *UserUpdate {
+	uu.mutation.ClearMemberships()
+	return uu
+}
+
+// RemoveMembershipIDs removes the "memberships" edge to GroupMembership entities by IDs.
+func (uu *UserUpdate) RemoveMembershipIDs(ids ...int) *UserUpdate {
+	uu.mutation.RemoveMembershipIDs(ids...)
+	return uu
+}
+
+// RemoveMemberships removes "memberships" edges to GroupMembership entities.
+func (uu *UserUpdate) RemoveMemberships(g ...*GroupMembership) *UserUpdate {
+	ids := make([]int, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return uu.RemoveMembershipIDs(ids...)
 }
 
 // ClearRedeemedCodes clears all "redeemed_codes" edges to the GiftCode entity.
@@ -1515,6 +1552,51 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(credittxn.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uu.mutation.MembershipsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.MembershipsTable,
+			Columns: []string{user.MembershipsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(groupmembership.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.RemovedMembershipsIDs(); len(nodes) > 0 && !uu.mutation.MembershipsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.MembershipsTable,
+			Columns: []string{user.MembershipsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(groupmembership.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.MembershipsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.MembershipsTable,
+			Columns: []string{user.MembershipsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(groupmembership.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -2230,6 +2312,21 @@ func (uuo *UserUpdateOne) AddCreditTxns(c ...*CreditTxn) *UserUpdateOne {
 	return uuo.AddCreditTxnIDs(ids...)
 }
 
+// AddMembershipIDs adds the "memberships" edge to the GroupMembership entity by IDs.
+func (uuo *UserUpdateOne) AddMembershipIDs(ids ...int) *UserUpdateOne {
+	uuo.mutation.AddMembershipIDs(ids...)
+	return uuo
+}
+
+// AddMemberships adds the "memberships" edges to the GroupMembership entity.
+func (uuo *UserUpdateOne) AddMemberships(g ...*GroupMembership) *UserUpdateOne {
+	ids := make([]int, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return uuo.AddMembershipIDs(ids...)
+}
+
 // AddRedeemedCodeIDs adds the "redeemed_codes" edge to the GiftCode entity by IDs.
 func (uuo *UserUpdateOne) AddRedeemedCodeIDs(ids ...int) *UserUpdateOne {
 	uuo.mutation.AddRedeemedCodeIDs(ids...)
@@ -2488,6 +2585,27 @@ func (uuo *UserUpdateOne) RemoveCreditTxns(c ...*CreditTxn) *UserUpdateOne {
 		ids[i] = c[i].ID
 	}
 	return uuo.RemoveCreditTxnIDs(ids...)
+}
+
+// ClearMemberships clears all "memberships" edges to the GroupMembership entity.
+func (uuo *UserUpdateOne) ClearMemberships() *UserUpdateOne {
+	uuo.mutation.ClearMemberships()
+	return uuo
+}
+
+// RemoveMembershipIDs removes the "memberships" edge to GroupMembership entities by IDs.
+func (uuo *UserUpdateOne) RemoveMembershipIDs(ids ...int) *UserUpdateOne {
+	uuo.mutation.RemoveMembershipIDs(ids...)
+	return uuo
+}
+
+// RemoveMemberships removes "memberships" edges to GroupMembership entities.
+func (uuo *UserUpdateOne) RemoveMemberships(g ...*GroupMembership) *UserUpdateOne {
+	ids := make([]int, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return uuo.RemoveMembershipIDs(ids...)
 }
 
 // ClearRedeemedCodes clears all "redeemed_codes" edges to the GiftCode entity.
@@ -3223,6 +3341,51 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(credittxn.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uuo.mutation.MembershipsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.MembershipsTable,
+			Columns: []string{user.MembershipsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(groupmembership.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.RemovedMembershipsIDs(); len(nodes) > 0 && !uuo.mutation.MembershipsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.MembershipsTable,
+			Columns: []string{user.MembershipsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(groupmembership.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.MembershipsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.MembershipsTable,
+			Columns: []string{user.MembershipsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(groupmembership.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

@@ -53,10 +53,11 @@ type (
 	}
 )
 
-// allowedGroupPolicies resolves the group's usable policy set and maps each
-// to a brief. The group's configured default is marked.
-func allowedGroupPolicies(c *gin.Context, group *ent.Group, dep dependency.Dep) ([]*ent.StoragePolicy, []*StoragePolicyBrief, error) {
-	allowed, err := dep.StoragePolicyClient().ListByGroup(c, group)
+// allowedGroupPolicies resolves the union of usable policies across every
+// group the user belongs to and maps each to a brief. The primary group's
+// configured default is marked.
+func allowedGroupPolicies(c *gin.Context, groups []*ent.Group, dep dependency.Dep) ([]*ent.StoragePolicy, []*StoragePolicyBrief, error) {
+	allowed, err := dep.StoragePolicyClient().ListByGroups(c, groups)
 	if err != nil {
 		return nil, nil, serializer.NewError(serializer.CodeDBError, "Failed to list storage policies", err)
 	}
@@ -64,13 +65,17 @@ func allowedGroupPolicies(c *gin.Context, group *ent.Group, dep dependency.Dep) 
 		return nil, nil, serializer.NewError(serializer.CodeNoPermissionErr, "No storage policy is available for your group", nil)
 	}
 
+	defaultPolicyID := 0
+	if len(groups) > 0 && groups[0] != nil {
+		defaultPolicyID = groups[0].StoragePolicyID
+	}
 	hasher := dep.HashIDEncoder()
 	briefs := lo.Map(allowed, func(p *ent.StoragePolicy, _ int) *StoragePolicyBrief {
 		return &StoragePolicyBrief{
 			ID:        hashid.EncodePolicyID(hasher, p.ID),
 			Name:      p.Name,
 			Type:      p.Type,
-			IsDefault: p.ID == group.StoragePolicyID,
+			IsDefault: p.ID == defaultPolicyID,
 		}
 	})
 	return allowed, briefs, nil
@@ -78,22 +83,22 @@ func allowedGroupPolicies(c *gin.Context, group *ent.Group, dep dependency.Dep) 
 
 func (s *AllowedPolicyService) Get(c *gin.Context) ([]*StoragePolicyBrief, error) {
 	user := inventory.UserFromContext(c)
-	if user.Edges.Group == nil {
+	if len(inventory.GroupsOf(user)) == 0 {
 		return nil, serializer.NewError(serializer.CodeNoPermissionErr, "Group not loaded", nil)
 	}
-	_, briefs, err := allowedGroupPolicies(c, user.Edges.Group, dependency.FromContext(c))
+	_, briefs, err := allowedGroupPolicies(c, inventory.GroupsOf(user), dependency.FromContext(c))
 	return briefs, err
 }
 
 // decodeAllowedPolicy validates a hashid-encoded policy id against the
-// group's allowed set and returns the matching policy.
-func decodeAllowedPolicy(c *gin.Context, dep dependency.Dep, group *ent.Group, raw string) (*ent.StoragePolicy, error) {
+// union of the user's group allowed sets and returns the matching policy.
+func decodeAllowedPolicy(c *gin.Context, dep dependency.Dep, groups []*ent.Group, raw string) (*ent.StoragePolicy, error) {
 	id, err := dep.HashIDEncoder().Decode(raw, hashid.PolicyID)
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeParamErr, "Invalid storage policy", err)
 	}
 
-	allowed, err := dep.StoragePolicyClient().ListByGroup(c, group)
+	allowed, err := dep.StoragePolicyClient().ListByGroups(c, groups)
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to list storage policies", err)
 	}
@@ -145,7 +150,7 @@ func (s *PreferredPolicyService) Update(c *gin.Context) (*StoragePolicyBrief, er
 
 	var policy *ent.StoragePolicy
 	if s.Policy != "" {
-		policy, err = decodeAllowedPolicy(c, dep, user.Edges.Group, s.Policy)
+		policy, err = decodeAllowedPolicy(c, dep, inventory.GroupsOf(user), s.Policy)
 		if err != nil {
 			return nil, err
 		}
@@ -177,7 +182,7 @@ func (s *FileRelocateService) Create(c *gin.Context) (*FileRelocateResponse, err
 	dep := dependency.FromContext(c)
 	user := inventory.UserFromContext(c)
 
-	policy, err := decodeAllowedPolicy(c, dep, user.Edges.Group, s.Policy)
+	policy, err := decodeAllowedPolicy(c, dep, inventory.GroupsOf(user), s.Policy)
 	if err != nil {
 		return nil, err
 	}

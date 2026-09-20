@@ -91,6 +91,14 @@ const UserDialog = ({ open, onClose, userID, onUpdated }: UserDialogProps) => {
       user: { ...modifiedValues },
     };
 
+    // Membership edge is only sent when it was loaded — undefined means
+    // "leave the set alone" server-side.
+    if (modifiedValues.edges?.memberships) {
+      args.memberships = modifiedValues.edges.memberships
+        .map((m) => m.group_id ?? 0)
+        .filter((id) => id > 0);
+    }
+
     if (!args.user.two_fa_enabled) {
       args.two_fa = "clear";
     }

@@ -9,6 +9,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/credittxn"
 	"github.com/cloudreve/Cloudreve/v4/ent/giftcode"
+	"github.com/cloudreve/Cloudreve/v4/ent/groupmembership"
 	"github.com/cloudreve/Cloudreve/v4/ent/schema"
 	"github.com/cloudreve/Cloudreve/v4/ent/sharepurchase"
 	"github.com/cloudreve/Cloudreve/v4/ent/sku"
@@ -263,18 +264,32 @@ func (c *vasClient) applyGroupCode(ctx context.Context, userID int, gc *ent.Gift
 	return c.applyGroupGrant(ctx, userID, int(gc.Amount), gc.Duration)
 }
 
+// applyGroupGrant grants a group membership on top of the user's existing
+// groups — purchases no longer replace the primary group. The UserGrant row
+// remains as purchase/expiry bookkeeping; its revert path is a no-op under
+// membership semantics since group_users is never switched.
 func (c *vasClient) applyGroupGrant(ctx context.Context, userID, targetGroup int, durationSeconds int64) error {
-	u, err := c.client.User.Get(ctx, userID)
-	if err != nil {
+	if _, err := c.client.User.Get(ctx, userID); err != nil {
 		return err
 	}
 	if _, err := c.client.Group.Get(ctx, targetGroup); err != nil {
 		return err
 	}
-	if err := c.createGrant(ctx, userID, usergrant.TypeGroup, int64(targetGroup), durationSeconds, u.GroupUsers); err != nil {
+	if err := c.createGrant(ctx, userID, usergrant.TypeGroup, int64(targetGroup), durationSeconds, 0); err != nil {
 		return err
 	}
-	return c.client.User.Update().Where(user.ID(userID)).SetGroupUsers(targetGroup).Exec(ctx)
+	var expires *time.Time
+	if durationSeconds > 0 {
+		t := time.Now().Add(time.Duration(durationSeconds) * time.Second)
+		expires = &t
+	}
+	return c.client.GroupMembership.Create().
+		SetUserID(userID).
+		SetGroupID(targetGroup).
+		SetNillableExpires(expires).
+		OnConflictColumns(groupmembership.FieldUserID, groupmembership.FieldGroupID).
+		UpdateNewValues().
+		Exec(ctx)
 }
 
 func (c *vasClient) createGrant(ctx context.Context, userID int, typ usergrant.Type, amount, durationSeconds int64, prevGroupID int) error {

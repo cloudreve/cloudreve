@@ -200,9 +200,9 @@ func (m *ExtractArchiveTask) createSlaveExtractTask(ctx context.Context, dep dep
 	}
 
 	// Validate file size
-	if user.Edges.Group.Settings.DecompressSize > 0 && archiveFile.Size() > user.Edges.Group.Settings.DecompressSize {
+	if inventory.EffectiveGroup(user).Settings.DecompressSize > 0 && archiveFile.Size() > inventory.EffectiveGroup(user).Settings.DecompressSize {
 		return task.StatusError,
-			fmt.Errorf("file size %d exceeds the limit %d (%w)", archiveFile.Size(), user.Edges.Group.Settings.DecompressSize, queue.CriticalErr)
+			fmt.Errorf("file size %d exceeds the limit %d (%w)", archiveFile.Size(), inventory.EffectiveGroup(user).Settings.DecompressSize, queue.CriticalErr)
 	}
 
 	// Create slave task
@@ -225,7 +225,7 @@ func (m *ExtractArchiveTask) createSlaveExtractTask(ctx context.Context, dep dep
 		Encoding:     m.state.Encoding,
 		Dst:          m.state.Dst,
 		UserID:       user.ID,
-		ExtractLimit: user.Edges.Group.Settings.DecompressSize,
+		ExtractLimit: inventory.EffectiveGroup(user).Settings.DecompressSize,
 		Password:     m.state.Password,
 		FileMask:     m.state.FileMask,
 		Volumes:      m.resolveVolumeEntities(ctx, fm, uri.DirUri(), archiveFile.DisplayName(), entityModel),
@@ -299,9 +299,9 @@ func (m *ExtractArchiveTask) masterExtractArchive(ctx context.Context, dep depen
 	}
 
 	// Validate file size
-	if user.Edges.Group.Settings.DecompressSize > 0 && archiveFile.Size() > user.Edges.Group.Settings.DecompressSize {
+	if inventory.EffectiveGroup(user).Settings.DecompressSize > 0 && archiveFile.Size() > inventory.EffectiveGroup(user).Settings.DecompressSize {
 		return task.StatusError,
-			fmt.Errorf("file size %d exceeds the limit %d (%w)", archiveFile.Size(), user.Edges.Group.Settings.DecompressSize, queue.CriticalErr)
+			fmt.Errorf("file size %d exceeds the limit %d (%w)", archiveFile.Size(), inventory.EffectiveGroup(user).Settings.DecompressSize, queue.CriticalErr)
 	}
 
 	es, err := fm.GetEntitySource(ctx, 0, fs.WithEntity(archiveFile.PrimaryEntity()))
@@ -434,7 +434,7 @@ func (m *ExtractArchiveTask) masterExtractArchive(ctx context.Context, dep depen
 
 		// Decompression-bomb guard: abort when cumulative output or entry
 		// count exceeds the group's bounds.
-		sizeLimit := user.Edges.Group.Settings.DecompressSize
+		sizeLimit := inventory.EffectiveGroup(user).Settings.DecompressSize
 		if err := checkExtractGuards(m.progress, sizeLimit); err != nil {
 			return err
 		}

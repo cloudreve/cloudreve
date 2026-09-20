@@ -269,8 +269,8 @@ func IsValidShare(share *ent.Share) error {
 	}
 
 	// Check the owner's current share permission.
-	ownerGroup, err := owner.Edges.GroupOrErr()
-	if err != nil || ownerGroup.Permissions == nil ||
+	ownerGroup := EffectiveGroup(owner)
+	if ownerGroup == nil || ownerGroup.Permissions == nil ||
 		!ownerGroup.Permissions.Enabled(int(types.GroupPermissionShare)) {
 		return ErrSourceFileInvalid
 	}

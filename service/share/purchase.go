@@ -43,7 +43,7 @@ func (s *SharePurchaseService) Purchase(c *gin.Context) (*SharePurchaseResponse,
 	if share.Edges.User.ID == u.ID {
 		return nil, serializer.NewError(serializer.CodeParamErr, "Cannot purchase own share", nil)
 	}
-	if !u.Edges.Group.Permissions.Enabled(int(types.GroupPermissionShareDownload)) {
+	if !inventory.EffectiveGroup(u).Permissions.Enabled(int(types.GroupPermissionShareDownload)) {
 		return nil, serializer.NewError(serializer.CodeNoPermissionErr, "You don't have permission to access share links", nil)
 	}
 

@@ -22,6 +22,18 @@ func init() {
 		}
 
 		recordMembershipUnsubscribes(ctx, dep, reverted, defaultGroup)
+
+		expired, err := dep.UserClient().ExpireMemberships(ctx)
+		if err != nil {
+			dep.Logger().Error("Failed to expire group memberships: %s", err)
+			return
+		}
+		for _, m := range expired {
+			activity.Record(ctx, dep.SettingProvider(), dep.ActivityClient(), types.EventMembershipUnsubscribe,
+				activity.Actor(m.UserID), activity.Extra(map[string]any{
+					"from_group": m.GroupID, "to_group": 0,
+				}))
+		}
 	})
 }
 

@@ -1415,6 +1415,29 @@ func HasCreditTxnsWith(preds ...predicate.CreditTxn) predicate.User {
 	})
 }
 
+// HasMemberships applies the HasEdge predicate on the "memberships" edge.
+func HasMemberships() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, MembershipsTable, MembershipsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasMembershipsWith applies the HasEdge predicate on the "memberships" edge with a given conditions (other predicates).
+func HasMembershipsWith(preds ...predicate.GroupMembership) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newMembershipsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasRedeemedCodes applies the HasEdge predicate on the "redeemed_codes" edge.
 func HasRedeemedCodes() predicate.User {
 	return predicate.User(func(s *sql.Selector) {

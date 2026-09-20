@@ -301,6 +301,7 @@ export interface User extends CommonMixin {
     storage_policy?: StoragePolicy;
     openid?: OpenID[];
     passkey?: Passkey[];
+    memberships?: GroupMembership[];
   };
 
   hash_id?: string;
@@ -310,6 +311,15 @@ export interface User extends CommonMixin {
 
 export interface OpenID extends CommonMixin {
   provider?: number;
+}
+
+export interface GroupMembership extends CommonMixin {
+  user_id?: number;
+  group_id?: number;
+  expires?: string;
+  edges?: {
+    group?: GroupEnt;
+  };
 }
 
 export interface Passkey extends CommonMixin {
@@ -398,6 +408,9 @@ export interface UpsertUserService {
   user: User;
   password?: string;
   two_fa?: string;
+  // Additional group memberships; omitted leaves the set untouched, an
+  // empty array clears it.
+  memberships?: number[];
 }
 
 export interface BatchIDService {

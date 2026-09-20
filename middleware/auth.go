@@ -182,9 +182,9 @@ func WebDAVAuth() gin.HandlerFunc {
 		}
 
 		// 用户组已启用WebDAV？
-		group, err := expectedUser.Edges.GroupOrErr()
-		if err != nil {
-			l.Debug("WebDAVAuth: user group not found: %s", err)
+		group := inventory.EffectiveGroup(expectedUser)
+		if group == nil {
+			l.Debug("WebDAVAuth: user group not found")
 			c.Status(http.StatusInternalServerError)
 			c.Abort()
 			return
@@ -328,7 +328,7 @@ func OSSCallbackAuth() gin.HandlerFunc {
 func IsAdmin() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user := inventory.UserFromContext(c)
-		if !user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+		if !inventory.EffectiveGroup(user).Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
 			c.JSON(200, serializer.ErrWithDetails(c, serializer.CodeNoPermissionErr, "", nil))
 			c.Abort()
 			return
@@ -343,7 +343,7 @@ func IsAdmin() gin.HandlerFunc {
 func IsAdminOrDelegated() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user := inventory.UserFromContext(c)
-		permissions := user.Edges.Group.Permissions
+		permissions := inventory.EffectiveGroup(user).Permissions
 		if !permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
 			delegated := false
 			for _, p := range types.DelegatedAdminPermissions() {
@@ -370,7 +370,7 @@ func IsAdminOrDelegated() gin.HandlerFunc {
 func AdminSection(sections ...types.GroupPermission) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user := inventory.UserFromContext(c)
-		permissions := user.Edges.Group.Permissions
+		permissions := inventory.EffectiveGroup(user).Permissions
 		if !permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
 			allowed := false
 			for _, p := range sections {

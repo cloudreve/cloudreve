@@ -208,8 +208,8 @@ func davWriteForbidden(user *ent.User) bool {
 		user.Edges.DavAccounts[0].Options.Enabled(int(types.DavAccountReadOnly)) {
 		return true
 	}
-	if user.Edges.Group != nil &&
-		user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionWebDAVReadOnly)) {
+	if inventory.EffectiveGroup(user) != nil &&
+		inventory.EffectiveGroup(user).Permissions.Enabled(int(types.GroupPermissionWebDAVReadOnly)) {
 		return true
 	}
 	return false
@@ -565,11 +565,11 @@ func handleGetHeadPost(c *gin.Context, user *ent.User, fm manager.FileManager) (
 
 	defer es.Close()
 
-	es.Apply(entitysource.WithSpeedLimit(int64(user.Edges.Group.SpeedLimit)))
+	es.Apply(entitysource.WithSpeedLimit(int64(inventory.EffectiveGroup(user).SpeedLimit)))
 	if es.ShouldInternalProxy() ||
 		(len(user.Edges.DavAccounts) > 0 &&
 			user.Edges.DavAccounts[0].Options.Enabled(int(types.DavAccountProxy)) &&
-			user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionWebDAVProxy))) {
+			inventory.EffectiveGroup(user).Permissions.Enabled(int(types.GroupPermissionWebDAVProxy))) {
 		es.Serve(c.Writer, c.Request)
 	} else {
 		settings := dependency.FromContext(c).SettingProvider()

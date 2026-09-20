@@ -70,6 +70,12 @@ func (m *GroupMutation) SetRawID(t int) {
 
 // SetUpdatedAt sets the "updated_at" field.
 
+func (m *GroupMembershipMutation) SetRawID(t int) {
+	m.id = &t
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+
 func (m *InvitationCodeMutation) SetRawID(t int) {
 	m.id = &t
 }

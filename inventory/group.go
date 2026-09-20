@@ -3,9 +3,15 @@ package inventory
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/group"
+	"github.com/cloudreve/Cloudreve/v4/ent/groupmembership"
+	"github.com/cloudreve/Cloudreve/v4/ent/user"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/boolset"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cache"
 	"github.com/cloudreve/Cloudreve/v4/pkg/conf"
 	"github.com/samber/lo"
@@ -70,7 +76,28 @@ func (c *groupClient) GetClient() *ent.Client {
 }
 
 func (c *groupClient) CountUsers(ctx context.Context, id int) (int, error) {
-	return c.client.Group.Query().Where(group.ID(id)).QueryUsers().Count(ctx)
+	// Count users whose primary group is id OR who hold a membership in it.
+	primary, err := c.client.User.Query().Where(user.GroupUsers(id)).Count(ctx)
+	if err != nil {
+		return 0, err
+	}
+	memberIDs, err := c.client.GroupMembership.Query().
+		Where(groupmembership.GroupID(id)).
+		Select(groupmembership.FieldUserID).
+		Ints(ctx)
+	if err != nil {
+		return 0, err
+	}
+	memberCount := 0
+	if len(memberIDs) > 0 {
+		memberCount, err = c.client.User.Query().
+			Where(user.IDIn(memberIDs...), user.GroupUsersNEQ(id)).
+			Count(ctx)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return primary + memberCount, nil
 }
 
 func (c *groupClient) AnonymousGroup(ctx context.Context) (*ent.Group, error) {
@@ -193,4 +220,159 @@ func withGroupEagerLoading(ctx context.Context, q *ent.GroupQuery) *ent.GroupQue
 		q.WithAllowedPolicies()
 	}
 	return q
+}
+
+// GroupsOf returns the user's primary group plus all unexpired membership
+// groups, deduped by ID. Memberships are eager-loaded under LoadUserGroup.
+func GroupsOf(u *ent.User) []*ent.Group {
+	res := []*ent.Group{}
+	if u.Edges.Group != nil {
+		res = append(res, u.Edges.Group)
+	}
+	now := time.Now()
+	for _, m := range u.Edges.Memberships {
+		g := m.Edges.Group
+		if g == nil || (m.Expires != nil && m.Expires.Before(now)) {
+			continue
+		}
+		if !lo.ContainsBy(res, func(x *ent.Group) bool { return x.ID == g.ID }) {
+			res = append(res, g)
+		}
+	}
+	return res
+}
+
+// GroupIDsOf returns the IDs of GroupsOf — used for group-subject ACL checks.
+func GroupIDsOf(u *ent.User) []int {
+	return lo.Map(GroupsOf(u), func(g *ent.Group, _ int) int { return g.ID })
+}
+
+// EffectiveGroup merges the user's primary group with every unexpired
+// membership group into a synthetic group carrying union semantics:
+// permission bits are OR'ed, quotas and limits take the most permissive
+// value (0 = unlimited), and policy lists are unioned. The merged group has
+// ID 0 and no usable edges beyond AllowedPolicies — functions that re-query
+// by group ID must take GroupsOf instead. With no memberships it returns the
+// primary group unchanged.
+func EffectiveGroup(u *ent.User) *ent.Group {
+	groups := GroupsOf(u)
+	switch len(groups) {
+	case 0:
+		return nil
+	case 1:
+		return groups[0]
+	}
+
+	// Seed from the first (primary) group — an empty accumulator's zero
+	// values would read as "unlimited" for caps where 0 means no limit.
+	merged := &ent.Group{
+		Name: strings.Join(lo.Map(groups, func(g *ent.Group, _ int) string {
+			return g.Name
+		}), " + "),
+		MaxStorage:      groups[0].MaxStorage,
+		SpeedLimit:      groups[0].SpeedLimit,
+		StoragePolicyID: groups[0].StoragePolicyID,
+	}
+	merged.Edges.StoragePolicies = groups[0].Edges.StoragePolicies
+	settings := cloneGroupSetting(groups[0].Settings)
+	perm := boolset.BooleanSet{}
+	allowed := map[int]*ent.StoragePolicy{}
+	for _, p := range groups[0].Edges.AllowedPolicies {
+		allowed[p.ID] = p
+	}
+	for _, g := range groups {
+		if g.Permissions == nil {
+			continue
+		}
+		for i, b := range *g.Permissions {
+			if len(perm) <= i {
+				perm = append(perm, make([]byte, i+1-len(perm))...)
+			}
+			perm[i] |= b
+		}
+	}
+	for _, g := range groups[1:] {
+		merged.MaxStorage = mostPermissiveInt64(merged.MaxStorage, g.MaxStorage)
+		merged.SpeedLimit = mostPermissive(merged.SpeedLimit, g.SpeedLimit)
+		for _, p := range g.Edges.AllowedPolicies {
+			allowed[p.ID] = p
+		}
+		mergeGroupSettings(settings, g.Settings)
+	}
+	merged.Permissions = &perm
+	merged.Settings = settings
+	merged.Edges.AllowedPolicies = lo.Values(allowed)
+	return merged
+}
+
+func cloneGroupSetting(src *types.GroupSetting) *types.GroupSetting {
+	if src == nil {
+		return &types.GroupSetting{}
+	}
+	cpy := *src
+	cpy.LoginIPWhitelist = append([]string(nil), src.LoginIPWhitelist...)
+	cpy.DefaultPinned = append([]int(nil), src.DefaultPinned...)
+	cpy.AllowedNodes = append([]int(nil), src.AllowedNodes...)
+	if src.RemoteDownloadOptions != nil {
+		cpy.RemoteDownloadOptions = lo.Assign(map[string]interface{}{}, src.RemoteDownloadOptions)
+	}
+	return &cpy
+}
+
+// mostPermissive picks the most permissive of two quota/limit values where
+// 0 means unlimited: any 0 wins, otherwise the larger value.
+func mostPermissive(a, b int) int {
+	if a == 0 || b == 0 {
+		return 0
+	}
+	return max(a, b)
+}
+
+func mostPermissiveInt64(a, b int64) int64 {
+	if a == 0 || b == 0 {
+		return 0
+	}
+	return max(a, b)
+}
+
+// mergeGroupSettings folds src into dst under most-permissive semantics.
+func mergeGroupSettings(dst, src *types.GroupSetting) {
+	if src == nil {
+		return
+	}
+	dst.CompressSize = mostPermissiveInt64(dst.CompressSize, src.CompressSize)
+	dst.DecompressSize = mostPermissiveInt64(dst.DecompressSize, src.DecompressSize)
+	// SourceBatchSize 0 disables the feature, so 0 is least permissive.
+	dst.SourceBatchSize = max(dst.SourceBatchSize, src.SourceBatchSize)
+	dst.Aria2BatchSize = mostPermissive(dst.Aria2BatchSize, src.Aria2BatchSize)
+	dst.Aria2TaskLimit = mostPermissive(dst.Aria2TaskLimit, src.Aria2TaskLimit)
+	dst.Aria2MaxFileSize = mostPermissiveInt64(dst.Aria2MaxFileSize, src.Aria2MaxFileSize)
+	// MaxWalkedFiles is clamped to >=1 at use, so 0 is least permissive.
+	dst.MaxWalkedFiles = max(dst.MaxWalkedFiles, src.MaxWalkedFiles)
+	// TrashRetention is a duration, not a quota — 0 collects trash
+	// immediately, so most-permissive is the larger value.
+	dst.TrashRetention = max(dst.TrashRetention, src.TrashRetention)
+	dst.RedirectedSource = dst.RedirectedSource || src.RedirectedSource
+	dst.AllowSelectNode = dst.AllowSelectNode || src.AllowSelectNode
+	dst.WeightedPolicies = dst.WeightedPolicies || src.WeightedPolicies
+	if len(src.RemoteDownloadOptions) > 0 {
+		if dst.RemoteDownloadOptions == nil {
+			dst.RemoteDownloadOptions = map[string]interface{}{}
+		}
+		for k, v := range src.RemoteDownloadOptions {
+			if _, ok := dst.RemoteDownloadOptions[k]; !ok {
+				dst.RemoteDownloadOptions[k] = v
+			}
+		}
+	}
+	// Allowlists union: an IP/node/pinned share granted by any membership is
+	// granted. The login IP whitelist is a restriction, not a grant — an
+	// empty list means "allow all", so any unrestricted group wins.
+	if len(dst.LoginIPWhitelist) > 0 && len(src.LoginIPWhitelist) > 0 {
+		dst.LoginIPWhitelist = lo.Union(dst.LoginIPWhitelist, src.LoginIPWhitelist)
+	} else {
+		dst.LoginIPWhitelist = nil
+	}
+	dst.DefaultPinned = lo.Union(dst.DefaultPinned, src.DefaultPinned)
+	dst.AllowedNodes = lo.Union(dst.AllowedNodes, src.AllowedNodes)
 }

@@ -206,8 +206,8 @@ func (s *UpsertGroupService) Create(c *gin.Context) (*GetGroupResponse, error) {
 // admin bits are preserved.
 func (s *UpsertGroupService) maskAdminPermissions(c *gin.Context, groupClient inventory.GroupClient) error {
 	actor := inventory.UserFromContext(c)
-	if actor.Edges.Group != nil && actor.Edges.Group.Permissions != nil &&
-		actor.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+	if inventory.EffectiveGroup(actor) != nil && inventory.EffectiveGroup(actor).Permissions != nil &&
+		inventory.EffectiveGroup(actor).Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
 		return nil
 	}
 

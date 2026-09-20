@@ -292,7 +292,7 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 // nodes with any task capability, intersected with the group's allowed pool.
 // Returns nil when the group disallows selection.
 func taskNodesForUser(c *gin.Context, dep dependency.Dep, u *ent.User) ([]TaskNode, bool) {
-	if u == nil || u.Edges.Group == nil || !u.Edges.Group.Settings.AllowSelectNode {
+	if u == nil || inventory.EffectiveGroup(u) == nil || !inventory.EffectiveGroup(u).Settings.AllowSelectNode {
 		return nil, false
 	}
 
@@ -301,7 +301,7 @@ func taskNodesForUser(c *gin.Context, dep dependency.Dep, u *ent.User) ([]TaskNo
 		return nil, true
 	}
 
-	allowed := u.Edges.Group.Settings.AllowedNodes
+	allowed := inventory.EffectiveGroup(u).Settings.AllowedNodes
 	taskCaps := []types.NodeCapability{
 		types.NodeCapabilityCreateArchive,
 		types.NodeCapabilityExtractArchive,

@@ -9,6 +9,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/boolset"
 	"github.com/cloudreve/Cloudreve/v4/pkg/conf"
+	"github.com/samber/lo"
 )
 
 type (
@@ -119,10 +120,7 @@ func (c *aclClient) EffectivePermissions(ctx context.Context, fileID int, user *
 		return nil, nil
 	}
 
-	groupID := 0
-	if group := user.Edges.Group; group != nil {
-		groupID = group.ID
-	}
+	groupIDs := GroupIDsOf(user)
 
 	res := &boolset.BooleanSet{}
 	matched := false
@@ -134,7 +132,7 @@ func (c *aclClient) EffectivePermissions(ctx context.Context, fileID int, user *
 		case aclentry.SubjectTypeUser:
 			hit = e.SubjectID == user.ID
 		case aclentry.SubjectTypeGroup:
-			hit = groupID > 0 && e.SubjectID == groupID
+			hit = lo.Contains(groupIDs, e.SubjectID)
 		}
 		if !hit {
 			continue

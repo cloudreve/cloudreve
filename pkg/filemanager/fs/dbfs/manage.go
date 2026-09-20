@@ -315,7 +315,10 @@ func (f *DBFS) SoftDelete(ctx context.Context, path ...*fs.URI) error {
 
 		// Save restore uri into metadata. A user-level retention overrides
 		// the group default when set.
-		retention := target.Owner().Edges.Group.Settings.TrashRetention
+		retention := 0
+		if g := inventory.EffectiveGroup(target.Owner()); g != nil && g.Settings != nil {
+			retention = g.Settings.TrashRetention
+		}
 		if us := target.Owner().Settings; us != nil && us.TrashRetention > 0 {
 			retention = us.TrashRetention
 		}
@@ -750,8 +753,8 @@ func (f *DBFS) GetFileFromDirectLink(ctx context.Context, dl *ent.DirectLink) (f
 	}
 
 	// Check the owner's current direct-link permission.
-	group, err := owner.Edges.GroupOrErr()
-	if err != nil || group.Settings == nil || group.Settings.SourceBatchSize <= 0 {
+	group := inventory.EffectiveGroup(owner)
+	if group == nil || group.Settings == nil || group.Settings.SourceBatchSize <= 0 {
 		return nil, fs.ErrDirectLinkInvalid
 	}
 
@@ -785,7 +788,7 @@ func (f *DBFS) TraverseFile(ctx context.Context, fileID int) (fs.File, error) {
 		return nil, err
 	}
 
-	if fileModel.OwnerID != f.user.ID && !f.user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+	if fileModel.OwnerID != f.user.ID && !inventory.EffectiveGroup(f.user).Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
 		return nil, fs.ErrOwnerOnly.WithError(fmt.Errorf("only file owner can traverse file's uri"))
 	}
 
@@ -890,7 +893,7 @@ func (f *DBFS) setCurrentVersion(ctx context.Context, target *File, versionId in
 }
 
 func (f *DBFS) deleteFiles(ctx context.Context, targets map[Navigator][]*File, fc inventory.FileClient, opt *types.EntityProps) ([]fs.Entity, inventory.StorageDiff, []int, error) {
-	if f.user.Edges.Group == nil {
+	if inventory.EffectiveGroup(f.user) == nil {
 		return nil, nil, nil, fmt.Errorf("user group not loaded")
 	}
 	allStaleEntities := make([]fs.Entity, 0, len(targets))
@@ -958,10 +961,10 @@ func (f *DBFS) deleteFiles(ctx context.Context, targets map[Navigator][]*File, f
 }
 
 func (f *DBFS) copyFiles(ctx context.Context, targets map[Navigator][]*File, destination *File, fc inventory.FileClient) (map[int]*ent.File, inventory.StorageDiff, *fs.IndexDiff, error) {
-	if f.user.Edges.Group == nil {
+	if inventory.EffectiveGroup(f.user) == nil {
 		return nil, nil, nil, fmt.Errorf("user group not loaded")
 	}
-	limit := max(f.user.Edges.Group.Settings.MaxWalkedFiles, 1)
+	limit := max(inventory.EffectiveGroup(f.user).Settings.MaxWalkedFiles, 1)
 	capacity, err := f.Capacity(ctx, destination.Owner())
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("copy files: failed to destination owner capacity: %w", err)

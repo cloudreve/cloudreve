@@ -128,17 +128,23 @@ func TestRedeemStorageAndGroupCodes(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, int64(1024), bonus)
 
-	// Group code → grant records prev group, user moved to target.
+	// Group code → membership added on top of the primary group, which is
+	// never replaced; the grant row records the purchase for bookkeeping.
 	groupCode, err := c.CreateGiftCodes(ctx, &CreateGiftCodeParams{
 		Type: giftcode.TypeGroup, Amount: int64(vip.ID), Duration: time.Hour, Qty: 1,
 	})
 	require.NoError(t, err)
 	_, err = c.RedeemGiftCode(ctx, u.ID, groupCode[0].Code)
 	require.NoError(t, err)
-	require.Equal(t, vip.ID, client.User.GetX(ctx, u.ID).GroupUsers)
+	require.Equal(t, group.ID, client.User.GetX(ctx, u.ID).GroupUsers)
+
+	ms := client.GroupMembership.Query().AllX(ctx)
+	require.Len(t, ms, 1)
+	require.Equal(t, vip.ID, ms[0].GroupID)
+	require.NotNil(t, ms[0].Expires)
 
 	grant := client.UserGrant.Query().Where(usergrant.TypeEQ(usergrant.TypeGroup)).OnlyX(ctx)
-	require.Equal(t, group.ID, grant.PrevGroupID)
+	require.Equal(t, int64(vip.ID), grant.Amount)
 }
 
 func TestExpireGrants(t *testing.T) {
@@ -218,16 +224,18 @@ func TestPurchaseSku(t *testing.T) {
 	require.Equal(t, credittxn.TypePurchase, txns[0].Type)
 	require.Equal(t, int64(-200), txns[0].Amount)
 
-	// Group sku → user moved, prev group recorded.
+	// Group sku → membership added; primary group preserved.
 	groupSku, err := c.UpsertSku(ctx, &ent.Sku{
 		Name: "vip month", Type: sku.TypeGroup, Amount: int64(vip.ID),
 		Duration: int64(time.Hour.Seconds()), Points: &points, Enabled: true,
 	})
 	require.NoError(t, err)
 	require.NoError(t, c.PurchaseSku(ctx, u.ID, groupSku))
-	require.Equal(t, vip.ID, client.User.GetX(ctx, u.ID).GroupUsers)
-	grant := client.UserGrant.Query().Where(usergrant.TypeEQ(usergrant.TypeGroup)).OnlyX(ctx)
-	require.Equal(t, group.ID, grant.PrevGroupID)
+	require.Equal(t, group.ID, client.User.GetX(ctx, u.ID).GroupUsers)
+	ms := client.GroupMembership.Query().AllX(ctx)
+	require.Len(t, ms, 1)
+	require.Equal(t, vip.ID, ms[0].GroupID)
+	require.NotNil(t, ms[0].Expires)
 
 	// No points price → not purchasable.
 	cashOnly, err := c.UpsertSku(ctx, &ent.Sku{

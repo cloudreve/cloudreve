@@ -18,6 +18,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/fsevent"
 	"github.com/cloudreve/Cloudreve/v4/ent/giftcode"
 	"github.com/cloudreve/Cloudreve/v4/ent/group"
+	"github.com/cloudreve/Cloudreve/v4/ent/groupmembership"
 	"github.com/cloudreve/Cloudreve/v4/ent/oauthgrant"
 	"github.com/cloudreve/Cloudreve/v4/ent/passkey"
 	"github.com/cloudreve/Cloudreve/v4/ent/predicate"
@@ -46,6 +47,7 @@ type UserQuery struct {
 	withEntities       *EntityQuery
 	withOauthGrants    *OAuthGrantQuery
 	withCreditTxns     *CreditTxnQuery
+	withMemberships    *GroupMembershipQuery
 	withRedeemedCodes  *GiftCodeQuery
 	withGrants         *UserGrantQuery
 	withSharePurchases *SharePurchaseQuery
@@ -299,6 +301,28 @@ func (uq *UserQuery) QueryCreditTxns() *CreditTxnQuery {
 			sqlgraph.From(user.Table, user.FieldID, selector),
 			sqlgraph.To(credittxn.Table, credittxn.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, user.CreditTxnsTable, user.CreditTxnsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryMemberships chains the current query on the "memberships" edge.
+func (uq *UserQuery) QueryMemberships() *GroupMembershipQuery {
+	query := (&GroupMembershipClient{config: uq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := uq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := uq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(groupmembership.Table, groupmembership.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.MembershipsTable, user.MembershipsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
 		return fromU, nil
@@ -596,6 +620,7 @@ func (uq *UserQuery) Clone() *UserQuery {
 		withEntities:       uq.withEntities.Clone(),
 		withOauthGrants:    uq.withOauthGrants.Clone(),
 		withCreditTxns:     uq.withCreditTxns.Clone(),
+		withMemberships:    uq.withMemberships.Clone(),
 		withRedeemedCodes:  uq.withRedeemedCodes.Clone(),
 		withGrants:         uq.withGrants.Clone(),
 		withSharePurchases: uq.withSharePurchases.Clone(),
@@ -713,6 +738,17 @@ func (uq *UserQuery) WithCreditTxns(opts ...func(*CreditTxnQuery)) *UserQuery {
 		opt(query)
 	}
 	uq.withCreditTxns = query
+	return uq
+}
+
+// WithMemberships tells the query-builder to eager-load the nodes that are connected to
+// the "memberships" edge. The optional arguments are used to configure the query builder of the edge.
+func (uq *UserQuery) WithMemberships(opts ...func(*GroupMembershipQuery)) *UserQuery {
+	query := (&GroupMembershipClient{config: uq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	uq.withMemberships = query
 	return uq
 }
 
@@ -838,7 +874,7 @@ func (uq *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	var (
 		nodes       = []*User{}
 		_spec       = uq.querySpec()
-		loadedTypes = [14]bool{
+		loadedTypes = [15]bool{
 			uq.withGroup != nil,
 			uq.withFiles != nil,
 			uq.withDavAccounts != nil,
@@ -849,6 +885,7 @@ func (uq *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 			uq.withEntities != nil,
 			uq.withOauthGrants != nil,
 			uq.withCreditTxns != nil,
+			uq.withMemberships != nil,
 			uq.withRedeemedCodes != nil,
 			uq.withGrants != nil,
 			uq.withSharePurchases != nil,
@@ -939,6 +976,13 @@ func (uq *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 		if err := uq.loadCreditTxns(ctx, query, nodes,
 			func(n *User) { n.Edges.CreditTxns = []*CreditTxn{} },
 			func(n *User, e *CreditTxn) { n.Edges.CreditTxns = append(n.Edges.CreditTxns, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := uq.withMemberships; query != nil {
+		if err := uq.loadMemberships(ctx, query, nodes,
+			func(n *User) { n.Edges.Memberships = []*GroupMembership{} },
+			func(n *User, e *GroupMembership) { n.Edges.Memberships = append(n.Edges.Memberships, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -1258,6 +1302,36 @@ func (uq *UserQuery) loadCreditTxns(ctx context.Context, query *CreditTxnQuery, 
 	}
 	query.Where(predicate.CreditTxn(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(user.CreditTxnsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.UserID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (uq *UserQuery) loadMemberships(ctx context.Context, query *GroupMembershipQuery, nodes []*User, init func(*User), assign func(*User, *GroupMembership)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(groupmembership.FieldUserID)
+	}
+	query.Where(predicate.GroupMembership(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.MembershipsColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {

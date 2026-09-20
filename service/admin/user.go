@@ -162,6 +162,9 @@ type (
 		User     *ent.User `json:"user" binding:"required"`
 		Password string    `json:"password" binding:"omitempty,min=6,max=128"`
 		TwoFA    string    `json:"two_fa"`
+		// Memberships, when present, replaces the user's additional group
+		// set (primary group untouched). nil leaves memberships alone.
+		Memberships *[]int `json:"memberships"`
 	}
 	UpsertUserParamCtx struct{}
 )
@@ -188,8 +191,8 @@ func groupIsAdminCapable(permissions *boolset.BooleanSet) bool {
 // full admin permission.
 func actorIsFullAdmin(c *gin.Context) bool {
 	actor := inventory.UserFromContext(c)
-	return actor.Edges.Group != nil && actor.Edges.Group.Permissions != nil &&
-		actor.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin))
+	return inventory.EffectiveGroup(actor) != nil && inventory.EffectiveGroup(actor).Permissions != nil &&
+		inventory.EffectiveGroup(actor).Permissions.Enabled(int(types.GroupPermissionIsAdmin))
 }
 
 // guardAdminGroupChange rejects delegated admins that try to move users into
@@ -199,7 +202,7 @@ func guardAdminGroupChange(c *gin.Context, dep dependency.Dep, existing *ent.Use
 		return nil
 	}
 
-	if existing != nil && existing.Edges.Group != nil && groupIsAdminCapable(existing.Edges.Group.Permissions) {
+	if existing != nil && inventory.EffectiveGroup(existing) != nil && groupIsAdminCapable(inventory.EffectiveGroup(existing).Permissions) {
 		return serializer.NewError(serializer.CodeNoPermissionErr, "Cannot modify an administrator", nil)
 	}
 
@@ -219,6 +222,24 @@ func guardAdminGroupChange(c *gin.Context, dep dependency.Dep, existing *ent.Use
 		return serializer.NewError(serializer.CodeNoPermissionErr, "Cannot assign an administrator group", nil)
 	}
 
+	return nil
+}
+
+// guardAdminMembershipChange applies the same delegated-admin restriction to
+// additional group memberships.
+func guardAdminMembershipChange(c *gin.Context, dep dependency.Dep, membershipIDs []int) error {
+	if len(membershipIDs) == 0 || actorIsFullAdmin(c) {
+		return nil
+	}
+	for _, id := range membershipIDs {
+		g, err := dep.GroupClient().GetByID(c, id)
+		if err != nil {
+			return serializer.NewError(serializer.CodeParamErr, "Invalid membership group", err)
+		}
+		if groupIsAdminCapable(g.Permissions) {
+			return serializer.NewError(serializer.CodeNoPermissionErr, "Cannot assign an administrator group", nil)
+		}
+	}
 	return nil
 }
 
@@ -246,7 +267,7 @@ func (s *UpsertUserService) Update(c *gin.Context) (*GetUserResponse, error) {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get user", err)
 	}
 
-	if s.User.ID == 1 && existing.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+	if s.User.ID == 1 && inventory.EffectiveGroup(existing).Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
 		if s.User.GroupUsers != existing.GroupUsers {
 			return nil, serializer.NewError(serializer.CodeInvalidActionOnDefaultUser, "Cannot change default user's group", nil)
 		}
@@ -260,10 +281,21 @@ func (s *UpsertUserService) Update(c *gin.Context) (*GetUserResponse, error) {
 	if err := guardAdminGroupChange(c, dep, existing, s.User.GroupUsers); err != nil {
 		return nil, err
 	}
+	if s.Memberships != nil {
+		if err := guardAdminMembershipChange(c, dep, *s.Memberships); err != nil {
+			return nil, err
+		}
+	}
 
 	newUser, err := userClient.Upsert(ctx, s.User, s.Password, s.TwoFA)
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to update user", err)
+	}
+
+	if s.Memberships != nil {
+		if err := userClient.SetMemberships(ctx, newUser.ID, *s.Memberships); err != nil {
+			return nil, serializer.NewError(serializer.CodeDBError, "Failed to update group memberships", err)
+		}
 	}
 
 	subject := activity.Extra(map[string]any{"user_id": newUser.ID})
@@ -300,10 +332,21 @@ func (s *UpsertUserService) Create(c *gin.Context) (*GetUserResponse, error) {
 	if err := guardAdminGroupChange(c, dep, nil, s.User.GroupUsers); err != nil {
 		return nil, err
 	}
+	if s.Memberships != nil {
+		if err := guardAdminMembershipChange(c, dep, *s.Memberships); err != nil {
+			return nil, err
+		}
+	}
 
 	user, err := userClient.Upsert(c, s.User, s.Password, s.TwoFA)
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to create user", err)
+	}
+
+	if s.Memberships != nil && len(*s.Memberships) > 0 {
+		if err := userClient.SetMemberships(c, user.ID, *s.Memberships); err != nil {
+			return nil, serializer.NewError(serializer.CodeDBError, "Failed to set group memberships", err)
+		}
 	}
 
 	service := &SingleUserService{ID: user.ID}
@@ -340,7 +383,7 @@ func (s *BatchUserService) Delete(c *gin.Context) error {
 				ae.Add(strconv.Itoa(id), serializer.NewError(serializer.CodeDBError, "Failed to get user", err))
 				continue
 			}
-			if target.Edges.Group != nil && groupIsAdminCapable(target.Edges.Group.Permissions) {
+			if inventory.EffectiveGroup(target) != nil && groupIsAdminCapable(inventory.EffectiveGroup(target).Permissions) {
 				ae.Add(strconv.Itoa(id), serializer.NewError(serializer.CodeNoPermissionErr, "Cannot delete an administrator", nil))
 				continue
 			}
@@ -426,7 +469,7 @@ func (s *BatchUserUpdateService) Update(c *gin.Context) error {
 				ae.Add(strconv.Itoa(id), serializer.NewError(serializer.CodeDBError, "Failed to get user", err))
 				return false
 			}
-			if target.Edges.Group != nil && groupIsAdminCapable(target.Edges.Group.Permissions) {
+			if inventory.EffectiveGroup(target) != nil && groupIsAdminCapable(inventory.EffectiveGroup(target).Permissions) {
 				ae.Add(strconv.Itoa(id), serializer.NewError(serializer.CodeNoPermissionErr, "Cannot modify an administrator", nil))
 				return false
 			}

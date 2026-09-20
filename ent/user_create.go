@@ -18,6 +18,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/fsevent"
 	"github.com/cloudreve/Cloudreve/v4/ent/giftcode"
 	"github.com/cloudreve/Cloudreve/v4/ent/group"
+	"github.com/cloudreve/Cloudreve/v4/ent/groupmembership"
 	"github.com/cloudreve/Cloudreve/v4/ent/oauthgrant"
 	"github.com/cloudreve/Cloudreve/v4/ent/passkey"
 	"github.com/cloudreve/Cloudreve/v4/ent/share"
@@ -435,6 +436,21 @@ func (uc *UserCreate) AddCreditTxns(c ...*CreditTxn) *UserCreate {
 		ids[i] = c[i].ID
 	}
 	return uc.AddCreditTxnIDs(ids...)
+}
+
+// AddMembershipIDs adds the "memberships" edge to the GroupMembership entity by IDs.
+func (uc *UserCreate) AddMembershipIDs(ids ...int) *UserCreate {
+	uc.mutation.AddMembershipIDs(ids...)
+	return uc
+}
+
+// AddMemberships adds the "memberships" edges to the GroupMembership entity.
+func (uc *UserCreate) AddMemberships(g ...*GroupMembership) *UserCreate {
+	ids := make([]int, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return uc.AddMembershipIDs(ids...)
 }
 
 // AddRedeemedCodeIDs adds the "redeemed_codes" edge to the GiftCode entity by IDs.
@@ -895,6 +911,22 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(credittxn.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := uc.mutation.MembershipsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.MembershipsTable,
+			Columns: []string{user.MembershipsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(groupmembership.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

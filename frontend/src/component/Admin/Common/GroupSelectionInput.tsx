@@ -1,4 +1,5 @@
 import { ListItemText } from "@mui/material";
+import Checkbox from "@mui/material/Checkbox";
 import FormControl from "@mui/material/FormControl";
 import { useEffect, useState } from "react";
 import { getGroupList } from "../../../api/api";
@@ -8,13 +9,15 @@ import { DenseSelect } from "../../Common/StyledComponents";
 import { SquareMenuItem } from "../../FileManager/ContextMenu/ContextMenu";
 
 export interface GroupSelectionInputProps {
-  value: string;
+  value: string | string[];
   onChange: (value: string) => void;
+  onChangeMulti?: (value: string[]) => void;
   onChangeGroup?: (group?: GroupEnt) => void;
   emptyValue?: string;
   emptyText?: string;
   fullWidth?: boolean;
   required?: boolean;
+  multiple?: boolean;
 }
 
 const AnonymousGroupId = 3;
@@ -22,11 +25,13 @@ const AnonymousGroupId = 3;
 const GroupSelectionInput = ({
   value,
   onChange,
+  onChangeMulti,
   onChangeGroup,
   emptyValue,
   emptyText,
   fullWidth,
   required,
+  multiple,
 }: GroupSelectionInputProps) => {
   const dispatch = useAppDispatch();
   const [loading, setLoading] = useState(true);
@@ -50,23 +55,40 @@ const GroupSelectionInput = ({
       });
   }, []);
 
-  const handleChange = (value: string) => {
-    onChange(value);
-    onChangeGroup?.(groups.find((g) => g.id === parseInt(value)));
+  const handleChange = (v: string | string[]) => {
+    if (multiple) {
+      onChangeMulti?.(Array.isArray(v) ? v : [v]);
+      return;
+    }
+    const sv = Array.isArray(v) ? v[0] : v;
+    onChange(sv);
+    onChangeGroup?.(groups.find((g) => g.id === parseInt(sv)));
   };
+
+  const multiValue = Array.isArray(value) ? value : value ? [value] : [];
 
   return (
     <FormControl fullWidth={fullWidth}>
       <DenseSelect
         disabled={loading}
-        value={value}
-        onChange={(e) => handleChange(e.target.value as string)}
+        multiple={multiple}
+        value={multiple ? multiValue : Array.isArray(value) ? (value[0] ?? "") : value}
+        onChange={(e) => handleChange(e.target.value as string | string[])}
         required={required}
+        renderValue={
+          multiple
+            ? (selected) =>
+                (selected as string[])
+                  .map((id) => groups.find((g) => g.id === parseInt(id))?.name ?? id)
+                  .join(", ")
+            : undefined
+        }
       >
         {groups
           .filter((g) => g.id != AnonymousGroupId)
           .map((g) => (
-            <SquareMenuItem value={g.id.toString()}>
+            <SquareMenuItem key={g.id} value={g.id.toString()}>
+              {multiple && <Checkbox checked={multiValue.indexOf(g.id.toString()) > -1} size="small" />}
               <ListItemText
                 slotProps={{
                   primary: { variant: "body2" },

@@ -260,7 +260,7 @@ func (m *RemoteDownloadTask) createDownloadTask(ctx context.Context, dep depende
 		torrentUrl = torrentUrls[0].Url
 	}
 
-	options, taskUrl := m.buildDownloadOptions(ctx, user.Edges.Group.Settings.RemoteDownloadOptions, torrentUrl)
+	options, taskUrl := m.buildDownloadOptions(ctx, inventory.EffectiveGroup(user).Settings.RemoteDownloadOptions, torrentUrl)
 
 	// Create download task
 	handle, err := m.d.CreateTask(ctx, taskUrl, options)
@@ -394,8 +394,8 @@ func (m *RemoteDownloadTask) monitor(ctx context.Context, dep dependency.Dep) (t
 		m.l.Info("download size changed, re-validate files.")
 		// Group per-task volume cap: abort once the resolved size exceeds it.
 		var maxSize int64
-		if u := inventory.UserFromContext(ctx); u != nil && u.Edges.Group != nil {
-			maxSize = u.Edges.Group.Settings.Aria2MaxFileSize
+		if u := inventory.UserFromContext(ctx); u != nil && inventory.EffectiveGroup(u) != nil {
+			maxSize = inventory.EffectiveGroup(u).Settings.Aria2MaxFileSize
 		}
 		if maxSize > 0 && status.Total > maxSize {
 			m.state.Status = status

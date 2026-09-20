@@ -55,24 +55,24 @@ func TestDecodeAllowedPolicy(t *testing.T) {
 	util.WithValue(c, dependency.DepCtx{}, dep)
 
 	t.Run("allowed policy decodes", func(t *testing.T) {
-		got, err := decodeAllowedPolicy(c, dep, group, hashid.EncodePolicyID(hasher, a.ID))
+		got, err := decodeAllowedPolicy(c, dep, []*ent.Group{group}, hashid.EncodePolicyID(hasher, a.ID))
 		require.NoError(t, err)
 		require.Equal(t, a.ID, got.ID)
 	})
 
 	t.Run("legacy default policy decodes", func(t *testing.T) {
-		got, err := decodeAllowedPolicy(c, dep, group, hashid.EncodePolicyID(hasher, def.ID))
+		got, err := decodeAllowedPolicy(c, dep, []*ent.Group{group}, hashid.EncodePolicyID(hasher, def.ID))
 		require.NoError(t, err)
 		require.Equal(t, def.ID, got.ID)
 	})
 
 	t.Run("policy outside the group set is rejected", func(t *testing.T) {
-		_, err := decodeAllowedPolicy(c, dep, group, hashid.EncodePolicyID(hasher, outside.ID))
+		_, err := decodeAllowedPolicy(c, dep, []*ent.Group{group}, hashid.EncodePolicyID(hasher, outside.ID))
 		require.Error(t, err)
 	})
 
 	t.Run("invalid hashid is rejected", func(t *testing.T) {
-		_, err := decodeAllowedPolicy(c, dep, group, "!!!")
+		_, err := decodeAllowedPolicy(c, dep, []*ent.Group{group}, "!!!")
 		require.Error(t, err)
 	})
 }

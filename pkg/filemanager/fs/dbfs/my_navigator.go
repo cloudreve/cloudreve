@@ -92,7 +92,7 @@ func (n *myNavigator) To(ctx context.Context, path *fs.URI) (*File, error) {
 			return nil, fs.ErrPathNotExist.WithError(fmt.Errorf("user not found: %w", err))
 		}
 
-		if targetUser.Status != user.StatusActive && !n.user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+		if targetUser.Status != user.StatusActive && !inventory.EffectiveGroup(n.user).Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
 			return nil, fs.ErrPathNotExist.WithError(fmt.Errorf("inactive user"))
 		}
 

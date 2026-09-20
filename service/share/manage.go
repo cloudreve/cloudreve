@@ -85,16 +85,16 @@ func (service *ShareCreateService) Upsert(c *gin.Context, existed int) (string, 
 	defer m.Recycle()
 
 	// Check group permission for creating share link
-	if !user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionShare)) {
+	if !inventory.EffectiveGroup(user).Permissions.Enabled(int(types.GroupPermissionShare)) {
 		return "", serializer.NewError(serializer.CodeGroupNotAllowed, "Group permission denied", nil)
 	}
 
-	if service.PricePoints > 0 && !user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionShareSell)) {
+	if service.PricePoints > 0 && !inventory.EffectiveGroup(user).Permissions.Enabled(int(types.GroupPermissionShareSell)) {
 		return "", serializer.NewError(serializer.CodeGroupNotAllowed, "Group permission denied for paid share", nil)
 	}
 
 	if service.ListedPublicly {
-		if !user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionSharePublicList)) {
+		if !inventory.EffectiveGroup(user).Permissions.Enabled(int(types.GroupPermissionSharePublicList)) {
 			return "", serializer.NewError(serializer.CodeGroupNotAllowed, "Group permission denied for public share listing", nil)
 		}
 		if service.IsPrivate {
@@ -178,7 +178,7 @@ func DeleteShare(c *gin.Context, shareId int) error {
 		share *ent.Share
 		err   error
 	)
-	if user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+	if inventory.EffectiveGroup(user).Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
 		share, err = shareClient.GetByID(ctx, shareId)
 	} else {
 		share, err = shareClient.GetByIDUser(ctx, shareId, user.ID)

@@ -107,8 +107,8 @@ func ownedAclFile(c *gin.Context, uriRaw string) (int, error) {
 		return 0, serializer.NewError(serializer.CodeNoPermissionErr, "Only the owner can manage permissions", nil)
 	}
 
-	if user.Edges.Group == nil || user.Edges.Group.Permissions == nil ||
-		!user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionSetExplicitUser)) {
+	if inventory.EffectiveGroup(user) == nil || inventory.EffectiveGroup(user).Permissions == nil ||
+		!inventory.EffectiveGroup(user).Permissions.Enabled(int(types.GroupPermissionSetExplicitUser)) {
 		return 0, serializer.NewError(serializer.CodeNoPermissionErr, "Permission management is not enabled for your group", nil)
 	}
 
@@ -219,8 +219,8 @@ func (s *AclDeleteService) Delete(c *gin.Context) error {
 
 func (s *AclSubjectSearchService) Get(c *gin.Context) ([]*AclSubjectResponse, error) {
 	user := inventory.UserFromContext(c)
-	if user.Edges.Group == nil || user.Edges.Group.Permissions == nil ||
-		!user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionSetExplicitUser)) {
+	if inventory.EffectiveGroup(user) == nil || inventory.EffectiveGroup(user).Permissions == nil ||
+		!inventory.EffectiveGroup(user).Permissions.Enabled(int(types.GroupPermissionSetExplicitUser)) {
 		return nil, serializer.NewError(serializer.CodeNoPermissionErr, "Permission management is not enabled for your group", nil)
 	}
 

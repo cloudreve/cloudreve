@@ -310,9 +310,9 @@ func (f *DBFS) Capacity(ctx context.Context, u *ent.User) (*fs.Capacity, error) 
 		res = &fs.Capacity{}
 	)
 
-	requesterGroup, err := u.Edges.GroupOrErr()
-	if err != nil {
-		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get user's group", err)
+	requesterGroup := inventory.EffectiveGroup(u)
+	if requesterGroup == nil {
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get user's group", nil)
 	}
 
 	res.Used = f.user.Storage
@@ -514,7 +514,7 @@ func (f *DBFS) Get(ctx context.Context, path *fs.URI, opts ...fs.Option) (fs.Fil
 		}
 
 		target.FileExtendedInfo = extendedInfo
-		if target.OwnerID() == f.user.ID || f.user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+		if target.OwnerID() == f.user.ID || inventory.EffectiveGroup(f.user).Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
 			target.FileExtendedInfo.Shares = target.Model.Edges.Shares
 			if target.Model.Props != nil {
 				target.FileExtendedInfo.View = target.Model.Props.View
@@ -548,10 +548,10 @@ func (f *DBFS) Get(ctx context.Context, path *fs.URI, opts ...fs.Option) (fs.Fil
 		} else {
 			// cache miss, walk the folder to get the summary
 			newSummary := &fs.FolderSummary{Completed: true}
-			if f.user.Edges.Group == nil {
+			if inventory.EffectiveGroup(f.user) == nil {
 				return nil, fmt.Errorf("user group not loaded")
 			}
-			limit := max(f.user.Edges.Group.Settings.MaxWalkedFiles, 1)
+			limit := max(inventory.EffectiveGroup(f.user).Settings.MaxWalkedFiles, 1)
 
 			// disable load metadata to speed up
 			ctxWalk := context.WithValue(ctx, inventory.LoadFilePublicMetadata{}, false)
@@ -637,10 +637,10 @@ func (f *DBFS) Walk(ctx context.Context, path *fs.URI, depth int, walk fs.WalkFu
 	}
 
 	// Walk
-	if f.user.Edges.Group == nil {
+	if inventory.EffectiveGroup(f.user) == nil {
 		return fmt.Errorf("user group not loaded")
 	}
-	limit := max(f.user.Edges.Group.Settings.MaxWalkedFiles, 1)
+	limit := max(inventory.EffectiveGroup(f.user).Settings.MaxWalkedFiles, 1)
 
 	if err := navigator.Walk(ctx, []*File{target}, limit, depth, func(files []*File, l int) error {
 		for _, file := range files {
@@ -767,13 +767,13 @@ func (f *DBFS) getPreferredPolicy(ctx context.Context, file *File) (*ent.Storage
 // size, so weighted-capacity selection can exclude policies without headroom.
 func (f *DBFS) getPreferredPolicyForSize(ctx context.Context, file *File, size int64) (*ent.StoragePolicy, error) {
 	owner := file.Owner()
-	ownerGroup := owner.Edges.Group
+	ownerGroup := inventory.EffectiveGroup(owner)
 	if ownerGroup == nil {
 		return nil, fmt.Errorf("owner group not loaded")
 	}
 
 	sc, _ := inventory.InheritTx(ctx, f.storagePolicyClient)
-	allowed, err := sc.ListByGroup(ctx, ownerGroup)
+	allowed, err := sc.ListByGroups(ctx, inventory.GroupsOf(owner))
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get available storage policies", err)
 	}
@@ -840,13 +840,13 @@ func (f *DBFS) pickPolicy(ctx context.Context, file *File, owner *ent.User, allo
 		}
 	}
 
-	if ownerGroup := owner.Edges.Group; ownerGroup != nil && ownerGroup.Settings != nil && ownerGroup.Settings.WeightedPolicies {
+	if ownerGroup := inventory.EffectiveGroup(owner); ownerGroup != nil && ownerGroup.Settings != nil && ownerGroup.Settings.WeightedPolicies {
 		if p := f.pickByFreeCapacity(ctx, allowed, size); p != nil {
 			return p
 		}
 	}
 
-	if p := inAllowed(owner.Edges.Group.StoragePolicyID); p != nil {
+	if p := inAllowed(inventory.EffectiveGroup(owner).StoragePolicyID); p != nil {
 		return p
 	}
 	return allowed[0]
@@ -928,13 +928,13 @@ func (f *DBFS) seedDefaultShares(ctx context.Context, uid int, root *ent.File) {
 	policyID := 0
 	userCtx := context.WithValue(ctx, inventory.LoadUserGroup{}, true)
 	if owner, err := f.userClient.GetByID(userCtx, uid); err == nil {
-		if group, err := owner.Edges.GroupOrErr(); err == nil {
+		if group := owner.Edges.Group; group != nil {
 			if policy, err := f.storagePolicyClient.GetByGroup(ctx, group); err == nil && policy != nil {
 				policyID = policy.ID
 			}
-			if group.Settings != nil && len(group.Settings.DefaultPinned) > 0 {
-				shareIDs = lo.Union(shareIDs, group.Settings.DefaultPinned)
-			}
+		}
+		if group := inventory.EffectiveGroup(owner); group != nil && group.Settings != nil && len(group.Settings.DefaultPinned) > 0 {
+			shareIDs = lo.Union(shareIDs, group.Settings.DefaultPinned)
 		}
 	}
 

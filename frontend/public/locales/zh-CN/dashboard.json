@@ -1525,7 +1525,9 @@
     "invitationCodeCopy": "复制",
     "invitationCodeDefaultGroup": "默认组",
     "noInvitationCodes": "暂无邀请码。",
-    "loadMore": "加载更多"
+    "loadMore": "加载更多",
+    "additionalGroups": "附加用户组",
+    "additionalGroupsDes": "在主要用户组之外的额外用户组成员身份。权限、容量与存储策略在所有用户组间取并集。"
   },
   "file": {
     "deleteXFiles": "删除 {{num}} 个文件",

@@ -98,6 +98,22 @@ const UserForm = ({ reload, setLoading }: { reload: () => void; setLoading: (loa
     [setUser],
   );
 
+  const onMembershipsChange = useCallback(
+    (v: string[]) => {
+      setUser((prev) => ({
+        ...prev,
+        edges: {
+          ...prev.edges,
+          memberships: v
+            .map((id) => parseInt(id))
+            .filter((id) => !isNaN(id) && id !== prev.group_users)
+            .map((id) => ({ id: 0, group_id: id })),
+        },
+      }));
+    },
+    [setUser],
+  );
+
   const onPasswordChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setUser((prev) => ({ ...prev, password: e.target.value ? e.target.value : undefined }));
@@ -238,6 +254,18 @@ const UserForm = ({ reload, setLoading }: { reload: () => void; setLoading: (loa
             )}
             <SettingForm title={t("user.group")} noContainer lgWidth={6}>
               <GroupSelectionInput value={values.group_users?.toString() ?? ""} onChange={onGroupChange} fullWidth />
+            </SettingForm>
+            <SettingForm title={t("user.additionalGroups")} noContainer lgWidth={6}>
+              <GroupSelectionInput
+                multiple
+                value={(values.edges?.memberships ?? [])
+                  .map((m) => m.group_id?.toString() ?? "")
+                  .filter((id) => id !== "")}
+                onChange={() => {}}
+                onChangeMulti={onMembershipsChange}
+                fullWidth
+              />
+              <NoMarginHelperText>{t("user.additionalGroupsDes")}</NoMarginHelperText>
             </SettingForm>
             <SettingForm title={t("application:vas.points")} noContainer lgWidth={6}>
               <DenseFilledTextField

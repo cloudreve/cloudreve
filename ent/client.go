@@ -26,6 +26,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/fsevent"
 	"github.com/cloudreve/Cloudreve/v4/ent/giftcode"
 	"github.com/cloudreve/Cloudreve/v4/ent/group"
+	"github.com/cloudreve/Cloudreve/v4/ent/groupmembership"
 	"github.com/cloudreve/Cloudreve/v4/ent/invitationcode"
 	"github.com/cloudreve/Cloudreve/v4/ent/metadata"
 	"github.com/cloudreve/Cloudreve/v4/ent/node"
@@ -72,6 +73,8 @@ type Client struct {
 	GiftCode *GiftCodeClient
 	// Group is the client for interacting with the Group builders.
 	Group *GroupClient
+	// GroupMembership is the client for interacting with the GroupMembership builders.
+	GroupMembership *GroupMembershipClient
 	// InvitationCode is the client for interacting with the InvitationCode builders.
 	InvitationCode *InvitationCodeClient
 	// Metadata is the client for interacting with the Metadata builders.
@@ -124,6 +127,7 @@ func (c *Client) init() {
 	c.FsEvent = NewFsEventClient(c.config)
 	c.GiftCode = NewGiftCodeClient(c.config)
 	c.Group = NewGroupClient(c.config)
+	c.GroupMembership = NewGroupMembershipClient(c.config)
 	c.InvitationCode = NewInvitationCodeClient(c.config)
 	c.Metadata = NewMetadataClient(c.config)
 	c.Node = NewNodeClient(c.config)
@@ -229,34 +233,35 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:            ctx,
-		config:         cfg,
-		AbuseReport:    NewAbuseReportClient(cfg),
-		AclEntry:       NewAclEntryClient(cfg),
-		ActivityEvent:  NewActivityEventClient(cfg),
-		CreditTxn:      NewCreditTxnClient(cfg),
-		DavAccount:     NewDavAccountClient(cfg),
-		DirectLink:     NewDirectLinkClient(cfg),
-		Entity:         NewEntityClient(cfg),
-		File:           NewFileClient(cfg),
-		FsEvent:        NewFsEventClient(cfg),
-		GiftCode:       NewGiftCodeClient(cfg),
-		Group:          NewGroupClient(cfg),
-		InvitationCode: NewInvitationCodeClient(cfg),
-		Metadata:       NewMetadataClient(cfg),
-		Node:           NewNodeClient(cfg),
-		OAuthClient:    NewOAuthClientClient(cfg),
-		OAuthGrant:     NewOAuthGrantClient(cfg),
-		Passkey:        NewPasskeyClient(cfg),
-		Setting:        NewSettingClient(cfg),
-		Share:          NewShareClient(cfg),
-		SharePurchase:  NewSharePurchaseClient(cfg),
-		Sku:            NewSkuClient(cfg),
-		SsoBinding:     NewSsoBindingClient(cfg),
-		StoragePolicy:  NewStoragePolicyClient(cfg),
-		Task:           NewTaskClient(cfg),
-		User:           NewUserClient(cfg),
-		UserGrant:      NewUserGrantClient(cfg),
+		ctx:             ctx,
+		config:          cfg,
+		AbuseReport:     NewAbuseReportClient(cfg),
+		AclEntry:        NewAclEntryClient(cfg),
+		ActivityEvent:   NewActivityEventClient(cfg),
+		CreditTxn:       NewCreditTxnClient(cfg),
+		DavAccount:      NewDavAccountClient(cfg),
+		DirectLink:      NewDirectLinkClient(cfg),
+		Entity:          NewEntityClient(cfg),
+		File:            NewFileClient(cfg),
+		FsEvent:         NewFsEventClient(cfg),
+		GiftCode:        NewGiftCodeClient(cfg),
+		Group:           NewGroupClient(cfg),
+		GroupMembership: NewGroupMembershipClient(cfg),
+		InvitationCode:  NewInvitationCodeClient(cfg),
+		Metadata:        NewMetadataClient(cfg),
+		Node:            NewNodeClient(cfg),
+		OAuthClient:     NewOAuthClientClient(cfg),
+		OAuthGrant:      NewOAuthGrantClient(cfg),
+		Passkey:         NewPasskeyClient(cfg),
+		Setting:         NewSettingClient(cfg),
+		Share:           NewShareClient(cfg),
+		SharePurchase:   NewSharePurchaseClient(cfg),
+		Sku:             NewSkuClient(cfg),
+		SsoBinding:      NewSsoBindingClient(cfg),
+		StoragePolicy:   NewStoragePolicyClient(cfg),
+		Task:            NewTaskClient(cfg),
+		User:            NewUserClient(cfg),
+		UserGrant:       NewUserGrantClient(cfg),
 	}, nil
 }
 
@@ -274,34 +279,35 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:            ctx,
-		config:         cfg,
-		AbuseReport:    NewAbuseReportClient(cfg),
-		AclEntry:       NewAclEntryClient(cfg),
-		ActivityEvent:  NewActivityEventClient(cfg),
-		CreditTxn:      NewCreditTxnClient(cfg),
-		DavAccount:     NewDavAccountClient(cfg),
-		DirectLink:     NewDirectLinkClient(cfg),
-		Entity:         NewEntityClient(cfg),
-		File:           NewFileClient(cfg),
-		FsEvent:        NewFsEventClient(cfg),
-		GiftCode:       NewGiftCodeClient(cfg),
-		Group:          NewGroupClient(cfg),
-		InvitationCode: NewInvitationCodeClient(cfg),
-		Metadata:       NewMetadataClient(cfg),
-		Node:           NewNodeClient(cfg),
-		OAuthClient:    NewOAuthClientClient(cfg),
-		OAuthGrant:     NewOAuthGrantClient(cfg),
-		Passkey:        NewPasskeyClient(cfg),
-		Setting:        NewSettingClient(cfg),
-		Share:          NewShareClient(cfg),
-		SharePurchase:  NewSharePurchaseClient(cfg),
-		Sku:            NewSkuClient(cfg),
-		SsoBinding:     NewSsoBindingClient(cfg),
-		StoragePolicy:  NewStoragePolicyClient(cfg),
-		Task:           NewTaskClient(cfg),
-		User:           NewUserClient(cfg),
-		UserGrant:      NewUserGrantClient(cfg),
+		ctx:             ctx,
+		config:          cfg,
+		AbuseReport:     NewAbuseReportClient(cfg),
+		AclEntry:        NewAclEntryClient(cfg),
+		ActivityEvent:   NewActivityEventClient(cfg),
+		CreditTxn:       NewCreditTxnClient(cfg),
+		DavAccount:      NewDavAccountClient(cfg),
+		DirectLink:      NewDirectLinkClient(cfg),
+		Entity:          NewEntityClient(cfg),
+		File:            NewFileClient(cfg),
+		FsEvent:         NewFsEventClient(cfg),
+		GiftCode:        NewGiftCodeClient(cfg),
+		Group:           NewGroupClient(cfg),
+		GroupMembership: NewGroupMembershipClient(cfg),
+		InvitationCode:  NewInvitationCodeClient(cfg),
+		Metadata:        NewMetadataClient(cfg),
+		Node:            NewNodeClient(cfg),
+		OAuthClient:     NewOAuthClientClient(cfg),
+		OAuthGrant:      NewOAuthGrantClient(cfg),
+		Passkey:         NewPasskeyClient(cfg),
+		Setting:         NewSettingClient(cfg),
+		Share:           NewShareClient(cfg),
+		SharePurchase:   NewSharePurchaseClient(cfg),
+		Sku:             NewSkuClient(cfg),
+		SsoBinding:      NewSsoBindingClient(cfg),
+		StoragePolicy:   NewStoragePolicyClient(cfg),
+		Task:            NewTaskClient(cfg),
+		User:            NewUserClient(cfg),
+		UserGrant:       NewUserGrantClient(cfg),
 	}, nil
 }
 
@@ -333,9 +339,9 @@ func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.AbuseReport, c.AclEntry, c.ActivityEvent, c.CreditTxn, c.DavAccount,
 		c.DirectLink, c.Entity, c.File, c.FsEvent, c.GiftCode, c.Group,
-		c.InvitationCode, c.Metadata, c.Node, c.OAuthClient, c.OAuthGrant, c.Passkey,
-		c.Setting, c.Share, c.SharePurchase, c.Sku, c.SsoBinding, c.StoragePolicy,
-		c.Task, c.User, c.UserGrant,
+		c.GroupMembership, c.InvitationCode, c.Metadata, c.Node, c.OAuthClient,
+		c.OAuthGrant, c.Passkey, c.Setting, c.Share, c.SharePurchase, c.Sku,
+		c.SsoBinding, c.StoragePolicy, c.Task, c.User, c.UserGrant,
 	} {
 		n.Use(hooks...)
 	}
@@ -347,9 +353,9 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.AbuseReport, c.AclEntry, c.ActivityEvent, c.CreditTxn, c.DavAccount,
 		c.DirectLink, c.Entity, c.File, c.FsEvent, c.GiftCode, c.Group,
-		c.InvitationCode, c.Metadata, c.Node, c.OAuthClient, c.OAuthGrant, c.Passkey,
-		c.Setting, c.Share, c.SharePurchase, c.Sku, c.SsoBinding, c.StoragePolicy,
-		c.Task, c.User, c.UserGrant,
+		c.GroupMembership, c.InvitationCode, c.Metadata, c.Node, c.OAuthClient,
+		c.OAuthGrant, c.Passkey, c.Setting, c.Share, c.SharePurchase, c.Sku,
+		c.SsoBinding, c.StoragePolicy, c.Task, c.User, c.UserGrant,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -380,6 +386,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.GiftCode.mutate(ctx, m)
 	case *GroupMutation:
 		return c.Group.mutate(ctx, m)
+	case *GroupMembershipMutation:
+		return c.GroupMembership.mutate(ctx, m)
 	case *InvitationCodeMutation:
 		return c.InvitationCode.mutate(ctx, m)
 	case *MetadataMutation:
@@ -2192,6 +2200,22 @@ func (c *GroupClient) QueryUsers(gr *Group) *UserQuery {
 	return query
 }
 
+// QueryMemberships queries the memberships edge of a Group.
+func (c *GroupClient) QueryMemberships(gr *Group) *GroupMembershipQuery {
+	query := (&GroupMembershipClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := gr.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(group.Table, group.FieldID, id),
+			sqlgraph.To(groupmembership.Table, groupmembership.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, group.MembershipsTable, group.MembershipsColumn),
+		)
+		fromV = sqlgraph.Neighbors(gr.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryStoragePolicies queries the storage_policies edge of a Group.
 func (c *GroupClient) QueryStoragePolicies(gr *Group) *StoragePolicyQuery {
 	query := (&StoragePolicyClient{config: c.config}).Query()
@@ -2248,6 +2272,173 @@ func (c *GroupClient) mutate(ctx context.Context, m *GroupMutation) (Value, erro
 		return (&GroupDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Group mutation op: %q", m.Op())
+	}
+}
+
+// GroupMembershipClient is a client for the GroupMembership schema.
+type GroupMembershipClient struct {
+	config
+}
+
+// NewGroupMembershipClient returns a client for the GroupMembership from the given config.
+func NewGroupMembershipClient(c config) *GroupMembershipClient {
+	return &GroupMembershipClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `groupmembership.Hooks(f(g(h())))`.
+func (c *GroupMembershipClient) Use(hooks ...Hook) {
+	c.hooks.GroupMembership = append(c.hooks.GroupMembership, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `groupmembership.Intercept(f(g(h())))`.
+func (c *GroupMembershipClient) Intercept(interceptors ...Interceptor) {
+	c.inters.GroupMembership = append(c.inters.GroupMembership, interceptors...)
+}
+
+// Create returns a builder for creating a GroupMembership entity.
+func (c *GroupMembershipClient) Create() *GroupMembershipCreate {
+	mutation := newGroupMembershipMutation(c.config, OpCreate)
+	return &GroupMembershipCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of GroupMembership entities.
+func (c *GroupMembershipClient) CreateBulk(builders ...*GroupMembershipCreate) *GroupMembershipCreateBulk {
+	return &GroupMembershipCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *GroupMembershipClient) MapCreateBulk(slice any, setFunc func(*GroupMembershipCreate, int)) *GroupMembershipCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &GroupMembershipCreateBulk{err: fmt.Errorf("calling to GroupMembershipClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*GroupMembershipCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &GroupMembershipCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for GroupMembership.
+func (c *GroupMembershipClient) Update() *GroupMembershipUpdate {
+	mutation := newGroupMembershipMutation(c.config, OpUpdate)
+	return &GroupMembershipUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *GroupMembershipClient) UpdateOne(gm *GroupMembership) *GroupMembershipUpdateOne {
+	mutation := newGroupMembershipMutation(c.config, OpUpdateOne, withGroupMembership(gm))
+	return &GroupMembershipUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *GroupMembershipClient) UpdateOneID(id int) *GroupMembershipUpdateOne {
+	mutation := newGroupMembershipMutation(c.config, OpUpdateOne, withGroupMembershipID(id))
+	return &GroupMembershipUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for GroupMembership.
+func (c *GroupMembershipClient) Delete() *GroupMembershipDelete {
+	mutation := newGroupMembershipMutation(c.config, OpDelete)
+	return &GroupMembershipDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *GroupMembershipClient) DeleteOne(gm *GroupMembership) *GroupMembershipDeleteOne {
+	return c.DeleteOneID(gm.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *GroupMembershipClient) DeleteOneID(id int) *GroupMembershipDeleteOne {
+	builder := c.Delete().Where(groupmembership.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &GroupMembershipDeleteOne{builder}
+}
+
+// Query returns a query builder for GroupMembership.
+func (c *GroupMembershipClient) Query() *GroupMembershipQuery {
+	return &GroupMembershipQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeGroupMembership},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a GroupMembership entity by its id.
+func (c *GroupMembershipClient) Get(ctx context.Context, id int) (*GroupMembership, error) {
+	return c.Query().Where(groupmembership.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *GroupMembershipClient) GetX(ctx context.Context, id int) *GroupMembership {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryUser queries the user edge of a GroupMembership.
+func (c *GroupMembershipClient) QueryUser(gm *GroupMembership) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := gm.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(groupmembership.Table, groupmembership.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, groupmembership.UserTable, groupmembership.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(gm.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryGroup queries the group edge of a GroupMembership.
+func (c *GroupMembershipClient) QueryGroup(gm *GroupMembership) *GroupQuery {
+	query := (&GroupClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := gm.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(groupmembership.Table, groupmembership.FieldID, id),
+			sqlgraph.To(group.Table, group.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, groupmembership.GroupTable, groupmembership.GroupColumn),
+		)
+		fromV = sqlgraph.Neighbors(gm.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *GroupMembershipClient) Hooks() []Hook {
+	hooks := c.hooks.GroupMembership
+	return append(hooks[:len(hooks):len(hooks)], groupmembership.Hooks[:]...)
+}
+
+// Interceptors returns the client interceptors.
+func (c *GroupMembershipClient) Interceptors() []Interceptor {
+	inters := c.inters.GroupMembership
+	return append(inters[:len(inters):len(inters)], groupmembership.Interceptors[:]...)
+}
+
+func (c *GroupMembershipClient) mutate(ctx context.Context, m *GroupMembershipMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&GroupMembershipCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&GroupMembershipUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&GroupMembershipUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&GroupMembershipDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown GroupMembership mutation op: %q", m.Op())
 	}
 }
 
@@ -4578,6 +4769,22 @@ func (c *UserClient) QueryCreditTxns(u *User) *CreditTxnQuery {
 	return query
 }
 
+// QueryMemberships queries the memberships edge of a User.
+func (c *UserClient) QueryMemberships(u *User) *GroupMembershipQuery {
+	query := (&GroupMembershipClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := u.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(groupmembership.Table, groupmembership.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.MembershipsTable, user.MembershipsColumn),
+		)
+		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryRedeemedCodes queries the redeemed_codes edge of a User.
 func (c *UserClient) QueryRedeemedCodes(u *User) *GiftCodeQuery {
 	query := (&GiftCodeClient{config: c.config}).Query()
@@ -4824,15 +5031,15 @@ func (c *UserGrantClient) mutate(ctx context.Context, m *UserGrantMutation) (Val
 type (
 	hooks struct {
 		AbuseReport, AclEntry, ActivityEvent, CreditTxn, DavAccount, DirectLink, Entity,
-		File, FsEvent, GiftCode, Group, InvitationCode, Metadata, Node, OAuthClient,
-		OAuthGrant, Passkey, Setting, Share, SharePurchase, Sku, SsoBinding,
-		StoragePolicy, Task, User, UserGrant []ent.Hook
+		File, FsEvent, GiftCode, Group, GroupMembership, InvitationCode, Metadata,
+		Node, OAuthClient, OAuthGrant, Passkey, Setting, Share, SharePurchase, Sku,
+		SsoBinding, StoragePolicy, Task, User, UserGrant []ent.Hook
 	}
 	inters struct {
 		AbuseReport, AclEntry, ActivityEvent, CreditTxn, DavAccount, DirectLink, Entity,
-		File, FsEvent, GiftCode, Group, InvitationCode, Metadata, Node, OAuthClient,
-		OAuthGrant, Passkey, Setting, Share, SharePurchase, Sku, SsoBinding,
-		StoragePolicy, Task, User, UserGrant []ent.Interceptor
+		File, FsEvent, GiftCode, Group, GroupMembership, InvitationCode, Metadata,
+		Node, OAuthClient, OAuthGrant, Passkey, Setting, Share, SharePurchase, Sku,
+		SsoBinding, StoragePolicy, Task, User, UserGrant []ent.Interceptor
 	}
 )
 

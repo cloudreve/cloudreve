@@ -16,6 +16,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/davaccount"
 	"github.com/cloudreve/Cloudreve/v4/ent/file"
+	"github.com/cloudreve/Cloudreve/v4/ent/groupmembership"
 	"github.com/cloudreve/Cloudreve/v4/ent/oauthgrant"
 	"github.com/cloudreve/Cloudreve/v4/ent/passkey"
 	"github.com/cloudreve/Cloudreve/v4/ent/schema"
@@ -140,6 +141,20 @@ type (
 		Delete(ctx context.Context, uid int) error
 		// CalculateStorage calculate user's storage from scratch and update user's storage.
 		CalculateStorage(ctx context.Context, uid int) (int64, error)
+		// ListMemberships returns the user's group memberships (any expiry
+		// state) in stable group-id order.
+		ListMemberships(ctx context.Context, uid int) ([]*ent.GroupMembership, error)
+		// UpsertMembership grants the user an additional group. expires nil
+		// means permanent; an existing row's expiry is updated.
+		UpsertMembership(ctx context.Context, uid, groupID int, expires *time.Time) error
+		// RemoveMembership deletes a membership row if present.
+		RemoveMembership(ctx context.Context, uid, groupID int) error
+		// SetMemberships replaces the user's membership set with the given
+		// group IDs; kept rows retain their expiry.
+		SetMemberships(ctx context.Context, uid int, groupIDs []int) error
+		// ExpireMemberships deletes expired membership rows and returns them
+		// (with the group edge loaded) for event recording.
+		ExpireMemberships(ctx context.Context) ([]*ent.GroupMembership, error)
 	}
 	ListUserParameters struct {
 		*PaginationArgs
@@ -704,7 +719,11 @@ func (c *userClient) AnonymousUser(ctx context.Context) (*ent.User, error) {
 func (c *userClient) ListUsers(ctx context.Context, args *ListUserParameters) (*ListUserResult, error) {
 	query := c.client.User.Query()
 	if args.GroupID != 0 {
-		query = query.Where(user.GroupUsers(args.GroupID))
+		// Group filter matches primary group or an additional membership.
+		query = query.Where(user.Or(
+			user.GroupUsers(args.GroupID),
+			user.HasMembershipsWith(groupmembership.GroupID(args.GroupID)),
+		))
 	}
 	if args.Status != "" {
 		query = query.Where(user.StatusEQ(args.Status))
@@ -874,6 +893,13 @@ func withUserEagerLoading(ctx context.Context, q *ent.UserQuery) *ent.UserQuery 
 		q.WithGroup(func(gq *ent.GroupQuery) {
 			withGroupEagerLoading(ctx, gq)
 		})
+		// Additional group memberships ride the same flag — any caller that
+		// needs the group at all needs effective (union) semantics.
+		q.WithMemberships(func(mq *ent.GroupMembershipQuery) {
+			mq.WithGroup(func(gq *ent.GroupQuery) {
+				withGroupEagerLoading(ctx, gq)
+			})
+		})
 	}
 	if v, ok := ctx.Value(LoadUserPasskey{}).(bool); ok && v {
 		q.WithPasskey()
@@ -904,4 +930,80 @@ func digestPassword(password string) (string, error) {
 
 	//存储 Salt 值和摘要， ":"分割
 	return salt + ":" + string(bs), nil
+}
+
+func (c *userClient) ListMemberships(ctx context.Context, uid int) ([]*ent.GroupMembership, error) {
+	return c.client.GroupMembership.Query().
+		Where(groupmembership.UserID(uid)).
+		WithGroup().
+		Order(ent.Asc(groupmembership.FieldGroupID)).
+		All(ctx)
+}
+
+func (c *userClient) UpsertMembership(ctx context.Context, uid, groupID int, expires *time.Time) error {
+	return c.client.GroupMembership.Create().
+		SetUserID(uid).
+		SetGroupID(groupID).
+		SetNillableExpires(expires).
+		OnConflictColumns(groupmembership.FieldUserID, groupmembership.FieldGroupID).
+		UpdateNewValues().
+		Exec(ctx)
+}
+
+func (c *userClient) RemoveMembership(ctx context.Context, uid, groupID int) error {
+	_, err := c.client.GroupMembership.Delete().
+		Where(groupmembership.UserID(uid), groupmembership.GroupID(groupID)).
+		Exec(schema.SkipSoftDelete(ctx))
+	return err
+}
+
+func (c *userClient) SetMemberships(ctx context.Context, uid int, groupIDs []int) error {
+	existing, err := c.client.GroupMembership.Query().
+		Where(groupmembership.UserID(uid)).
+		All(ctx)
+	if err != nil {
+		return err
+	}
+
+	want := lo.KeyBy(groupIDs, func(id int) int { return id })
+	var delIDs []int
+	for _, m := range existing {
+		if _, ok := want[m.GroupID]; !ok {
+			delIDs = append(delIDs, m.ID)
+		}
+		delete(want, m.GroupID)
+	}
+	if len(delIDs) > 0 {
+		if _, err := c.client.GroupMembership.Delete().
+			Where(groupmembership.IDIn(delIDs...)).
+			Exec(schema.SkipSoftDelete(ctx)); err != nil {
+			return err
+		}
+	}
+	for groupID := range want {
+		if err := c.UpsertMembership(ctx, uid, groupID, nil); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *userClient) ExpireMemberships(ctx context.Context) ([]*ent.GroupMembership, error) {
+	expired, err := c.client.GroupMembership.Query().
+		Where(groupmembership.ExpiresNotNil(), groupmembership.ExpiresLT(time.Now())).
+		WithGroup().
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(expired) == 0 {
+		return nil, nil
+	}
+	ids := lo.Map(expired, func(m *ent.GroupMembership, _ int) int { return m.ID })
+	if _, err := c.client.GroupMembership.Delete().
+		Where(groupmembership.IDIn(ids...)).
+		Exec(schema.SkipSoftDelete(ctx)); err != nil {
+		return nil, err
+	}
+	return expired, nil
 }

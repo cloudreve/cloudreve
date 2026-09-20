@@ -335,7 +335,7 @@ func checkUserStatus(c *gin.Context, u *ent.User) error {
 	case user.StatusInactive:
 		return serializer.NewError(serializer.CodeUserNotActivated, "User is not activated", nil)
 	}
-	return checkLoginIPWhitelist(c.ClientIP(), u.Edges.Group)
+	return checkLoginIPWhitelist(c.ClientIP(), inventory.EffectiveGroup(u))
 }
 
 // CheckEmailAllowed enforces the sign-up email filter. Shared by the classic

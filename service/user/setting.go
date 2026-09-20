@@ -469,7 +469,7 @@ func (s *PatchUserSetting) Patch(c *gin.Context) error {
 			if err != nil {
 				return serializer.NewError(serializer.CodeParamErr, "Invalid storage policy", err)
 			}
-			allowed, err := dep.StoragePolicyClient().ListByGroup(c, u.Edges.Group)
+			allowed, err := dep.StoragePolicyClient().ListByGroups(c, inventory.GroupsOf(u))
 			if err != nil {
 				return serializer.NewError(serializer.CodeDBError, "Failed to list storage policies", err)
 			}

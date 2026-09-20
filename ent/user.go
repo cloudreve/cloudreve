@@ -90,6 +90,8 @@ type UserEdges struct {
 	OauthGrants []*OAuthGrant `json:"oauth_grants,omitempty"`
 	// CreditTxns holds the value of the credit_txns edge.
 	CreditTxns []*CreditTxn `json:"credit_txns,omitempty"`
+	// Memberships holds the value of the memberships edge.
+	Memberships []*GroupMembership `json:"memberships,omitempty"`
 	// RedeemedCodes holds the value of the redeemed_codes edge.
 	RedeemedCodes []*GiftCode `json:"redeemed_codes,omitempty"`
 	// Grants holds the value of the grants edge.
@@ -100,7 +102,7 @@ type UserEdges struct {
 	SSOBindings []*SsoBinding `json:"sso_bindings,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [14]bool
+	loadedTypes [15]bool
 }
 
 // GroupOrErr returns the Group value or an error if the edge
@@ -197,10 +199,19 @@ func (e UserEdges) CreditTxnsOrErr() ([]*CreditTxn, error) {
 	return nil, &NotLoadedError{edge: "credit_txns"}
 }
 
+// MembershipsOrErr returns the Memberships value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) MembershipsOrErr() ([]*GroupMembership, error) {
+	if e.loadedTypes[10] {
+		return e.Memberships, nil
+	}
+	return nil, &NotLoadedError{edge: "memberships"}
+}
+
 // RedeemedCodesOrErr returns the RedeemedCodes value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) RedeemedCodesOrErr() ([]*GiftCode, error) {
-	if e.loadedTypes[10] {
+	if e.loadedTypes[11] {
 		return e.RedeemedCodes, nil
 	}
 	return nil, &NotLoadedError{edge: "redeemed_codes"}
@@ -209,7 +220,7 @@ func (e UserEdges) RedeemedCodesOrErr() ([]*GiftCode, error) {
 // GrantsOrErr returns the Grants value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) GrantsOrErr() ([]*UserGrant, error) {
-	if e.loadedTypes[11] {
+	if e.loadedTypes[12] {
 		return e.Grants, nil
 	}
 	return nil, &NotLoadedError{edge: "grants"}
@@ -218,7 +229,7 @@ func (e UserEdges) GrantsOrErr() ([]*UserGrant, error) {
 // SharePurchasesOrErr returns the SharePurchases value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) SharePurchasesOrErr() ([]*SharePurchase, error) {
-	if e.loadedTypes[12] {
+	if e.loadedTypes[13] {
 		return e.SharePurchases, nil
 	}
 	return nil, &NotLoadedError{edge: "share_purchases"}
@@ -227,7 +238,7 @@ func (e UserEdges) SharePurchasesOrErr() ([]*SharePurchase, error) {
 // SSOBindingsOrErr returns the SSOBindings value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) SSOBindingsOrErr() ([]*SsoBinding, error) {
-	if e.loadedTypes[13] {
+	if e.loadedTypes[14] {
 		return e.SSOBindings, nil
 	}
 	return nil, &NotLoadedError{edge: "sso_bindings"}
@@ -464,6 +475,11 @@ func (u *User) QueryCreditTxns() *CreditTxnQuery {
 	return NewUserClient(u.config).QueryCreditTxns(u)
 }
 
+// QueryMemberships queries the "memberships" edge of the User entity.
+func (u *User) QueryMemberships() *GroupMembershipQuery {
+	return NewUserClient(u.config).QueryMemberships(u)
+}
+
 // QueryRedeemedCodes queries the "redeemed_codes" edge of the User entity.
 func (u *User) QueryRedeemedCodes() *GiftCodeQuery {
 	return NewUserClient(u.config).QueryRedeemedCodes(u)
@@ -637,28 +653,34 @@ func (e *User) SetCreditTxns(v []*CreditTxn) {
 	e.Edges.loadedTypes[9] = true
 }
 
+// SetMemberships manually set the edge as loaded state.
+func (e *User) SetMemberships(v []*GroupMembership) {
+	e.Edges.Memberships = v
+	e.Edges.loadedTypes[10] = true
+}
+
 // SetRedeemedCodes manually set the edge as loaded state.
 func (e *User) SetRedeemedCodes(v []*GiftCode) {
 	e.Edges.RedeemedCodes = v
-	e.Edges.loadedTypes[10] = true
+	e.Edges.loadedTypes[11] = true
 }
 
 // SetGrants manually set the edge as loaded state.
 func (e *User) SetGrants(v []*UserGrant) {
 	e.Edges.Grants = v
-	e.Edges.loadedTypes[11] = true
+	e.Edges.loadedTypes[12] = true
 }
 
 // SetSharePurchases manually set the edge as loaded state.
 func (e *User) SetSharePurchases(v []*SharePurchase) {
 	e.Edges.SharePurchases = v
-	e.Edges.loadedTypes[12] = true
+	e.Edges.loadedTypes[13] = true
 }
 
 // SetSSOBindings manually set the edge as loaded state.
 func (e *User) SetSSOBindings(v []*SsoBinding) {
 	e.Edges.SSOBindings = v
-	e.Edges.loadedTypes[13] = true
+	e.Edges.loadedTypes[14] = true
 }
 
 // Users is a parsable slice of User.

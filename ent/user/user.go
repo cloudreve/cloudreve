@@ -79,6 +79,8 @@ const (
 	EdgeOauthGrants = "oauth_grants"
 	// EdgeCreditTxns holds the string denoting the credit_txns edge name in mutations.
 	EdgeCreditTxns = "credit_txns"
+	// EdgeMemberships holds the string denoting the memberships edge name in mutations.
+	EdgeMemberships = "memberships"
 	// EdgeRedeemedCodes holds the string denoting the redeemed_codes edge name in mutations.
 	EdgeRedeemedCodes = "redeemed_codes"
 	// EdgeGrants holds the string denoting the grants edge name in mutations.
@@ -159,6 +161,13 @@ const (
 	CreditTxnsInverseTable = "credit_txns"
 	// CreditTxnsColumn is the table column denoting the credit_txns relation/edge.
 	CreditTxnsColumn = "user_id"
+	// MembershipsTable is the table that holds the memberships relation/edge.
+	MembershipsTable = "group_memberships"
+	// MembershipsInverseTable is the table name for the GroupMembership entity.
+	// It exists in this package in order to avoid circular dependency with the "groupmembership" package.
+	MembershipsInverseTable = "group_memberships"
+	// MembershipsColumn is the table column denoting the memberships relation/edge.
+	MembershipsColumn = "user_id"
 	// RedeemedCodesTable is the table that holds the redeemed_codes relation/edge.
 	RedeemedCodesTable = "gift_codes"
 	// RedeemedCodesInverseTable is the table name for the GiftCode entity.
@@ -521,6 +530,20 @@ func ByCreditTxns(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByMembershipsCount orders the results by memberships count.
+func ByMembershipsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newMembershipsStep(), opts...)
+	}
+}
+
+// ByMemberships orders the results by memberships terms.
+func ByMemberships(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newMembershipsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByRedeemedCodesCount orders the results by redeemed_codes count.
 func ByRedeemedCodesCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -644,6 +667,13 @@ func newCreditTxnsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(CreditTxnsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, CreditTxnsTable, CreditTxnsColumn),
+	)
+}
+func newMembershipsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(MembershipsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, MembershipsTable, MembershipsColumn),
 	)
 }
 func newRedeemedCodesStep() *sqlgraph.Step {

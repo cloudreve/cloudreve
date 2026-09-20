@@ -39,6 +39,9 @@ type GiftCode func(*sql.Selector)
 // Group is the predicate function for group builders.
 type Group func(*sql.Selector)
 
+// GroupMembership is the predicate function for groupmembership builders.
+type GroupMembership func(*sql.Selector)
+
 // InvitationCode is the predicate function for invitationcode builders.
 type InvitationCode func(*sql.Selector)
 

@@ -16,6 +16,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/fsevent"
 	"github.com/cloudreve/Cloudreve/v4/ent/giftcode"
 	"github.com/cloudreve/Cloudreve/v4/ent/group"
+	"github.com/cloudreve/Cloudreve/v4/ent/groupmembership"
 	"github.com/cloudreve/Cloudreve/v4/ent/invitationcode"
 	"github.com/cloudreve/Cloudreve/v4/ent/metadata"
 	"github.com/cloudreve/Cloudreve/v4/ent/node"
@@ -265,6 +266,25 @@ func init() {
 	groupDescSettings := groupFields[4].Descriptor()
 	// group.DefaultSettings holds the default value on creation for the settings field.
 	group.DefaultSettings = groupDescSettings.Default.(*types.GroupSetting)
+	groupmembershipMixin := schema.GroupMembership{}.Mixin()
+	groupmembershipMixinHooks0 := groupmembershipMixin[0].Hooks()
+	groupmembership.Hooks[0] = groupmembershipMixinHooks0[0]
+	groupmembershipMixinInters0 := groupmembershipMixin[0].Interceptors()
+	groupmembership.Interceptors[0] = groupmembershipMixinInters0[0]
+	groupmembershipMixinFields0 := groupmembershipMixin[0].Fields()
+	_ = groupmembershipMixinFields0
+	groupmembershipFields := schema.GroupMembership{}.Fields()
+	_ = groupmembershipFields
+	// groupmembershipDescCreatedAt is the schema descriptor for created_at field.
+	groupmembershipDescCreatedAt := groupmembershipMixinFields0[0].Descriptor()
+	// groupmembership.DefaultCreatedAt holds the default value on creation for the created_at field.
+	groupmembership.DefaultCreatedAt = groupmembershipDescCreatedAt.Default.(func() time.Time)
+	// groupmembershipDescUpdatedAt is the schema descriptor for updated_at field.
+	groupmembershipDescUpdatedAt := groupmembershipMixinFields0[1].Descriptor()
+	// groupmembership.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	groupmembership.DefaultUpdatedAt = groupmembershipDescUpdatedAt.Default.(func() time.Time)
+	// groupmembership.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	groupmembership.UpdateDefaultUpdatedAt = groupmembershipDescUpdatedAt.UpdateDefault.(func() time.Time)
 	invitationcodeMixin := schema.InvitationCode{}.Mixin()
 	invitationcodeMixinHooks0 := invitationcodeMixin[0].Hooks()
 	invitationcode.Hooks[0] = invitationcodeMixinHooks0[0]

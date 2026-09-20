@@ -236,7 +236,7 @@ func (n *shareNavigator) Root(ctx context.Context, path *fs.URI) (*File, error) 
 		}
 	}
 
-	if n.user.ID != n.owner.ID && !n.user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionShareDownload)) {
+	if n.user.ID != n.owner.ID && !inventory.EffectiveGroup(n.user).Permissions.Enabled(int(types.GroupPermissionShareDownload)) {
 		if inventory.IsAnonymousUser(n.user) {
 			return nil, serializer.NewError(
 				serializer.CodeAnonymouseAccessDenied,
@@ -644,8 +644,8 @@ func (n *shareNavigator) checkSharePaid(ctx context.Context, share *ent.Share) b
 		return true
 	}
 	// Groups with the share-free bit (staff/VIP) bypass the paywall.
-	if n.user.Edges.Group != nil &&
-		n.user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionShareFree)) {
+	if inventory.EffectiveGroup(n.user) != nil &&
+		inventory.EffectiveGroup(n.user).Permissions.Enabled(int(types.GroupPermissionShareFree)) {
 		return true
 	}
 	if n.vasClient == nil {

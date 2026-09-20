@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/ent"
+	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cluster/routes"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/driver"
@@ -60,7 +61,7 @@ type (
 func (m *manager) GetDirectLink(ctx context.Context, urls ...*fs.URI) ([]DirectLink, error) {
 	ae := serializer.NewAggregateError()
 	res := make([]DirectLink, 0, len(urls))
-	useRedirect := m.user.Edges.Group.Settings.RedirectedSource
+	useRedirect := inventory.EffectiveGroup(m.user).Settings.RedirectedSource
 	fileClient := m.dep.FileClient()
 	siteUrl := m.settings.SiteURL(ctx)
 
@@ -75,7 +76,7 @@ func (m *manager) GetDirectLink(ctx context.Context, urls ...*fs.URI) ([]DirectL
 			continue
 		}
 
-		if file.OwnerID() != m.user.ID && !m.user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
+		if file.OwnerID() != m.user.ID && !inventory.EffectiveGroup(m.user).Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
 			ae.Add(url.String(), fs.ErrOwnerOnly)
 			continue
 		}
@@ -100,9 +101,9 @@ func (m *manager) GetDirectLink(ctx context.Context, urls ...*fs.URI) ([]DirectL
 		}
 
 		if useRedirect {
-			reuseExisting := !m.user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionUniqueRedirectDirectLink))
+			reuseExisting := !inventory.EffectiveGroup(m.user).Permissions.Enabled(int(types.GroupPermissionUniqueRedirectDirectLink))
 			// Use redirect source
-			link, err := fileClient.CreateDirectLink(ctx, file.ID(), file.Name(), m.user.Edges.Group.SpeedLimit, reuseExisting)
+			link, err := fileClient.CreateDirectLink(ctx, file.ID(), file.Name(), inventory.EffectiveGroup(m.user).SpeedLimit, reuseExisting)
 			if err != nil {
 				ae.Add(url.String(), err)
 				continue
@@ -124,7 +125,7 @@ func (m *manager) GetDirectLink(ctx context.Context, urls ...*fs.URI) ([]DirectL
 			source := entitysource.NewEntitySource(target, d, policy, m.auth, m.settings, m.hasher, m.dep.RequestClient(),
 				m.l, m.config, m.dep.MimeDetector(ctx), m.dep.EncryptorFactory(ctx))
 			sourceUrl, err := source.Url(ctx,
-				entitysource.WithSpeedLimit(int64(m.user.Edges.Group.SpeedLimit)),
+				entitysource.WithSpeedLimit(int64(inventory.EffectiveGroup(m.user).SpeedLimit)),
 				entitysource.WithDisplayName(file.Name()),
 			)
 			if err != nil {

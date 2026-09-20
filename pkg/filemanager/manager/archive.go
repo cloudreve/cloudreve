@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/bodgit/sevenzip"
+	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs/dbfs"
@@ -100,8 +101,8 @@ func (m *manager) ListArchiveFiles(ctx context.Context, uri *fs.URI, entity, zip
 	}
 
 	// Validate file size
-	if m.user.Edges.Group.Settings.DecompressSize > 0 && file.Size() > m.user.Edges.Group.Settings.DecompressSize {
-		return nil, fs.ErrFileSizeTooBig.WithError(fmt.Errorf("file size %d exceeds the limit %d", file.Size(), m.user.Edges.Group.Settings.DecompressSize))
+	if inventory.EffectiveGroup(m.user).Settings.DecompressSize > 0 && file.Size() > inventory.EffectiveGroup(m.user).Settings.DecompressSize {
+		return nil, fs.ErrFileSizeTooBig.WithError(fmt.Errorf("file size %d exceeds the limit %d", file.Size(), inventory.EffectiveGroup(m.user).Settings.DecompressSize))
 	}
 
 	found, targetEntity := fs.FindDesiredEntity(file, entity, m.hasher, nil)

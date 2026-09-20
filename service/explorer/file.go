@@ -102,11 +102,11 @@ func (s *GetDirectLinkService) Get(c *gin.Context) ([]DirectLinkResponse, error)
 	dep := dependency.FromContext(c)
 	u := inventory.UserFromContext(c)
 
-	if u.Edges.Group.Settings.SourceBatchSize == 0 {
+	if inventory.EffectiveGroup(u).Settings.SourceBatchSize == 0 {
 		return nil, serializer.NewError(serializer.CodeGroupNotAllowed, "", nil)
 	}
 
-	if len(s.Uris) > u.Edges.Group.Settings.SourceBatchSize {
+	if len(s.Uris) > inventory.EffectiveGroup(u).Settings.SourceBatchSize {
 		return nil, serializer.NewError(serializer.CodeBatchSourceSize, "", nil)
 	}
 
@@ -502,7 +502,7 @@ func (s *FileURLService) GetArchiveDownloadSession(c *gin.Context) (*FileURLResp
 		return nil, serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
 	}
 
-	if !user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionArchiveDownload)) {
+	if !inventory.EffectiveGroup(user).Permissions.Enabled(int(types.GroupPermissionArchiveDownload)) {
 		return nil, serializer.NewError(serializer.CodeGroupNotAllowed, "", nil)
 	}
 
@@ -565,7 +565,7 @@ func (s *FileURLService) Get(c *gin.Context) (*FileURLResponse, error) {
 	}
 
 	res, earliestExpire, err := m.GetEntityUrls(ctx, urlReq,
-		fs.WithDownloadSpeed(int64(user.Edges.Group.SpeedLimit)),
+		fs.WithDownloadSpeed(int64(inventory.EffectiveGroup(user).SpeedLimit)),
 		fs.WithIsDownload(s.Download),
 		fs.WithNoCache(s.NoCache),
 		fs.WithUrlExpire(&expire),
@@ -668,7 +668,7 @@ func (s *DeleteFileService) Delete(c *gin.Context) error {
 		return serializer.NewError(serializer.CodeParamErr, "unknown uri", err)
 	}
 
-	if s.UnlinkOnly && !user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionAdvanceDelete)) {
+	if s.UnlinkOnly && !inventory.EffectiveGroup(user).Permissions.Enabled(int(types.GroupPermissionAdvanceDelete)) {
 		return serializer.NewError(serializer.CodeNoPermissionErr, "advance delete permission is required", nil)
 	}
 
@@ -886,7 +886,7 @@ func (s *ArchiveListFilesService) List(c *gin.Context) (*ArchiveListFilesRespons
 	user := inventory.UserFromContext(c)
 	m := manager.NewFileManager(dep, user)
 	defer m.Recycle()
-	if !user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionArchiveTask)) {
+	if !inventory.EffectiveGroup(user).Permissions.Enabled(int(types.GroupPermissionArchiveTask)) {
 		return nil, serializer.NewError(serializer.CodeGroupNotAllowed, "Group not allowed to extract archive files", nil)
 	}
 

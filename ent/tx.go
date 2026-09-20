@@ -36,6 +36,8 @@ type Tx struct {
 	GiftCode *GiftCodeClient
 	// Group is the client for interacting with the Group builders.
 	Group *GroupClient
+	// GroupMembership is the client for interacting with the GroupMembership builders.
+	GroupMembership *GroupMembershipClient
 	// InvitationCode is the client for interacting with the InvitationCode builders.
 	InvitationCode *InvitationCodeClient
 	// Metadata is the client for interacting with the Metadata builders.
@@ -208,6 +210,7 @@ func (tx *Tx) init() {
 	tx.FsEvent = NewFsEventClient(tx.config)
 	tx.GiftCode = NewGiftCodeClient(tx.config)
 	tx.Group = NewGroupClient(tx.config)
+	tx.GroupMembership = NewGroupMembershipClient(tx.config)
 	tx.InvitationCode = NewInvitationCodeClient(tx.config)
 	tx.Metadata = NewMetadataClient(tx.config)
 	tx.Node = NewNodeClient(tx.config)

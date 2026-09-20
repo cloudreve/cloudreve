@@ -246,7 +246,7 @@ func (m *CreateArchiveTask) listEntitiesAndSendToSlave(ctx context.Context, dep 
 				}
 			}
 		}),
-		fs.WithMaxArchiveSize(user.Edges.Group.Settings.CompressSize),
+		fs.WithMaxArchiveSize(inventory.EffectiveGroup(user).Settings.CompressSize),
 	)
 	if err != nil {
 		return task.StatusError, fmt.Errorf("failed to compress files: %w", err)
@@ -403,7 +403,7 @@ func (m *CreateArchiveTask) createArchiveFile(ctx context.Context, dep dependenc
 	m.Unlock()
 	failed, err := fm.CreateArchive(ctx, uris, zipFile,
 		fs.WithArchiveCompression(true),
-		fs.WithMaxArchiveSize(user.Edges.Group.Settings.CompressSize),
+		fs.WithMaxArchiveSize(inventory.EffectiveGroup(user).Settings.CompressSize),
 		fs.WithProgressFunc(func(current, diff int64, total int64) {
 			atomic.AddInt64(&m.progress[ProgressTypeArchiveSize].Current, diff)
 			atomic.AddInt64(&m.progress[ProgressTypeArchiveCount].Current, 1)

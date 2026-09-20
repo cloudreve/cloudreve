@@ -199,7 +199,7 @@ func (service *SmsLoginService) Login(c *gin.Context) (*ent.User, string, error)
 			loginFailed = banError(expectedUser, "This account has been blocked")
 		} else if expectedUser.Status == user.StatusInactive {
 			loginFailed = serializer.NewError(serializer.CodeUserNotActivated, "This account is not activated", nil)
-		} else if ipErr := checkLoginIPWhitelist(c.ClientIP(), expectedUser.Edges.Group); ipErr != nil {
+		} else if ipErr := checkLoginIPWhitelist(c.ClientIP(), inventory.EffectiveGroup(expectedUser)); ipErr != nil {
 			loginFailed = ipErr
 		}
 	}

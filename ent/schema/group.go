@@ -37,6 +37,7 @@ func (Group) Mixin() []ent.Mixin {
 func (Group) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("users", User.Type),
+		edge.To("memberships", GroupMembership.Type),
 		edge.From("storage_policies", StoragePolicy.Type).
 			Ref("groups").
 			Field("storage_policy_id").

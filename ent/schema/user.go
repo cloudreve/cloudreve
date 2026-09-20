@@ -98,6 +98,7 @@ func (User) Edges() []ent.Edge {
 		edge.To("entities", Entity.Type),
 		edge.To("oauth_grants", OAuthGrant.Type),
 		edge.To("credit_txns", CreditTxn.Type),
+		edge.To("memberships", GroupMembership.Type),
 		edge.To("redeemed_codes", GiftCode.Type),
 		edge.To("grants", UserGrant.Type),
 		edge.To("share_purchases", SharePurchase.Type),

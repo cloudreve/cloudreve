@@ -36,6 +36,8 @@ const (
 	FieldStoragePolicyID = "storage_policy_id"
 	// EdgeUsers holds the string denoting the users edge name in mutations.
 	EdgeUsers = "users"
+	// EdgeMemberships holds the string denoting the memberships edge name in mutations.
+	EdgeMemberships = "memberships"
 	// EdgeStoragePolicies holds the string denoting the storage_policies edge name in mutations.
 	EdgeStoragePolicies = "storage_policies"
 	// EdgeAllowedPolicies holds the string denoting the allowed_policies edge name in mutations.
@@ -49,6 +51,13 @@ const (
 	UsersInverseTable = "users"
 	// UsersColumn is the table column denoting the users relation/edge.
 	UsersColumn = "group_users"
+	// MembershipsTable is the table that holds the memberships relation/edge.
+	MembershipsTable = "group_memberships"
+	// MembershipsInverseTable is the table name for the GroupMembership entity.
+	// It exists in this package in order to avoid circular dependency with the "groupmembership" package.
+	MembershipsInverseTable = "group_memberships"
+	// MembershipsColumn is the table column denoting the memberships relation/edge.
+	MembershipsColumn = "group_id"
 	// StoragePoliciesTable is the table that holds the storage_policies relation/edge.
 	StoragePoliciesTable = "groups"
 	// StoragePoliciesInverseTable is the table name for the StoragePolicy entity.
@@ -168,6 +177,20 @@ func ByUsers(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByMembershipsCount orders the results by memberships count.
+func ByMembershipsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newMembershipsStep(), opts...)
+	}
+}
+
+// ByMemberships orders the results by memberships terms.
+func ByMemberships(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newMembershipsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByStoragePoliciesField orders the results by storage_policies field.
 func ByStoragePoliciesField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -193,6 +216,13 @@ func newUsersStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(UsersInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, UsersTable, UsersColumn),
+	)
+}
+func newMembershipsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(MembershipsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, MembershipsTable, MembershipsColumn),
 	)
 }
 func newStoragePoliciesStep() *sqlgraph.Step {

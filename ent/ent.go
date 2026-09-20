@@ -23,6 +23,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/fsevent"
 	"github.com/cloudreve/Cloudreve/v4/ent/giftcode"
 	"github.com/cloudreve/Cloudreve/v4/ent/group"
+	"github.com/cloudreve/Cloudreve/v4/ent/groupmembership"
 	"github.com/cloudreve/Cloudreve/v4/ent/invitationcode"
 	"github.com/cloudreve/Cloudreve/v4/ent/metadata"
 	"github.com/cloudreve/Cloudreve/v4/ent/node"
@@ -98,32 +99,33 @@ var (
 func checkColumn(table, column string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			abusereport.Table:    abusereport.ValidColumn,
-			aclentry.Table:       aclentry.ValidColumn,
-			activityevent.Table:  activityevent.ValidColumn,
-			credittxn.Table:      credittxn.ValidColumn,
-			davaccount.Table:     davaccount.ValidColumn,
-			directlink.Table:     directlink.ValidColumn,
-			entity.Table:         entity.ValidColumn,
-			file.Table:           file.ValidColumn,
-			fsevent.Table:        fsevent.ValidColumn,
-			giftcode.Table:       giftcode.ValidColumn,
-			group.Table:          group.ValidColumn,
-			invitationcode.Table: invitationcode.ValidColumn,
-			metadata.Table:       metadata.ValidColumn,
-			node.Table:           node.ValidColumn,
-			oauthclient.Table:    oauthclient.ValidColumn,
-			oauthgrant.Table:     oauthgrant.ValidColumn,
-			passkey.Table:        passkey.ValidColumn,
-			setting.Table:        setting.ValidColumn,
-			share.Table:          share.ValidColumn,
-			sharepurchase.Table:  sharepurchase.ValidColumn,
-			sku.Table:            sku.ValidColumn,
-			ssobinding.Table:     ssobinding.ValidColumn,
-			storagepolicy.Table:  storagepolicy.ValidColumn,
-			task.Table:           task.ValidColumn,
-			user.Table:           user.ValidColumn,
-			usergrant.Table:      usergrant.ValidColumn,
+			abusereport.Table:     abusereport.ValidColumn,
+			aclentry.Table:        aclentry.ValidColumn,
+			activityevent.Table:   activityevent.ValidColumn,
+			credittxn.Table:       credittxn.ValidColumn,
+			davaccount.Table:      davaccount.ValidColumn,
+			directlink.Table:      directlink.ValidColumn,
+			entity.Table:          entity.ValidColumn,
+			file.Table:            file.ValidColumn,
+			fsevent.Table:         fsevent.ValidColumn,
+			giftcode.Table:        giftcode.ValidColumn,
+			group.Table:           group.ValidColumn,
+			groupmembership.Table: groupmembership.ValidColumn,
+			invitationcode.Table:  invitationcode.ValidColumn,
+			metadata.Table:        metadata.ValidColumn,
+			node.Table:            node.ValidColumn,
+			oauthclient.Table:     oauthclient.ValidColumn,
+			oauthgrant.Table:      oauthgrant.ValidColumn,
+			passkey.Table:         passkey.ValidColumn,
+			setting.Table:         setting.ValidColumn,
+			share.Table:           share.ValidColumn,
+			sharepurchase.Table:   sharepurchase.ValidColumn,
+			sku.Table:             sku.ValidColumn,
+			ssobinding.Table:      ssobinding.ValidColumn,
+			storagepolicy.Table:   storagepolicy.ValidColumn,
+			task.Table:            task.ValidColumn,
+			user.Table:            user.ValidColumn,
+			usergrant.Table:       usergrant.ValidColumn,
 		})
 	})
 	return columnCheck(table, column)
