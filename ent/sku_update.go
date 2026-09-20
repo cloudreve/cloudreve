@@ -224,6 +224,30 @@ func (su *SkuUpdate) ClearDes() *SkuUpdate {
 	return su
 }
 
+// SetNameI18n sets the "name_i18n" field.
+func (su *SkuUpdate) SetNameI18n(m map[string]string) *SkuUpdate {
+	su.mutation.SetNameI18n(m)
+	return su
+}
+
+// ClearNameI18n clears the value of the "name_i18n" field.
+func (su *SkuUpdate) ClearNameI18n() *SkuUpdate {
+	su.mutation.ClearNameI18n()
+	return su
+}
+
+// SetDesI18n sets the "des_i18n" field.
+func (su *SkuUpdate) SetDesI18n(m map[string]string) *SkuUpdate {
+	su.mutation.SetDesI18n(m)
+	return su
+}
+
+// ClearDesI18n clears the value of the "des_i18n" field.
+func (su *SkuUpdate) ClearDesI18n() *SkuUpdate {
+	su.mutation.ClearDesI18n()
+	return su
+}
+
 // SetEnabled sets the "enabled" field.
 func (su *SkuUpdate) SetEnabled(b bool) *SkuUpdate {
 	su.mutation.SetEnabled(b)
@@ -387,6 +411,18 @@ func (su *SkuUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if su.mutation.DesCleared() {
 		_spec.ClearField(sku.FieldDes, field.TypeString)
+	}
+	if value, ok := su.mutation.NameI18n(); ok {
+		_spec.SetField(sku.FieldNameI18n, field.TypeJSON, value)
+	}
+	if su.mutation.NameI18nCleared() {
+		_spec.ClearField(sku.FieldNameI18n, field.TypeJSON)
+	}
+	if value, ok := su.mutation.DesI18n(); ok {
+		_spec.SetField(sku.FieldDesI18n, field.TypeJSON, value)
+	}
+	if su.mutation.DesI18nCleared() {
+		_spec.ClearField(sku.FieldDesI18n, field.TypeJSON)
 	}
 	if value, ok := su.mutation.Enabled(); ok {
 		_spec.SetField(sku.FieldEnabled, field.TypeBool, value)
@@ -613,6 +649,30 @@ func (suo *SkuUpdateOne) ClearDes() *SkuUpdateOne {
 	return suo
 }
 
+// SetNameI18n sets the "name_i18n" field.
+func (suo *SkuUpdateOne) SetNameI18n(m map[string]string) *SkuUpdateOne {
+	suo.mutation.SetNameI18n(m)
+	return suo
+}
+
+// ClearNameI18n clears the value of the "name_i18n" field.
+func (suo *SkuUpdateOne) ClearNameI18n() *SkuUpdateOne {
+	suo.mutation.ClearNameI18n()
+	return suo
+}
+
+// SetDesI18n sets the "des_i18n" field.
+func (suo *SkuUpdateOne) SetDesI18n(m map[string]string) *SkuUpdateOne {
+	suo.mutation.SetDesI18n(m)
+	return suo
+}
+
+// ClearDesI18n clears the value of the "des_i18n" field.
+func (suo *SkuUpdateOne) ClearDesI18n() *SkuUpdateOne {
+	suo.mutation.ClearDesI18n()
+	return suo
+}
+
 // SetEnabled sets the "enabled" field.
 func (suo *SkuUpdateOne) SetEnabled(b bool) *SkuUpdateOne {
 	suo.mutation.SetEnabled(b)
@@ -806,6 +866,18 @@ func (suo *SkuUpdateOne) sqlSave(ctx context.Context) (_node *Sku, err error) {
 	}
 	if suo.mutation.DesCleared() {
 		_spec.ClearField(sku.FieldDes, field.TypeString)
+	}
+	if value, ok := suo.mutation.NameI18n(); ok {
+		_spec.SetField(sku.FieldNameI18n, field.TypeJSON, value)
+	}
+	if suo.mutation.NameI18nCleared() {
+		_spec.ClearField(sku.FieldNameI18n, field.TypeJSON)
+	}
+	if value, ok := suo.mutation.DesI18n(); ok {
+		_spec.SetField(sku.FieldDesI18n, field.TypeJSON, value)
+	}
+	if suo.mutation.DesI18nCleared() {
+		_spec.ClearField(sku.FieldDesI18n, field.TypeJSON)
 	}
 	if value, ok := suo.mutation.Enabled(); ok {
 		_spec.SetField(sku.FieldEnabled, field.TypeBool, value)

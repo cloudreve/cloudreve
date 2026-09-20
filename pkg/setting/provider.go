@@ -22,6 +22,14 @@ type (
 	Provider interface {
 		// Site basic information
 		SiteBasic(ctx context.Context) *SiteBasic
+		// SiteBasicLocalized returns site basic info with Name, Title and
+		// Description resolved for the given language tag via sibling
+		// "<key>_i18n" settings.
+		SiteBasicLocalized(ctx context.Context, lang string) *SiteBasic
+		// Localized returns the value of a setting key translated for lang.
+		// A sibling "<key>_i18n" JSON object (language tag -> text) is
+		// consulted first; falls back to the plain "<key>" value.
+		Localized(ctx context.Context, key, lang string) string
 		// PWA related settings
 		PWA(ctx context.Context) *PWASetting
 		// RegisterEnabled returns true if public sign-up is enabled.
@@ -1114,13 +1122,89 @@ func (s *settingProvider) ShareDefaults(ctx context.Context) *ShareDefaults {
 }
 
 func (s *settingProvider) SiteBasic(ctx context.Context) *SiteBasic {
+	return s.SiteBasicLocalized(ctx, "")
+}
+
+func (s *settingProvider) SiteBasicLocalized(ctx context.Context, lang string) *SiteBasic {
 	return &SiteBasic{
-		Name:        s.getString(ctx, "siteName", ""),
-		Title:       s.getString(ctx, "siteTitle", ""),
+		Name:        s.Localized(ctx, "siteName", lang),
+		Title:       s.Localized(ctx, "siteTitle", lang),
 		ID:          s.getString(ctx, "siteID", ""),
-		Description: s.getString(ctx, "siteDes", ""),
+		Description: s.Localized(ctx, "siteDes", lang),
 		Script:      s.getString(ctx, "siteScript", ""),
 	}
+}
+
+func (s *settingProvider) Localized(ctx context.Context, key, lang string) string {
+	base := s.getString(ctx, key, "")
+	if lang == "" {
+		return base
+	}
+
+	raw := s.getString(ctx, key+"_i18n", "")
+	if raw == "" {
+		return base
+	}
+
+	var translations map[string]string
+	if err := json.Unmarshal([]byte(raw), &translations); err != nil || len(translations) == 0 {
+		return base
+	}
+
+	return MatchLanguage(translations, lang, base)
+}
+
+// MatchLanguage picks the best translation for lang from translations.
+// Exact tag match wins, then a bare primary subtag ("zh" for "zh-CN"), then
+// any entry sharing the primary subtag (for bare requests like "zh"), then
+// the "*" wildcard entry; fallback is returned otherwise.
+func MatchLanguage(translations map[string]string, lang, fallback string) string {
+	if lang == "" || len(translations) == 0 {
+		return fallback
+	}
+
+	if v, ok := translations[lang]; ok && v != "" {
+		return v
+	}
+
+	primary := lang
+	if i := strings.IndexAny(lang, "-_"); i >= 0 {
+		primary = lang[:i]
+		if v, ok := translations[primary]; ok && v != "" {
+			return v
+		}
+	} else {
+		// Bare request ("zh") may match a regional entry ("zh-CN").
+		keys := make([]string, 0, len(translations))
+		for k := range translations {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			if strings.IndexAny(k, "-_") > 0 && k[:strings.IndexAny(k, "-_")] == primary && translations[k] != "" {
+				return translations[k]
+			}
+		}
+	}
+
+	if v, ok := translations["*"]; ok && v != "" {
+		return v
+	}
+	return fallback
+}
+
+// ParseAcceptLanguage returns the first language tag of an Accept-Language
+// header value, ignoring quality weights — browsers send the preferred tag
+// first. "" when the header is empty or malformed.
+func ParseAcceptLanguage(header string) string {
+	if header == "" {
+		return ""
+	}
+	first := strings.TrimSpace(strings.Split(header, ",")[0])
+	if i := strings.Index(first, ";"); i >= 0 {
+		first = strings.TrimSpace(first[:i])
+	}
+	return first
 }
 
 func (s *settingProvider) PWA(ctx context.Context) *PWASetting {

@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -39,6 +40,10 @@ type Sku struct {
 	Label string `json:"label,omitempty"`
 	// Des holds the value of the "des" field.
 	Des string `json:"des,omitempty"`
+	// NameI18n holds the value of the "name_i18n" field.
+	NameI18n map[string]string `json:"name_i18n,omitempty"`
+	// DesI18n holds the value of the "des_i18n" field.
+	DesI18n map[string]string `json:"des_i18n,omitempty"`
 	// Enabled holds the value of the "enabled" field.
 	Enabled bool `json:"enabled,omitempty"`
 	// Weight holds the value of the "weight" field.
@@ -51,6 +56,8 @@ func (*Sku) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case sku.FieldNameI18n, sku.FieldDesI18n:
+			values[i] = new([]byte)
 		case sku.FieldEnabled:
 			values[i] = new(sql.NullBool)
 		case sku.FieldID, sku.FieldAmount, sku.FieldDuration, sku.FieldPrice, sku.FieldPoints, sku.FieldWeight:
@@ -148,6 +155,22 @@ func (s *Sku) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				s.Des = value.String
 			}
+		case sku.FieldNameI18n:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field name_i18n", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &s.NameI18n); err != nil {
+					return fmt.Errorf("unmarshal field name_i18n: %w", err)
+				}
+			}
+		case sku.FieldDesI18n:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field des_i18n", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &s.DesI18n); err != nil {
+					return fmt.Errorf("unmarshal field des_i18n: %w", err)
+				}
+			}
 		case sku.FieldEnabled:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field enabled", values[i])
@@ -232,6 +255,12 @@ func (s *Sku) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("des=")
 	builder.WriteString(s.Des)
+	builder.WriteString(", ")
+	builder.WriteString("name_i18n=")
+	builder.WriteString(fmt.Sprintf("%v", s.NameI18n))
+	builder.WriteString(", ")
+	builder.WriteString("des_i18n=")
+	builder.WriteString(fmt.Sprintf("%v", s.DesI18n))
 	builder.WriteString(", ")
 	builder.WriteString("enabled=")
 	builder.WriteString(fmt.Sprintf("%v", s.Enabled))

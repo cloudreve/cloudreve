@@ -381,6 +381,8 @@ func (c *vasClient) UpsertSku(ctx context.Context, s *ent.Sku) (*ent.Sku, error)
 			SetNillablePoints(s.Points).
 			SetLabel(s.Label).
 			SetDes(s.Des).
+			SetNameI18n(s.NameI18n).
+			SetDesI18n(s.DesI18n).
 			SetEnabled(s.Enabled).
 			SetWeight(s.Weight).
 			Save(ctx)
@@ -394,6 +396,8 @@ func (c *vasClient) UpsertSku(ctx context.Context, s *ent.Sku) (*ent.Sku, error)
 		SetNillablePoints(s.Points).
 		SetLabel(s.Label).
 		SetDes(s.Des).
+		SetNameI18n(s.NameI18n).
+		SetDesI18n(s.DesI18n).
 		SetEnabled(s.Enabled).
 		SetWeight(s.Weight).
 		Save(ctx)

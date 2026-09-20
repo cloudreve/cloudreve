@@ -317,7 +317,7 @@ func (s *AnnouncementService) Get(c *gin.Context) (*AnnouncementResponse, error)
 	dep := dependency.FromContext(c)
 	u := inventory.UserFromContext(c)
 
-	current := dep.SettingProvider().Announcement(c)
+	current := dep.SettingProvider().Localized(c, "announcement", u.Settings.Language)
 	if current == "" || current == u.Settings.DismissedAnnouncement {
 		return &AnnouncementResponse{}, nil
 	}

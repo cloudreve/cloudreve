@@ -664,6 +664,26 @@ func DesContainsFold(v string) predicate.Sku {
 	return predicate.Sku(sql.FieldContainsFold(FieldDes, v))
 }
 
+// NameI18nIsNil applies the IsNil predicate on the "name_i18n" field.
+func NameI18nIsNil() predicate.Sku {
+	return predicate.Sku(sql.FieldIsNull(FieldNameI18n))
+}
+
+// NameI18nNotNil applies the NotNil predicate on the "name_i18n" field.
+func NameI18nNotNil() predicate.Sku {
+	return predicate.Sku(sql.FieldNotNull(FieldNameI18n))
+}
+
+// DesI18nIsNil applies the IsNil predicate on the "des_i18n" field.
+func DesI18nIsNil() predicate.Sku {
+	return predicate.Sku(sql.FieldIsNull(FieldDesI18n))
+}
+
+// DesI18nNotNil applies the NotNil predicate on the "des_i18n" field.
+func DesI18nNotNil() predicate.Sku {
+	return predicate.Sku(sql.FieldNotNull(FieldDesI18n))
+}
+
 // EnabledEQ applies the EQ predicate on the "enabled" field.
 func EnabledEQ(v bool) predicate.Sku {
 	return predicate.Sku(sql.FieldEQ(FieldEnabled, v))

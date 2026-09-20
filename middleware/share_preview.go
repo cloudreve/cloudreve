@@ -15,6 +15,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
+	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 	"github.com/cloudreve/Cloudreve/v4/service/explorer"
 	"github.com/cloudreve/Cloudreve/v4/service/share"
@@ -128,7 +129,7 @@ func extractShareParams(c *gin.Context) (id, password string) {
 
 func renderShareOGPage(c *gin.Context, dep dependency.Dep, id, password string) string {
 	settings := dep.SettingProvider()
-	siteBasic := settings.SiteBasic(c)
+	siteBasic := settings.SiteBasicLocalized(c, setting.ParseAcceptLanguage(c.GetHeader("Accept-Language")))
 	pwa := settings.PWA(c)
 	base := settings.SiteURL(c)
 

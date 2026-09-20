@@ -235,7 +235,14 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 	}
 
 	u := inventory.UserFromContext(c)
-	siteBasic := settings.SiteBasic(c)
+	lang := ""
+	if u != nil {
+		lang = u.Settings.Language
+	}
+	if lang == "" {
+		lang = setting.ParseAcceptLanguage(c.GetHeader("Accept-Language"))
+	}
+	siteBasic := settings.SiteBasicLocalized(c, lang)
 	themes := settings.Theme(c)
 	userRes := user.BuildUser(u, dep.HashIDEncoder())
 	logo := settings.Logo(c)

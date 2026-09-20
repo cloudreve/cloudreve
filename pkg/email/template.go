@@ -33,7 +33,7 @@ func NewResetEmail(ctx context.Context, settings setting.Provider, user *ent.Use
 
 	selected := selectTemplate(templates, user)
 	resetCtx := ResetContext{
-		CommonContext: commonContext(ctx, settings),
+		CommonContext: commonContext(ctx, settings, user),
 		User:          user,
 		Url:           url,
 	}
@@ -79,7 +79,7 @@ func NewActivationEmail(ctx context.Context, settings setting.Provider, user *en
 
 	selected := selectTemplate(templates, user)
 	activationCtx := ActivationContext{
-		CommonContext: commonContext(ctx, settings),
+		CommonContext: commonContext(ctx, settings, user),
 		User:          user,
 		Url:           url,
 	}
@@ -109,7 +109,7 @@ func NewActivationEmail(ctx context.Context, settings setting.Provider, user *en
 	return resTitle.String(), resBody.String(), nil
 }
 
-func commonContext(ctx context.Context, settings setting.Provider) *CommonContext {
+func commonContext(ctx context.Context, settings setting.Provider, user *ent.User) *CommonContext {
 	logo := settings.Logo(ctx)
 	siteUrl := settings.SiteURL(ctx)
 	resolvedLogo := *logo
@@ -125,8 +125,13 @@ func commonContext(ctx context.Context, settings setting.Provider) *CommonContex
 		resolvedLogo.Normal = siteUrl.ResolveReference(logoPath).String()
 	}
 
+	lang := ""
+	if user != nil {
+		lang = user.Settings.Language
+	}
+
 	return &CommonContext{
-		SiteBasic: settings.SiteBasic(ctx),
+		SiteBasic: settings.SiteBasicLocalized(ctx, lang),
 		Logo:      &resolvedLogo,
 		SiteUrl:   siteUrl.String(),
 	}

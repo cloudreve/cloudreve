@@ -7,6 +7,7 @@ import { DenseFilledTextField } from "../../../Common/StyledComponents.tsx";
 import SettingForm from "../../../Pages/Setting/SettingForm.tsx";
 import { NoMarginHelperText, SettingSection, SettingSectionContent, StyledInputAdornment } from "../Settings.tsx";
 import { SettingContext } from "../SettingWrapper.tsx";
+import LocalizedFields from "../LocalizedFields.tsx";
 import GeneralImagePreview from "./GeneralImagePreview.tsx";
 import LogoPreview from "./LogoPreview.tsx";
 import SiteURLInput from "./SiteURLInput.tsx";
@@ -32,6 +33,10 @@ const SiteInformation = () => {
                   required
                   inputProps={{ maxLength: 255 }}
                 />
+                <LocalizedFields
+                  value={values.siteName_i18n}
+                  onChange={(v) => setSettings({ siteName_i18n: v })}
+                />
                 <NoMarginHelperText>{t("settings.mainTitleDes")}</NoMarginHelperText>
               </FormControl>
             </SettingForm>
@@ -43,6 +48,12 @@ const SiteInformation = () => {
                   value={values.siteDes}
                   multiline
                   rows={4}
+                />
+                <LocalizedFields
+                  multiline
+                  rows={2}
+                  value={values.siteDes_i18n}
+                  onChange={(v) => setSettings({ siteDes_i18n: v })}
                 />
                 <NoMarginHelperText>{t("settings.siteDescriptionDes")}</NoMarginHelperText>
               </FormControl>
@@ -103,6 +114,12 @@ const SiteInformation = () => {
                   rows={4}
                   onChange={(e) => setSettings({ announcement: e.target.value })}
                   value={values.announcement}
+                />
+                <LocalizedFields
+                  multiline
+                  rows={2}
+                  value={values.announcement_i18n}
+                  onChange={(v) => setSettings({ announcement_i18n: v })}
                 />
                 <NoMarginHelperText>{t("settings.announcementDes")}</NoMarginHelperText>
               </FormControl>

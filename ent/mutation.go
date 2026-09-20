@@ -19671,6 +19671,8 @@ type SkuMutation struct {
 	addpoints     *int64
 	label         *string
 	des           *string
+	name_i18n     *map[string]string
+	des_i18n      *map[string]string
 	enabled       *bool
 	weight        *int
 	addweight     *int
@@ -20335,6 +20337,104 @@ func (m *SkuMutation) ResetDes() {
 	delete(m.clearedFields, sku.FieldDes)
 }
 
+// SetNameI18n sets the "name_i18n" field.
+func (m *SkuMutation) SetNameI18n(value map[string]string) {
+	m.name_i18n = &value
+}
+
+// NameI18n returns the value of the "name_i18n" field in the mutation.
+func (m *SkuMutation) NameI18n() (r map[string]string, exists bool) {
+	v := m.name_i18n
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNameI18n returns the old "name_i18n" field's value of the Sku entity.
+// If the Sku object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SkuMutation) OldNameI18n(ctx context.Context) (v map[string]string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNameI18n is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNameI18n requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNameI18n: %w", err)
+	}
+	return oldValue.NameI18n, nil
+}
+
+// ClearNameI18n clears the value of the "name_i18n" field.
+func (m *SkuMutation) ClearNameI18n() {
+	m.name_i18n = nil
+	m.clearedFields[sku.FieldNameI18n] = struct{}{}
+}
+
+// NameI18nCleared returns if the "name_i18n" field was cleared in this mutation.
+func (m *SkuMutation) NameI18nCleared() bool {
+	_, ok := m.clearedFields[sku.FieldNameI18n]
+	return ok
+}
+
+// ResetNameI18n resets all changes to the "name_i18n" field.
+func (m *SkuMutation) ResetNameI18n() {
+	m.name_i18n = nil
+	delete(m.clearedFields, sku.FieldNameI18n)
+}
+
+// SetDesI18n sets the "des_i18n" field.
+func (m *SkuMutation) SetDesI18n(value map[string]string) {
+	m.des_i18n = &value
+}
+
+// DesI18n returns the value of the "des_i18n" field in the mutation.
+func (m *SkuMutation) DesI18n() (r map[string]string, exists bool) {
+	v := m.des_i18n
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDesI18n returns the old "des_i18n" field's value of the Sku entity.
+// If the Sku object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SkuMutation) OldDesI18n(ctx context.Context) (v map[string]string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDesI18n is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDesI18n requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDesI18n: %w", err)
+	}
+	return oldValue.DesI18n, nil
+}
+
+// ClearDesI18n clears the value of the "des_i18n" field.
+func (m *SkuMutation) ClearDesI18n() {
+	m.des_i18n = nil
+	m.clearedFields[sku.FieldDesI18n] = struct{}{}
+}
+
+// DesI18nCleared returns if the "des_i18n" field was cleared in this mutation.
+func (m *SkuMutation) DesI18nCleared() bool {
+	_, ok := m.clearedFields[sku.FieldDesI18n]
+	return ok
+}
+
+// ResetDesI18n resets all changes to the "des_i18n" field.
+func (m *SkuMutation) ResetDesI18n() {
+	m.des_i18n = nil
+	delete(m.clearedFields, sku.FieldDesI18n)
+}
+
 // SetEnabled sets the "enabled" field.
 func (m *SkuMutation) SetEnabled(b bool) {
 	m.enabled = &b
@@ -20461,7 +20561,7 @@ func (m *SkuMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *SkuMutation) Fields() []string {
-	fields := make([]string, 0, 13)
+	fields := make([]string, 0, 15)
 	if m.created_at != nil {
 		fields = append(fields, sku.FieldCreatedAt)
 	}
@@ -20494,6 +20594,12 @@ func (m *SkuMutation) Fields() []string {
 	}
 	if m.des != nil {
 		fields = append(fields, sku.FieldDes)
+	}
+	if m.name_i18n != nil {
+		fields = append(fields, sku.FieldNameI18n)
+	}
+	if m.des_i18n != nil {
+		fields = append(fields, sku.FieldDesI18n)
 	}
 	if m.enabled != nil {
 		fields = append(fields, sku.FieldEnabled)
@@ -20531,6 +20637,10 @@ func (m *SkuMutation) Field(name string) (ent.Value, bool) {
 		return m.Label()
 	case sku.FieldDes:
 		return m.Des()
+	case sku.FieldNameI18n:
+		return m.NameI18n()
+	case sku.FieldDesI18n:
+		return m.DesI18n()
 	case sku.FieldEnabled:
 		return m.Enabled()
 	case sku.FieldWeight:
@@ -20566,6 +20676,10 @@ func (m *SkuMutation) OldField(ctx context.Context, name string) (ent.Value, err
 		return m.OldLabel(ctx)
 	case sku.FieldDes:
 		return m.OldDes(ctx)
+	case sku.FieldNameI18n:
+		return m.OldNameI18n(ctx)
+	case sku.FieldDesI18n:
+		return m.OldDesI18n(ctx)
 	case sku.FieldEnabled:
 		return m.OldEnabled(ctx)
 	case sku.FieldWeight:
@@ -20655,6 +20769,20 @@ func (m *SkuMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetDes(v)
+		return nil
+	case sku.FieldNameI18n:
+		v, ok := value.(map[string]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNameI18n(v)
+		return nil
+	case sku.FieldDesI18n:
+		v, ok := value.(map[string]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDesI18n(v)
 		return nil
 	case sku.FieldEnabled:
 		v, ok := value.(bool)
@@ -20781,6 +20909,12 @@ func (m *SkuMutation) ClearedFields() []string {
 	if m.FieldCleared(sku.FieldDes) {
 		fields = append(fields, sku.FieldDes)
 	}
+	if m.FieldCleared(sku.FieldNameI18n) {
+		fields = append(fields, sku.FieldNameI18n)
+	}
+	if m.FieldCleared(sku.FieldDesI18n) {
+		fields = append(fields, sku.FieldDesI18n)
+	}
 	return fields
 }
 
@@ -20812,6 +20946,12 @@ func (m *SkuMutation) ClearField(name string) error {
 		return nil
 	case sku.FieldDes:
 		m.ClearDes()
+		return nil
+	case sku.FieldNameI18n:
+		m.ClearNameI18n()
+		return nil
+	case sku.FieldDesI18n:
+		m.ClearDesI18n()
 		return nil
 	}
 	return fmt.Errorf("unknown Sku nullable field %s", name)
@@ -20853,6 +20993,12 @@ func (m *SkuMutation) ResetField(name string) error {
 		return nil
 	case sku.FieldDes:
 		m.ResetDes()
+		return nil
+	case sku.FieldNameI18n:
+		m.ResetNameI18n()
+		return nil
+	case sku.FieldDesI18n:
+		m.ResetDesI18n()
 		return nil
 	case sku.FieldEnabled:
 		m.ResetEnabled()

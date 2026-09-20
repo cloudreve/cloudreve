@@ -36,6 +36,7 @@ import Add from "../../../Icons/Add.tsx";
 import Dismiss from "../../../Icons/Dismiss.tsx";
 import Edit from "../../../Icons/Edit.tsx";
 import SettingForm from "../../../Pages/Setting/SettingForm.tsx";
+import LocalizedFields from "../LocalizedFields.tsx";
 import { NoMarginHelperText } from "../Settings.tsx";
 
 const DAY_SECONDS = 86400;
@@ -54,6 +55,8 @@ interface SkuForm {
   points: number;
   label: string;
   des: string;
+  nameI18n: { [lang: string]: string };
+  desI18n: { [lang: string]: string };
   enabled: boolean;
 }
 
@@ -67,8 +70,12 @@ const emptyForm = (type: string): SkuForm => ({
   points: 0,
   label: "",
   des: "",
+  nameI18n: {},
+  desI18n: {},
   enabled: true,
 });
+
+const nonEmpty = (m: { [lang: string]: string }) => (Object.keys(m).length > 0 ? m : undefined);
 
 const SkuTable = ({ type }: SkuTableProps) => {
   const { t } = useTranslation("dashboard");
@@ -109,6 +116,8 @@ const SkuTable = ({ type }: SkuTableProps) => {
       points: s.points ?? 0,
       label: s.label ?? "",
       des: s.des ?? "",
+      nameI18n: s.name_i18n ?? {},
+      desI18n: s.des_i18n ?? {},
       enabled: s.enabled,
     });
   };
@@ -129,6 +138,8 @@ const SkuTable = ({ type }: SkuTableProps) => {
         points: form.allowPoints ? Math.max(1, form.points) : undefined,
         label: form.label || undefined,
         des: form.des || undefined,
+        name_i18n: nonEmpty(form.nameI18n),
+        des_i18n: nonEmpty(form.desI18n),
         enabled: form.enabled,
         weight: 0,
       }),
@@ -226,6 +237,10 @@ const SkuTable = ({ type }: SkuTableProps) => {
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                 />
                 <NoMarginHelperText>{t("vas.productNameDes")}</NoMarginHelperText>
+                <LocalizedFields
+                  value={JSON.stringify(form.nameI18n)}
+                  onChange={(v) => setForm({ ...form, nameI18n: JSON.parse(v) })}
+                />
               </SettingForm>
 
               {type === "storage" ? (
@@ -322,6 +337,12 @@ const SkuTable = ({ type }: SkuTableProps) => {
                   onChange={(e) => setForm({ ...form, des: e.target.value })}
                 />
                 <NoMarginHelperText>{t("vas.productDescriptionDes")}</NoMarginHelperText>
+                <LocalizedFields
+                  multiline
+                  rows={2}
+                  value={JSON.stringify(form.desI18n)}
+                  onChange={(v) => setForm({ ...form, desI18n: JSON.parse(v) })}
+                />
               </SettingForm>
 
               <SettingForm lgWidth={5}>

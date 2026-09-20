@@ -664,6 +664,8 @@ var (
 		{Name: "points", Type: field.TypeInt64, Nullable: true},
 		{Name: "label", Type: field.TypeString, Nullable: true},
 		{Name: "des", Type: field.TypeString, Nullable: true},
+		{Name: "name_i18n", Type: field.TypeJSON, Nullable: true},
+		{Name: "des_i18n", Type: field.TypeJSON, Nullable: true},
 		{Name: "enabled", Type: field.TypeBool, Default: true},
 		{Name: "weight", Type: field.TypeInt, Default: 0},
 	}

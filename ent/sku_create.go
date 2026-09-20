@@ -152,6 +152,18 @@ func (sc *SkuCreate) SetNillableDes(s *string) *SkuCreate {
 	return sc
 }
 
+// SetNameI18n sets the "name_i18n" field.
+func (sc *SkuCreate) SetNameI18n(m map[string]string) *SkuCreate {
+	sc.mutation.SetNameI18n(m)
+	return sc
+}
+
+// SetDesI18n sets the "des_i18n" field.
+func (sc *SkuCreate) SetDesI18n(m map[string]string) *SkuCreate {
+	sc.mutation.SetDesI18n(m)
+	return sc
+}
+
 // SetEnabled sets the "enabled" field.
 func (sc *SkuCreate) SetEnabled(b bool) *SkuCreate {
 	sc.mutation.SetEnabled(b)
@@ -347,6 +359,14 @@ func (sc *SkuCreate) createSpec() (*Sku, *sqlgraph.CreateSpec) {
 	if value, ok := sc.mutation.Des(); ok {
 		_spec.SetField(sku.FieldDes, field.TypeString, value)
 		_node.Des = value
+	}
+	if value, ok := sc.mutation.NameI18n(); ok {
+		_spec.SetField(sku.FieldNameI18n, field.TypeJSON, value)
+		_node.NameI18n = value
+	}
+	if value, ok := sc.mutation.DesI18n(); ok {
+		_spec.SetField(sku.FieldDesI18n, field.TypeJSON, value)
+		_node.DesI18n = value
 	}
 	if value, ok := sc.mutation.Enabled(); ok {
 		_spec.SetField(sku.FieldEnabled, field.TypeBool, value)
@@ -585,6 +605,42 @@ func (u *SkuUpsert) UpdateDes() *SkuUpsert {
 // ClearDes clears the value of the "des" field.
 func (u *SkuUpsert) ClearDes() *SkuUpsert {
 	u.SetNull(sku.FieldDes)
+	return u
+}
+
+// SetNameI18n sets the "name_i18n" field.
+func (u *SkuUpsert) SetNameI18n(v map[string]string) *SkuUpsert {
+	u.Set(sku.FieldNameI18n, v)
+	return u
+}
+
+// UpdateNameI18n sets the "name_i18n" field to the value that was provided on create.
+func (u *SkuUpsert) UpdateNameI18n() *SkuUpsert {
+	u.SetExcluded(sku.FieldNameI18n)
+	return u
+}
+
+// ClearNameI18n clears the value of the "name_i18n" field.
+func (u *SkuUpsert) ClearNameI18n() *SkuUpsert {
+	u.SetNull(sku.FieldNameI18n)
+	return u
+}
+
+// SetDesI18n sets the "des_i18n" field.
+func (u *SkuUpsert) SetDesI18n(v map[string]string) *SkuUpsert {
+	u.Set(sku.FieldDesI18n, v)
+	return u
+}
+
+// UpdateDesI18n sets the "des_i18n" field to the value that was provided on create.
+func (u *SkuUpsert) UpdateDesI18n() *SkuUpsert {
+	u.SetExcluded(sku.FieldDesI18n)
+	return u
+}
+
+// ClearDesI18n clears the value of the "des_i18n" field.
+func (u *SkuUpsert) ClearDesI18n() *SkuUpsert {
+	u.SetNull(sku.FieldDesI18n)
 	return u
 }
 
@@ -870,6 +926,48 @@ func (u *SkuUpsertOne) UpdateDes() *SkuUpsertOne {
 func (u *SkuUpsertOne) ClearDes() *SkuUpsertOne {
 	return u.Update(func(s *SkuUpsert) {
 		s.ClearDes()
+	})
+}
+
+// SetNameI18n sets the "name_i18n" field.
+func (u *SkuUpsertOne) SetNameI18n(v map[string]string) *SkuUpsertOne {
+	return u.Update(func(s *SkuUpsert) {
+		s.SetNameI18n(v)
+	})
+}
+
+// UpdateNameI18n sets the "name_i18n" field to the value that was provided on create.
+func (u *SkuUpsertOne) UpdateNameI18n() *SkuUpsertOne {
+	return u.Update(func(s *SkuUpsert) {
+		s.UpdateNameI18n()
+	})
+}
+
+// ClearNameI18n clears the value of the "name_i18n" field.
+func (u *SkuUpsertOne) ClearNameI18n() *SkuUpsertOne {
+	return u.Update(func(s *SkuUpsert) {
+		s.ClearNameI18n()
+	})
+}
+
+// SetDesI18n sets the "des_i18n" field.
+func (u *SkuUpsertOne) SetDesI18n(v map[string]string) *SkuUpsertOne {
+	return u.Update(func(s *SkuUpsert) {
+		s.SetDesI18n(v)
+	})
+}
+
+// UpdateDesI18n sets the "des_i18n" field to the value that was provided on create.
+func (u *SkuUpsertOne) UpdateDesI18n() *SkuUpsertOne {
+	return u.Update(func(s *SkuUpsert) {
+		s.UpdateDesI18n()
+	})
+}
+
+// ClearDesI18n clears the value of the "des_i18n" field.
+func (u *SkuUpsertOne) ClearDesI18n() *SkuUpsertOne {
+	return u.Update(func(s *SkuUpsert) {
+		s.ClearDesI18n()
 	})
 }
 
@@ -1331,6 +1429,48 @@ func (u *SkuUpsertBulk) UpdateDes() *SkuUpsertBulk {
 func (u *SkuUpsertBulk) ClearDes() *SkuUpsertBulk {
 	return u.Update(func(s *SkuUpsert) {
 		s.ClearDes()
+	})
+}
+
+// SetNameI18n sets the "name_i18n" field.
+func (u *SkuUpsertBulk) SetNameI18n(v map[string]string) *SkuUpsertBulk {
+	return u.Update(func(s *SkuUpsert) {
+		s.SetNameI18n(v)
+	})
+}
+
+// UpdateNameI18n sets the "name_i18n" field to the value that was provided on create.
+func (u *SkuUpsertBulk) UpdateNameI18n() *SkuUpsertBulk {
+	return u.Update(func(s *SkuUpsert) {
+		s.UpdateNameI18n()
+	})
+}
+
+// ClearNameI18n clears the value of the "name_i18n" field.
+func (u *SkuUpsertBulk) ClearNameI18n() *SkuUpsertBulk {
+	return u.Update(func(s *SkuUpsert) {
+		s.ClearNameI18n()
+	})
+}
+
+// SetDesI18n sets the "des_i18n" field.
+func (u *SkuUpsertBulk) SetDesI18n(v map[string]string) *SkuUpsertBulk {
+	return u.Update(func(s *SkuUpsert) {
+		s.SetDesI18n(v)
+	})
+}
+
+// UpdateDesI18n sets the "des_i18n" field to the value that was provided on create.
+func (u *SkuUpsertBulk) UpdateDesI18n() *SkuUpsertBulk {
+	return u.Update(func(s *SkuUpsert) {
+		s.UpdateDesI18n()
+	})
+}
+
+// ClearDesI18n clears the value of the "des_i18n" field.
+func (u *SkuUpsertBulk) ClearDesI18n() *SkuUpsertBulk {
+	return u.Update(func(s *SkuUpsert) {
+		s.ClearDesI18n()
 	})
 }
 

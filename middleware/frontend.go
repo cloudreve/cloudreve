@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
+	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
 	"github.com/cloudreve/Cloudreve/v4/pkg/util"
 	"github.com/gin-gonic/gin"
 	"io"
@@ -54,7 +55,7 @@ func FrontendFileHandler(dep dependency.Dep) gin.HandlerFunc {
 		if (path == "/index.html") || (path == "/") || !fs.Exists("/", path) {
 			// 读取、替换站点设置
 			settingClient := dep.SettingProvider()
-			siteBasic := settingClient.SiteBasic(c)
+			siteBasic := settingClient.SiteBasicLocalized(c, setting.ParseAcceptLanguage(c.GetHeader("Accept-Language")))
 			pwaOpts := settingClient.PWA(c)
 			theme := settingClient.Theme(c)
 			finalHTML := util.Replace(map[string]string{

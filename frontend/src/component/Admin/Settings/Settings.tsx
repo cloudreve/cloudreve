@@ -162,11 +162,15 @@ const Settings = () => {
                 <SettingsWrapper
                   settings={[
                     "siteName",
+                    "siteName_i18n",
                     "siteDes",
+                    "siteDes_i18n",
                     "siteURL",
                     "download_cdn_routes",
                     "download_cdn_shuffle",
                     "siteScript",
+                    "announcement",
+                    "announcement_i18n",
                     "pwa_small_icon",
                     "pwa_medium_icon",
                     "pwa_large_icon",

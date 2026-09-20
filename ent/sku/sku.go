@@ -37,6 +37,10 @@ const (
 	FieldLabel = "label"
 	// FieldDes holds the string denoting the des field in the database.
 	FieldDes = "des"
+	// FieldNameI18n holds the string denoting the name_i18n field in the database.
+	FieldNameI18n = "name_i18n"
+	// FieldDesI18n holds the string denoting the des_i18n field in the database.
+	FieldDesI18n = "des_i18n"
 	// FieldEnabled holds the string denoting the enabled field in the database.
 	FieldEnabled = "enabled"
 	// FieldWeight holds the string denoting the weight field in the database.
@@ -59,6 +63,8 @@ var Columns = []string{
 	FieldPoints,
 	FieldLabel,
 	FieldDes,
+	FieldNameI18n,
+	FieldDesI18n,
 	FieldEnabled,
 	FieldWeight,
 }
