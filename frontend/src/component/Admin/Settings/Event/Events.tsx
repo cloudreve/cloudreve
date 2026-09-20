@@ -74,7 +74,13 @@ export const eventCategories = {
   share: {
     title: "settings.shareEvents",
     description: "settings.shareEventsDes",
-    events: [AuditLogType.share, AuditLogType.share_link_viewed, AuditLogType.edit_share, AuditLogType.delete_share],
+    events: [
+      AuditLogType.share,
+      AuditLogType.share_link_viewed,
+      AuditLogType.edit_share,
+      AuditLogType.delete_share,
+      AuditLogType.content_audit_blocked,
+    ],
   },
   version: {
     title: "settings.versionEvents",

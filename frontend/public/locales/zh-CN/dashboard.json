@@ -790,7 +790,8 @@
       "report_abuse": "举报滥用",
       "oauth_grant_create": "OAuth 应用授权",
       "oauth_token_exchange": "OAuth 令牌交换",
-      "oauth_grant_revoke": "OAuth 应用授权撤销"
+      "oauth_grant_revoke": "OAuth 应用授权撤销",
+      "content_audit_blocked": "分享被内容审计拦截"
     },
     "server": "服务器设置",
     "tempPath": "临时路径",
@@ -1097,6 +1098,10 @@
     "maxTotalSizeDes": "此存储策略下可存储的文件总大小上限，超出后上传和复制将被拒绝。输入 0 表示不限制。",
     "overflowPolicy": "溢出存储策略",
     "overflowPolicyDes": "当此存储策略容量用尽时，新上传将自动切换到所选存储策略。支持多级链式溢出。",
+    "auditEndpoint": "内容审计端点",
+    "auditEndpointDes": "用于内容审计（鉴黄）的 HTTP 端点。设置后，分享此策略下的文件时会将文件内容 POST 到该端点；返回 {\"flagged\":true} 时阻止分享。留空表示不启用。",
+    "auditMaxSize": "审计大小上限",
+    "auditMaxSizeDes": "发送至审计端点的文件大小上限，超过此大小的文件跳过审计。输入 0 表示不限制。",
     "overflowNone": "无",
     "enterFileExt": "留空表示不限制文件扩展名，多个请以半角逗号 , 隔开。",
     "extList": "文件扩展名限制",

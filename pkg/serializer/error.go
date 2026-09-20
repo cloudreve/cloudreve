@@ -272,6 +272,10 @@ const (
 	CodeSmsCodeErr = 40095
 	// CodeFailedSendSms 短信发送失败
 	CodeFailedSendSms = 40096
+	// CodeContentAuditFailed 内容审核服务不可用或响应异常
+	CodeContentAuditFailed = 40097
+	// CodeContentAuditRejected 内容审核未通过
+	CodeContentAuditRejected = 40098
 	// CodeDBError 数据库操作失败
 	CodeDBError = 50001
 	// CodeEncryptError 加密失败

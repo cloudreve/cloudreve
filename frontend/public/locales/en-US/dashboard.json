@@ -790,7 +790,8 @@
       "report_abuse": "Report abuse",
       "oauth_grant_create": "OAuth App Authorization",
       "oauth_token_exchange": "OAuth Token Exchange",
-      "oauth_grant_revoke": "OAuth App Authorization Revoke"
+      "oauth_grant_revoke": "OAuth App Authorization Revoke",
+      "content_audit_blocked": "Share Blocked by Content Audit"
     },
     "server": "Server",
     "tempPath": "Temporary path",
@@ -1097,6 +1098,10 @@
     "maxTotalSizeDes": "Maximum total bytes stored under this policy. Uploads and copies that would exceed it are rejected. 0 means unlimited.",
     "overflowPolicy": "Overflow policy",
     "overflowPolicyDes": "When this policy is out of capacity, new uploads spill into the selected policy. Chains of policies are supported.",
+    "auditEndpoint": "Content audit endpoint",
+    "auditEndpointDes": "HTTP endpoint for content audit (e.g. image moderation). When set, sharing a file stored on this policy POSTs its content to the endpoint; a {\"flagged\":true} response blocks the share. Leave empty to disable.",
+    "auditMaxSize": "Audit size limit",
+    "auditMaxSizeDes": "Maximum entity size sent to the audit endpoint. Larger files are skipped. 0 means no limit.",
     "overflowNone": "None",
     "enterFileExt": "Separated by semi-colon commas, leave blank to allow all file extensions.",
     "extList": "File extension restrictions",
