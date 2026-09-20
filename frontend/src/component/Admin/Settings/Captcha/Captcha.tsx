@@ -11,6 +11,7 @@ import { SettingContext } from "../SettingWrapper.tsx";
 import CapCaptcha from "./CapCaptcha.tsx";
 import GraphicCaptcha from "./GraphicCaptcha.tsx";
 import ReCaptcha from "./ReCaptcha.tsx";
+import TCaptcha from "./TCaptcha.tsx";
 import TurnstileCaptcha from "./TurnstileCaptcha.tsx";
 
 const Captcha = () => {
@@ -132,6 +133,15 @@ const Captcha = () => {
                       {t("settings.reCaptchaV2")}
                     </ListItemText>
                   </SquareMenuItem>
+                  <SquareMenuItem value={CaptchaType.TCAPTCHA}>
+                    <ListItemText
+                      slotProps={{
+                        primary: { variant: "body2" },
+                      }}
+                    >
+                      {t("settings.tcaptcha")}
+                    </ListItemText>
+                  </SquareMenuItem>
                   <SquareMenuItem value={CaptchaType.TURNSTILE}>
                     <ListItemText
                       slotProps={{
@@ -159,6 +169,9 @@ const Captcha = () => {
             </Collapse>
             <Collapse in={values.captcha_type === CaptchaType.RECAPTCHA} unmountOnExit>
               <ReCaptcha setSettings={setSettings} values={values} />
+            </Collapse>
+            <Collapse in={values.captcha_type === CaptchaType.TCAPTCHA} unmountOnExit>
+              <TCaptcha setSettings={setSettings} values={values} />
             </Collapse>
             <Collapse in={values.captcha_type === CaptchaType.TURNSTILE} unmountOnExit>
               <TurnstileCaptcha setSettings={setSettings} values={values} />

@@ -4,7 +4,6 @@ import { User } from "./user.ts";
 export enum CaptchaType {
   NORMAL = "normal",
   RECAPTCHA = "recaptcha",
-  // Deprecated
   TCAPTCHA = "tcaptcha",
   TURNSTILE = "turnstile",
   CAP = "cap",
@@ -22,6 +21,7 @@ export interface SiteConfig {
   user?: User;
   captcha_ReCaptchaKey?: string;
   captcha_type?: CaptchaType;
+  tcaptcha_app_id?: string;
   turnstile_site_id?: string;
   captcha_cap_instance_url?: string;
   captcha_cap_site_key?: string;

@@ -34,7 +34,9 @@
       "human": "I'm a human",
       "verifying": "Verifying...",
       "verified": "You're a human"
-    }
+    },
+    "verify": "Click to verify",
+    "verified": "Verified"
   },
   "errors": {
     "401": "Please login.",
