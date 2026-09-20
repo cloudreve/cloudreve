@@ -150,6 +150,12 @@ export interface UserSettings {
   trash_retention?: number;
   preferred_policy?: string;
   oauth_grants?: OAuthGrant[];
+  linked_accounts?: LinkedAccount[];
+}
+
+export interface LinkedAccount {
+  provider: string;
+  created_at: string;
 }
 
 export interface OAuthGrant {

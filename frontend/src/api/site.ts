@@ -32,6 +32,7 @@ export interface SiteConfig {
   sso_enabled?: boolean;
   sso_display_name?: string;
   sso_auto_redirect?: boolean;
+  qq_connect_enabled?: boolean;
   download_cdn_routes?: { name: string; url: string }[];
   abuse_captcha?: boolean;
   allow_select_node?: boolean;

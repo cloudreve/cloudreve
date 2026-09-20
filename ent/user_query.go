@@ -23,6 +23,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/predicate"
 	"github.com/cloudreve/Cloudreve/v4/ent/share"
 	"github.com/cloudreve/Cloudreve/v4/ent/sharepurchase"
+	"github.com/cloudreve/Cloudreve/v4/ent/ssobinding"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
 	"github.com/cloudreve/Cloudreve/v4/ent/usergrant"
@@ -48,6 +49,7 @@ type UserQuery struct {
 	withRedeemedCodes  *GiftCodeQuery
 	withGrants         *UserGrantQuery
 	withSharePurchases *SharePurchaseQuery
+	withSSOBindings    *SsoBindingQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -370,6 +372,28 @@ func (uq *UserQuery) QuerySharePurchases() *SharePurchaseQuery {
 	return query
 }
 
+// QuerySSOBindings chains the current query on the "sso_bindings" edge.
+func (uq *UserQuery) QuerySSOBindings() *SsoBindingQuery {
+	query := (&SsoBindingClient{config: uq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := uq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := uq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(ssobinding.Table, ssobinding.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.SSOBindingsTable, user.SSOBindingsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // First returns the first User entity from the query.
 // Returns a *NotFoundError when no User was found.
 func (uq *UserQuery) First(ctx context.Context) (*User, error) {
@@ -575,6 +599,7 @@ func (uq *UserQuery) Clone() *UserQuery {
 		withRedeemedCodes:  uq.withRedeemedCodes.Clone(),
 		withGrants:         uq.withGrants.Clone(),
 		withSharePurchases: uq.withSharePurchases.Clone(),
+		withSSOBindings:    uq.withSSOBindings.Clone(),
 		// clone intermediate query.
 		sql:  uq.sql.Clone(),
 		path: uq.path,
@@ -724,6 +749,17 @@ func (uq *UserQuery) WithSharePurchases(opts ...func(*SharePurchaseQuery)) *User
 	return uq
 }
 
+// WithSSOBindings tells the query-builder to eager-load the nodes that are connected to
+// the "sso_bindings" edge. The optional arguments are used to configure the query builder of the edge.
+func (uq *UserQuery) WithSSOBindings(opts ...func(*SsoBindingQuery)) *UserQuery {
+	query := (&SsoBindingClient{config: uq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	uq.withSSOBindings = query
+	return uq
+}
+
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 //
@@ -802,7 +838,7 @@ func (uq *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	var (
 		nodes       = []*User{}
 		_spec       = uq.querySpec()
-		loadedTypes = [13]bool{
+		loadedTypes = [14]bool{
 			uq.withGroup != nil,
 			uq.withFiles != nil,
 			uq.withDavAccounts != nil,
@@ -816,6 +852,7 @@ func (uq *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 			uq.withRedeemedCodes != nil,
 			uq.withGrants != nil,
 			uq.withSharePurchases != nil,
+			uq.withSSOBindings != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -923,6 +960,13 @@ func (uq *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 		if err := uq.loadSharePurchases(ctx, query, nodes,
 			func(n *User) { n.Edges.SharePurchases = []*SharePurchase{} },
 			func(n *User, e *SharePurchase) { n.Edges.SharePurchases = append(n.Edges.SharePurchases, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := uq.withSSOBindings; query != nil {
+		if err := uq.loadSSOBindings(ctx, query, nodes,
+			func(n *User) { n.Edges.SSOBindings = []*SsoBinding{} },
+			func(n *User, e *SsoBinding) { n.Edges.SSOBindings = append(n.Edges.SSOBindings, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -1314,6 +1358,36 @@ func (uq *UserQuery) loadSharePurchases(ctx context.Context, query *SharePurchas
 		node, ok := nodeids[fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "buyer_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (uq *UserQuery) loadSSOBindings(ctx context.Context, query *SsoBindingQuery, nodes []*User, init func(*User), assign func(*User, *SsoBinding)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(ssobinding.FieldUserID)
+	}
+	query.Where(predicate.SsoBinding(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.SSOBindingsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.UserID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}

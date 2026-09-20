@@ -45,6 +45,9 @@ const (
 type ssoState struct {
 	Nonce    string
 	Redirect string
+	// LinkUserID is non-zero for account-link flows (QQ Connect): the
+	// resolved external identity binds to this user instead of signing in.
+	LinkUserID int
 }
 
 // SSOLoginService starts an inbound OIDC flow by redirecting the browser to

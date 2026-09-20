@@ -52,6 +52,9 @@ func TestMasterRouteWiring(t *testing.T) {
 		"PUT /api/v4/file/upload",
 		"POST /api/v4/file/upload/:sessionId/:index",
 		"POST /api/v4/share/purchase/:id",
+		"GET /api/v4/session/qq/login",
+		"GET /api/v4/session/qq/callback",
+		"DELETE /api/v4/user/setting/sso_binding/:provider",
 		"GET /f/:id/:name",
 	}
 	for _, e := range expected {

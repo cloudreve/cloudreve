@@ -56,6 +56,8 @@ type Tx struct {
 	SharePurchase *SharePurchaseClient
 	// Sku is the client for interacting with the Sku builders.
 	Sku *SkuClient
+	// SsoBinding is the client for interacting with the SsoBinding builders.
+	SsoBinding *SsoBindingClient
 	// StoragePolicy is the client for interacting with the StoragePolicy builders.
 	StoragePolicy *StoragePolicyClient
 	// Task is the client for interacting with the Task builders.
@@ -216,6 +218,7 @@ func (tx *Tx) init() {
 	tx.Share = NewShareClient(tx.config)
 	tx.SharePurchase = NewSharePurchaseClient(tx.config)
 	tx.Sku = NewSkuClient(tx.config)
+	tx.SsoBinding = NewSsoBindingClient(tx.config)
 	tx.StoragePolicy = NewStoragePolicyClient(tx.config)
 	tx.Task = NewTaskClient(tx.config)
 	tx.User = NewUserClient(tx.config)

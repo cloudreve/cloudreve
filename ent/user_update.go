@@ -23,6 +23,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/predicate"
 	"github.com/cloudreve/Cloudreve/v4/ent/share"
 	"github.com/cloudreve/Cloudreve/v4/ent/sharepurchase"
+	"github.com/cloudreve/Cloudreve/v4/ent/ssobinding"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
 	"github.com/cloudreve/Cloudreve/v4/ent/usergrant"
@@ -489,6 +490,21 @@ func (uu *UserUpdate) AddSharePurchases(s ...*SharePurchase) *UserUpdate {
 	return uu.AddSharePurchaseIDs(ids...)
 }
 
+// AddSSOBindingIDs adds the "sso_bindings" edge to the SsoBinding entity by IDs.
+func (uu *UserUpdate) AddSSOBindingIDs(ids ...int) *UserUpdate {
+	uu.mutation.AddSSOBindingIDs(ids...)
+	return uu
+}
+
+// AddSSOBindings adds the "sso_bindings" edges to the SsoBinding entity.
+func (uu *UserUpdate) AddSSOBindings(s ...*SsoBinding) *UserUpdate {
+	ids := make([]int, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return uu.AddSSOBindingIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uu *UserUpdate) Mutation() *UserMutation {
 	return uu.mutation
@@ -750,6 +766,27 @@ func (uu *UserUpdate) RemoveSharePurchases(s ...*SharePurchase) *UserUpdate {
 		ids[i] = s[i].ID
 	}
 	return uu.RemoveSharePurchaseIDs(ids...)
+}
+
+// ClearSSOBindings clears all "sso_bindings" edges to the SsoBinding entity.
+func (uu *UserUpdate) ClearSSOBindings() *UserUpdate {
+	uu.mutation.ClearSSOBindings()
+	return uu
+}
+
+// RemoveSSOBindingIDs removes the "sso_bindings" edge to SsoBinding entities by IDs.
+func (uu *UserUpdate) RemoveSSOBindingIDs(ids ...int) *UserUpdate {
+	uu.mutation.RemoveSSOBindingIDs(ids...)
+	return uu
+}
+
+// RemoveSSOBindings removes "sso_bindings" edges to SsoBinding entities.
+func (uu *UserUpdate) RemoveSSOBindings(s ...*SsoBinding) *UserUpdate {
+	ids := make([]int, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return uu.RemoveSSOBindingIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -1470,6 +1507,51 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if uu.mutation.SSOBindingsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SSOBindingsTable,
+			Columns: []string{user.SSOBindingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(ssobinding.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.RemovedSSOBindingsIDs(); len(nodes) > 0 && !uu.mutation.SSOBindingsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SSOBindingsTable,
+			Columns: []string{user.SSOBindingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(ssobinding.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.SSOBindingsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SSOBindingsTable,
+			Columns: []string{user.SSOBindingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(ssobinding.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, uu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{user.Label}
@@ -1937,6 +2019,21 @@ func (uuo *UserUpdateOne) AddSharePurchases(s ...*SharePurchase) *UserUpdateOne 
 	return uuo.AddSharePurchaseIDs(ids...)
 }
 
+// AddSSOBindingIDs adds the "sso_bindings" edge to the SsoBinding entity by IDs.
+func (uuo *UserUpdateOne) AddSSOBindingIDs(ids ...int) *UserUpdateOne {
+	uuo.mutation.AddSSOBindingIDs(ids...)
+	return uuo
+}
+
+// AddSSOBindings adds the "sso_bindings" edges to the SsoBinding entity.
+func (uuo *UserUpdateOne) AddSSOBindings(s ...*SsoBinding) *UserUpdateOne {
+	ids := make([]int, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return uuo.AddSSOBindingIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uuo *UserUpdateOne) Mutation() *UserMutation {
 	return uuo.mutation
@@ -2198,6 +2295,27 @@ func (uuo *UserUpdateOne) RemoveSharePurchases(s ...*SharePurchase) *UserUpdateO
 		ids[i] = s[i].ID
 	}
 	return uuo.RemoveSharePurchaseIDs(ids...)
+}
+
+// ClearSSOBindings clears all "sso_bindings" edges to the SsoBinding entity.
+func (uuo *UserUpdateOne) ClearSSOBindings() *UserUpdateOne {
+	uuo.mutation.ClearSSOBindings()
+	return uuo
+}
+
+// RemoveSSOBindingIDs removes the "sso_bindings" edge to SsoBinding entities by IDs.
+func (uuo *UserUpdateOne) RemoveSSOBindingIDs(ids ...int) *UserUpdateOne {
+	uuo.mutation.RemoveSSOBindingIDs(ids...)
+	return uuo
+}
+
+// RemoveSSOBindings removes "sso_bindings" edges to SsoBinding entities.
+func (uuo *UserUpdateOne) RemoveSSOBindings(s ...*SsoBinding) *UserUpdateOne {
+	ids := make([]int, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
+	}
+	return uuo.RemoveSSOBindingIDs(ids...)
 }
 
 // Where appends a list predicates to the UserUpdate builder.
@@ -2941,6 +3059,51 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(sharepurchase.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uuo.mutation.SSOBindingsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SSOBindingsTable,
+			Columns: []string{user.SSOBindingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(ssobinding.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.RemovedSSOBindingsIDs(); len(nodes) > 0 && !uuo.mutation.SSOBindingsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SSOBindingsTable,
+			Columns: []string{user.SSOBindingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(ssobinding.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.SSOBindingsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SSOBindingsTable,
+			Columns: []string{user.SSOBindingsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(ssobinding.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

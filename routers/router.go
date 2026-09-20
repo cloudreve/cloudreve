@@ -342,6 +342,19 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				)
 			}
 
+			// QQ Connect (non-OIDC OAuth2 provider)
+			qqRouter := session.Group("qq")
+			{
+				qqRouter.GET("login",
+					controllers.FromQuery[usersvc.QQLoginService](usersvc.QQLoginParameterCtx{}),
+					controllers.UserQQLogin,
+				)
+				qqRouter.GET("callback",
+					controllers.FromQuery[usersvc.QQCallbackService](usersvc.QQCallbackParameterCtx{}),
+					controllers.UserQQCallback,
+				)
+			}
+
 			oauthRouter := session.Group("oauth")
 			{
 				oauthRouter.GET("app/:app_id",
@@ -1519,6 +1532,12 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 						middleware.RateLimitByIP("email_change", 5, time.Hour),
 						controllers.FromJSON[usersvc.RequestEmailChangeService](usersvc.RequestEmailChangeParamCtx{}),
 						controllers.UserRequestEmailChange,
+					)
+					// 解除外部账号绑定（QQ Connect 等）
+					setting.DELETE("sso_binding/:provider",
+						middleware.RequiredScopes(types.ScopeUserSecurityInfoWrite),
+						controllers.FromUri[usersvc.SsoUnbindService](usersvc.SsoUnbindParameterCtx{}),
+						controllers.UserUnbindSso,
 					)
 				}
 

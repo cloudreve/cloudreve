@@ -33,6 +33,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent/share"
 	"github.com/cloudreve/Cloudreve/v4/ent/sharepurchase"
 	"github.com/cloudreve/Cloudreve/v4/ent/sku"
+	"github.com/cloudreve/Cloudreve/v4/ent/ssobinding"
 	"github.com/cloudreve/Cloudreve/v4/ent/storagepolicy"
 	"github.com/cloudreve/Cloudreve/v4/ent/task"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
@@ -118,6 +119,7 @@ func checkColumn(table, column string) error {
 			share.Table:          share.ValidColumn,
 			sharepurchase.Table:  sharepurchase.ValidColumn,
 			sku.Table:            sku.ValidColumn,
+			ssobinding.Table:     ssobinding.ValidColumn,
 			storagepolicy.Table:  storagepolicy.ValidColumn,
 			task.Table:           task.ValidColumn,
 			user.Table:           user.ValidColumn,
