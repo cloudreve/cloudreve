@@ -137,6 +137,59 @@ func TestAclEffectivePermissionsNoMatchIsNil(t *testing.T) {
 	require.Nil(t, res)
 }
 
+func TestAclSharedFileIDs(t *testing.T) {
+	client := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared")
+	t.Cleanup(func() { require.NoError(t, client.Close()) })
+	ctx := context.Background()
+	user, group, file := aclFixture(t, client)
+	c := NewAclClient(client, conf.SQLiteDB)
+
+	other := client.File.Create().SetName("other").SetType(int(types.FileTypeFolder)).SetOwner(user).SaveX(ctx)
+	writeOnly := client.File.Create().SetName("wo").SetType(int(types.FileTypeFolder)).SetOwner(user).SaveX(ctx)
+	everyoneFile := client.File.Create().SetName("ev").SetType(int(types.FileTypeFolder)).SetOwner(user).SaveX(ctx)
+
+	aclEntry(t, client, file.ID, aclentry.SubjectTypeUser, user.ID, types.AclPermRead)
+	aclEntry(t, client, file.ID, aclentry.SubjectTypeGroup, group.ID, types.AclPermCreate)
+	aclEntry(t, client, other.ID, aclentry.SubjectTypeGroup, group.ID, types.AclPermRead)
+	aclEntry(t, client, writeOnly.ID, aclentry.SubjectTypeUser, user.ID, types.AclPermCreate)
+	aclEntry(t, client, everyoneFile.ID, aclentry.SubjectTypeEveryone, 0, types.AclPermRead)
+
+	res, err := c.SharedFileIDs(ctx, user)
+	require.NoError(t, err)
+	require.Len(t, res, 2)
+
+	// Unioned perms across user + group rows.
+	require.True(t, res[file.ID].Enabled(int(types.AclPermRead)))
+	require.True(t, res[file.ID].Enabled(int(types.AclPermCreate)))
+	require.True(t, res[other.ID].Enabled(int(types.AclPermRead)))
+
+	// Anonymous gets no discovery listing.
+	anonRes, err := c.SharedFileIDs(ctx, &ent.User{ID: 0})
+	require.NoError(t, err)
+	require.Empty(t, anonRes)
+}
+
+func TestAclSharedFileIDsViaMembership(t *testing.T) {
+	client := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared")
+	t.Cleanup(func() { require.NoError(t, client.Close()) })
+	ctx := context.Background()
+	user, _, file := aclFixture(t, client)
+	c := NewAclClient(client, conf.SQLiteDB)
+
+	// Grant targets a group the user holds via membership, not primary.
+	team := client.Group.Create().SetName("team").SetPermissions(&boolset.BooleanSet{}).SaveX(ctx)
+	m := client.GroupMembership.Create().SetUserID(user.ID).SetGroupID(team.ID).SaveX(ctx)
+	m.Edges.Group = team
+	user.Edges.Memberships = []*ent.GroupMembership{m}
+
+	aclEntry(t, client, file.ID, aclentry.SubjectTypeGroup, team.ID, types.AclPermRead)
+
+	res, err := c.SharedFileIDs(ctx, user)
+	require.NoError(t, err)
+	require.Len(t, res, 1)
+	require.True(t, res[file.ID].Enabled(int(types.AclPermRead)))
+}
+
 func TestAclEffectivePermissionsExplicitEmptyRevokes(t *testing.T) {
 	client := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared")
 	t.Cleanup(func() { require.NoError(t, client.Close()) })

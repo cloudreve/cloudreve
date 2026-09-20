@@ -207,7 +207,7 @@
     "auto": "自动",
     "default": "默认",
     "shareWithMeEmpty": "没有找到别人的分享",
-    "shareWithMeEmptyDes": "如需要在此看到别人的分享，请在访问别人的分享链接时，在右上角将快捷方式保存到你的文件中的任意位置。",
+    "shareWithMeEmptyDes": "分享给你或你所在用户组的文件夹会自动出现在这里。你也可以在访问别人的分享链接时，在右上角将快捷方式保存到你的文件中。",
     "selectAll": "全选",
     "selectNone": "取消选择",
     "invertSelection": "反选",

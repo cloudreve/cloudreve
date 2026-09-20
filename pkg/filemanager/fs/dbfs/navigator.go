@@ -101,6 +101,9 @@ type (
 		Page           *inventory.PaginationArgs
 		Search         *inventory.SearchFileParameters
 		SharedWithMe   bool
+		// AclSharedIDs unions other owners' ACL-granted files into the
+		// SharedWithMe orphan listing; nil outside that filesystem.
+		AclSharedIDs   []int
 		StreamCallback func([]*File)
 	}
 	// ListResult is the result of a list operation.
@@ -186,11 +189,30 @@ func init() {
 		NavigatorCapabilityRestore:      true,
 		NavigatorCapabilityInfo:         true,
 	}, trashNavigatorCapability)
+	// Static superset admitting every action a group/user ACL grant may
+	// allow; the effective per-file set narrows to the ACL-derived
+	// capabilities once a shared subtree is resolved.
+	boolset.Sets(map[NavigatorCapability]bool{
+		NavigatorCapabilityCreateFile:     true,
+		NavigatorCapabilityRenameFile:     true,
+		NavigatorCapabilityUploadFile:     true,
+		NavigatorCapabilityDownloadFile:   true,
+		NavigatorCapabilityUpdateMetadata: true,
+		NavigatorCapabilityListChildren:   true,
+		NavigatorCapabilityGenerateThumb:  true,
+		NavigatorCapabilityDeleteFile:     true,
+		NavigatorCapabilityLockFile:       true,
+		NavigatorCapabilitySoftDelete:     true,
+		NavigatorCapabilityInfo:           true,
+		NavigatorCapabilityVersionControl: true,
+		NavigatorCapabilityEnterFolder:    true,
+		NavigatorCapabilityModifyProps:    true,
+	}, sharedWithMeNavigatorCapability)
 	boolset.Sets(map[NavigatorCapability]bool{
 		NavigatorCapabilityListChildren: true,
-		NavigatorCapabilityDownloadFile: true,
 		NavigatorCapabilityEnterFolder:  true,
-	}, sharedWithMeNavigatorCapability)
+		NavigatorCapabilityInfo:         true,
+	}, sharedWithMeRootCapability)
 }
 
 // ==================== Base Navigator ====================
@@ -296,6 +318,7 @@ func (b *baseNavigator) children(ctx context.Context, parent *File, args *ListAr
 	children, err := b.fileClient.GetChildFiles(ctx, &inventory.ListFileParameters{
 		PaginationArgs: args.Page,
 		SharedWithMe:   args.SharedWithMe,
+		AclSharedIDs:   args.AclSharedIDs,
 	}, b.user.ID, model)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get children: %w", err)
@@ -422,6 +445,7 @@ func (b *baseNavigator) search(ctx context.Context, parent *File, args *ListArgs
 			MixedType:      true,
 			Search:         args.Search,
 			SharedWithMe:   args.SharedWithMe,
+			AclSharedIDs:   args.AclSharedIDs,
 		}, b.user.ID, nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get children: %w", err)

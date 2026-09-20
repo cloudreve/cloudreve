@@ -999,7 +999,7 @@ func (f *DBFS) getNavigator(ctx context.Context, path *fs.URI, requiredCapabilit
 		case constants.FileSystemTrash:
 			n = NewTrashNavigator(f.user, f.fileClient, f.l, config, f.hasher)
 		case constants.FileSystemSharedWithMe:
-			n = NewSharedWithMeNavigator(f.user, f.fileClient, f.l, config, f.hasher)
+			n = NewSharedWithMeNavigator(f.user, f.fileClient, f.aclClient, f.l, config, f.hasher)
 		default:
 			return nil, fmt.Errorf("unknown file system %q", pathFs)
 		}
@@ -1045,6 +1045,14 @@ func (f *DBFS) navigatorId(path *fs.URI) string {
 		return fmt.Sprintf("%s/%s/%d", constants.FileSystemShare, path.ID(uidHashed), f.user.ID)
 	case constants.FileSystemTrash:
 		return fmt.Sprintf("%s/%s", constants.FileSystemTrash, path.ID(uidHashed))
+	case constants.FileSystemSharedWithMe:
+		// Per-subtree navigators keep the resolved ACL capability set from
+		// going stale when a request touches several shared roots.
+		scope := ""
+		if elements := path.Elements(); len(elements) > 0 {
+			scope = "/" + elements[0]
+		}
+		return fmt.Sprintf("%s%s/%d", constants.FileSystemSharedWithMe, scope, f.user.ID)
 	default:
 		return fmt.Sprintf("%s/%s/%d", path.FileSystem(), path.ID(uidHashed), f.user.ID)
 	}

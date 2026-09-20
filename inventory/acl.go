@@ -27,6 +27,12 @@ type (
 		// and group rows plus the everyone tier. Returns nil when no entry
 		// matches — callers then fall back to share-level defaults.
 		EffectivePermissions(ctx context.Context, fileID int, user *ent.User) (*boolset.BooleanSet, error)
+		// SharedFileIDs returns the unioned permissions per file for every
+		// entry explicitly granted to the user — user-subject rows matching
+		// their ID plus group-subject rows matching any of their effective
+		// groups. The everyone/anonymous tiers are not discovery grants and
+		// are excluded. Files whose union lacks the read bit are dropped.
+		SharedFileIDs(ctx context.Context, user *ent.User) (map[int]*boolset.BooleanSet, error)
 	}
 
 	UpsertAclEntryParams struct {
@@ -149,6 +155,52 @@ func (c *aclClient) EffectivePermissions(ctx context.Context, fileID int, user *
 	}
 	if !matched {
 		return nil, nil
+	}
+	return res, nil
+}
+
+func (c *aclClient) SharedFileIDs(ctx context.Context, user *ent.User) (map[int]*boolset.BooleanSet, error) {
+	if IsAnonymousUser(user) {
+		return nil, nil
+	}
+
+	entries, err := c.client.AclEntry.Query().
+		Where(aclentry.Or(
+			aclentry.And(
+				aclentry.SubjectTypeEQ(aclentry.SubjectTypeUser),
+				aclentry.SubjectIDEQ(user.ID),
+			),
+			aclentry.And(
+				aclentry.SubjectTypeEQ(aclentry.SubjectTypeGroup),
+				aclentry.SubjectIDIn(GroupIDsOf(user)...),
+			),
+		)).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query shared ACL entries: %w", err)
+	}
+
+	res := make(map[int]*boolset.BooleanSet, len(entries))
+	for _, e := range entries {
+		bs, ok := res[e.FileID]
+		if !ok {
+			bs = &boolset.BooleanSet{}
+			res[e.FileID] = bs
+		}
+		if e.Permissions == nil {
+			continue
+		}
+		for i := 0; i <= int(types.AclPermDelete); i++ {
+			if e.Permissions.Enabled(i) {
+				boolset.Set(i, true, bs)
+			}
+		}
+	}
+
+	for fileID, bs := range res {
+		if !bs.Enabled(int(types.AclPermRead)) {
+			delete(res, fileID)
+		}
 	}
 	return res, nil
 }
