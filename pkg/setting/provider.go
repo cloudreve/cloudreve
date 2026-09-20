@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand/v2"
+	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
@@ -262,6 +263,9 @@ type (
 		SSO(ctx context.Context) *SSO
 		QQConnect(ctx context.Context) *QQConnect
 		WeChatConnect(ctx context.Context) *WeChatConnect
+		// SmsGateway returns the generic HTTP SMS gateway config for
+		// phone verification codes.
+		SmsGateway(ctx context.Context) *SmsGateway
 		// EmailFilter returns the sign-up email restriction settings.
 		EmailFilter(ctx context.Context) *EmailFilter
 		// ShareDefaults returns the site-wide share defaults applied when a
@@ -1021,6 +1025,21 @@ func (s *settingProvider) WeChatConnect(ctx context.Context) *WeChatConnect {
 		AppID:           s.getString(ctx, "wechat_connect_app_id", ""),
 		AppSecret:       s.getString(ctx, "wechat_connect_app_secret", ""),
 		RegisterEnabled: s.getBoolean(ctx, "wechat_connect_register_enabled", true),
+	}
+}
+
+func (s *settingProvider) SmsGateway(ctx context.Context) *SmsGateway {
+	method := strings.ToUpper(s.getString(ctx, "sms_method", "POST"))
+	if method != http.MethodGet && method != http.MethodPost {
+		method = http.MethodPost
+	}
+	return &SmsGateway{
+		Enabled:         s.getBoolean(ctx, "sms_enabled", false),
+		Endpoint:        s.getString(ctx, "sms_endpoint", ""),
+		Method:          method,
+		Headers:         s.getString(ctx, "sms_headers", ""),
+		BodyTemplate:    s.getString(ctx, "sms_body_tpl", `{"phone":"{phone}","code":"{code}"}`),
+		RegisterEnabled: s.getBoolean(ctx, "sms_register_enabled", true),
 	}
 }
 

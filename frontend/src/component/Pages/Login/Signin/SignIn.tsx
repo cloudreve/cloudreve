@@ -13,6 +13,7 @@ import {
   sendLogin,
   sendPrepareLogin,
   sendResetEmail,
+  sendSmsLogin,
 } from "../../../../api/api.ts";
 import { ApiPrefix, AppError, Code } from "../../../../api/request.ts";
 import { AppRegistration, GrantService, LoginResponse, PrepareLoginResponse } from "../../../../api/user.ts";
@@ -31,6 +32,7 @@ import PhaseCollectPassword from "../Phases/PhaseCollectPassword.tsx";
 import PhaseConsent from "../Phases/PhaseConsent.tsx";
 import PhaseForgetPassword from "../Phases/PhaseForgetPassword.tsx";
 import PhaseSignupNeeded from "../Phases/PhaseSignupNeeded.tsx";
+import PhaseSmsLogin, { SmsLoginState } from "../Phases/PhaseSmsLogin.tsx";
 import "../SideTransition.css";
 
 // Local storage key for OAuth redirect
@@ -43,6 +45,7 @@ enum EmailLoginPhase {
   Collect2FA,
   ForgetPassword,
   Consent,
+  SmsLogin,
 }
 
 export interface Control {
@@ -96,6 +99,7 @@ const EmailLogin = ({ oauthConsent }: SignInProps) => {
   const [loading, setLoading] = useState(false);
   const captchaState = useRef<CaptchaParams>();
   const twoFaSession = useRef<string>("");
+  const smsState = useRef<SmsLoginState>({ phone: "", code: "" });
   const [loginOptions, setLoginOptions] = useState<PrepareLoginResponse>();
 
   // OAuth-specific state
@@ -234,6 +238,25 @@ const EmailLogin = ({ oauthConsent }: SignInProps) => {
     [dispatch, setPhase, setCaptchaGen, setLoading, t],
   );
 
+  const smsLogin = useCallback(async () => {
+    try {
+      setLoading(true);
+      const loginRes = await dispatch(sendSmsLogin({ phone: smsState.current.phone, code: smsState.current.code }));
+      if (isOAuthFlow) {
+        await handleOAuthSessionSwitch(loginRes);
+      } else {
+        dispatch(refreshUserSession(loginRes, query.get("redirect")));
+      }
+    } catch (e) {
+      if (e instanceof AppError && e.code === Code.Continue) {
+        twoFaSession.current = e.response.data;
+        setPhase(EmailLoginPhase.Collect2FA);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [dispatch, isOAuthFlow, handleOAuthSessionSwitch, query]);
+
   const finish2FA = useCallback(
     async (otp: string, ticket: string) => {
       try {
@@ -292,6 +315,9 @@ const EmailLogin = ({ oauthConsent }: SignInProps) => {
         break;
       case EmailLoginPhase.Consent:
         sendConsent();
+        break;
+      case EmailLoginPhase.SmsLogin:
+        smsLogin();
         break;
     }
   };
@@ -404,6 +430,14 @@ const EmailLogin = ({ oauthConsent }: SignInProps) => {
           previous: EmailLoginPhase.CollectEmail,
         };
         break;
+      case EmailLoginPhase.SmsLogin:
+        phaseSetting = {
+          title: t("login.smsSignIn"),
+          nextButtonText: t("login.signIn"),
+          showBackButton: true,
+          previous: EmailLoginPhase.CollectEmail,
+        };
+        break;
       default:
         break;
     }
@@ -503,6 +537,7 @@ const EmailLogin = ({ oauthConsent }: SignInProps) => {
                   setEmail={setEmail}
                   control={phaseConfig.control}
                   onOAuthPasskeyLogin={isOAuthFlow ? handleOAuthSessionSwitch : undefined}
+                  onSmsLogin={() => setPhase(EmailLoginPhase.SmsLogin)}
                 />
               )}
               {phase === EmailLoginPhase.Consent && app && (
@@ -519,6 +554,17 @@ const EmailLogin = ({ oauthConsent }: SignInProps) => {
                   email={email}
                   captchaGen={captchaGen}
                   setCaptchaState={(s) => (captchaState.current = s)}
+                  captchaState={captchaState}
+                  control={phaseConfig.control}
+                  onSmsResetDone={() => setPhase(EmailLoginPhase.CollectEmail)}
+                />
+              )}
+              {phase === EmailLoginPhase.SmsLogin && (
+                <PhaseSmsLogin
+                  setSmsState={(s) => (smsState.current = s)}
+                  captchaGen={captchaGen}
+                  setCaptchaState={(s) => (captchaState.current = s)}
+                  captchaState={captchaState}
                   control={phaseConfig.control}
                 />
               )}

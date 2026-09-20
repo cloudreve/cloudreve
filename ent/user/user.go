@@ -25,6 +25,8 @@ const (
 	FieldDeletedAt = "deleted_at"
 	// FieldEmail holds the string denoting the email field in the database.
 	FieldEmail = "email"
+	// FieldPhone holds the string denoting the phone field in the database.
+	FieldPhone = "phone"
 	// FieldNick holds the string denoting the nick field in the database.
 	FieldNick = "nick"
 	// FieldPassword holds the string denoting the password field in the database.
@@ -192,6 +194,7 @@ var Columns = []string{
 	FieldUpdatedAt,
 	FieldDeletedAt,
 	FieldEmail,
+	FieldPhone,
 	FieldNick,
 	FieldPassword,
 	FieldStatus,
@@ -235,6 +238,8 @@ var (
 	UpdateDefaultUpdatedAt func() time.Time
 	// EmailValidator is a validator for the "email" field. It is called by the builders before save.
 	EmailValidator func(string) error
+	// PhoneValidator is a validator for the "phone" field. It is called by the builders before save.
+	PhoneValidator func(string) error
 	// NickValidator is a validator for the "nick" field. It is called by the builders before save.
 	NickValidator func(string) error
 	// DefaultStorage holds the default value on creation for the "storage" field.
@@ -301,6 +306,11 @@ func ByDeletedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByEmail orders the results by the email field.
 func ByEmail(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldEmail, opts...).ToFunc()
+}
+
+// ByPhone orders the results by the phone field.
+func ByPhone(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPhone, opts...).ToFunc()
 }
 
 // ByNick orders the results by the nick field.

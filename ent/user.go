@@ -28,6 +28,8 @@ type User struct {
 	DeletedAt *time.Time `json:"deleted_at,omitempty"`
 	// Email holds the value of the "email" field.
 	Email string `json:"email,omitempty"`
+	// Phone holds the value of the "phone" field.
+	Phone *string `json:"phone,omitempty"`
 	// Nick holds the value of the "nick" field.
 	Nick string `json:"nick,omitempty"`
 	// Password holds the value of the "password" field.
@@ -238,7 +240,7 @@ func (*User) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case user.FieldID, user.FieldStorage, user.FieldCredits, user.FieldVaultFolder, user.FieldGroupUsers:
 			values[i] = new(sql.NullInt64)
-		case user.FieldEmail, user.FieldNick, user.FieldPassword, user.FieldStatus, user.FieldBanReason, user.FieldTwoFactorSecret, user.FieldVaultPassword, user.FieldAvatar:
+		case user.FieldEmail, user.FieldPhone, user.FieldNick, user.FieldPassword, user.FieldStatus, user.FieldBanReason, user.FieldTwoFactorSecret, user.FieldVaultPassword, user.FieldAvatar:
 			values[i] = new(sql.NullString)
 		case user.FieldCreatedAt, user.FieldUpdatedAt, user.FieldDeletedAt, user.FieldBanExpires, user.FieldLastLogin:
 			values[i] = new(sql.NullTime)
@@ -287,6 +289,13 @@ func (u *User) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field email", values[i])
 			} else if value.Valid {
 				u.Email = value.String
+			}
+		case user.FieldPhone:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field phone", values[i])
+			} else if value.Valid {
+				u.Phone = new(string)
+				*u.Phone = value.String
 			}
 		case user.FieldNick:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -503,6 +512,11 @@ func (u *User) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("email=")
 	builder.WriteString(u.Email)
+	builder.WriteString(", ")
+	if v := u.Phone; v != nil {
+		builder.WriteString("phone=")
+		builder.WriteString(*v)
+	}
 	builder.WriteString(", ")
 	builder.WriteString("nick=")
 	builder.WriteString(u.Nick)

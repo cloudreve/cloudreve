@@ -55,6 +55,8 @@ type SiteConfig struct {
 	SSOAutoRedirect  bool                `json:"sso_auto_redirect,omitempty"`
 	QQConnectEnabled bool                `json:"qq_connect_enabled,omitempty"`
 	WeChatEnabled    bool                `json:"wechat_connect_enabled,omitempty"`
+	// SmsEnabled tells the login UI to offer phone + code sign-in.
+	SmsEnabled bool `json:"sms_enabled,omitempty"`
 
 	// DownloadCDNRoutes exposes configured CDN mirror endpoints so clients
 	// can offer a download-route picker (#2987).
@@ -152,6 +154,7 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 			SSOAutoRedirect:  sso.AutoRedirect,
 			QQConnectEnabled: qq.Enabled && qq.AppID != "",
 			WeChatEnabled:    wx.Enabled && wx.AppID != "",
+			SmsEnabled:       settings.SmsGateway(c).Enabled && settings.SmsGateway(c).Endpoint != "",
 		}, nil
 	case "explorer":
 		explorerSettings := settings.ExplorerFrontendSettings(c)

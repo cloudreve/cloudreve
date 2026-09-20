@@ -117,6 +117,10 @@ import {
   SendResetEmailService,
   ShopSku,
   SignUpService,
+  SmsBindRequest,
+  SmsLoginRequest,
+  SmsResetRequest,
+  SmsSendCodeRequest,
   Token,
   TwoFALoginRequest,
   User,
@@ -1722,6 +1726,91 @@ export function sendResetEmail(req: SendResetEmailService): ThunkResponse<User> 
           ...defaultOpts,
           noCredential: true,
         },
+      ),
+    );
+  };
+}
+
+export function sendSmsCode(req: SmsSendCodeRequest): ThunkResponse<null> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/session/sms/send",
+        {
+          method: "POST",
+          data: req,
+        },
+        {
+          ...defaultOpts,
+          noCredential: true,
+        },
+      ),
+    );
+  };
+}
+
+export function sendSmsLogin(req: SmsLoginRequest): ThunkResponse<LoginResponse> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/session/sms/login",
+        {
+          method: "POST",
+          data: req,
+        },
+        {
+          ...defaultOpts,
+          noCredential: true,
+          bypassSnackbar: (e) => e instanceof AppError && e.code == Code.Continue,
+        },
+      ),
+    );
+  };
+}
+
+export function sendSmsReset(req: SmsResetRequest): ThunkResponse<User> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/user/reset_sms",
+        {
+          method: "POST",
+          data: req,
+        },
+        {
+          ...defaultOpts,
+          noCredential: true,
+        },
+      ),
+    );
+  };
+}
+
+export function bindPhone(req: SmsBindRequest): ThunkResponse<null> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/user/setting/phone",
+        {
+          method: "PUT",
+          data: req,
+        },
+        defaultOpts,
+      ),
+    );
+  };
+}
+
+export function unbindPhone(): ThunkResponse<null> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/user/setting/phone",
+        {
+          method: "DELETE",
+          data: {},
+        },
+        defaultOpts,
       ),
     );
   };

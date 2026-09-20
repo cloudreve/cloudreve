@@ -97,6 +97,61 @@ func UserLogin2FAValidation(c *gin.Context) {
 	c.Next()
 }
 
+// UserSmsLogin validates a phone verification code for sign-in
+func UserSmsLogin(c *gin.Context) {
+	service := ParametersFromContext[*user.SmsLoginService](c, user.SmsLoginParameterCtx{})
+	expectedUser, twoFaSession, err := service.Login(c)
+	if respondErr(c, err) {
+		return
+	}
+
+	if twoFaSession == "" {
+		util.WithValue(c, inventory.UserCtx{}, expectedUser)
+		c.Next()
+		return
+	}
+
+	c.JSON(200, serializer.Response{Code: serializer.CodeNotFullySuccess, Data: twoFaSession})
+	c.Abort()
+}
+
+// UserSendSmsCode dispatches an SMS verification code
+func UserSendSmsCode(c *gin.Context) {
+	service := ParametersFromContext[*user.SmsSendCodeService](c, user.SmsSendCodeParameterCtx{})
+	if err := service.Send(c); respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{})
+}
+
+// UserSmsReset resets password via a phone verification code
+func UserSmsReset(c *gin.Context) {
+	service := ParametersFromContext[*user.SmsResetService](c, user.SmsResetParameterCtx{})
+	res, err := service.Reset(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
+
+// UserBindPhone binds a verified phone number to the current user
+func UserBindPhone(c *gin.Context) {
+	service := ParametersFromContext[*user.SmsBindService](c, user.SmsBindParameterCtx{})
+	if err := service.Bind(c); respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{})
+}
+
+// UserUnbindPhone clears the current user's phone binding
+func UserUnbindPhone(c *gin.Context) {
+	service := ParametersFromContext[*user.SmsUnbindService](c, user.SmsUnbindParameterCtx{})
+	if err := service.Unbind(c); respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{})
+}
+
 // UserIssueToken generates new token pair for user
 func UserIssueToken(c *gin.Context) {
 	resp, err := user.IssueToken(c)

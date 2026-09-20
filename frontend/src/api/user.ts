@@ -155,6 +155,8 @@ export interface UserSettings {
   linked_accounts?: LinkedAccount[];
   vault_enabled: boolean;
   vault_unlocked: boolean;
+  // Bound mobile number, masked for display (e.g. "+86****34").
+  phone?: string;
 }
 
 export interface LinkedAccount {
@@ -267,6 +269,29 @@ export interface SendResetEmailService extends CaptchaRequest {
 export interface ResetPasswordService {
   password: string;
   secret: string;
+}
+
+export type SmsScene = "login" | "bind" | "reset";
+
+export interface SmsSendCodeRequest extends CaptchaRequest {
+  phone: string;
+  scene: SmsScene;
+}
+
+export interface SmsLoginRequest {
+  phone: string;
+  code: string;
+}
+
+export interface SmsResetRequest {
+  phone: string;
+  code: string;
+  password: string;
+}
+
+export interface SmsBindRequest {
+  phone: string;
+  code: string;
 }
 
 export enum ShareLinksInProfileLevel {

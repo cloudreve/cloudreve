@@ -105,6 +105,18 @@ type WeChatConnect struct {
 	RegisterEnabled bool
 }
 
+// SmsGateway holds the generic HTTP SMS gateway config used for phone
+// verification codes. Endpoint/BodyTemplate accept `{phone}` and `{code}`
+// placeholders; Headers is a newline-separated `Key: Value` list.
+type SmsGateway struct {
+	Enabled         bool
+	Endpoint        string
+	Method          string
+	Headers         string
+	BodyTemplate    string
+	RegisterEnabled bool
+}
+
 type EmailFilterMode int
 
 const (

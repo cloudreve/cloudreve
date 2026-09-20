@@ -43,6 +43,8 @@ type UserSettings struct {
 	VaultEnabled bool `json:"vault_enabled"`
 	// VaultUnlocked reports whether an unlock session is currently active.
 	VaultUnlocked bool `json:"vault_unlocked"`
+	// Phone is the bound mobile number, masked for display.
+	Phone string `json:"phone,omitempty"`
 }
 
 // LinkedAccount is an external identity bound to the local account
@@ -75,7 +77,17 @@ func BuildUserSettings(u *ent.User, passkeys []*ent.Passkey, parser *uaparser.Pa
 			return LinkedAccount{Provider: item.Provider, CreatedAt: item.CreatedAt}
 		}),
 		VaultEnabled: u.VaultFolder > 0,
+		Phone:        maskPhone(u.Phone),
 	}
+}
+
+// maskPhone redacts the middle of a bound phone number for display.
+func maskPhone(phone *string) string {
+	if phone == nil || len(*phone) < 5 {
+		return ""
+	}
+	p := *phone
+	return p[:3] + "****" + p[len(p)-2:]
 }
 
 type Passkey struct {

@@ -1,4 +1,4 @@
-import { Box, Divider, FormControl, Link, Stack } from "@mui/material";
+import { Box, Button, Divider, FormControl, Link, Stack } from "@mui/material";
 import { useEffect } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link as RouterLink } from "react-router-dom";
@@ -7,6 +7,7 @@ import { useAppSelector } from "../../../../redux/hooks.ts";
 import { useQuery } from "../../../../util";
 import { OutlineIconTextField } from "../../../Common/Form/OutlineIconTextField.tsx";
 import MailOutlined from "../../../Icons/MailOutlined.tsx";
+import PhoneLaptopOutlined from "../../../Icons/PhoneLaptopOutlined.tsx";
 import PasskeyLoginButton from "../Signin/PasskeyLoginButton.tsx";
 import QQLoginButton from "../Signin/QQLoginButton.tsx";
 import SSOLoginButton from "../Signin/SSOLoginButton.tsx";
@@ -50,18 +51,19 @@ interface PhaseCollectEmailProps {
   setEmail: (email: string) => void;
   control?: Control;
   onOAuthPasskeyLogin?: (response: LoginResponse) => void;
+  onSmsLogin?: () => void;
 }
 
-const PhaseCollectEmail = ({ email, setEmail, control, onOAuthPasskeyLogin }: PhaseCollectEmailProps) => {
+const PhaseCollectEmail = ({ email, setEmail, control, onOAuthPasskeyLogin, onSmsLogin }: PhaseCollectEmailProps) => {
   const { t } = useTranslation();
   const query = useQuery();
-  const { register_enabled, authn, sso_enabled, qq_connect_enabled } = useAppSelector(
+  const { register_enabled, authn, sso_enabled, qq_connect_enabled, sms_enabled } = useAppSelector(
     (state) => state.siteConfig.login.config,
   );
   const tos = useAppSelector((state) => state.siteConfig.login.config.tos_url);
   const privacyPolicy = useAppSelector((state) => state.siteConfig.login.config.privacy_policy_url);
 
-  const showFooter = tos || privacyPolicy || authn || sso_enabled || qq_connect_enabled;
+  const showFooter = tos || privacyPolicy || authn || sso_enabled || qq_connect_enabled || sms_enabled;
 
   useEffect(() => {
     if (!!query.get("email")) {
@@ -107,6 +109,11 @@ const PhaseCollectEmail = ({ email, setEmail, control, onOAuthPasskeyLogin }: Ph
             <SSOLoginButton />
             <QQLoginButton />
             <WeChatLoginButton />
+            {sms_enabled && onSmsLogin && (
+              <Button variant="outlined" startIcon={<PhoneLaptopOutlined />} onClick={onSmsLogin}>
+                {t("login.smsSignIn")}
+              </Button>
+            )}
           </Stack>
           <LegalLinks />
         </>

@@ -17,6 +17,13 @@ func (User) Fields() []ent.Field {
 		field.String("email").
 			MaxLen(100).
 			Unique(),
+		// phone is the mobile number used for SMS sign-in and password
+		// reset; NULL when the user never bound one.
+		field.String("phone").
+			MaxLen(20).
+			Optional().
+			Nillable().
+			Unique(),
 		field.String("nick").
 			MaxLen(100),
 		field.String("password").

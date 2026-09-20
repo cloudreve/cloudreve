@@ -56,6 +56,9 @@ type (
 		Create(ctx context.Context, args *NewUserArgs) (*ent.User, error)
 		// GetByEmail get the user with given email, user status is ignored.
 		GetByEmail(ctx context.Context, email string) (*ent.User, error)
+		// GetByPhone get the user with given phone number, user status is
+		// ignored; returns ent.IsNotFound-compatible error when unbound.
+		GetByPhone(ctx context.Context, phone string) (*ent.User, error)
 		// GetByID get user by its ID, user status is ignored.
 		GetByID(ctx context.Context, id int) (*ent.User, error)
 		// ListByIDs returns users for the given IDs, keyed by user ID.
@@ -92,6 +95,8 @@ type (
 		UpdateAvatar(ctx context.Context, u *ent.User, avatar string) (*ent.User, error)
 		// UpdateNickname updates user nickname.
 		UpdateNickname(ctx context.Context, u *ent.User, name string) (*ent.User, error)
+		// SetPhone binds a phone number to the user; empty clears the binding.
+		SetPhone(ctx context.Context, u *ent.User, phone string) (*ent.User, error)
 		// UpdatePassword updates user password.
 		UpdatePassword(ctx context.Context, u *ent.User, newPassword string) (*ent.User, error)
 		// UpdateVault sets or clears the user's private-space credential and
@@ -161,6 +166,7 @@ type (
 		GroupID       int
 		Avatar        string // Optional
 		Language      string // Optional
+		Phone         string // Optional, bound phone number
 	}
 	CreateStoragePackArgs struct {
 		UserID   int
@@ -179,6 +185,14 @@ func (c *userClient) CountByTimeRange(ctx context.Context, start, end *time.Time
 
 func (c *userClient) UpdateNickname(ctx context.Context, u *ent.User, name string) (*ent.User, error) {
 	return c.client.User.UpdateOne(u).SetNick(name).Save(ctx)
+}
+
+func (c *userClient) SetPhone(ctx context.Context, u *ent.User, phone string) (*ent.User, error) {
+	stm := c.client.User.UpdateOne(u)
+	if phone == "" {
+		return stm.ClearPhone().Save(ctx)
+	}
+	return stm.SetPhone(phone).Save(ctx)
 }
 
 func (c *userClient) UpdateAvatar(ctx context.Context, u *ent.User, avatar string) (*ent.User, error) {
@@ -513,6 +527,9 @@ func (c *userClient) Create(ctx context.Context, args *NewUserArgs) (*ent.User, 
 	if args.Language != "" {
 		userSetting.Language = args.Language
 	}
+	if args.Phone != "" {
+		query.SetPhone(args.Phone)
+	}
 	query.SetSettings(userSetting)
 
 	// Create user
@@ -533,6 +550,10 @@ func (c *userClient) Create(ctx context.Context, args *NewUserArgs) (*ent.User, 
 
 func (c *userClient) GetByEmail(ctx context.Context, email string) (*ent.User, error) {
 	return withUserEagerLoading(ctx, c.client.User.Query().Where(user.EmailEqualFold(email))).First(ctx)
+}
+
+func (c *userClient) GetByPhone(ctx context.Context, phone string) (*ent.User, error) {
+	return withUserEagerLoading(ctx, c.client.User.Query().Where(user.PhoneEQ(phone))).First(ctx)
 }
 
 func (c *userClient) GetByID(ctx context.Context, id int) (*ent.User, error) {

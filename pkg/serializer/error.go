@@ -266,6 +266,10 @@ const (
 
 	// CodeVaultLocked 私密空间未解锁
 	CodeVaultLocked = 40093
+	// CodeSmsCodeErr 短信验证码错误或已过期
+	CodeSmsCodeErr = 40095
+	// CodeFailedSendSms 短信发送失败
+	CodeFailedSendSms = 40096
 	// CodeDBError 数据库操作失败
 	CodeDBError = 50001
 	// CodeEncryptError 加密失败

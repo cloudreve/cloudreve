@@ -677,24 +677,28 @@ func init() {
 	userDescEmail := userFields[0].Descriptor()
 	// user.EmailValidator is a validator for the "email" field. It is called by the builders before save.
 	user.EmailValidator = userDescEmail.Validators[0].(func(string) error)
+	// userDescPhone is the schema descriptor for phone field.
+	userDescPhone := userFields[1].Descriptor()
+	// user.PhoneValidator is a validator for the "phone" field. It is called by the builders before save.
+	user.PhoneValidator = userDescPhone.Validators[0].(func(string) error)
 	// userDescNick is the schema descriptor for nick field.
-	userDescNick := userFields[1].Descriptor()
+	userDescNick := userFields[2].Descriptor()
 	// user.NickValidator is a validator for the "nick" field. It is called by the builders before save.
 	user.NickValidator = userDescNick.Validators[0].(func(string) error)
 	// userDescStorage is the schema descriptor for storage field.
-	userDescStorage := userFields[7].Descriptor()
+	userDescStorage := userFields[8].Descriptor()
 	// user.DefaultStorage holds the default value on creation for the storage field.
 	user.DefaultStorage = userDescStorage.Default.(int64)
 	// userDescCredits is the schema descriptor for credits field.
-	userDescCredits := userFields[8].Descriptor()
+	userDescCredits := userFields[9].Descriptor()
 	// user.DefaultCredits holds the default value on creation for the credits field.
 	user.DefaultCredits = userDescCredits.Default.(int64)
 	// userDescVaultFolder is the schema descriptor for vault_folder field.
-	userDescVaultFolder := userFields[11].Descriptor()
+	userDescVaultFolder := userFields[12].Descriptor()
 	// user.DefaultVaultFolder holds the default value on creation for the vault_folder field.
 	user.DefaultVaultFolder = userDescVaultFolder.Default.(int)
 	// userDescSettings is the schema descriptor for settings field.
-	userDescSettings := userFields[14].Descriptor()
+	userDescSettings := userFields[15].Descriptor()
 	// user.DefaultSettings holds the default value on creation for the settings field.
 	user.DefaultSettings = userDescSettings.Default.(*types.UserSetting)
 	usergrantMixin := schema.UserGrant{}.Mixin()

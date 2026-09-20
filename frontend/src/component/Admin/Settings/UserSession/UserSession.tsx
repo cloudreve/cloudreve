@@ -13,6 +13,7 @@ import SharesInput from "../../Common/SharesInput.tsx";
 import { NoMarginHelperText, SettingSection, SettingSectionContent } from "../Settings.tsx";
 import { SettingContext } from "../SettingWrapper.tsx";
 import QQConnectSettings from "./QQConnectSettings.tsx";
+import SmsGatewaySettings from "./SmsGatewaySettings.tsx";
 import SSOSettings from "./SSOSettings.tsx";
 import WeChatConnectSettings from "./WeChatConnectSettings.tsx";
 
@@ -310,6 +311,9 @@ const UserSession = () => {
             </SettingForm>
             <SettingForm lgWidth={5}>
               <WeChatConnectSettings />
+            </SettingForm>
+            <SettingForm lgWidth={5}>
+              <SmsGatewaySettings />
             </SettingForm>
           </SettingSectionContent>
         </SettingSection>

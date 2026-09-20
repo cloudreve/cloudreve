@@ -342,6 +342,27 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				)
 			}
 
+			// SMS verification-code sign-in
+			smsRouter := session.Group("sms")
+			{
+				// Send a verification code (login/bind/reset scenes)
+				smsRouter.POST("send",
+					middleware.RateLimitByIP("sms_send", 5, time.Minute),
+					middleware.CaptchaRequired(func(c *gin.Context) bool {
+						return dep.SettingProvider().LoginCaptchaEnabled(c)
+					}),
+					controllers.FromJSON[usersvc.SmsSendCodeService](usersvc.SmsSendCodeParameterCtx{}),
+					controllers.UserSendSmsCode,
+				)
+				// Sign in with phone + code
+				smsRouter.POST("login",
+					middleware.RateLimitByIP("sms_login", 10, time.Minute),
+					controllers.FromJSON[usersvc.SmsLoginService](usersvc.SmsLoginParameterCtx{}),
+					controllers.UserSmsLogin,
+					controllers.UserIssueToken,
+				)
+			}
+
 			// QQ Connect (non-OIDC OAuth2 provider)
 			qqRouter := session.Group("qq")
 			{
@@ -451,6 +472,12 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				}),
 				controllers.FromJSON[usersvc.UserResetEmailService](usersvc.UserResetEmailParameterCtx{}),
 				controllers.UserSendReset,
+			)
+			// 通过短信验证码重设密码
+			user.POST("reset_sms",
+				middleware.RateLimitByIP("reset_sms", 10, time.Minute),
+				controllers.FromJSON[usersvc.SmsResetService](usersvc.SmsResetParameterCtx{}),
+				controllers.UserSmsReset,
 			)
 			// 邮件激活 Done
 			user.GET("activate/:id",
@@ -1573,6 +1600,19 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 						middleware.RateLimitByIP("email_change", 5, time.Hour),
 						controllers.FromJSON[usersvc.RequestEmailChangeService](usersvc.RequestEmailChangeParamCtx{}),
 						controllers.UserRequestEmailChange,
+					)
+					// 绑定手机号（短信验证码校验）
+					setting.PUT("phone",
+						middleware.RequiredScopes(types.ScopeUserSecurityInfoWrite),
+						middleware.RateLimitByIP("phone_bind", 10, time.Hour),
+						controllers.FromJSON[usersvc.SmsBindService](usersvc.SmsBindParameterCtx{}),
+						controllers.UserBindPhone,
+					)
+					// 解绑手机号
+					setting.DELETE("phone",
+						middleware.RequiredScopes(types.ScopeUserSecurityInfoWrite),
+						controllers.FromJSON[usersvc.SmsUnbindService](usersvc.SmsUnbindParameterCtx{}),
+						controllers.UserUnbindPhone,
 					)
 					// 解除外部账号绑定（QQ Connect 等）
 					setting.DELETE("sso_binding/:provider",

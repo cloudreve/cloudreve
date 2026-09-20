@@ -15,16 +15,19 @@ import {
   useTheme,
 } from "@mui/material";
 import { useSnackbar } from "notistack";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import {
+  bindPhone,
   sendRevokeOAuthGrant,
+  sendSmsCode,
   sendUnbindSso,
   sendUpdateUserSetting,
   sendVaultDisable,
   sendVaultLock,
   sendVaultSetup,
+  unbindPhone,
 } from "../../../../api/api.ts";
 import { LinkedAccount, OAuthGrant, Passkey, UserSettings } from "../../../../api/user.ts";
 import { useAppDispatch, useAppSelector } from "../../../../redux/hooks.ts";
@@ -44,6 +47,7 @@ import Edit from "../../../Icons/Edit.tsx";
 import LockClosed from "../../../Icons/LockClosed.tsx";
 import LockClosedKey from "../../../Icons/LockClosedKey.tsx";
 import Open from "../../../Icons/Open.tsx";
+import PhoneLaptopOutlined from "../../../Icons/PhoneLaptopOutlined.tsx";
 import ShieldLock from "../../../Icons/ShieldLock.tsx";
 import { ProfileSettingProps } from "../ProfileSetting.tsx";
 import SettingForm from "../SettingForm.tsx";
@@ -406,6 +410,120 @@ const VaultSetting = ({ setting, setSetting }: ProfileSettingProps) => {
   );
 };
 
+const PHONE_RESEND_SECONDS = 60;
+
+const PhoneBinding = ({ setting, setSetting }: ProfileSettingProps) => {
+  const { t } = useTranslation();
+  const dispatch = useAppDispatch();
+  const [phone, setPhone] = useState("");
+  const [code, setCode] = useState("");
+  const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+
+  useEffect(() => {
+    if (countdown <= 0) {
+      return;
+    }
+    const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [countdown]);
+
+  const onSendCode = () => {
+    setSending(true);
+    dispatch(sendSmsCode({ phone, scene: "bind" }))
+      .then(() => setCountdown(PHONE_RESEND_SECONDS))
+      .finally(() => setSending(false));
+  };
+
+  const onBind = () => {
+    setLoading(true);
+    dispatch(bindPhone({ phone, code }))
+      .then(() => {
+        setSetting({ ...setting, phone });
+        setPhone("");
+        setCode("");
+      })
+      .finally(() => setLoading(false));
+  };
+
+  const onUnbind = () => {
+    dispatch(confirmOperation(t("setting.unbindPhoneConfirm"))).then(() => {
+      setLoading(true);
+      dispatch(unbindPhone())
+        .then(() => {
+          setSetting({ ...setting, phone: undefined });
+        })
+        .finally(() => setLoading(false));
+    });
+  };
+
+  return (
+    <SettingForm title={t("setting.phoneBinding")} lgWidth={5}>
+      {setting.phone ? (
+        <StyledOAuthGrantListItem sx={{ pr: "150px" }}>
+          <ListItemAvatar>
+            <Avatar>
+              <PhoneLaptopOutlined />
+            </Avatar>
+          </ListItemAvatar>
+          <StyledListItemText primary={setting.phone} />
+          <ListItemSecondaryAction>
+            <LoadingButton
+              loading={loading}
+              variant={"outlined"}
+              onClick={onUnbind}
+              startIcon={<Dismiss />}
+              color={"error"}
+            >
+              <span>{t("setting.unbindPhone")}</span>
+            </LoadingButton>
+          </ListItemSecondaryAction>
+        </StyledOAuthGrantListItem>
+      ) : (
+        <Stack spacing={2} sx={{ mt: 1 }}>
+          <DenseFilledTextField
+            required
+            label={t("login.phoneNumber")}
+            fullWidth
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            inputProps={{ type: "tel" }}
+          />
+          <Stack direction={"row"} spacing={1}>
+            <DenseFilledTextField
+              required
+              label={t("login.smsCode")}
+              fullWidth
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+            />
+            <SecondaryButton
+              variant={"outlined"}
+              disabled={sending || countdown > 0 || !phone}
+              onClick={onSendCode}
+              sx={{ whiteSpace: "nowrap" }}
+            >
+              {countdown > 0 ? t("login.resendSmsCode", { seconds: countdown }) : t("login.sendSmsCode")}
+            </SecondaryButton>
+          </Stack>
+          <Box>
+            <LoadingButton
+              variant={"contained"}
+              onClick={onBind}
+              loading={loading}
+              disabled={!phone || code.length !== 6}
+              startIcon={<PhoneLaptopOutlined />}
+            >
+              <span>{t("setting.bindPhone")}</span>
+            </LoadingButton>
+          </Box>
+        </Stack>
+      )}
+    </SettingForm>
+  );
+};
+
 const SecuritySetting = ({ setting, setSetting }: ProfileSettingProps) => {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -417,6 +535,7 @@ const SecuritySetting = ({ setting, setSetting }: ProfileSettingProps) => {
   const authEnabled = useAppSelector((s) => s.siteConfig.login.config.authn);
   const qqConnectEnabled = useAppSelector((s) => s.siteConfig.login.config.qq_connect_enabled);
   const wechatConnectEnabled = useAppSelector((s) => s.siteConfig.login.config.wechat_connect_enabled);
+  const smsEnabled = useAppSelector((s) => s.siteConfig.login.config.sms_enabled);
 
   const resetPwdFormRef = React.createRef<HTMLFormElement>();
   const [showResetPassword, setShowResetPassword] = useState(false);
@@ -652,6 +771,7 @@ const SecuritySetting = ({ setting, setSetting }: ProfileSettingProps) => {
           )}
         </SettingForm>
       )}
+      {smsEnabled && <PhoneBinding setting={setting} setSetting={setSetting} />}
       <VaultSetting setting={setting} setSetting={setSetting} />
       <Enable2FADialog open={enable2FAOpen} onClose={() => setEnable2FAOpen(false)} on2FAEnabled={on2FAChange(true)} />
       <Disable2FADialog
