@@ -688,7 +688,9 @@
     "deleteViewSetting": "删除视图设置",
     "shareTargets": "分享对象",
     "shareTargetsCount_one": "已选择 {{count}} 个项目",
-    "shareTargetsCount_other": "已选择 {{count}} 个项目"
+    "shareTargetsCount_other": "已选择 {{count}} 个项目",
+    "hideReadme": "隐藏 README 文件",
+    "hideReadmeDes": "在分享文件列表中隐藏 README 文件本身，访客仍可看到渲染后的说明内容。"
   },
   "uploader": {
     "fileCopyName": "副本_",

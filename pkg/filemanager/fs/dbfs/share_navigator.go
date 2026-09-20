@@ -3,6 +3,7 @@ package dbfs
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/cloudreve/Cloudreve/v4/application/constants"
 	"github.com/cloudreve/Cloudreve/v4/ent"
@@ -15,6 +16,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
 	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
+	"github.com/samber/lo"
 )
 
 var (
@@ -367,7 +369,26 @@ func (n *shareNavigator) Children(ctx context.Context, parent *File, args *ListA
 		}, nil
 	}
 
-	return n.baseNavigator.children(ctx, parent, args)
+	res, err := n.baseNavigator.children(ctx, parent, args)
+	if err != nil {
+		return nil, err
+	}
+
+	// Shares with a rendered readme can keep the file itself out of the
+	// listing; it stays reachable by direct path for the readme viewer.
+	if n.share != nil && n.share.Props != nil && n.share.Props.ShowReadMe && n.share.Props.HideReadMe {
+		res.Files = lo.Filter(res.Files, func(f *File, _ int) bool {
+			return !readMeFileNames[strings.ToUpper(f.Name())]
+		})
+	}
+	return res, nil
+}
+
+// readMeFileNames mirrors the frontend's detection priority list; entries
+// are uppercase for case-insensitive matching.
+var readMeFileNames = map[string]bool{
+	"README.MD":  true,
+	"README.TXT": true,
 }
 
 // linkSharedFile attaches a linked file of a multi-file share under the

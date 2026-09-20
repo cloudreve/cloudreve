@@ -124,6 +124,7 @@ type (
 		Expire          *time.Time
 		ShareView       bool
 		ShowReadMe      bool
+		HideReadMe      bool
 		AllowUpload     bool
 		AllowEdit       bool
 		PreviewOnly     bool
