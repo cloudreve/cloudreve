@@ -3,10 +3,13 @@ package dbfs
 import (
 	"context"
 	"fmt"
+	"math"
 	"regexp"
 	"strings"
 
 	"github.com/cloudreve/Cloudreve/v4/ent"
+	"github.com/cloudreve/Cloudreve/v4/ent/storagepolicy"
+	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/activity"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
@@ -147,4 +150,78 @@ func (f *DBFS) validatePolicyCapacityRaw(size int64, policy *ent.StoragePolicy, 
 		return fs.ErrInsufficientCapacity
 	}
 	return nil
+}
+
+// maxOverflowHops bounds the overflow-chain walk so misconfigured cycles or
+// long chains cannot spin the upload path.
+const maxOverflowHops = 16
+
+// overflowChain returns the ordered concrete policies an upload may spill
+// into: `policy` itself first, then each `overflow_policy_id` hop. Suspended
+// members are skipped; load-balance members resolve to a weighted child. The
+// walk stops at a missing hop, a cycle, or maxOverflowHops.
+func (f *DBFS) overflowChain(ctx context.Context, policy *ent.StoragePolicy) []*ent.StoragePolicy {
+	sc, _ := inventory.InheritTx(ctx, f.storagePolicyClient)
+	seen := map[int]bool{policy.ID: true}
+	chain := make([]*ent.StoragePolicy, 0, 4)
+	cur := policy
+	for hops := 0; cur != nil && hops < maxOverflowHops; hops++ {
+		if cur.Type == types.PolicyTypeLoadBalance {
+			if child, err := sc.ResolveLoadBalance(ctx, cur); err == nil &&
+				child.Status == storagepolicy.StatusActive && !seen[child.ID] {
+				seen[child.ID] = true
+				chain = append(chain, child)
+			}
+		} else if cur.Status == storagepolicy.StatusActive {
+			chain = append(chain, cur)
+		}
+
+		nextID := cur.Settings.OverflowPolicyID
+		if nextID == 0 || seen[nextID] {
+			break
+		}
+		seen[nextID] = true
+		next, err := sc.GetPolicyByID(ctx, nextID)
+		if err != nil {
+			break
+		}
+		cur = next
+	}
+	return chain
+}
+
+// resolveOverflowPolicy picks the first chain member with headroom for
+// `size` more bytes. When every member is full it returns the last one, so
+// the caller's own capacity check still reports the canonical error.
+func (f *DBFS) resolveOverflowPolicy(ctx context.Context, policy *ent.StoragePolicy, size int64) *ent.StoragePolicy {
+	chain := f.overflowChain(ctx, policy)
+	for _, p := range chain {
+		if err := f.validatePolicyCapacity(ctx, size, p); err == nil {
+			if p.ID != policy.ID {
+				f.l.Info("storage policy %q full, upload overflows to %q", policy.Name, p.Name)
+			}
+			return p
+		}
+	}
+	if len(chain) == 0 {
+		return policy
+	}
+	return chain[len(chain)-1]
+}
+
+// chainHeadroom returns the aggregate bytes still storable across the
+// policy's overflow chain; math.MaxInt64 when any member is uncapped.
+func (f *DBFS) chainHeadroom(ctx context.Context, policy *ent.StoragePolicy) (int64, error) {
+	total := int64(0)
+	for _, p := range f.overflowChain(ctx, policy) {
+		if p.Settings.MaxTotalSize <= 0 {
+			return math.MaxInt64, nil
+		}
+		_, used, err := f.fileClient.CountEntityByStoragePolicyID(ctx, p.ID)
+		if err != nil {
+			return 0, fmt.Errorf("failed to get storage policy usage: %w", err)
+		}
+		total += max(p.Settings.MaxTotalSize-int64(used), 0)
+	}
+	return total, nil
 }
