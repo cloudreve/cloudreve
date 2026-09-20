@@ -53,6 +53,11 @@ type (
 		FolderOnly bool
 		// SharedWithMe indicates whether to list files shared with the user
 		SharedWithMe bool
+		// AclSharedIDs carries file IDs the user may access through direct
+		// ACL grants (user/group subjects); unioned into the SharedWithMe
+		// orphan listing so ACL-shared folders surface next to saved share
+		// shortcuts.
+		AclSharedIDs []int
 		Search       *SearchFileParameters
 	}
 
@@ -1187,7 +1192,7 @@ func (f *fileClient) QueryMetadata(ctx context.Context, root *ent.File) error {
 }
 
 func (f *fileClient) GetChildFile(ctx context.Context, root *ent.File, ownerID int, child string, eagerLoading bool) (*ent.File, error) {
-	query := f.childFileQuery(ownerID, false, root)
+	query := f.childFileQuery(ownerID, false, nil, root)
 	if eagerLoading {
 		query = withFileEagerLoading(ctx, query)
 	}
@@ -1197,10 +1202,14 @@ func (f *fileClient) GetChildFile(ctx context.Context, root *ent.File, ownerID i
 }
 
 func (f *fileClient) GetChildFiles(ctx context.Context, args *ListFileParameters, ownerID int, roots ...*ent.File) (*ListFileResult, error) {
-	rawQuery := f.childFileQuery(ownerID, args.SharedWithMe, roots...)
+	rawQuery := f.childFileQuery(ownerID, args.SharedWithMe, args.AclSharedIDs, roots...)
 	query := withFileEagerLoading(ctx, rawQuery)
 	if args.Search != nil {
-		query = f.searchQuery(query, args.Search, roots, ownerID)
+		searchOwnerID := ownerID
+		if args.SharedWithMe {
+			searchOwnerID = -1
+		}
+		query = f.searchQuery(query, args.Search, roots, searchOwnerID)
 	}
 
 	var (

@@ -207,7 +207,7 @@
     "auto": "Auto",
     "default": "Default",
     "shareWithMeEmpty": "No shared files found",
-    "shareWithMeEmptyDes": "If you need to see others' shares here, please save the shortcut to any location in your files when you visit a shared link.",
+    "shareWithMeEmptyDes": "Folders shared with you or your groups appear here automatically. You can also save a shortcut while visiting someone's share link.",
     "selectAll": "Select all",
     "selectNone": "Select none",
     "invertSelection": "Invert selection",

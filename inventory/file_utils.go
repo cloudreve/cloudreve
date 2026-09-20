@@ -22,7 +22,11 @@ const (
 
 func (f *fileClient) searchQuery(q *ent.FileQuery, args *SearchFileParameters, parents []*ent.File, ownerId int) *ent.FileQuery {
 	if len(parents) == 1 && parents[0] == nil {
-		q = q.Where(file.OwnerID(ownerId))
+		// ownerId <= 0 skips the pin — the SharedWithMe union already
+		// scopes ownership and must not exclude other owners' grants.
+		if ownerId > 0 {
+			q = q.Where(file.OwnerID(ownerId))
+		}
 	} else {
 		q = q.Where(
 			file.HasParentWith(
@@ -115,7 +119,7 @@ func (f *fileClient) searchQuery(q *ent.FileQuery, args *SearchFileParameters, p
 }
 
 // ChildFileQuery generates query for child file(s) of a given set of root
-func (f *fileClient) childFileQuery(ownerID int, isSymbolic bool, root ...*ent.File) *ent.FileQuery {
+func (f *fileClient) childFileQuery(ownerID int, isSymbolic bool, aclSharedIDs []int, root ...*ent.File) *ent.FileQuery {
 	rawQuery := f.client.File.Query()
 	if len(root) == 1 && root[0] != nil {
 		// Query children of one single root
@@ -126,13 +130,24 @@ func (f *fileClient) childFileQuery(ownerID int, isSymbolic bool, root ...*ent.F
 			file.NameNEQ(RootFolderName),
 		}
 
-		if ownerID > 0 {
-			predicates = append(predicates, file.OwnerIDEQ(ownerID))
-		}
-
 		if isSymbolic {
-			predicates = append(predicates, file.And(file.IsSymbolic(true), file.FileChildrenNotNil()))
+			// "Shared with me" unions the user's own symbolic share
+			// shortcuts with other owners' files granted to them via ACL.
+			shared := []predicate.File{
+				file.And(
+					file.IsSymbolic(true),
+					file.FileChildrenNotNil(),
+					file.OwnerIDEQ(ownerID),
+				),
+			}
+			if len(aclSharedIDs) > 0 {
+				shared = append(shared, file.IDIn(aclSharedIDs...))
+			}
+			predicates = append(predicates, file.Or(shared...))
 		} else {
+			if ownerID > 0 {
+				predicates = append(predicates, file.OwnerIDEQ(ownerID))
+			}
 			predicates = append(predicates, file.Not(file.HasParent()))
 		}
 
