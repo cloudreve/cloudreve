@@ -33,6 +33,55 @@
 - **Tests and CI are real.** GitHub Actions run backend tests, frontend typecheck/build, and the
   desktop matrix (Windows/macOS/Linux) on every PR.
 
+## Migrating from upstream Cloudreve
+
+This fork is a drop-in replacement: same 4.19.x schema baseline, same `/cloudreve/data` volume
+layout, same `CR_CONF_*` env vars, same port 5212. Existing accounts, files, shares, and settings
+carry over — schema migrations run automatically on first boot. Back up your data volume and
+database first, as with any upgrade.
+
+**Docker Compose** — one command (backs up your compose file, swaps the image, restarts):
+
+```bash
+curl -sSL https://raw.githubusercontent.com/Dvorinka/cloudreve/master/migrate.sh | sh -s -- /path/to/compose/dir
+```
+
+Or edit `docker-compose.yml` by hand — only the image changes, everything else stays identical to
+the [upstream compose setup](https://github.com/cloudreve/docker-compose):
+
+```diff
+ services:
+   cloudreve:
+-    image: cloudreve/cloudreve:v4
++    image: ghcr.io/dvorinka/cloudreve:latest
+```
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+**Plain docker** — same flags, new image:
+
+```bash
+docker stop cloudreve && docker rm cloudreve
+docker run -d --name cloudreve --restart unless-stopped \
+  -p 5212:5212 -v backend_data:/cloudreve/data \
+  ghcr.io/dvorinka/cloudreve:latest
+```
+
+**Binary** — stop the service, drop in the binary from
+[Releases](https://github.com/Dvorinka/cloudreve/releases), start. Your `data/` directory
+(SQLite, uploads, `conf.ini`) is untouched.
+
+Notes:
+
+- Tags: `latest` / `slim` track the newest release; pin `ghcr.io/dvorinka/cloudreve:v4.19.2` for
+  reproducibility. Slim drops aria2, LibreOffice, ffmpeg, and font/media tooling.
+- `CR_LICENSE_KEY` has no effect — Pro-class features are reimplemented as free features; the key
+  is simply ignored.
+- Migration is supported from upstream ≤ 4.19.x. If you run a newer upstream than our latest
+  release, wait for the next tag rather than downgrading the schema.
+
 ## Repository layout
 
 ```
