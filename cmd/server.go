@@ -31,9 +31,13 @@ var serverCmd = &cobra.Command{
 
 		server.PrintBanner()
 
-		// Graceful shutdown after received signal.
+		// Graceful shutdown after received signal. SIGHUP (terminal hangup)
+		// is explicitly ignored: its default disposition terminates the
+		// process, which kills servers accidentally left running in an SSH
+		// session. Use SIGINT/SIGTERM/SIGQUIT to stop the server.
 		sigChan := make(chan os.Signal, 1)
-		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
+		signal.Ignore(syscall.SIGHUP)
+		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
 		go shutdown(sigChan, logger, server)
 
 		if err := server.Start(); err != nil {

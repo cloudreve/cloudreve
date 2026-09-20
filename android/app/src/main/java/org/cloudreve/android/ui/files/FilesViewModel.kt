@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.cloudreve.android.api.FileObject
 import org.cloudreve.android.api.SearchHit
+import org.cloudreve.android.data.FavoriteEntry
+import org.cloudreve.android.data.FavoritesStore
 import org.cloudreve.android.data.FileRepository
 import org.cloudreve.android.util.CrUri
 import java.io.File
@@ -28,12 +30,27 @@ data class FilesUiState(
     val searchLoading: Boolean = false,
     val searchLoadingMore: Boolean = false,
     val searchError: String? = null,
-)
+    val favorites: List<FavoriteEntry> = emptyList(),
+    val favoriteSaving: Boolean = false,
+) {
+    val favoritePaths: Set<String> get() = favorites.map { it.path }.toSet()
+}
 
-class FilesViewModel(private val repo: FileRepository) : ViewModel() {
+class FilesViewModel(
+    private val repo: FileRepository,
+    private val favorites: FavoritesStore,
+) : ViewModel() {
 
     private val _state = MutableStateFlow(FilesUiState())
     val state: StateFlow<FilesUiState> = _state
+
+    init {
+        viewModelScope.launch {
+            favorites.entries.collect { list ->
+                _state.value = _state.value.copy(favorites = list)
+            }
+        }
+    }
 
     fun refresh() {
         val uri = _state.value.currentUri
@@ -165,12 +182,73 @@ class FilesViewModel(private val repo: FileRepository) : ViewModel() {
     }
 
     /** Downloads into app cache and returns the file for the caller to open/share. */
-    suspend fun downloadToCache(context: Context, file: FileObject): File {
+    suspend fun downloadToCache(context: Context, file: FileObject): File =
+        downloadTo(File(context.cacheDir, "downloads"), file, file.name)
+
+    /** Saves the file under filesDir/offline and registers it as a favorite. */
+    fun toggleFavorite(context: Context, file: FileObject) {
+        if (file.isFolder) return
+        val existing = _state.value.favorites.firstOrNull { it.path == file.path }
+        if (existing != null) {
+            removeFavorite(existing)
+            return
+        }
+        if (_state.value.favoriteSaving) return
+        _state.value = _state.value.copy(favoriteSaving = true)
+        viewModelScope.launch {
+            runCatching {
+                val local = downloadTo(
+                    File(context.filesDir, "offline"),
+                    file,
+                    "${file.path.hashCode()}_${file.name}",
+                )
+                favorites.put(
+                    FavoriteEntry(
+                        path = file.path,
+                        name = file.name,
+                        size = file.size,
+                        localFile = local.absolutePath,
+                        savedAt = System.currentTimeMillis(),
+                        remoteUpdatedAt = file.updatedAt,
+                    )
+                )
+            }
+                .onSuccess { _state.value = _state.value.copy(snackbar = "Saved for offline") }
+                .onFailure { _state.value = _state.value.copy(snackbar = it.message) }
+            _state.value = _state.value.copy(favoriteSaving = false)
+        }
+    }
+
+    /** Re-downloads a favorite to refresh its local copy. */
+    fun refreshFavorite(context: Context, entry: FavoriteEntry) {
+        viewModelScope.launch {
+            runCatching {
+                val url = repo.downloadUrl(entry.path)
+                val resp = repo.download(url)
+                if (!resp.isSuccessful) throw Exception("Download failed: HTTP ${resp.code()}")
+                val out = File(entry.localFile)
+                resp.body()!!.byteStream().use { input ->
+                    FileOutputStream(out).use { input.copyTo(it) }
+                }
+                favorites.put(entry.copy(savedAt = System.currentTimeMillis()))
+            }
+                .onFailure { _state.value = _state.value.copy(snackbar = it.message) }
+        }
+    }
+
+    fun removeFavorite(entry: FavoriteEntry) {
+        viewModelScope.launch {
+            File(entry.localFile).delete()
+            favorites.remove(entry.path)
+        }
+    }
+
+    private suspend fun downloadTo(dir: File, file: FileObject, name: String): File {
         val url = repo.downloadUrl(file.path)
         val resp = repo.download(url)
         if (!resp.isSuccessful) throw Exception("Download failed: HTTP ${resp.code()}")
-        val dir = File(context.cacheDir, "downloads").apply { mkdirs() }
-        val out = File(dir, file.name)
+        dir.mkdirs()
+        val out = File(dir, name)
         resp.body()!!.byteStream().use { input ->
             FileOutputStream(out).use { input.copyTo(it) }
         }
