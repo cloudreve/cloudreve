@@ -81,8 +81,10 @@ import org.cloudreve.android.CloudreveApp
 import org.cloudreve.android.api.FileObject
 import org.cloudreve.android.data.CameraUploadSettings
 import org.cloudreve.android.data.FavoriteEntry
+import org.cloudreve.android.data.SyncFolderSettings
 import org.cloudreve.android.util.CrUri
 import org.cloudreve.android.work.CameraUploadWorker
+import org.cloudreve.android.work.SyncFolderWorker
 import org.cloudreve.android.work.TaskPollWorker
 import org.cloudreve.android.work.UploadWorker
 import java.text.DecimalFormat
@@ -212,7 +214,7 @@ fun FilesScreen(
                             )
                         }
                         IconButton(onClick = { cameraSettingsOpen = true }) {
-                            Icon(Icons.Default.Settings, contentDescription = "Camera backup")
+                            Icon(Icons.Default.Settings, contentDescription = "Backup & sync")
                         }
                         IconButton(onClick = { mkdirOpen = true }) {
                             Icon(Icons.Default.CreateNewFolder, contentDescription = "New folder")
@@ -561,11 +563,32 @@ private fun CameraUploadDialog(onDismiss: () -> Unit) {
     val app = context.applicationContext as CloudreveApp
     val settings = app.cameraUploadSettings
     val notifySettings = app.taskNotifySettings
+    val syncSettings = app.syncFolderSettings
     val scope = rememberCoroutineScope()
     val snap by settings.snapshot.collectAsState(initial = null)
     val notifyEnabled by notifySettings.enabled.collectAsState(initial = false)
+    val syncSnap by syncSettings.snapshot.collectAsState(initial = null)
     var folderText by remember(snap?.remoteFolder) {
         mutableStateOf(snap?.remoteFolder ?: CameraUploadSettings.DEFAULT_FOLDER)
+    }
+    var syncFolderText by remember(syncSnap?.remoteFolder) {
+        mutableStateOf(syncSnap?.remoteFolder ?: SyncFolderSettings.DEFAULT_FOLDER)
+    }
+
+    val treeLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            context.contentResolver.takePersistableUriPermission(
+                uri, Intent.FLAG_GRANT_READ_URI_PERMISSION,
+            )
+            scope.launch {
+                syncSettings.setTreeUri(uri.toString())
+                syncSettings.setRemoteFolder(syncFolderText)
+                syncSettings.setEnabled(true)
+                SyncFolderWorker.apply(context, syncSnap?.wifiOnly ?: true)
+            }
+        }
     }
 
     val notifPermLauncher = rememberLauncherForActivityResult(
@@ -593,7 +616,7 @@ private fun CameraUploadDialog(onDismiss: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Camera backup") },
+        title = { Text("Backup & sync") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(
@@ -685,19 +708,86 @@ private fun CameraUploadDialog(onDismiss: () -> Unit) {
                         },
                     )
                 }
+                HorizontalDivider()
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Mirror a local folder", Modifier.weight(1f))
+                    Switch(
+                        checked = syncSnap?.enabled == true && syncSnap?.treeUri != null,
+                        onCheckedChange = { want ->
+                            if (want) {
+                                treeLauncher.launch(null)
+                            } else {
+                                scope.launch {
+                                    syncSettings.setEnabled(false)
+                                    SyncFolderWorker.cancel(context)
+                                }
+                            }
+                        },
+                    )
+                }
+                syncSnap?.treeUri?.let {
+                    Text(
+                        "Local: " + android.net.Uri.parse(it).lastPathSegment.orEmpty(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                OutlinedTextField(
+                    value = syncFolderText,
+                    onValueChange = { syncFolderText = it },
+                    label = { Text("Remote folder (sync)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Sync Wi-Fi only", Modifier.weight(1f))
+                    Switch(
+                        checked = syncSnap?.wifiOnly ?: true,
+                        onCheckedChange = { wifiOnly ->
+                            scope.launch {
+                                syncSettings.setWifiOnly(wifiOnly)
+                                if (syncSnap?.enabled == true) {
+                                    SyncFolderWorker.apply(context, wifiOnly)
+                                }
+                            }
+                        },
+                    )
+                }
+                syncSnap?.lastSyncAt?.takeIf { it > 0 }?.let {
+                    Text(
+                        "Last folder sync: " + java.text.DateFormat.getDateTimeInstance(
+                            java.text.DateFormat.SHORT, java.text.DateFormat.SHORT,
+                        ).format(java.util.Date(it)),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         },
         confirmButton = {
             TextButton(onClick = {
                 scope.launch {
                     settings.setRemoteFolder(folderText)
+                    syncSettings.setRemoteFolder(syncFolderText)
                     CameraUploadWorker.syncNow(context, snap?.wifiOnly ?: true)
+                    if (syncSnap?.enabled == true) {
+                        SyncFolderWorker.syncNow(context, syncSnap?.wifiOnly ?: true)
+                    }
                 }
             }) { Text("Sync now") }
         },
         dismissButton = {
             TextButton(onClick = {
-                scope.launch { settings.setRemoteFolder(folderText) }
+                scope.launch {
+                    settings.setRemoteFolder(folderText)
+                    syncSettings.setRemoteFolder(syncFolderText)
+                }
                 onDismiss()
             }) { Text("Done") }
         },
