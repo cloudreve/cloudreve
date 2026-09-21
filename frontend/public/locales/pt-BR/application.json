@@ -529,7 +529,7 @@
     "everyone": "Todos os outros",
     "otherGroup": "Outros grupos",
     "sameGroup": "Mesmo grupo que eu",
-    "anonymous": "Visitantes anônimos",
+    "anonymous": "Anônimo",
     "noResults": "Nenhum resultado",
     "searchGroupUser": "Buscar por e-mails ou grupos...",
     "resetToDefault": "Redefinir para padrão",
@@ -664,7 +664,8 @@
     "viewSetting": "Configuração de visualização",
     "saved": "Salvo",
     "notSet": "Não definido",
-    "deleteViewSetting": "Excluir configuração de visualização"
+    "deleteViewSetting": "Excluir configuração de visualização",
+    "shareTargetsCount": "{{count}} destinos"
   },
   "uploader": {
     "fileCopyName": "Cópia de ",
@@ -1110,7 +1111,12 @@
     "report": "Denunciar abuso",
     "reportTarget": "Alvo da denúncia",
     "reportReason": "Razão",
-    "reportReasonOptions": ["Violação de direitos autorais", "Conteúdo prejudicial", "Spam", "Outro"],
+    "reportReasonOptions": [
+      "Violação de direitos autorais",
+      "Conteúdo prejudicial",
+      "Spam",
+      "Outro"
+    ],
     "reportDescription": "Descrição adicional",
     "reportAbuseSuccess": "Denúncia enviada.",
     "migrateStoragePolicy": "Migrar política de armazenamento",

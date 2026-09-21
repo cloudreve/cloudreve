@@ -1422,7 +1422,8 @@
     "otherConditions": "Inne warunki",
     "shareLinkExisted": "Posiada link udostępniania",
     "directLinkExisted": "Posiada link bezpośredni",
-    "isUploading": "Jest przesyłany"
+    "isUploading": "Jest przesyłany",
+    "selectUser": "Wybierz użytkownika"
   },
   "entity": {
     "refenenceCount": "Liczba odniesień",

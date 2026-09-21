@@ -125,7 +125,7 @@ const Uploader = () => {
       if (e instanceof UploaderError) {
         enqueueSnackbar(e.Message(), { variant: "warning" });
       } else {
-        enqueueSnackbar(t("uploader:unknownError", { msg: e.message }), {
+        enqueueSnackbar(t("application:uploader.unknownError", { msg: e.message }), {
           variant: "error",
         });
       }

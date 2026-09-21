@@ -61,7 +61,11 @@
     "overwriteRemote": "Overwrite remote",
     "saveAsNew": "Save as new",
     "keepAllRemote": "Keep all remote",
-    "overwriteAllRemote": "Overwrite all remote"
+    "overwriteAllRemote": "Overwrite all remote",
+    "justNow": "Just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago"
   },
   "settings": {
     "title": "Settings",
@@ -159,5 +163,19 @@
     "cancel": "Cancel",
     "done": "Done",
     "copied": "Link copied to clipboard"
+  },
+  "update": {
+    "title": "Software Update",
+    "available": "Version {{version}} is available (you have {{current}}).",
+    "downloading": "Downloading update…",
+    "ready": "Update installed — restart to apply.",
+    "upToDate": "You're up to date.",
+    "failed": "Update check failed.",
+    "updateNow": "Update now",
+    "later": "Later",
+    "restart": "Restart now",
+    "close": "Close",
+    "checkNow": "Check for updates",
+    "downloadManually": "Download manually"
   }
 }

@@ -116,5 +116,6 @@
     "40072": "Sei amministratore, non puoi acquistare altri gruppi.",
     "40084": "Il tuo account è senza password, devi mantenere almeno un account collegato.",
     "40085": "L'importo totale di questo ordine è troppo piccolo per il checkout."
-  }
+  },
+  "save": "Salva"
 }

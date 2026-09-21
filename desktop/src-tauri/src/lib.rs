@@ -190,6 +190,29 @@ async fn init_sync_service(app: AppHandle) -> anyhow::Result<()> {
         event_broadcaster.no_drive();
     }
 
+    // Check GitHub releases for a newer desktop build in the background. The
+    // prompt is shown once per version; dismissing it snoozes until the next
+    // release. Failures (offline, no updater artifact for this platform) are
+    // silent — the About page still offers a manual check.
+    {
+        let app = app.clone();
+        tauri::async_runtime::spawn(async move {
+            use tauri_plugin_updater::UpdaterExt;
+
+            tokio::time::sleep(std::time::Duration::from_secs(8)).await;
+            let Ok(updater) = app.updater() else { return };
+            let Ok(Some(update)) = updater.check().await else { return };
+
+            let config = ConfigManager::get().get_config();
+            if config.prompted_update_version.as_deref() == Some(update.version.as_str()) {
+                return;
+            }
+            let _ = ConfigManager::get()
+                .update(|c| c.prompted_update_version = Some(update.version.clone()));
+            commands::show_update_window_impl(&app);
+        });
+    }
+
     tracing::info!(target: "main", "Tauri application setup complete");
 
     Ok(())
@@ -472,6 +495,7 @@ pub fn run() {
 
     builder
         .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_prevent_default::debug())
@@ -532,6 +556,10 @@ pub fn run() {
             commands::get_file_icon,
             commands::show_file_in_explorer,
             commands::create_share,
+            commands::check_update,
+            commands::install_update,
+            commands::restart_app,
+            commands::show_update_window,
             commands::show_add_drive_window,
             commands::show_reauthorize_window,
             commands::show_settings_window,

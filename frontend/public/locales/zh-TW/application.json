@@ -611,7 +611,9 @@
     "viewSetting": "視圖設定",
     "saved": "已保存",
     "notSet": "未設定",
-    "deleteViewSetting": "刪除視圖設定"
+    "deleteViewSetting": "刪除視圖設定",
+    "anonymous": "匿名",
+    "shareTargetsCount": "{{count}} 個目標"
   },
   "uploader": {
     "fileCopyName": "副本_",
@@ -991,7 +993,12 @@
     "validDurationDays": "{{num}} 天",
     "reportTarget": "舉報對象",
     "reportReason": "原因",
-    "reportReasonOptions": ["侵權", "有害內容", "垃圾訊息", "其他"],
+    "reportReasonOptions": [
+      "侵權",
+      "有害內容",
+      "垃圾訊息",
+      "其他"
+    ],
     "reportDescription": "補充說明",
     "reportAbuseSuccess": "舉報已提交"
   }

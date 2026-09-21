@@ -102,5 +102,6 @@
     "50005": "Błąd wewnętrzny.",
     "50010": "Żądany węzeł jest niedostępny.",
     "50011": "Nie udało się pobrać metadanych pliku."
-  }
+  },
+  "save": "Zapisz"
 }

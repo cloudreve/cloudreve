@@ -698,12 +698,13 @@
     "notSet": "Not set",
     "deleteViewSetting": "Delete view setting",
     "shareTargets": "Share targets",
-    "shareTargetsCount_one": "{{count}} file selected",
-    "shareTargetsCount_other": "{{count}} files selected",
+    "shareTargetsCount_one": "{{count}} target",
+    "shareTargetsCount_other": "{{count}} targets",
     "publicListing": "List in public directory",
     "publicListingDes": "Show this share on the Discover page, visible to anyone including anonymous visitors. Not available for password-protected shares.",
     "hideReadme": "Hide readme file",
-    "hideReadmeDes": "Keep the README file itself out of the share listing. Visitors still see the rendered readme."
+    "hideReadmeDes": "Keep the README file itself out of the share listing. Visitors still see the rendered readme.",
+    "anonymous": "Anonymous"
   },
   "uploader": {
     "fileCopyName": "Copy of ",

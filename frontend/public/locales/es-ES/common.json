@@ -116,5 +116,6 @@
     "40072": "Eres administrador, no puedes comprar otro grupo.",
     "40084": "Tu cuenta no tiene contraseña, debes mantener al menos una cuenta vinculada.",
     "40085": "El monto total de esta orden es demasiado pequeño para el pago."
-  }
+  },
+  "save": "Guardar"
 }

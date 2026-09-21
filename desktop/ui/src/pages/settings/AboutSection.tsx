@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { Box, Typography, Link, Chip, Stack } from "@mui/material";
+import { Box, Typography, Link, Chip, Stack, Button } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { getVersion } from "@tauri-apps/api/app";
+import { invoke } from "@tauri-apps/api/core";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import BugReportIcon from "@mui/icons-material/BugReportRounded";
 import ForumIcon from "@mui/icons-material/ForumRounded";
+import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt";
 import logo from "../../assets/cloudreve.svg";
 import { HomeRounded } from "@mui/icons-material";
 
@@ -33,12 +35,12 @@ export default function AboutSection() {
     {
       icon: <GitHubIcon fontSize="small" />,
       label: "GitHub",
-      href: "https://github.com/cloudreve/desktop",
+      href: "https://github.com/Dvorinka/cloudreve",
     },
     {
       icon: <BugReportIcon fontSize="small" />,
       label: t("about.reportIssue"),
-      href: "https://github.com/cloudreve/desktop/issues",
+      href: "https://github.com/Dvorinka/cloudreve/issues",
     },
     {
       icon: <ForumIcon fontSize="small" />,
@@ -78,6 +80,16 @@ export default function AboutSection() {
           </Stack>
         </Box>
       </Stack>
+
+      <Button
+        variant="outlined"
+        size="small"
+        startIcon={<SystemUpdateAltIcon />}
+        onClick={() => invoke("show_update_window")}
+        sx={{ width: "fit-content", mb: 2 }}
+      >
+        {t("update.checkNow")}
+      </Button>
 
       <Stack spacing={1}>
         {links.map((link) => (

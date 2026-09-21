@@ -6,6 +6,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory
+import com.google.android.play.core.appupdate.AppUpdateOptions
+import com.google.android.play.core.install.model.AppUpdateType
+import com.google.android.play.core.install.model.UpdateAvailability
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -18,6 +23,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import kotlinx.coroutines.launch
 import org.cloudreve.android.api.RefreshTokenRequest
 import org.cloudreve.android.ui.files.FilesScreen
@@ -30,11 +38,47 @@ import org.cloudreve.android.work.UploadWorker
 
 class MainActivity : ComponentActivity() {
 
+    private val updateLauncher =
+        registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         handleShareIntent(intent)
         setContent { App() }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        checkForPlayUpdate()
+    }
+
+    // Ask Play for an update; if one is available and this install came from
+    // Play, surface the in-app prompt once per version, then hand off to the
+    // official IMMEDIATE update sheet.
+    private fun checkForPlayUpdate() {
+        val manager = AppUpdateManagerFactory.create(this)
+        manager.appUpdateInfo.addOnSuccessListener { info ->
+            if (info.updateAvailability() != UpdateAvailability.UPDATE_AVAILABLE ||
+                !info.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)
+            ) return@addOnSuccessListener
+            val version = info.availableVersionCode()
+            val prefs = getSharedPreferences("updates", MODE_PRIVATE)
+            if (prefs.getInt("prompted_version", -1) == version) return@addOnSuccessListener
+            prefs.edit().putInt("prompted_version", version).apply()
+            (application as CloudreveApp).playUpdateAvailable.value = info
+        }
+    }
+
+    fun launchPlayUpdate() {
+        val info = (application as CloudreveApp).playUpdateAvailable.value ?: return
+        runCatching {
+            AppUpdateManagerFactory.create(this).startUpdateFlowForResult(
+                info,
+                updateLauncher,
+                AppUpdateOptions.newBuilder(AppUpdateType.IMMEDIATE).build(),
+            )
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -103,6 +147,25 @@ fun App() {
     }
 
     CloudreveTheme {
+        val updateInfo by app.playUpdateAvailable.collectAsState()
+        if (updateInfo != null) {
+            AlertDialog(
+                onDismissRequest = { app.playUpdateAvailable.value = null },
+                title = { Text("Update available") },
+                text = { Text("A new version of Cloudreve Mobile is available on Google Play.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        app.playUpdateAvailable.value = null
+                        (context as? MainActivity)?.launchPlayUpdate()
+                    }) { Text("Update") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { app.playUpdateAvailable.value = null }) {
+                        Text("Later")
+                    }
+                },
+            )
+        }
         when (loggedIn) {
             null -> Unit // session store still loading; keep frame empty
             false -> NavHost(navController = nav, startDestination = "login") {

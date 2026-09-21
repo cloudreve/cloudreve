@@ -1611,7 +1611,8 @@
     "isUploading": "Is uploading",
     "deletedState": "Deleted state",
     "liveOnly": "Live files only",
-    "trashOnly": "Trash only"
+    "trashOnly": "Trash only",
+    "selectUser": "Select user"
   },
   "entity": {
     "refenenceCount": "Reference count",

@@ -599,7 +599,9 @@
     "viewSetting": "اعدادات العرض",
     "saved": "تم الحفظ",
     "notSet": "لم يتم تعيينه",
-    "deleteViewSetting": "حذف اعدادات العرض"
+    "deleteViewSetting": "حذف اعدادات العرض",
+    "anonymous": "مجهول",
+    "shareTargetsCount": "{{count}} من الوجهات"
   },
   "uploader": {
     "fileCopyName": "نسخة من ",
@@ -979,7 +981,12 @@
     "validDurationDays": "{{num}} يوم",
     "reportTarget": "الذي تريد الإبلاغ عنه",
     "reportReason": "السبب",
-    "reportReasonOptions": ["انتهاك حقوق الطبع والنشر", "محتوى ضار", "غير المرغوب به", "أخرى"],
+    "reportReasonOptions": [
+      "انتهاك حقوق الطبع والنشر",
+      "محتوى ضار",
+      "غير المرغوب به",
+      "أخرى"
+    ],
     "reportDescription": "وصف إضافي",
     "reportAbuseSuccess": "تم رفع التقرير."
   }

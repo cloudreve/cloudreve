@@ -61,7 +61,7 @@ export const getTaskStatusText = (status: TaskStatus, t: TFunction) => {
     case TaskStatus.completed:
       return t("application:setting.finished");
     default:
-      return t("application:uplaoder.unknownStatus");
+      return t("application:uploader.unknownStatus");
   }
 };
 

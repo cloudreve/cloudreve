@@ -1422,7 +1422,8 @@
     "otherConditions": "Другие условия",
     "shareLinkExisted": "Существует ссылка для общего доступа",
     "directLinkExisted": "Существует прямая ссылка",
-    "isUploading": "Загружается"
+    "isUploading": "Загружается",
+    "selectUser": "Выбрать пользователя"
   },
   "entity": {
     "refenenceCount": "Количество ссылок",
@@ -1468,7 +1469,8 @@
     "rawContent": "Исходная запись",
     "confirmDelete": "Подтвердите удаление этого события?",
     "deleteXEvents": "Удалить {{num}} событий",
-    "confirmBatchDelete": "Подтвердите удаление {{num}} событий?"
+    "confirmBatchDelete": "Подтвердите удаление {{num}} событий?",
+    "allEventTypes": "Все типы событий"
   },
   "share": {
     "confirmBatchDelete": "Подтвердите удаление {{num}} общих доступов?",

@@ -611,7 +611,9 @@
     "viewSetting": "Ustawienia widoku",
     "saved": "Zapisano",
     "notSet": "Nieustawione",
-    "deleteViewSetting": "Usuń ustawienia widoku"
+    "deleteViewSetting": "Usuń ustawienia widoku",
+    "anonymous": "Anonimowy",
+    "shareTargetsCount": "{{count}} cele"
   },
   "uploader": {
     "fileCopyName": "Kopia ",
@@ -994,7 +996,12 @@
     "validDurationDays": "{{num}} dni",
     "reportTarget": "Cel zgłoszenia",
     "reportReason": "Powód",
-    "reportReasonOptions": ["Naruszenie praw autorskich", "Szkodliwa treść", "Spam", "Inne"],
+    "reportReasonOptions": [
+      "Naruszenie praw autorskich",
+      "Szkodliwa treść",
+      "Spam",
+      "Inne"
+    ],
     "reportDescription": "Dodatkowy opis",
     "reportAbuseSuccess": "Zgłoszenie przesłane."
   }

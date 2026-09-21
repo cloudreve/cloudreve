@@ -1,6 +1,6 @@
 [package]
 name = "cloudreve-desktop"
-version = "0.2.0"
+version = "0.3.0"
 description = "Cloudreve Desktop Sync Client"
 authors = ["cloudreve"]
 license = ""
@@ -44,6 +44,7 @@ tauri-plugin-deep-link = "2.4.9"
 tauri-plugin-dialog = "2.7.1"
 tauri-plugin-prevent-default = "4"
 tauri-plugin-os = "2"
+tauri-plugin-updater = "2"
 tauri-plugin-frame = "1.1.6"
 
 [target.'cfg(windows)'.dependencies.windows]

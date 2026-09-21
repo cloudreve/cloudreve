@@ -1428,7 +1428,8 @@
     "otherConditions": "Andere Bedingungen",
     "shareLinkExisted": "Hat Freigabe-Link",
     "directLinkExisted": "Hat direkten Link",
-    "isUploading": "Wird hochgeladen"
+    "isUploading": "Wird hochgeladen",
+    "selectUser": "Benutzer auswählen"
   },
   "entity": {
     "refenenceCount": "Referenzzähler",
@@ -1474,7 +1475,8 @@
     "rawContent": "Roher Inhalt",
     "confirmDelete": "Sind Sie sicher, dass Sie dieses Ereignis löschen möchten?",
     "deleteXEvents": "{{num}} Ereignisse löschen",
-    "confirmBatchDelete": "Sind Sie sicher, dass Sie {{num}} Ereignisse löschen möchten?"
+    "confirmBatchDelete": "Sind Sie sicher, dass Sie {{num}} Ereignisse löschen möchten?",
+    "allEventTypes": "Alle Ereignistypen"
   },
   "share": {
     "confirmBatchDelete": "Sind Sie sicher, dass Sie {{num}} Freigaben löschen möchten?",

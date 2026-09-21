@@ -61,7 +61,11 @@
     "overwriteRemote": "覆盖远程版本",
     "saveAsNew": "另存为新文件",
     "keepAllRemote": "全部保留远程",
-    "overwriteAllRemote": "全部覆盖远程"
+    "overwriteAllRemote": "全部覆盖远程",
+    "justNow": "刚刚",
+    "minutesAgo": "{{count}} 分钟前",
+    "hoursAgo": "{{count}} 小时前",
+    "daysAgo": "{{count}} 天前"
   },
   "settings": {
     "title": "设置",
@@ -159,5 +163,19 @@
     "cancel": "取消",
     "done": "完成",
     "copied": "链接已复制到剪贴板"
+  },
+  "update": {
+    "title": "软件更新",
+    "available": "新版本 {{version}} 可用（当前版本 {{current}}）。",
+    "downloading": "正在下载更新…",
+    "ready": "更新已安装 — 重启以应用。",
+    "upToDate": "已是最新版本。",
+    "failed": "更新检查失败。",
+    "updateNow": "立即更新",
+    "later": "稍后",
+    "restart": "立即重启",
+    "close": "关闭",
+    "checkNow": "检查更新",
+    "downloadManually": "手动下载"
   }
 }

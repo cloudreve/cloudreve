@@ -1421,7 +1421,8 @@
     "otherConditions": "Outras condições",
     "shareLinkExisted": "Tem link de compartilhamento",
     "directLinkExisted": "Tem link direto",
-    "isUploading": "Está enviando"
+    "isUploading": "Está enviando",
+    "selectUser": "Selecionar usuário"
   },
   "entity": {
     "refenenceCount": "Contagem de referência",
@@ -1467,7 +1468,8 @@
     "rawContent": "Conteúdo bruto",
     "confirmDelete": "Tem certeza de que deseja excluir este evento?",
     "deleteXEvents": "Excluir {{num}} eventos",
-    "confirmBatchDelete": "Tem certeza de que deseja excluir {{num}} eventos?"
+    "confirmBatchDelete": "Tem certeza de que deseja excluir {{num}} eventos?",
+    "allEventTypes": "Todos os tipos de evento"
   },
   "share": {
     "confirmBatchDelete": "Tem certeza de que deseja excluir {{num}} compartilhamentos?",

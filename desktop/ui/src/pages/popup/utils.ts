@@ -1,3 +1,5 @@
+import i18n from "../../i18n";
+
 export function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
   const k = 1024;
@@ -10,10 +12,12 @@ export function formatRelativeTime(timestamp: number): string {
   const now = Date.now() / 1000;
   const diff = now - timestamp;
 
-  if (diff < 60) return "Just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
+  if (diff < 60) return i18n.t("popup.justNow");
+  if (diff < 3600)
+    return i18n.t("popup.minutesAgo", { count: Math.floor(diff / 60) });
+  if (diff < 86400)
+    return i18n.t("popup.hoursAgo", { count: Math.floor(diff / 3600) });
+  return i18n.t("popup.daysAgo", { count: Math.floor(diff / 86400) });
 }
 
 export function getFileName(path: string): string {

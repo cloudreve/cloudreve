@@ -703,7 +703,9 @@
     "publicListing": "收录到公开目录",
     "publicListingDes": "将此分享显示在“发现”页，任何人（包括未登录访客）可见。带密码的分享不可用。",
     "hideReadme": "隐藏 README 文件",
-    "hideReadmeDes": "在分享文件列表中隐藏 README 文件本身，访客仍可看到渲染后的说明内容。"
+    "hideReadmeDes": "在分享文件列表中隐藏 README 文件本身，访客仍可看到渲染后的说明内容。",
+    "anonymous": "匿名",
+    "shareTargetsCount": "{{count}} 个目标"
   },
   "uploader": {
     "fileCopyName": "副本_",

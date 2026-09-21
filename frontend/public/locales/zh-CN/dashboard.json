@@ -1611,7 +1611,8 @@
     "isUploading": "上传中",
     "deletedState": "删除状态",
     "liveOnly": "仅未删除",
-    "trashOnly": "仅回收站"
+    "trashOnly": "仅回收站",
+    "selectUser": "选择用户"
   },
   "entity": {
     "refenenceCount": "引用次数",
@@ -1666,7 +1667,8 @@
     "noEvents": "暂无事件记录",
     "confirmDelete": "确认要删除此事件？",
     "deleteXEvents": "删除 {{num}} 个事件",
-    "confirmBatchDelete": "确认要删除 {{num}} 个事件？"
+    "confirmBatchDelete": "确认要删除 {{num}} 个事件？",
+    "allEventTypes": "全部事件类型"
   },
   "share": {
     "confirmBatchDelete": "确认要删除 {{num}} 个分享？",

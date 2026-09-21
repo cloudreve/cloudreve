@@ -77,6 +77,9 @@ jobs:
 
       - name: Build desktop bundles
         working-directory: desktop
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: cargo tauri build
 
       - name: Publish bundles to GitHub release
@@ -92,14 +95,32 @@ jobs:
           done
           gh release view "$TAG" >/dev/null
           FILES=$(find desktop/target/release/bundle -type f \
-            \( -name '*.deb' -o -name '*.AppImage' -o -name '*.msi' \
-               -o -name '*.exe' -o -name '*.dmg' -o -name '*.app.tar.gz' \))
+            \( -name '*.deb' -o -name '*.AppImage' -o -name '*.AppImage.tar.gz' \
+               -o -name '*.msi' -o -name '*.exe' -o -name '*.dmg' \
+               -o -name '*.app.tar.gz' -o -name '*.sig' \))
           [ -n "$FILES" ]
           echo "$FILES" | while read -r f; do
             name="cloudreve-desktop-$(basename "$f")"
             cp "$f" "$name"
             gh release upload "$TAG" "$name" --clobber
           done
+
+  updater-manifest:
+    needs: desktop
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and publish latest.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -e
+          mkdir -p sigs
+          gh release download "$TAG" -p '*.sig' -D sigs --clobber
+          python3 desktop/scripts/gen_latest_json.py "$TAG" sigs latest.json
+          gh release upload "$TAG" latest.json --clobber
 
   android:
     runs-on: ubuntu-latest

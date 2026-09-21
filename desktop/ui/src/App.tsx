@@ -6,6 +6,7 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import { Routes, Route, HashRouter } from "react-router-dom";
+import Update from "./pages/Update";
 import "@fontsource/roboto/300.css";
 import "@fontsource/roboto/400.css";
 import "@fontsource/roboto/500.css";
@@ -49,6 +50,7 @@ function App() {
             <Route path="/popup" element={<Popup />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/share" element={<Share />} />
+            <Route path="/update" element={<Update />} />
           </Routes>
         </HashRouter>
       </ThemeProvider>

@@ -529,7 +529,7 @@
     "everyone": "Tous les autres",
     "otherGroup": "Autres groupes",
     "sameGroup": "Même groupe que moi",
-    "anonymous": "Visiteurs anonymes",
+    "anonymous": "Anonyme",
     "noResults": "Aucun résultat",
     "searchGroupUser": "Rechercher des e-mails ou des groupes...",
     "resetToDefault": "Réinitialiser par défaut",
@@ -664,7 +664,8 @@
     "viewSetting": "Paramètre de vue",
     "saved": "Enregistré",
     "notSet": "Non défini",
-    "deleteViewSetting": "Supprimer le paramètre de vue"
+    "deleteViewSetting": "Supprimer le paramètre de vue",
+    "shareTargetsCount": "{{count}} cibles"
   },
   "uploader": {
     "fileCopyName": "Copie de ",
@@ -1110,7 +1111,12 @@
     "report": "Signaler un abus",
     "reportTarget": "Cible du signalement",
     "reportReason": "Raison",
-    "reportReasonOptions": ["Violation de droits d'auteur", "Contenu nuisible", "Spam", "Autre"],
+    "reportReasonOptions": [
+      "Violation de droits d'auteur",
+      "Contenu nuisible",
+      "Spam",
+      "Autre"
+    ],
     "reportDescription": "Description supplémentaire",
     "reportAbuseSuccess": "Signalement soumis.",
     "migrateStoragePolicy": "Migrer la stratégie de stockage",

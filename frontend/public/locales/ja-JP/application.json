@@ -611,7 +611,9 @@
     "viewSetting": "表示設定",
     "saved": "保存されました",
     "notSet": "未設定",
-    "deleteViewSetting": "表示設定の削除"
+    "deleteViewSetting": "表示設定の削除",
+    "anonymous": "匿名",
+    "shareTargetsCount": "{{count}} 件の対象"
   },
   "uploader": {
     "fileCopyName": "コピー_",
@@ -994,7 +996,12 @@
     "validDurationDays": "{{num}} 日",
     "reportTarget": "報告対象",
     "reportReason": "理由",
-    "reportReasonOptions": ["著作権侵害", "有害なコンテンツ", "スパム", "その他"],
+    "reportReasonOptions": [
+      "著作権侵害",
+      "有害なコンテンツ",
+      "スパム",
+      "その他"
+    ],
     "reportDescription": "詳細説明",
     "reportAbuseSuccess": "報告を受け付けました"
   }

@@ -1,6 +1,7 @@
 package org.cloudreve.android
 
 import android.app.Application
+import com.google.android.play.core.appupdate.AppUpdateInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.cloudreve.android.api.ApiClient
 import org.cloudreve.android.data.CameraUploadSettings
@@ -15,6 +16,9 @@ class CloudreveApp : Application() {
     /** OAuth code+state arriving via the `cloudreve://mount` deep link. */
     data class OAuthCallback(val code: String, val state: String)
     val oauthCallback = MutableStateFlow<OAuthCallback?>(null)
+
+    /** Pending Play in-app update, set by MainActivity's update check. */
+    val playUpdateAvailable = MutableStateFlow<AppUpdateInfo?>(null)
 
     lateinit var sessionManager: SessionManager
         private set

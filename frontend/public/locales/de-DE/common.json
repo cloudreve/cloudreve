@@ -116,5 +116,6 @@
     "40072": "Sie sind Administrator und können keine andere Gruppe erwerben.",
     "40084": "Ihr Konto ist passwortlos. Sie müssen mindestens ein verknüpftes Konto behalten.",
     "40085": "Der Gesamtbetrag dieser Bestellung ist zu gering für den Checkout."
-  }
+  },
+  "save": "Speichern"
 }

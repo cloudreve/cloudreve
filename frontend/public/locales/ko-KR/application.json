@@ -529,7 +529,7 @@
     "everyone": "기타 모든 사람",
     "otherGroup": "다른 사용자 그룹",
     "sameGroup": "나와 같은 사용자 그룹",
-    "anonymous": "익명 방문자",
+    "anonymous": "익명",
     "noResults": "결과 없음",
     "searchGroupUser": "사용자 또는 사용자 그룹 검색...",
     "resetToDefault": "기본값으로 재설정",
@@ -664,7 +664,8 @@
     "viewSetting": "보기 설정",
     "saved": "저장됨",
     "notSet": "설정되지 않음",
-    "deleteViewSetting": "보기 설정 삭제"
+    "deleteViewSetting": "보기 설정 삭제",
+    "shareTargetsCount": "대상 {{count}}개"
   },
   "uploader": {
     "fileCopyName": "사본_",
@@ -1110,7 +1111,12 @@
     "report": "남용 신고",
     "reportTarget": "신고 대상",
     "reportReason": "이유",
-    "reportReasonOptions": ["침해", "유해 콘텐츠", "스팸 정보", "기타"],
+    "reportReasonOptions": [
+      "침해",
+      "유해 콘텐츠",
+      "스팸 정보",
+      "기타"
+    ],
     "reportDescription": "추가 설명",
     "reportAbuseSuccess": "신고가 제출되었습니다",
     "migrateStoragePolicy": "저장 정책 전송",

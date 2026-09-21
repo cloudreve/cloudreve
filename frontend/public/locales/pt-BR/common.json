@@ -116,5 +116,6 @@
     "40072": "Você é administrador, não pode comprar outro grupo.",
     "40084": "Sua conta não possui senha, você deve manter pelo menos uma conta vinculada.",
     "40085": "O valor total deste pedido é muito pequeno para checkout."
-  }
+  },
+  "save": "Salvar"
 }

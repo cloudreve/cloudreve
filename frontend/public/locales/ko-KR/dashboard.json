@@ -1421,7 +1421,8 @@
     "otherConditions": "기타 조건",
     "shareLinkExisted": "공유 링크 존재",
     "directLinkExisted": "중계 직접 링크 존재",
-    "isUploading": "업로드 중"
+    "isUploading": "업로드 중",
+    "selectUser": "사용자 선택"
   },
   "entity": {
     "refenenceCount": "참조 횟수",
@@ -1467,7 +1468,8 @@
     "rawContent": "원본 기록",
     "confirmDelete": "이 이벤트를 삭제하시겠습니까?",
     "deleteXEvents": "{{num}}개 이벤트 삭제",
-    "confirmBatchDelete": "{{num}}개 이벤트를 삭제하시겠습니까?"
+    "confirmBatchDelete": "{{num}}개 이벤트를 삭제하시겠습니까?",
+    "allEventTypes": "모든 이벤트 유형"
   },
   "share": {
     "confirmBatchDelete": "{{num}}개 공유를 삭제하시겠습니까?",

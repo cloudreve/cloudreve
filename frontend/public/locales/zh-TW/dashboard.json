@@ -1422,7 +1422,8 @@
     "otherConditions": "其他條件",
     "shareLinkExisted": "有分享連結",
     "directLinkExisted": "有中轉直鏈",
-    "isUploading": "上傳中"
+    "isUploading": "上傳中",
+    "selectUser": "選擇使用者"
   },
   "entity": {
     "refenenceCount": "引用次數",
@@ -1442,7 +1443,7 @@
     "cleanupNotAfter": "在此日期之前",
     "cleanupEventTypes": "事件類型",
     "cleanupEventTypesDes": "選擇要清理的事件類型，留空表示清理所有類型。",
-    "allEventTypes": "所有事件類型",
+    "allEventTypes": "全部事件類型",
     "initiator": "發起者",
     "event": "事件",
     "userID": "使用者 ID",

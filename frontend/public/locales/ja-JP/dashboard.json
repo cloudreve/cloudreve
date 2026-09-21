@@ -1422,7 +1422,8 @@
     "otherConditions": "その他の条件",
     "shareLinkExisted": "共有リンクが存在",
     "directLinkExisted": "直接リンクが存在",
-    "isUploading": "アップロード中"
+    "isUploading": "アップロード中",
+    "selectUser": "ユーザーを選択"
   },
   "entity": {
     "refenenceCount": "参照回数",
@@ -1442,7 +1443,7 @@
     "cleanupNotAfter": "この日付以前",
     "cleanupEventTypes": "イベント種類",
     "cleanupEventTypesDes": "イベント種類を選択してください。空の場合はすべての種類を削除します。",
-    "allEventTypes": "すべてのイベントタイプ",
+    "allEventTypes": "すべてのイベント種別",
     "initiator": "発信者",
     "event": "イベント",
     "userID": "ユーザーID",

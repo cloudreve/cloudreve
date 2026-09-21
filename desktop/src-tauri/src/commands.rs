@@ -1471,3 +1471,161 @@ pub async fn open_log_folder() -> CommandResult<()> {
     showfile::show_path_in_file_manager(format!("{}\\", log_dir.display()));
     Ok(())
 }
+
+/// Metadata about an available app update, returned to the frontend.
+#[derive(serde::Serialize)]
+pub struct UpdateInfo {
+    pub version: String,
+    pub current_version: String,
+    pub notes: Option<String>,
+    pub date: Option<String>,
+}
+
+/// Progress payload emitted on `update-progress` while an update downloads.
+#[derive(serde::Serialize, Clone)]
+struct UpdateProgress {
+    downloaded: u64,
+    total: Option<u64>,
+}
+
+/// Check the configured update endpoint (GitHub releases `latest.json`) for a
+/// newer desktop build. Returns `None` when already up to date or when no
+/// signed updater artifact exists for this platform.
+#[tauri::command]
+pub async fn check_update(app: AppHandle) -> CommandResult<Option<UpdateInfo>> {
+    use tauri_plugin_updater::UpdaterExt;
+
+    let update = app
+        .updater()
+        .map_err(|e| e.to_string())?
+        .check()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(update.map(|u| UpdateInfo {
+        version: u.version.clone(),
+        current_version: u.current_version.clone(),
+        notes: u.body.clone(),
+        date: u.date.map(|d| d.to_string()),
+    }))
+}
+
+/// Download the pending update, emit `update-progress` events, and install it.
+/// The frontend should call `restart_app` afterwards.
+#[tauri::command]
+pub async fn install_update(app: AppHandle) -> CommandResult<()> {
+    use tauri::Emitter;
+    use tauri_plugin_updater::UpdaterExt;
+
+    let update = app
+        .updater()
+        .map_err(|e| e.to_string())?
+        .check()
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "No update available".to_string())?;
+
+    let app2 = app.clone();
+    let app3 = app.clone();
+    update
+        .download_and_install(
+            move |chunk_len, content_len| {
+                let _ = app2.emit(
+                    "update-progress",
+                    UpdateProgress {
+                        downloaded: chunk_len as u64,
+                        total: content_len,
+                    },
+                );
+            },
+            move || {
+                let _ = app3.emit("update-finished", ());
+            },
+        )
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+/// Restart the application (used after a successful update install).
+#[tauri::command]
+pub fn restart_app(app: AppHandle) {
+    app.restart();
+}
+
+/// Show or create the in-app update window. The window itself runs the update
+/// check so it works both for automatic prompts and manual "Check for
+/// updates" from the About page.
+pub fn show_update_window_impl(app: &AppHandle) {
+    // One update window at a time — refocus instead of stacking dialogs.
+    if let Some(window) = app.get_webview_window("update") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+        return;
+    }
+
+    let url_path = get_url_with_lang("index.html#/update");
+
+    #[cfg(windows)]
+    let effects = WindowEffectsConfig {
+        effects: vec![WindowEffect::Mica, WindowEffect::Acrylic],
+        state: None,
+        radius: None,
+        color: None,
+    };
+
+    let builder = WebviewWindowBuilder::new(app, "update", WebviewUrl::App(url_path.into()))
+        .title("Software Update")
+        .inner_size(460.0, 380.0)
+        .resizable(false)
+        .visible(false)
+        .decorations(false)
+        .minimizable(false);
+
+    #[cfg(not(windows))]
+    let builder = builder.background_color(Color(255, 255, 255, 255));
+
+    #[cfg(windows)]
+    let builder = builder.transparent(true);
+
+    #[cfg(target_os = "macos")]
+    let builder = builder
+        .title_bar_style(TitleBarStyle::Overlay)
+        .hidden_title(true);
+
+    let Some(builder) = apply_default_window_icon(builder, app, "update") else {
+        return;
+    };
+
+    match builder.build() {
+        Ok(window) => {
+            #[cfg(target_os = "macos")]
+            update_dock_on_window_close(&window);
+
+            #[cfg(windows)]
+            {
+                let _ = window.set_effects(effects);
+            }
+
+            move_window_safely(&window, Position::Center, "update");
+            #[cfg(windows)]
+            let _ = window.create_overlay_titlebar();
+            let _ = window.show();
+            let _ = window.set_focus();
+            #[cfg(target_os = "macos")]
+            crate::update_dock_visibility(app);
+        }
+        Err(e) => {
+            tracing::error!(target: "main", error = %e, "Failed to create update window");
+        }
+    }
+}
+
+/// Open the in-app update window (Settings → About → "Check for updates").
+#[tauri::command]
+pub async fn show_update_window(app: AppHandle) -> CommandResult<()> {
+    show_update_window_impl(&app);
+    Ok(())
+}

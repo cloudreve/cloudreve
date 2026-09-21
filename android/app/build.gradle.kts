@@ -7,14 +7,14 @@ plugins {
 
 android {
     namespace = "org.cloudreve.android"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.tdvorak.cloudreve"
         minSdk = 28
-        targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        targetSdk = 36
+        versionCode = 2
+        versionName = "1.1.0"
     }
 
     signingConfigs {
@@ -94,4 +94,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
     implementation("io.coil-kt:coil-compose:2.7.0")
+
+    // Play in-app updates — no-op on sideloaded/non-Play installs
+    implementation("com.google.android.play:app-update-ktx:2.1.0")
+    // ActivityResult API (update flow launcher) needs fragment >= 1.3.0
+    implementation("androidx.fragment:fragment-ktx:1.8.5")
 }

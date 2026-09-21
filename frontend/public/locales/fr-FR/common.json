@@ -116,5 +116,6 @@
     "40072": "Vous êtes administrateur, vous ne pouvez pas acheter d'autre groupe.",
     "40084": "Votre compte est sans mot de passe, vous devez conserver au moins un compte lié.",
     "40085": "Le montant total de cette commande est trop petit pour le paiement."
-  }
+  },
+  "save": "Enregistrer"
 }

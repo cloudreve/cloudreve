@@ -529,7 +529,7 @@
     "everyone": "Todos los demás",
     "otherGroup": "Otros grupos",
     "sameGroup": "Mismo grupo que yo",
-    "anonymous": "Visitantes anónimos",
+    "anonymous": "Anónimo",
     "noResults": "Sin resultados",
     "searchGroupUser": "Buscar emails o grupos...",
     "resetToDefault": "Restablecer a predeterminado",
@@ -660,7 +660,8 @@
     "skipSoftDelete": "Eliminar permanentemente",
     "skipSoftDeleteDes": "Omitir mover a papelera, eliminar permanentemente",
     "unlinkOnly": "Mantener archivos físicos",
-    "unlinkOnlyDes": "Eliminar solo registros de archivos, los archivos físicos no serán eliminados."
+    "unlinkOnlyDes": "Eliminar solo registros de archivos, los archivos físicos no serán eliminados.",
+    "shareTargetsCount": "{{count}} destinos"
   },
   "uploader": {
     "fileCopyName": "Copia de ",
@@ -1106,7 +1107,12 @@
     "report": "Reportar abuso",
     "reportTarget": "Objeto del reporte",
     "reportReason": "Razón",
-    "reportReasonOptions": ["Infracción de derechos de autor", "Contenido dañino", "Información basura", "Otro"],
+    "reportReasonOptions": [
+      "Infracción de derechos de autor",
+      "Contenido dañino",
+      "Información basura",
+      "Otro"
+    ],
     "reportDescription": "Descripción adicional",
     "reportAbuseSuccess": "Reporte enviado",
     "migrateStoragePolicy": "Transferir política de almacenamiento",

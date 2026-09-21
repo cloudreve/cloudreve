@@ -66,6 +66,9 @@ pub struct AppConfig {
     pub hide_tray_icon: bool,
     /// Language/locale setting (e.g., "en-US", "zh-CN"). None means use system default.
     pub language: Option<String>,
+    /// Last app-update version the user was already prompted about. A new
+    /// version still prompts once; dismissing snoozes until the next release.
+    pub prompted_update_version: Option<String>,
 }
 
 impl Default for AppConfig {
@@ -81,6 +84,7 @@ impl Default for AppConfig {
             sync_delay_seconds: 0,
             hide_tray_icon: false,
             language: None,
+            prompted_update_version: None,
         }
     }
 }
