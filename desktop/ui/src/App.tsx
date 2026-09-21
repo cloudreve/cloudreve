@@ -15,6 +15,7 @@ import { createAppTheme } from "./theme";
 import AddDrive from "./pages/AddDrive";
 import Popup from "./pages/popup";
 import Settings from "./pages/settings";
+import Share from "./pages/Share";
 
 function LoadingFallback() {
   return (
@@ -47,6 +48,7 @@ function App() {
             <Route path="/reauthorize/:driveId/:siteUrl/:driveName" element={<AddDrive mode="reauthorize" />} />
             <Route path="/popup" element={<Popup />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/share" element={<Share />} />
           </Routes>
         </HashRouter>
       </ThemeProvider>

@@ -156,6 +156,10 @@ pub enum ManagerCommand {
     CopyShareLink {
         path: PathBuf,
     },
+    /// Open the share dialog for a file or folder
+    ShareLink {
+        path: PathBuf,
+    },
     PersistConfig,
     GenerateThumbnail {
         path: PathBuf,
@@ -450,22 +454,34 @@ impl Mount {
         Ok(thumb_response.bytes().await?)
     }
 
-    /// Create a public share link for the file or folder at `path`,
-    /// returning the share URL.
-    pub async fn create_share_link(&self, path: PathBuf) -> Result<String> {
+    /// Resolve a mount-space local path to its cloudreve URI.
+    pub async fn share_uri(&self, path: PathBuf) -> Result<String> {
         // `path` arrives in mount space from the file manager, so the URI root
         // is `sync_path` — mount and store share the same relative layout.
         let (sync_path, remote_base) = {
             let config = self.config.read().await;
             (config.sync_path.clone(), config.remote_path.to_string())
         };
-        let uri = local_path_to_cr_uri(path.clone(), sync_path, remote_base)
+        let uri = local_path_to_cr_uri(path, sync_path, remote_base)
             .context("failed to convert local path to cloudreve uri")?
             .to_string();
-        Ok(self
-            .cr_client
-            .create_share(&ShareCreateService { uri })
-            .await?)
+        Ok(uri)
+    }
+
+    /// Create a share link for the file or folder at `path`,
+    /// returning the share URL.
+    pub async fn create_share_link(&self, path: PathBuf) -> Result<String> {
+        let uri = self.share_uri(path).await?;
+        self.create_share(ShareCreateService {
+            uri,
+            ..Default::default()
+        })
+        .await
+    }
+
+    /// Create a share link from a full share request, returning the share URL.
+    pub async fn create_share(&self, request: ShareCreateService) -> Result<String> {
+        Ok(self.cr_client.create_share(&request).await?)
     }
 
     pub async fn rename_completed(&self, source: PathBuf, destination: PathBuf) -> Result<()> {

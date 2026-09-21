@@ -3,6 +3,7 @@ use tauri::{AppHandle, Emitter};
 
 use crate::commands::{
     show_add_drive_window_impl, show_main_window_center, show_settings_window_impl,
+    show_share_window_impl,
 };
 
 /// Handle incoming events from the event broadcaster.
@@ -15,6 +16,12 @@ pub fn handle_event(app_handle: &AppHandle, event: &Event) {
         }
         Event::OpenSyncStatusWindow => handle_open_sync_status_window(app_handle),
         Event::OpenSettingsWindow => handle_open_settings_window(app_handle),
+        Event::OpenShareDialog {
+            drive_id,
+            uri,
+            name,
+            is_dir,
+        } => show_share_window_impl(app_handle, drive_id, uri, name, *is_dir),
     }
 }
 

@@ -11,6 +11,18 @@ viewOnline:
   ru: "Просмотреть онлайн"
   pl: "Zobacz online"
   it: "Visualizza online"
+shareLink:
+  en-US: "Share link…"
+  zh-CN: "分享链接…"
+  zh-TW: "分享連結…"
+  ja: "共有リンク…"
+  de: "Link teilen…"
+  fr: "Lien de partage…"
+  es: "Enlace para compartir…"
+  ko: "공유 링크…"
+  ru: "Поделиться ссылкой…"
+  pl: "Udostępnij link…"
+  it: "Condividi link…"
 copyShareLink:
   en-US: "Copy share link"
   zh-CN: "复制分享链接"

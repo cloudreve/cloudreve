@@ -136,5 +136,28 @@
     "monthsAgo": "Vor {{value}} Monaten",
     "yearAgo": "Vor {{value}} Jahr",
     "yearsAgo": "Vor {{value}} Jahren"
+  },
+  "share": {
+    "title": "Share link for {{name}}",
+    "linkReady": "Your share link is ready:",
+    "permission": "Sharing permissions",
+    "permViewDownload": "View + Download",
+    "permPreviewOnly": "Preview only (no download)",
+    "permAllowEdit": "View + Download + Edit",
+    "permUploadOnly": "Upload only (drop box)",
+    "expires": "Expires",
+    "expire_never": "Never expires",
+    "expire_oneHour": "1 hour",
+    "expire_oneDay": "1 day",
+    "expire_sevenDays": "7 days",
+    "expire_thirtyDays": "30 days",
+    "passwordProtect": "Protect with password",
+    "password": "Password",
+    "downloadLimit": "Download limit",
+    "unlimited": "Unlimited",
+    "create": "Create share",
+    "cancel": "Cancel",
+    "done": "Done",
+    "copied": "Link copied to clipboard"
   }
 }

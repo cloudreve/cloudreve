@@ -15,6 +15,13 @@ pub enum Event {
     OpenSyncStatusWindow,
     /// Request to open the settings window
     OpenSettingsWindow,
+    /// Request to open the share dialog for a file or folder
+    OpenShareDialog {
+        drive_id: String,
+        uri: String,
+        name: String,
+        is_dir: bool,
+    },
 }
 
 impl Event {
@@ -24,6 +31,7 @@ impl Event {
             Event::NoDrive {} => "NoDrive",
             Event::OpenSyncStatusWindow => "OpenSyncStatusWindow",
             Event::OpenSettingsWindow => "OpenSettingsWindow",
+            Event::OpenShareDialog { .. } => "OpenShareDialog",
         }
     }
 }
@@ -90,6 +98,16 @@ impl EventBroadcaster {
     /// Helper: Broadcast open settings window event
     pub fn open_settings_window(&self) {
         self.broadcast(Event::OpenSettingsWindow);
+    }
+
+    /// Helper: Broadcast open share dialog event
+    pub fn open_share_dialog(&self, drive_id: String, uri: String, name: String, is_dir: bool) {
+        self.broadcast(Event::OpenShareDialog {
+            drive_id,
+            uri,
+            name,
+            is_dir,
+        });
     }
 
     /// Get the number of active subscribers

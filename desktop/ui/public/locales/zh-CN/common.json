@@ -136,5 +136,28 @@
     "monthsAgo": "{{value}} 个月前",
     "yearAgo": "{{value}} 年前",
     "yearsAgo": "{{value}} 年前"
+  },
+  "share": {
+    "title": "分享 {{name}} 的链接",
+    "linkReady": "分享链接已创建：",
+    "permission": "分享权限",
+    "permViewDownload": "查看 + 下载",
+    "permPreviewOnly": "仅预览（禁止下载）",
+    "permAllowEdit": "查看 + 下载 + 编辑",
+    "permUploadOnly": "仅上传（收集箱）",
+    "expires": "过期时间",
+    "expire_never": "永不过期",
+    "expire_oneHour": "1 小时",
+    "expire_oneDay": "1 天",
+    "expire_sevenDays": "7 天",
+    "expire_thirtyDays": "30 天",
+    "passwordProtect": "密码保护",
+    "password": "密码",
+    "downloadLimit": "下载次数限制",
+    "unlimited": "不限",
+    "create": "创建分享",
+    "cancel": "取消",
+    "done": "完成",
+    "copied": "链接已复制到剪贴板"
   }
 }

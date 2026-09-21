@@ -18,6 +18,7 @@ pub mod uploader;
 pub mod utils;
 
 // Re-export commonly used types
+pub use cloudreve_api::models::share::ShareCreateService;
 pub use cloudreve_api::normalize_site_url;
 pub use config::{AppConfig, ConfigManager};
 pub use drive::manager::{

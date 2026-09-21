@@ -878,6 +878,137 @@ pub fn show_settings_window_impl(app: &AppHandle) {
     }
 }
 
+/// Show or create the share dialog window for a file or folder.
+pub fn show_share_window_impl(
+    app: &AppHandle,
+    drive_id: &str,
+    uri: &str,
+    name: &str,
+    is_dir: bool,
+) {
+    let url_path = format!(
+        "index.html#/share?drive={}&uri={}&name={}&dir={}",
+        urlencoding::encode(drive_id),
+        urlencoding::encode(uri),
+        urlencoding::encode(name),
+        if is_dir { "1" } else { "0" },
+    );
+    let url_path = get_url_with_lang(&url_path);
+
+    // A stale window could belong to a different item; rebuild it each time.
+    if let Some(window) = app.get_webview_window("share") {
+        let _ = window.destroy();
+    }
+
+    #[cfg(windows)]
+    let effects = WindowEffectsConfig {
+        effects: vec![WindowEffect::Mica, WindowEffect::Acrylic],
+        state: None,
+        radius: None,
+        color: None,
+    };
+
+    let builder = WebviewWindowBuilder::new(app, "share", WebviewUrl::App(url_path.into()))
+        .title("Share link")
+        .inner_size(480.0, 640.0)
+        .resizable(false)
+        .visible(false)
+        .decorations(false)
+        .minimizable(false);
+
+    #[cfg(not(windows))]
+    // See `show_main_window_at_position`: keep non-Windows webviews opaque to
+    // avoid platform compositor artifacts while preserving Windows effects.
+    let builder = builder.background_color(Color(255, 255, 255, 255));
+
+    #[cfg(windows)]
+    let builder = builder.transparent(true);
+
+    #[cfg(target_os = "macos")]
+    let builder = builder
+        .title_bar_style(TitleBarStyle::Overlay)
+        .hidden_title(true);
+
+    let Some(builder) = apply_default_window_icon(builder, app, "share") else {
+        return;
+    };
+
+    match builder.build() {
+        Ok(window) => {
+            #[cfg(target_os = "macos")]
+            update_dock_on_window_close(&window);
+
+            #[cfg(windows)]
+            {
+                let _ = window.set_effects(effects);
+            }
+
+            move_window_safely(&window, Position::Center, "share");
+            #[cfg(windows)]
+            let _ = window.create_overlay_titlebar();
+            let _ = window.show();
+            let _ = window.set_focus();
+            #[cfg(target_os = "macos")]
+            crate::update_dock_visibility(app);
+        }
+        Err(e) => {
+            tracing::error!(target: "main", error = %e, "Failed to create share window");
+        }
+    }
+}
+
+/// Options accepted by the share dialog, mapped onto the server's share
+/// creation fields.
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ShareOptions {
+    pub password: Option<String>,
+    pub downloads: Option<i32>,
+    /// Seconds until expiry.
+    pub expire: Option<i32>,
+    pub preview_only: Option<bool>,
+    pub allow_edit: Option<bool>,
+    pub allow_upload: Option<bool>,
+    pub upload_only: Option<bool>,
+}
+
+/// Create a share link from the share dialog, returning the share URL.
+#[tauri::command]
+pub async fn create_share(
+    state: State<'_, AppStateHandle>,
+    drive_id: String,
+    uri: String,
+    options: ShareOptions,
+) -> CommandResult<String> {
+    let app_state = state
+        .get()
+        .ok_or_else(|| "App not yet initialized".to_string())?;
+
+    let mount = app_state
+        .drive_manager
+        .get_drive(&drive_id)
+        .await
+        .ok_or_else(|| "Drive not found".to_string())?;
+
+    let password = options.password.filter(|p| !p.is_empty());
+    let request = cloudreve_sync::ShareCreateService {
+        uri,
+        is_private: password.is_some(),
+        password,
+        downloads: options.downloads.filter(|d| *d > 0),
+        expire: options.expire.filter(|e| *e > 0),
+        preview_only: options.preview_only.unwrap_or(false),
+        allow_edit: options.allow_edit.unwrap_or(false),
+        allow_upload: options.allow_upload.unwrap_or(false),
+        upload_only: options.upload_only.unwrap_or(false),
+    };
+
+    mount
+        .create_share(request)
+        .await
+        .map_err(|e| e.to_string())
+}
+
 /// The TaskId defined in AppxManifest.xml for the startup task
 #[cfg(windows)]
 const STARTUP_TASK_ID: &str = "cloudreve";

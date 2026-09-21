@@ -12,7 +12,7 @@ mod view_online;
 pub use explorer_command::CrExplorerCommandHandler;
 pub use factory::CrExplorerCommandFactory;
 pub use resolve_conflict::ResolveConflictCommandHandler;
-pub use share_link::ShareLinkCommandHandler;
+pub use share_link::{CopyShareLinkCommandHandler, ShareLinkCommandHandler};
 pub use sub_commands::SubCommands;
 pub use sync_now::SyncNowCommandHandler;
 pub use view_online::ViewOnlineCommandHandler;

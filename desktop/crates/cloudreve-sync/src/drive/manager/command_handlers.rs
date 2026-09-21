@@ -50,6 +50,15 @@ impl DriveManager {
                         }
                     });
                 }
+                ManagerCommand::ShareLink { path } => {
+                    let path = path.clone();
+                    spawn(async move {
+                        let result = manager.handle_share_link(path.clone()).await;
+                        if let Err(e) = result {
+                            tracing::error!(target: "drive::manager", path = %path.display(), error = %e, "ShareLink command failed");
+                        }
+                    });
+                }
                 ManagerCommand::PersistConfig => {
                     let result = manager.persist().await;
                     if let Err(e) = result {
@@ -233,6 +242,29 @@ impl DriveManager {
             }
         }
 
+        Ok(())
+    }
+
+    /// Handle ShareLink command — resolves the target URI and asks the UI to
+    /// open the share dialog where the user picks permissions before creating
+    /// the link.
+    pub(super) async fn handle_share_link(&self, path: PathBuf) -> Result<()> {
+        tracing::debug!(target: "drive::manager", path = %path.display(), "ShareLink command");
+
+        let mount = self
+            .search_drive_by_child_path(path.to_str().unwrap_or(""))
+            .await
+            .ok_or_else(|| anyhow::anyhow!("No drive found for path: {:?}", path))?;
+
+        let uri = mount.share_uri(path.clone()).await?;
+        let name = match path.file_name() {
+            Some(n) => n.to_string_lossy().to_string(),
+            None => mount.get_config().await.name,
+        };
+        let is_dir = path.is_dir();
+
+        self.event_broadcaster
+            .open_share_dialog(mount.id.clone(), uri, name, is_dir);
         Ok(())
     }
 

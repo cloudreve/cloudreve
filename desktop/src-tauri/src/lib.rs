@@ -469,6 +469,7 @@ pub fn run() {
             commands::get_drives_info,
             commands::get_file_icon,
             commands::show_file_in_explorer,
+            commands::create_share,
             commands::show_add_drive_window,
             commands::show_reauthorize_window,
             commands::show_settings_window,
