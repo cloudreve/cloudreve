@@ -34,7 +34,9 @@
       "human": "Sou humano",
       "verifying": "Verificando...",
       "verified": "Você é humano"
-    }
+    },
+    "verify": "Clique para verificar",
+    "verified": "Verificado"
   },
   "errors": {
     "401": "Faça login primeiro.",
@@ -54,7 +56,7 @@
     "40014": "Excede limite de tamanho de lote para obter link de origem.",
     "40015": "Excede limite de tamanho de lote do aria2.",
     "40016": "Caminho não encontrado.",
-    "40017": "Esta conta foi bloqueada.",
+    "40017": "Esta conta foi bloqueada. {{message}}",
     "40018": "Esta conta não está ativada.",
     "40019": "Este recurso não está habilitado.",
     "40020": "Credencial inválida ou expirada.",
@@ -117,5 +119,6 @@
     "40084": "Sua conta não possui senha, você deve manter pelo menos uma conta vinculada.",
     "40085": "O valor total deste pedido é muito pequeno para checkout."
   },
-  "save": "Salvar"
+  "save": "Salvar",
+  "delete": "Excluir"
 }

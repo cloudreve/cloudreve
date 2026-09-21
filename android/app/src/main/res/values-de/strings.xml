@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="update_available_title">Update verfügbar</string>
+    <string name="update_available_message">Eine neue Version von Cloudreve Mobile ist auf Google Play verfügbar.</string>
+    <string name="update_now">Aktualisieren</string>
+    <string name="update_later">Später</string>
+</resources>

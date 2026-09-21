@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="update_available_title">アップデートがあります</string>
+    <string name="update_available_message">Cloudreve Mobile の新しいバージョンが Google Play で入手できます。</string>
+    <string name="update_now">更新</string>
+    <string name="update_later">後で</string>
+</resources>

@@ -34,7 +34,9 @@
       "human": "Ich bin ein Mensch",
       "verifying": "Verifizierung läuft...",
       "verified": "Sie sind ein Mensch"
-    }
+    },
+    "verify": "Zum Verifizieren klicken",
+    "verified": "Verifiziert"
   },
   "errors": {
     "401": "Bitte melden Sie sich an.",
@@ -54,7 +56,7 @@
     "40014": "Batch-Größenlimit für das Abrufen von Quelllinks überschritten.",
     "40015": "Aria2-Batch-Größenlimit überschritten.",
     "40016": "Pfad nicht gefunden.",
-    "40017": "Dieses Konto wurde gesperrt.",
+    "40017": "Dieses Konto wurde gesperrt. {{message}}",
     "40018": "Dieses Konto ist nicht aktiviert.",
     "40019": "Diese Funktion ist nicht aktiviert.",
     "40020": "Ungültige oder abgelaufene Anmeldedaten.",
@@ -117,5 +119,6 @@
     "40084": "Ihr Konto ist passwortlos. Sie müssen mindestens ein verknüpftes Konto behalten.",
     "40085": "Der Gesamtbetrag dieser Bestellung ist zu gering für den Checkout."
   },
-  "save": "Speichern"
+  "save": "Speichern",
+  "delete": "Löschen"
 }

@@ -34,7 +34,9 @@
       "human": "Je suis humain",
       "verifying": "Vérification...",
       "verified": "Vous êtes humain"
-    }
+    },
+    "verify": "Cliquez pour vérifier",
+    "verified": "Vérifié"
   },
   "errors": {
     "401": "Veuillez vous connecter.",
@@ -54,7 +56,7 @@
     "40014": "Limite de taille de lot dépassée pour l'obtention du lien source.",
     "40015": "Limite de taille de lot aria2 dépassée.",
     "40016": "Chemin non trouvé.",
-    "40017": "Ce compte a été bloqué.",
+    "40017": "Ce compte a été bloqué. {{message}}",
     "40018": "Ce compte n'est pas activé.",
     "40019": "Cette fonctionnalité n'est pas activée.",
     "40020": "Identifiant non valide ou expiré.",
@@ -117,5 +119,6 @@
     "40084": "Votre compte est sans mot de passe, vous devez conserver au moins un compte lié.",
     "40085": "Le montant total de cette commande est trop petit pour le paiement."
   },
-  "save": "Enregistrer"
+  "save": "Enregistrer",
+  "delete": "Supprimer"
 }

@@ -34,7 +34,9 @@
       "human": "Jestem człowiekiem",
       "verifying": "Weryfikacja...",
       "verified": "Jesteś człowiekiem"
-    }
+    },
+    "verify": "Kliknij, aby zweryfikować",
+    "verified": "Zweryfikowano"
   },
   "errors": {
     "401": "Zaloguj się.",
@@ -54,7 +56,7 @@
     "40014": "Przekroczono limit rozmiaru partii pobierania linków źródłowych.",
     "40015": "Przekroczono limit rozmiaru partii aria2.",
     "40016": "Nie znaleziono ścieżki.",
-    "40017": "To konto zostało zablokowane.",
+    "40017": "To konto zostało zablokowane. {{message}}",
     "40018": "To konto nie jest aktywowane.",
     "40019": "Ta funkcja nie jest włączona.",
     "40020": "Nieprawidłowe lub wygasłe dane uwierzytelniające.",
@@ -103,5 +105,6 @@
     "50010": "Żądany węzeł jest niedostępny.",
     "50011": "Nie udało się pobrać metadanych pliku."
   },
-  "save": "Zapisz"
+  "save": "Zapisz",
+  "delete": "Usuń"
 }

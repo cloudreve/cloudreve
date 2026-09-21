@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -151,17 +152,17 @@ fun App() {
         if (updateInfo != null) {
             AlertDialog(
                 onDismissRequest = { app.playUpdateAvailable.value = null },
-                title = { Text("Update available") },
-                text = { Text("A new version of Cloudreve Mobile is available on Google Play.") },
+                title = { Text(stringResource(R.string.update_available_title)) },
+                text = { Text(stringResource(R.string.update_available_message)) },
                 confirmButton = {
                     TextButton(onClick = {
                         app.playUpdateAvailable.value = null
                         (context as? MainActivity)?.launchPlayUpdate()
-                    }) { Text("Update") }
+                    }) { Text(stringResource(R.string.update_now)) }
                 },
                 dismissButton = {
                     TextButton(onClick = { app.playUpdateAvailable.value = null }) {
-                        Text("Later")
+                        Text(stringResource(R.string.update_later))
                     }
                 },
             )

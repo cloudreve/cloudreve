@@ -34,7 +34,9 @@
       "human": "Sono umano",
       "verifying": "Verifica in corso...",
       "verified": "Verifica completata"
-    }
+    },
+    "verify": "Clicca per verificare",
+    "verified": "Verificato"
   },
   "errors": {
     "401": "Effettua prima il login.",
@@ -54,7 +56,7 @@
     "40014": "Superato il limite di batch per ottenere il link sorgente.",
     "40015": "Superato il limite di batch per aria2.",
     "40016": "Percorso non trovato.",
-    "40017": "Questo account è stato bloccato.",
+    "40017": "Questo account è stato bloccato. {{message}}",
     "40018": "Questo account non è attivato.",
     "40019": "Questa funzione non è abilitata.",
     "40020": "Credenziali non valide o scadute.",
@@ -117,5 +119,6 @@
     "40084": "Il tuo account è senza password, devi mantenere almeno un account collegato.",
     "40085": "L'importo totale di questo ordine è troppo piccolo per il checkout."
   },
-  "save": "Salva"
+  "save": "Salva",
+  "delete": "Elimina"
 }

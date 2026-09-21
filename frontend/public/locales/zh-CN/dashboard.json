@@ -959,7 +959,7 @@
     "authorizeNow": "立即授权",
     "authorizeAgain": "重新授权",
     "notGranted": "无授权账号，存储策略无法使用。",
-    "granted": "已授权账号，凭证刷新于 <0></0>。",
+    "granted": "已授权账号，凭证刷新于 <0>{{time}}</0>。",
     "grantedNotRefresh": "已授权账号，凭证自上次启动后尚未刷新。",
     "batchDeleteSize": "最大批量删除数量",
     "batchDeleteSizeDes": "限制单次 API 请求的最大删除数量，此设置不会影响用户删除批量文件。不填写会使用默认值 <0>1000</0>，这是官方 S3 API 的最大允许值。",

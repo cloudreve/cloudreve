@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Cloudreve Mobile</string>
+    <string name="update_available_title">Update available</string>
+    <string name="update_available_message">A new version of Cloudreve Mobile is available on Google Play.</string>
+    <string name="update_now">Update</string>
+    <string name="update_later">Later</string>
 </resources>
