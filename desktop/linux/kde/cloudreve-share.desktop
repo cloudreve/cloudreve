@@ -1,0 +1,15 @@
+# KDE Dolphin service menu — right-click > Cloudreve > Share link…
+# Install: copy to ~/.local/share/kio/servicemenus/ (Dolphin ≥ 22) or
+# ~/.local/share/kservices5/ServiceMenus/ (older), then restart Dolphin.
+# Requires `cloudreve-share` on PATH (see desktop/linux/cloudreve-share).
+
+[Desktop Entry]
+Type=Service
+MimeType=all/all
+Actions=cloudreveShare
+X-KDE-Submenu=Cloudreve
+
+[Desktop Action cloudreveShare]
+Name=Share link…
+Icon=emblem-shared
+Exec=cloudreve-share %f

@@ -1,0 +1,10 @@
+#!/bin/sh
+# Nautilus script — adds "Scripts > Cloudreve Share" to the right-click menu.
+# Install: copy to ~/.local/share/nautilus/scripts/ and chmod +x.
+# Requires `cloudreve-share` on PATH (see desktop/linux/cloudreve-share).
+
+# NAUTILUS_SCRIPT_SELECTED_FILE_PATHS is newline-separated; read per line so
+# paths containing spaces survive.
+printf '%s\n' "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" | while IFS= read -r f; do
+    [ -n "$f" ] && cloudreve-share "$f"
+done

@@ -1,0 +1,16 @@
+#!/bin/sh
+# cloudreve-share — open the Cloudreve share dialog for local file(s).
+# Invoked by the Nautilus script and Dolphin service menu; also usable
+# directly: `cloudreve-share ~/CloudDrive/report.pdf`.
+#
+# Works whether the app is running or not — the packaged .desktop file
+# registers x-scheme-handler/cloudreve, and the app processes share deep
+# links passed on its own command line at cold start.
+# Requires python3 for URL encoding.
+
+set -eu
+
+for f in "$@"; do
+    encoded=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))' "$f")
+    xdg-open "cloudreve://share/$encoded" &
+done

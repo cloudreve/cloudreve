@@ -176,6 +176,16 @@ async fn init_sync_service(app: AppHandle) -> anyhow::Result<()> {
     // Store in Tauri's managed state as well for commands
     app.manage(AppStateHandle);
 
+    // Dispatch share deep links that arrived while the sync service was still
+    // initializing, then handle a `cloudreve://` URL passed on our own argv —
+    // the cold-start case where the app was launched by the file manager.
+    drain_pending_share_links();
+    for arg in std::env::args().skip(1) {
+        if arg.starts_with("cloudreve://") {
+            handle_deeplink_url(&app, &arg);
+        }
+    }
+
     if has_no_drives {
         event_broadcaster.no_drive();
     }
@@ -230,6 +240,60 @@ impl AppStateHandle {
     pub fn get(&self) -> Option<&'static AppState> {
         APP_STATE.get()
     }
+}
+
+/// Share deep links that arrived before `APP_STATE` was ready. Drained once
+/// after init completes — the link is a user action and must not be dropped.
+static PENDING_SHARE_LINKS: Mutex<Vec<std::path::PathBuf>> = Mutex::new(Vec::new());
+
+fn dispatch_share_link(path: std::path::PathBuf) {
+    match APP_STATE.get() {
+        Some(state) => {
+            if let Err(e) = state
+                .drive_manager
+                .get_command_sender()
+                .send(cloudreve_sync::drive::commands::ManagerCommand::ShareLink { path })
+            {
+                tracing::error!(target: "main", error = %e, "Failed to dispatch share deep link");
+            }
+        }
+        None => {
+            tracing::info!(target: "main", path = %path.display(), "Share deep link queued until sync service init");
+            PENDING_SHARE_LINKS
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .push(path);
+        }
+    }
+}
+
+fn drain_pending_share_links() {
+    let pending: Vec<std::path::PathBuf> = PENDING_SHARE_LINKS
+        .lock()
+        .map(|mut q| std::mem::take(&mut *q))
+        .unwrap_or_default();
+    for path in pending {
+        dispatch_share_link(path);
+    }
+}
+
+/// Route an incoming `cloudreve://` deep link. `cloudreve://share/<url-encoded
+/// local path>` opens the share dialog via the same pipeline as the Explorer
+/// context menu — this is the Linux/macOS file-manager entry point (Nautilus
+/// scripts, Dolphin service menus, `xdg-open`). Everything else keeps the
+/// existing behavior: forward to the frontend and show the add-drive window.
+fn handle_deeplink_url(app: &AppHandle, url: &str) {
+    if let Some(encoded_path) = url.strip_prefix("cloudreve://share/") {
+        let Ok(decoded) = urlencoding::decode(encoded_path) else {
+            tracing::warn!(target: "main", url = %url, "Malformed share deep link");
+            return;
+        };
+        dispatch_share_link(std::path::PathBuf::from(decoded.as_ref()));
+        return;
+    }
+
+    let _ = app.emit("deeplink", url.to_string());
+    show_add_drive_window_impl(app);
 }
 
 /// Spawn a task that bridges EventBroadcaster to Tauri events
@@ -394,8 +458,7 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             tracing::info!("a new app instance was opened with {argv:?} and the deep link event was already triggered");
             if argv.len() > 1 {
-                let _ = app.emit("deeplink", argv[1].clone());
-                show_add_drive_window_impl(app);
+                handle_deeplink_url(app, &argv[1]);
             }
             // when defining deep link schemes at runtime, you must also check `argv` here
         }))
@@ -428,8 +491,7 @@ pub fn run() {
                 if let Ok(urls) = serde_json::from_str::<Vec<String>>(event.payload()) {
                     if let Some(url) = urls.first() {
                         tracing::info!(target: "main", "Received deep-link URL: {}", url);
-                        let _ = app_handle.emit("deeplink", url.clone());
-                        show_add_drive_window_impl(&app_handle);
+                        handle_deeplink_url(&app_handle, url);
                     }
                 }
             });
