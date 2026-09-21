@@ -1144,6 +1144,17 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 						middleware.RequiredScopes(types.ScopeAdminWrite),
 						controllers.AdminClearEntityUrlCache,
 					)
+					// Check GitHub releases for a newer server build
+					tool.GET("update",
+						controllers.FromQuery[adminsvc.UpdateCheckService](adminsvc.UpdateCheckParamCtx{}),
+						controllers.AdminCheckUpdate,
+					)
+					// Download + install the latest release in place
+					tool.POST("update",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
+						controllers.FromQuery[adminsvc.UpdateApplyService](adminsvc.UpdateApplyParamCtx{}),
+						controllers.AdminApplyUpdate,
+					)
 				}
 
 				queue := admin.Group("queue", middleware.AdminSection(types.GroupPermissionAdminQueue))

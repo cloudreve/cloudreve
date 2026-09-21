@@ -1992,5 +1992,15 @@
       "dismissed": "忽略此舉報",
       "open": "重新開啟舉報"
     }
+  },
+  "update": {
+    "available": "新版本 {{version}} 可用（目前版本：{{current}}）",
+    "title": "軟體更新",
+    "updateNow": "立即更新",
+    "updating": "正在下載並安裝——伺服器將自動重新啟動……",
+    "viewRelease": "在 GitHub 上檢視發布",
+    "containerHint": "此伺服器執行於容器中，請更新映像：docker compose pull && docker compose up -d",
+    "unsupported": "目前環境不支援原地更新，請手動下載新版本。",
+    "timeout": "伺服器未及時恢復——請查看日誌並重新整理頁面。"
   }
 }

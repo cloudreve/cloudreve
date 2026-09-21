@@ -1992,5 +1992,15 @@
       "dismissed": "通報を却下",
       "open": "通報を再開"
     }
+  },
+  "update": {
+    "available": "バージョン {{version}} が利用可能です（現在: {{current}}）",
+    "title": "ソフトウェア更新",
+    "updateNow": "今すぐ更新",
+    "updating": "ダウンロードしてインストール中——サーバーは自動的に再起動します…",
+    "viewRelease": "GitHub でリリースを見る",
+    "containerHint": "このサーバーはコンテナ内で実行されています。イメージを更新してください: docker compose pull && docker compose up -d",
+    "unsupported": "この環境ではインプレース更新をサポートしていません。手動でリリースをダウンロードしてください。",
+    "timeout": "サーバーが時間内に復帰しませんでした——ログを確認してページを再読み込みしてください。"
   }
 }

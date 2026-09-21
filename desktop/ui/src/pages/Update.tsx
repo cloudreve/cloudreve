@@ -12,7 +12,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { DenseFilledTextField } from "../common/StyledComponent";
 
@@ -34,6 +34,25 @@ export default function Update() {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const downloadedRef = useRef(0);
+  const auto = new URLSearchParams(window.location.hash.split("?")[1]).get(
+    "auto"
+  ) === "1";
+
+  const startUpdate = useCallback(async () => {
+    setPhase("downloading");
+    setError(null);
+    downloadedRef.current = 0;
+    setProgress(0);
+    try {
+      await invoke("install_update");
+      // The ready phase is set by the update-finished listener; if the
+      // event raced past us, still land on ready.
+      setPhase((p) => (p === "downloading" ? "ready" : p));
+    } catch (e) {
+      setError(String(e));
+      setPhase("error");
+    }
+  }, []);
 
   useEffect(() => {
     const unProgress = listen<{ downloaded: number; total: number | null }>(
@@ -52,7 +71,12 @@ export default function Update() {
     invoke<UpdateInfo | null>("check_update")
       .then((u) => {
         setInfo(u);
-        setPhase(u ? "available" : "uptodate");
+        if (u && auto) {
+          // Opened from the startup prompt — start the download right away.
+          startUpdate();
+        } else {
+          setPhase(u ? "available" : "uptodate");
+        }
       })
       .catch((e) => {
         setError(String(e));
@@ -63,23 +87,7 @@ export default function Update() {
       unProgress.then((f) => f());
       unFinished.then((f) => f());
     };
-  }, []);
-
-  const startUpdate = async () => {
-    setPhase("downloading");
-    setError(null);
-    downloadedRef.current = 0;
-    setProgress(0);
-    try {
-      await invoke("install_update");
-      // The ready phase is set by the update-finished listener; if the
-      // event raced past us, still land on ready.
-      setPhase((p) => (p === "downloading" ? "ready" : p));
-    } catch (e) {
-      setError(String(e));
-      setPhase("error");
-    }
-  };
+  }, [auto, startUpdate]);
 
   return (
     <Box
@@ -155,6 +163,14 @@ export default function Update() {
 
         {phase === "downloading" && (
           <>
+            {info && (
+              <Typography variant="body1" fontWeight={600}>
+                {t("update.available", {
+                  version: info.version,
+                  current: info.current_version,
+                })}
+              </Typography>
+            )}
             <Typography variant="body2" color="text.secondary">
               {t("update.downloading")}
             </Typography>

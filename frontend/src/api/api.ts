@@ -26,6 +26,7 @@ import {
   GetSettingService,
   GroupEnt,
   HomepageSummary,
+  UpdateInfo,
   ListEntityResponse,
   ListFileResponse,
   ListNodeResponse,
@@ -1830,6 +1831,22 @@ export function sendReset(uid: string, req: ResetPasswordService): ThunkResponse
           noCredential: true,
         },
       ),
+    );
+  };
+}
+
+export function getServerUpdateInfo(): ThunkResponse<UpdateInfo> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(`/admin/tool/update`, { method: "GET" }, { ...defaultOpts }),
+    );
+  };
+}
+
+export function applyServerUpdate(): ThunkResponse<UpdateInfo> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(`/admin/tool/update`, { method: "POST" }, { ...defaultOpts }),
     );
   };
 }

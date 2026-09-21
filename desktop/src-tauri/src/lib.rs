@@ -209,7 +209,7 @@ async fn init_sync_service(app: AppHandle) -> anyhow::Result<()> {
             }
             let _ = ConfigManager::get()
                 .update(|c| c.prompted_update_version = Some(update.version.clone()));
-            commands::show_update_window_impl(&app);
+            commands::show_update_window_impl(&app, true);
         });
     }
 

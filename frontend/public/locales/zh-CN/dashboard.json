@@ -1992,5 +1992,15 @@
       "dismissed": "忽略此举报",
       "open": "重新打开举报"
     }
+  },
+  "update": {
+    "available": "新版本 {{version}} 可用（当前版本：{{current}}）",
+    "title": "软件更新",
+    "updateNow": "立即更新",
+    "updating": "正在下载并安装——服务器将自动重启……",
+    "viewRelease": "在 GitHub 上查看发布",
+    "containerHint": "此服务器运行在容器中，请更新镜像：docker compose pull && docker compose up -d",
+    "unsupported": "当前环境不支持原地更新，请手动下载新版本。",
+    "timeout": "服务器未及时恢复——请查看日志并刷新页面。"
   }
 }

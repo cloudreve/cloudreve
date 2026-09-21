@@ -1994,5 +1994,15 @@
       "dismissed": "Descartar informe",
       "open": "Reabrir informe"
     }
+  },
+  "update": {
+    "available": "La versión {{version}} está disponible (actual: {{current}})",
+    "title": "Actualización de software",
+    "updateNow": "Actualizar ahora",
+    "updating": "Descargando e instalando — el servidor se reinicia automáticamente…",
+    "viewRelease": "Ver lanzamiento en GitHub",
+    "containerHint": "Este servidor se ejecuta en un contenedor. Actualiza la imagen: docker compose pull && docker compose up -d",
+    "unsupported": "La actualización en el lugar no es compatible con este entorno. Descarga la versión manualmente.",
+    "timeout": "El servidor no volvió a tiempo — revisa los registros y recarga."
   }
 }

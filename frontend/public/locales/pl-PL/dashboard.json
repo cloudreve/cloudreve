@@ -1992,5 +1992,15 @@
       "dismissed": "Odrzuć zgłoszenie",
       "open": "Otwórz zgłoszenie ponownie"
     }
+  },
+  "update": {
+    "available": "Dostępna jest wersja {{version}} (obecna: {{current}})",
+    "title": "Aktualizacja oprogramowania",
+    "updateNow": "Aktualizuj teraz",
+    "updating": "Pobieranie i instalowanie — serwer uruchomi się ponownie automatycznie…",
+    "viewRelease": "Zobacz wydanie na GitHub",
+    "containerHint": "Ten serwer działa w kontenerze. Zaktualizuj obraz: docker compose pull && docker compose up -d",
+    "unsupported": "Aktualizacja w miejscu nie jest obsługiwana w tym środowisku. Pobierz wydanie ręcznie.",
+    "timeout": "Serwer nie wrócił na czas — sprawdź logi i przeładuj stronę."
   }
 }

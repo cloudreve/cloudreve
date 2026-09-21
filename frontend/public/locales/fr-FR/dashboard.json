@@ -1994,5 +1994,15 @@
       "dismissed": "Rejeter le signalement",
       "open": "Rouvrir le signalement"
     }
+  },
+  "update": {
+    "available": "La version {{version}} est disponible (actuelle : {{current}})",
+    "title": "Mise à jour logicielle",
+    "updateNow": "Mettre à jour",
+    "updating": "Téléchargement et installation — le serveur redémarre automatiquement…",
+    "viewRelease": "Voir la version sur GitHub",
+    "containerHint": "Ce serveur s'exécute dans un conteneur. Mettez à jour l'image : docker compose pull && docker compose up -d",
+    "unsupported": "La mise à jour sur place n'est pas prise en charge dans cet environnement. Téléchargez la version manuellement.",
+    "timeout": "Le serveur n'est pas revenu à temps — consultez les journaux et rechargez."
   }
 }

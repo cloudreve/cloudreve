@@ -2020,5 +2020,15 @@
     "learnMore": "Mehr erfahren",
     "promotionTitle": "Sonderrabatt beim Upgrade der Community-Edition",
     "promotion": "Verwenden Sie beim Kauf den Aktionscode <0>{{code}}</0>, um <1>-{{discount}}%</1> Rabatt zu erhalten."
+  },
+  "update": {
+    "available": "Version {{version}} ist verfügbar (aktuell: {{current}})",
+    "title": "Software-Update",
+    "updateNow": "Jetzt aktualisieren",
+    "updating": "Wird heruntergeladen und installiert — der Server startet automatisch neu…",
+    "viewRelease": "Release auf GitHub ansehen",
+    "containerHint": "Dieser Server läuft in einem Container. Aktualisieren Sie das Image: docker compose pull && docker compose up -d",
+    "unsupported": "Ein direktes Update wird in dieser Umgebung nicht unterstützt. Laden Sie das Release manuell herunter.",
+    "timeout": "Der Server ist nicht rechtzeitig zurückgekehrt — Logs prüfen und Seite neu laden."
   }
 }

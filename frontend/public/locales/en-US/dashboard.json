@@ -1992,5 +1992,15 @@
       "dismissed": "Dismiss report",
       "open": "Reopen report"
     }
+  },
+  "update": {
+    "available": "Version {{version}} is available (current: {{current}})",
+    "title": "Software update",
+    "updateNow": "Update now",
+    "updating": "Downloading and installing — the server restarts automatically…",
+    "viewRelease": "View release on GitHub",
+    "containerHint": "This server runs in a container. Update the image instead: docker compose pull && docker compose up -d",
+    "unsupported": "In-place update is not supported in this environment. Download the release manually.",
+    "timeout": "The server did not come back in time — check the logs and reload."
   }
 }

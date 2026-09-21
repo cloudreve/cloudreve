@@ -1557,7 +1557,7 @@ pub fn restart_app(app: AppHandle) {
 /// Show or create the in-app update window. The window itself runs the update
 /// check so it works both for automatic prompts and manual "Check for
 /// updates" from the About page.
-pub fn show_update_window_impl(app: &AppHandle) {
+pub fn show_update_window_impl(app: &AppHandle, auto_download: bool) {
     // One update window at a time — refocus instead of stacking dialogs.
     if let Some(window) = app.get_webview_window("update") {
         let _ = window.unminimize();
@@ -1566,7 +1566,11 @@ pub fn show_update_window_impl(app: &AppHandle) {
         return;
     }
 
-    let url_path = get_url_with_lang("index.html#/update");
+    let url_path = get_url_with_lang(if auto_download {
+        "index.html#/update?auto=1"
+    } else {
+        "index.html#/update"
+    });
 
     #[cfg(windows)]
     let effects = WindowEffectsConfig {
@@ -1626,6 +1630,6 @@ pub fn show_update_window_impl(app: &AppHandle) {
 /// Open the in-app update window (Settings → About → "Check for updates").
 #[tauri::command]
 pub async fn show_update_window(app: AppHandle) -> CommandResult<()> {
-    show_update_window_impl(&app);
+    show_update_window_impl(&app, false);
     Ok(())
 }

@@ -26,6 +26,18 @@ export interface HomepageSummary {
   version: Version;
 }
 
+export interface UpdateInfo {
+  version: string;
+  current: string;
+  url: string;
+  notes: string;
+  published_at: string;
+  newer: boolean;
+  self_update: boolean;
+  container: boolean;
+  reason?: string;
+}
+
 export interface ManualRefreshLicenseService {
   license: string;
 }

@@ -754,3 +754,23 @@ func AdminBatchDeleteOAuthClient(c *gin.Context) {
 	}
 	c.JSON(200, serializer.Response{})
 }
+
+// AdminCheckUpdate returns the latest GitHub release info for this server.
+func AdminCheckUpdate(c *gin.Context) {
+	service := ParametersFromContext[*admin.UpdateCheckService](c, admin.UpdateCheckParamCtx{})
+	res, err := service.Check(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
+
+// AdminApplyUpdate downloads and installs the latest release, then restarts.
+func AdminApplyUpdate(c *gin.Context) {
+	service := ParametersFromContext[*admin.UpdateApplyService](c, admin.UpdateApplyParamCtx{})
+	res, err := service.Apply(c)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(200, serializer.Response{Data: res})
+}
