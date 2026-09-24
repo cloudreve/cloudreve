@@ -1,3 +1,19 @@
+# Build stage
+
+FROM ghcr.io/goreleaser/goreleaser:v2.10.2 AS builder
+
+WORKDIR /src
+
+# Install goreleaser
+RUN apk add --no-cache bash curl git npm nodejs tar zip
+RUN npm install -g yarn
+
+# Perform the build
+COPY . .
+
+RUN goreleaser build --single-target --snapshot
+
+# Runtime stage
 FROM alpine:latest
 
 WORKDIR /cloudreve
@@ -17,7 +33,7 @@ ENV CR_ENABLE_ARIA2=1 \
     CR_SETTING_DEFAULT_thumb_libraw_enabled=1
 
 COPY .build/aria2.supervisor.conf .build/entrypoint.sh ./
-COPY cloudreve ./cloudreve
+COPY --from=builder /src/dist/*/cloudreve ./cloudreve
 
 RUN chmod +x ./cloudreve \
     && chmod +x ./entrypoint.sh
