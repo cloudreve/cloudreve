@@ -32,7 +32,7 @@ $folderUri = "cloudreve://my/inbox-$suffix"
 $contents = [Text.Encoding]::UTF8.GetBytes("receive-once-$suffix")
 $source = Invoke-RestMethod -Uri "$api/file/content?uri=$([uri]::EscapeDataString($sourceUri))" -Method Put -Headers $crawlerHeaders -ContentType 'application/octet-stream' -Body $contents
 if ($source.code -ne 0) { throw "Test upload failed: $($source.msg)" }
-Invoke-TestApi '/file' Post @{ uri = $folderUri; type = 'folder' } $adminHeaders | Out-Null
+Invoke-TestApi '/file/create' Post @{ uri = $folderUri; type = 'folder' } $adminHeaders | Out-Null
 $request = @{ source_id = $source.data.id; dst = $folderUri }
 Invoke-TestApi '/admin/file/receive' Post $request $crawlerHeaders -ExpectFailure | Out-Null
 Invoke-TestApi '/admin/file/receive' Post $request -ExpectFailure | Out-Null
