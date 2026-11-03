@@ -1,0 +1,13 @@
+.git
+assets/.git
+assets/node_modules
+assets/build
+data
+uploads
+dist
+cloudreve
+*.exe
+*.db
+*.ini
+.env
+*.env

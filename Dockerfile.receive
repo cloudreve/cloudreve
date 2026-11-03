@@ -1,0 +1,30 @@
+# syntax=docker/dockerfile:1
+FROM node:22-bookworm@sha256:18a6d90fd60542269850c80ca03b29b1d9b14d6b221ac7ee8e35b0d33ef904bd AS frontend
+WORKDIR /src/assets
+RUN apt-get update && apt-get install -y --no-install-recommends zip && rm -rf /var/lib/apt/lists/*
+COPY assets/package.json assets/yarn.lock ./
+RUN yarn install --frozen-lockfile --network-timeout 1000000
+COPY assets/ ./
+ENV NODE_OPTIONS=--max-old-space-size=4096
+RUN yarn version --new-version 4.19.1 --no-git-tag-version && yarn run build
+WORKDIR /src
+RUN zip -rq /assets.zip assets/build
+
+FROM golang:1.26.5-bookworm@sha256:53eeac89074db483fdf0ab3be1df32bf6e47562263d2d0d6baa7f26acb4957dd AS backend
+WORKDIR /src
+ENV CGO_ENABLED=0 GOMAXPROCS=4 GOFLAGS=-p=2
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+COPY . ./
+COPY --from=frontend /assets.zip ./application/statics/assets.zip
+ARG SOURCE_COMMIT=local
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    go test ./pkg/filemanager/fs/dbfs ./service/admin && \
+    go build -trimpath -ldflags="-s -w -X github.com/cloudreve/Cloudreve/v4/application/constants.BackendVersion=4.19.1 -X github.com/cloudreve/Cloudreve/v4/application/constants.LastCommit=${SOURCE_COMMIT}" -o /out/cloudreve .
+
+FROM cloudreve/cloudreve:4.19.1@sha256:5c6c5baf7fa5bc6e1bb9a7509c09dde00e80b618d180244eb1d5f7e36b358ea2
+ARG SOURCE_COMMIT=local
+LABEL org.opencontainers.image.source="https://github.com/duminqing/cloudreve" \
+      org.opencontainers.image.revision="${SOURCE_COMMIT}" \
+      org.opencontainers.image.version="4.19.1-receive.1"
+COPY --from=backend --chmod=755 /out/cloudreve /cloudreve/cloudreve

@@ -79,6 +79,8 @@ type (
 		Rename(ctx context.Context, path *URI, newName string) (File, *IndexDiff, error)
 		// Move moves files to dst.
 		MoveOrCopy(ctx context.Context, path []*URI, dst *URI, isCopy bool) (*IndexDiff, error)
+		// ReceiveFile copies a completed file by ID into the administrator's own filesystem.
+		ReceiveFile(ctx context.Context, fileID int, dst *URI) (File, *IndexDiff, error)
 		// Delete performs hard-delete for given paths, return newly generated stale entities in this delete operation.
 		Delete(ctx context.Context, path []*URI, opts ...Option) ([]Entity, *IndexDiff, error)
 		// GetEntitiesFromFileID returns all entities of a given file.

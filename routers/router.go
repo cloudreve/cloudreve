@@ -1162,6 +1162,12 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 
 				file := admin.Group("file")
 				{
+					// Receive an existing file into the current administrator's own directory.
+					file.POST("receive",
+						middleware.RequiredScopes(types.ScopeAdminWrite, types.ScopeFilesWrite),
+						controllers.FromJSON[adminsvc.ReceiveFileService](adminsvc.ReceiveFileParamCtx{}),
+						controllers.AdminReceiveFile,
+					)
 					// 列出文件
 					file.POST("",
 						controllers.FromJSON[adminsvc.AdminListService](adminsvc.AdminListServiceParamsCtx{}),
