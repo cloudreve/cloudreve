@@ -49,7 +49,7 @@ pwsh -File D:\project\cloudreve\deploy\Update-Cloudreve.ps1 -Revision HEAD
 
 脚本会解析到完整提交 SHA，再让 Docker 从该 GitHub 提交下载源码及固定的前端子模块，通过 `Dockerfile.receive` 构建镜像。镜像构建会运行接收功能的数据库集成测试和管理员服务测试。
 
-镜像构建完成后，脚本只停止 Cloudreve，备份 PostgreSQL 的 `cloudreve` 数据库、`cloudreve_data` 卷和现有部署配置，然后写入 `D:\docker\server\cloudreve\compose.custom.yaml`，重建 Cloudreve 容器并等待健康检查。数据库和 Redis 服务继续运行。数据库结构没有新增表或列。
+镜像构建完成后，脚本只停止 Cloudreve，备份 PostgreSQL 的 `cloudreve` 数据库、`cloudreve_data` 卷和现有部署配置，然后写入 `D:\docker\server\cloudreve\compose.custom.yaml`，重建 Cloudreve 容器并等待健康检查。文件卷保存为未压缩的 `cloudreve-data.tar`，以缩短停机时间；备份目录需要至少相当于文件卷大小的可用空间。数据库和 Redis 服务继续运行。数据库结构没有新增表或列。
 
 配置、密码和实际文件留在原部署目录及 Docker 卷内，均不提交 GitHub。默认分支 `master` 保留官方同步用途；不要直接把未经适配的新官方版本合进当前部署分支。
 

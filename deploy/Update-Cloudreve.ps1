@@ -55,7 +55,7 @@ try {
     Invoke-Docker @('run', '--rm', '--pull', 'never', '--network', 'none', '--entrypoint', 'sh',
         '--mount', 'type=volume,source=cloudreve_data,target=/source,readonly',
         '--mount', "type=bind,source=$backup,target=/backup", $previousImage,
-        '-c', 'tar -czf /backup/cloudreve-data.tar.gz -C /source .')
+        '-c', 'tar -cf /backup/cloudreve-data.tar -C /source .')
     @{
         commit = $commit; image = $image; previousImage = $previousImage
         hadOverride = $hadOverride; created = (Get-Date).ToString('o')
