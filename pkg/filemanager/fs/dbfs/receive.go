@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/cloudreve/Cloudreve/v4/application/constants"
 	"github.com/cloudreve/Cloudreve/v4/ent"
@@ -17,7 +18,7 @@ import (
 // ReceiveFile is deliberately separate from MoveOrCopy: only administrators may
 // use a source file belonging to another user, and the destination must belong
 // to the authenticated administrator. File contents never leave their provider.
-func (f *DBFS) ReceiveFile(ctx context.Context, fileID int, dst *fs.URI) (fs.File, *fs.IndexDiff, error) {
+func (f *DBFS) ReceiveFile(ctx context.Context, fileID int, dst *fs.URI, name string) (fs.File, *fs.IndexDiff, error) {
 	if f.user == nil || f.user.Edges.Group == nil ||
 		!f.user.Edges.Group.Permissions.Enabled(int(types.GroupPermissionIsAdmin)) {
 		return nil, nil, ErrPermissionDenied
@@ -53,11 +54,21 @@ func (f *DBFS) ReceiveFile(ctx context.Context, fileID int, dst *fs.URI) (fs.Fil
 		return nil, nil, fs.ErrNotSupportedAction.WithError(fmt.Errorf("source must be a live regular file"))
 	}
 
+	if name == "" {
+		name = source.Name()
+	}
+	if err := validateFileName(name); err != nil {
+		return nil, nil, fs.ErrIllegalObjectName.WithError(err)
+	}
+	if strings.ContainsAny(name, "\x00\r\n") {
+		return nil, nil, fs.ErrIllegalObjectName.WithError(fmt.Errorf("name contains control characters"))
+	}
+
 	// Use the same lock namespace as normal uploads, deletes and moves. Hold both
 	// source and destination locks until the copy transaction has committed.
 	ls, err := f.acquireByPath(ctx, -1, f.user, false, fs.LockApp(fs.ApplicationMoveCopy),
 		&LockByPath{source.Uri(true), source, source.Type(), ""},
-		&LockByPath{destination.Uri(true).Join(source.Name()), destination, source.Type(), ""},
+		&LockByPath{destination.Uri(true).Join(name), destination, source.Type(), ""},
 	)
 	defer func() { _ = f.Release(ctx, ls) }()
 	if err != nil {
@@ -111,8 +122,12 @@ func (f *DBFS) ReceiveFile(ctx context.Context, fileID int, dst *fs.URI) (fs.Fil
 		return nil, nil, err
 	}
 
+	// Set the destination name on a shallow copy before INSERT. This keeps the
+	// source untouched and checks final-name conflicts in the copy transaction.
+	copyModel := *model
+	copyModel.Name = name
 	copied, storageDiff, err := fc.Copy(txCtx, &inventory.CopyParameter{
-		Files: []*ent.File{model},
+		Files: []*ent.File{&copyModel},
 		DstMap: map[int][]*ent.File{model.FileChildren: lo.Map(destination.AncestorsChain(), func(file *File, _ int) *ent.File {
 			return file.Model
 		})},

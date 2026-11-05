@@ -153,11 +153,11 @@ func (m *manager) MoveOrCopy(ctx context.Context, src []*fs.URI, dst *fs.URI, is
 	return nil
 }
 
-func (m *manager) ReceiveFile(ctx context.Context, fileID int, dst *fs.URI) (fs.File, error) {
+func (m *manager) ReceiveFile(ctx context.Context, fileID int, dst *fs.URI, name string) (fs.File, error) {
 	if m.stateless {
 		return nil, fs.ErrNotSupportedAction
 	}
-	file, diff, err := m.fs.ReceiveFile(ctx, fileID, dst)
+	file, diff, err := m.fs.ReceiveFile(ctx, fileID, dst, name)
 	if err != nil {
 		return nil, err
 	}

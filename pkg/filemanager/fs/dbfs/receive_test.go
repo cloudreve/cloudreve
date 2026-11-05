@@ -95,7 +95,7 @@ func newReceiveFixture(t *testing.T) *receiveFixture {
 
 func TestReceiveFilePreservesBlobAfterSourceDeletion(t *testing.T) {
 	x := newReceiveFixture(t)
-	received, _, err := x.fs.ReceiveFile(x.ctx, x.source.ID, x.dst)
+	received, _, err := x.fs.ReceiveFile(x.ctx, x.source.ID, x.dst, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,7 +146,7 @@ func TestReceiveFilePreservesBlobAfterSourceDeletion(t *testing.T) {
 func TestReceiveFileRejectsNonAdministrator(t *testing.T) {
 	x := newReceiveFixture(t)
 	x.fs.user = x.owner
-	if _, _, err := x.fs.ReceiveFile(x.ctx, x.source.ID, x.dst); err == nil {
+	if _, _, err := x.fs.ReceiveFile(x.ctx, x.source.ID, x.dst, ""); err == nil {
 		t.Fatal("ordinary user accepted")
 	}
 	if got := x.db.Entity.GetX(x.ctx, x.blob.ID).ReferenceCount; got != 1 {
@@ -157,17 +157,17 @@ func TestReceiveFileRejectsNonAdministrator(t *testing.T) {
 func TestReceiveFileRejectsOtherUsersDestination(t *testing.T) {
 	x := newReceiveFixture(t)
 	dst, _ := fs.NewUriFromString(fmt.Sprintf("cloudreve://%s@my", hashid.EncodeUserID(x.fs.hasher, x.owner.ID)))
-	if _, _, err := x.fs.ReceiveFile(x.ctx, x.source.ID, dst); err == nil {
+	if _, _, err := x.fs.ReceiveFile(x.ctx, x.source.ID, dst, ""); err == nil {
 		t.Fatal("other user's destination accepted")
 	}
 }
 
 func TestReceiveFileNameConflictRollsBackQuotaAndReferences(t *testing.T) {
 	x := newReceiveFixture(t)
-	if _, _, err := x.fs.ReceiveFile(x.ctx, x.source.ID, x.dst); err != nil {
+	if _, _, err := x.fs.ReceiveFile(x.ctx, x.source.ID, x.dst, ""); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := x.fs.ReceiveFile(x.ctx, x.source.ID, x.dst); err == nil {
+	if _, _, err := x.fs.ReceiveFile(x.ctx, x.source.ID, x.dst, ""); err == nil {
 		t.Fatal("name conflict accepted")
 	}
 	if got := x.db.Entity.GetX(x.ctx, x.blob.ID).ReferenceCount; got != 2 {
@@ -192,7 +192,7 @@ func TestReceiveFileRejectsIncompleteAndDeletedSources(t *testing.T) {
 			case "symbolic":
 				x.db.File.UpdateOne(x.source).SetIsSymbolic(true).SaveX(x.ctx)
 			}
-			if _, _, err := x.fs.ReceiveFile(x.ctx, x.source.ID, x.dst); err == nil {
+			if _, _, err := x.fs.ReceiveFile(x.ctx, x.source.ID, x.dst, ""); err == nil {
 				t.Fatal("invalid source accepted")
 			}
 			if got := x.db.User.GetX(x.ctx, x.admin.ID).Storage; got != 0 {
@@ -205,7 +205,7 @@ func TestReceiveFileRejectsIncompleteAndDeletedSources(t *testing.T) {
 func TestReceiveFileInsufficientQuota(t *testing.T) {
 	x := newReceiveFixture(t)
 	x.fs.user.Edges.Group.MaxStorage = 4
-	if _, _, err := x.fs.ReceiveFile(x.ctx, x.source.ID, x.dst); err == nil {
+	if _, _, err := x.fs.ReceiveFile(x.ctx, x.source.ID, x.dst, ""); err == nil {
 		t.Fatal("insufficient quota accepted")
 	}
 	if got := x.db.Entity.GetX(x.ctx, x.blob.ID).ReferenceCount; got != 1 {
@@ -213,5 +213,57 @@ func TestReceiveFileInsufficientQuota(t *testing.T) {
 	}
 	if got := x.db.User.GetX(x.ctx, x.admin.ID).Storage; got != 0 {
 		t.Fatal("failed receive changed quota")
+	}
+}
+
+func TestReceiveFileUsesRequestedNameWithoutChangingSource(t *testing.T) {
+	x := newReceiveFixture(t)
+	name := "2026-10-1_2026-10-31_销售主题分析.xlsx"
+	received, _, err := x.fs.ReceiveFile(x.ctx, x.source.ID, x.dst, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if received.Name() != name || received.Uri(false).Name() != name {
+		t.Fatal("received file did not use requested business name")
+	}
+	if x.db.File.GetX(x.ctx, x.source.ID).Name != "X.txt" {
+		t.Fatal("receive renamed the crawler source")
+	}
+	if received.PrimaryEntityID() != x.blob.ID {
+		t.Fatal("receive changed the physical blob")
+	}
+}
+
+func TestReceiveFileConflictsOnRequestedNameOnly(t *testing.T) {
+	x := newReceiveFixture(t)
+	// A file using the source name does not block a different business name.
+	if _, _, err := x.fs.ReceiveFile(x.ctx, x.source.ID, x.dst, ""); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := x.fs.ReceiveFile(x.ctx, x.source.ID, x.dst, "business.xlsx"); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := x.fs.ReceiveFile(x.ctx, x.source.ID, x.dst, "business.xlsx"); err == nil {
+		t.Fatal("duplicate requested name accepted")
+	}
+	if got := x.db.Entity.GetX(x.ctx, x.blob.ID).ReferenceCount; got != 3 {
+		t.Fatalf("references = %d, want 3 after rejected duplicate", got)
+	}
+	if got := x.db.User.GetX(x.ctx, x.admin.ID).Storage; got != 10 {
+		t.Fatalf("storage = %d, want 10 after rejected duplicate", got)
+	}
+}
+
+func TestReceiveFileRejectsInvalidRequestedNames(t *testing.T) {
+	for _, name := range []string{"..", "../escape.xlsx", "a/b.xlsx", "a\\b.xlsx", "bad\x00.xlsx", "bad\n.xlsx", "bad\r.xlsx"} {
+		t.Run(fmt.Sprintf("%q", name), func(t *testing.T) {
+			x := newReceiveFixture(t)
+			if _, _, err := x.fs.ReceiveFile(x.ctx, x.source.ID, x.dst, name); err == nil {
+				t.Fatal("invalid requested name accepted")
+			}
+			if x.db.User.GetX(x.ctx, x.admin.ID).Storage != 0 || x.db.Entity.GetX(x.ctx, x.blob.ID).ReferenceCount != 1 {
+				t.Fatal("invalid requested name changed quota or references")
+			}
+		})
 	}
 }

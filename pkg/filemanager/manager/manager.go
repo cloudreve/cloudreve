@@ -50,7 +50,7 @@ type (
 		// MoveOrCopy moves or copies a group of files
 		MoveOrCopy(ctx context.Context, src []*fs.URI, dst *fs.URI, isCopy bool) error
 		// ReceiveFile creates an independently owned file while sharing existing blobs.
-		ReceiveFile(ctx context.Context, fileID int, dst *fs.URI) (fs.File, error)
+		ReceiveFile(ctx context.Context, fileID int, dst *fs.URI, name string) (fs.File, error)
 		// Update puts file content. If given file does not exist, it will create a new one.
 		Update(ctx context.Context, req *fs.UploadRequest, opts ...fs.Option) (fs.File, error)
 		// Walk walks through given path

@@ -16,6 +16,7 @@ type ReceiveFileParamCtx struct{}
 type ReceiveFileService struct {
 	SourceID string `json:"source_id" binding:"required"`
 	Dst      string `json:"dst" binding:"required"`
+	Name     string `json:"name" binding:"omitempty,min=1,max=255"`
 }
 
 func (s *ReceiveFileService) Receive(c *gin.Context) (*explorer.FileResponse, error) {
@@ -31,7 +32,7 @@ func (s *ReceiveFileService) Receive(c *gin.Context) (*explorer.FileResponse, er
 	u := inventory.UserFromContext(c)
 	fm := manager.NewFileManager(dep, u)
 	defer fm.Recycle()
-	file, err := fm.ReceiveFile(c, fileID, dst)
+	file, err := fm.ReceiveFile(c, fileID, dst, s.Name)
 	if err != nil {
 		return nil, err
 	}
