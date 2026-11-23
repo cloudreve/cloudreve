@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -334,15 +333,12 @@ func (m *RemoteDownloadTask) slaveTransfer(ctx context.Context, dep dependency.D
 		if err != nil {
 			return task.StatusError, fmt.Errorf("failed to parse dst uri %q: %s (%w)", m.state.Dst, err, queue.CriticalErr)
 		}
-
-		// Create slave upload task
-		payload := &SlaveUploadTaskState{
-			Files:       []SlaveUploadEntity{},
-			MaxParallel: dep.SettingProvider().MaxParallelTransfer(ctx),
-			UserID:      u.ID,
+		if m.state.Status.SavePath == "" {
+			return task.StatusError, fmt.Errorf("download save path is empty (%w)", queue.CriticalErr)
 		}
 
 		// Construct files to be transferred
+		files := []SlaveUploadEntity{}
 		for _, f := range m.state.Status.Files {
 			if !f.Selected {
 				continue
@@ -353,14 +349,24 @@ func (m *RemoteDownloadTask) slaveTransfer(ctx context.Context, dep dependency.D
 				continue
 			}
 
-			dst := dstUri.JoinRaw(sanitizeFileName(f.Name))
+			dst, err := remoteDownloadDestination(dstUri, f.Name)
+			if err != nil {
+				return task.StatusError, fmt.Errorf("invalid download file %q: %s (%w)", f.Name, err, queue.CriticalErr)
+			}
 			src := path.Join(m.state.Status.SavePath, f.Name)
-			payload.Files = append(payload.Files, SlaveUploadEntity{
+			files = append(files, SlaveUploadEntity{
 				Src:   src,
 				Uri:   dst,
 				Size:  f.Size,
 				Index: f.Index,
 			})
+		}
+
+		payload := &SlaveUploadTaskState{
+			Files:       files,
+			SourceRoot:  m.state.Status.SavePath,
+			MaxParallel: dep.SettingProvider().MaxParallelTransfer(ctx),
+			UserID:      u.ID,
 		}
 
 		payloadStr, err := json.Marshal(payload)
@@ -430,23 +436,39 @@ func (m *RemoteDownloadTask) masterTransfer(ctx context.Context, dep dependency.
 		m.state.Transferred = make(map[int]interface{})
 	}
 
+	dstUri, err := fs.NewUriFromString(m.state.Dst)
+	if err != nil {
+		return task.StatusError, fmt.Errorf("failed to parse dst uri: %s (%w)", err, queue.CriticalErr)
+	}
+	if m.state.Status.SavePath == "" {
+		return task.StatusError, fmt.Errorf("download save path is empty (%w)", queue.CriticalErr)
+	}
+
+	// Sum up total count and select files
+	type transferFile struct {
+		downloader.TaskFile
+		dst *fs.URI
+	}
+	totalCount := 0
+	totalSize := int64(0)
+	allFiles := make([]transferFile, 0, len(m.state.Status.Files))
+	for _, f := range m.state.Status.Files {
+		if f.Selected {
+			dst, err := remoteDownloadDestination(dstUri, f.Name)
+			if err != nil {
+				return task.StatusError, fmt.Errorf("invalid download file %q: %s (%w)", f.Name, err, queue.CriticalErr)
+			}
+			allFiles = append(allFiles, transferFile{TaskFile: f, dst: dst})
+			totalSize += f.Size
+			totalCount++
+		}
+	}
+
 	maxParallel := dep.SettingProvider().MaxParallelTransfer(ctx)
 	wg := sync.WaitGroup{}
 	worker := make(chan int, maxParallel)
 	for i := 0; i < maxParallel; i++ {
 		worker <- i
-	}
-
-	// Sum up total count and select files
-	totalCount := 0
-	totalSize := int64(0)
-	allFiles := make([]downloader.TaskFile, 0, len(m.state.Status.Files))
-	for _, f := range m.state.Status.Files {
-		if f.Selected {
-			allFiles = append(allFiles, f)
-			totalSize += f.Size
-			totalCount++
-		}
 	}
 
 	m.Lock()
@@ -455,21 +477,15 @@ func (m *RemoteDownloadTask) masterTransfer(ctx context.Context, dep dependency.
 	m.progress[ProgressTypeUpload] = &queue.Progress{Total: totalSize}
 	m.Unlock()
 
-	dstUri, err := fs.NewUriFromString(m.state.Dst)
-	if err != nil {
-		return task.StatusError, fmt.Errorf("failed to parse dst uri: %s (%w)", err, queue.CriticalErr)
-	}
-
 	user := inventory.UserFromContext(ctx)
 	fm := manager.NewFileManager(dep, user)
 	failed := int64(0)
 	ae := serializer.NewAggregateError()
 
-	transferFunc := func(workerId int, file downloader.TaskFile) {
-		sanitizedName := sanitizeFileName(file.Name)
-		dst := dstUri.JoinRaw(sanitizedName)
-		src := filepath.FromSlash(path.Join(m.state.Status.SavePath, file.Name))
-		m.l.Info("Uploading file %s to %s...", src, sanitizedName, dst)
+	transferFunc := func(workerId int, file transferFile) {
+		dst := file.dst
+		src := path.Join(m.state.Status.SavePath, file.Name)
+		m.l.Info("Uploading file %s to %s...", src, dst)
 
 		progressKey := fmt.Sprintf("%s%d", ProgressTypeUploadSinglePrefix, workerId)
 		m.Lock()
@@ -485,7 +501,7 @@ func (m *RemoteDownloadTask) masterTransfer(ctx context.Context, dep dependency.
 			wg.Done()
 		}()
 
-		fileStream, err := os.Open(src)
+		fileStream, err := openFileInRoot(m.state.Status.SavePath, src)
 		if err != nil {
 			m.l.Warning("Failed to open file %s: %s", src, err.Error())
 			atomic.AddInt64(&uploadProgress.Current, file.Size)
@@ -561,10 +577,6 @@ func (m *RemoteDownloadTask) awaitSeeding(ctx context.Context, dep dependency.De
 }
 
 func (m *RemoteDownloadTask) validateFiles(ctx context.Context, dep dependency.Dep, status *downloader.TaskStatus) error {
-	// Validate files
-	user := inventory.UserFromContext(ctx)
-	fm := manager.NewFileManager(dep, user)
-
 	dstUri, err := fs.NewUriFromString(m.state.Dst)
 	if err != nil {
 		return fmt.Errorf("failed to parse dst uri: %w", err)
@@ -577,14 +589,22 @@ func (m *RemoteDownloadTask) validateFiles(ctx context.Context, dep dependency.D
 		return fmt.Errorf("no selected file found in download task")
 	}
 
-	validateArgs := lo.Map(selectedFiles, func(f downloader.TaskFile, _ int) fs.PreValidateFile {
-		return fs.PreValidateFile{
+	validateArgs := make([]fs.PreValidateFile, 0, len(selectedFiles))
+	for _, f := range selectedFiles {
+		if f.Name != "" {
+			if _, err := remoteDownloadDestination(dstUri, f.Name); err != nil {
+				return fmt.Errorf("invalid download file %q: %w", f.Name, err)
+			}
+		}
+		validateArgs = append(validateArgs, fs.PreValidateFile{
 			Name:     sanitizeFileName(f.Name),
 			Size:     f.Size,
 			OmitName: f.Name == "",
-		}
-	})
+		})
+	}
 
+	user := inventory.UserFromContext(ctx)
+	fm := manager.NewFileManager(dep, user)
 	if err := fm.PreValidateUpload(ctx, dstUri, validateArgs...); err != nil {
 		return fmt.Errorf("failed to pre-validate files: %w", err)
 	}
@@ -681,4 +701,22 @@ func (m *RemoteDownloadTask) Progress(ctx context.Context) queue.Progresses {
 func sanitizeFileName(name string) string {
 	r := strings.NewReplacer("\\", "_", ":", "_", "*", "_", "?", "_", "\"", "_", "<", "_", ">", "_", "|", "_")
 	return r.Replace(name)
+}
+
+func remoteDownloadDestination(base *fs.URI, name string) (*fs.URI, error) {
+	if strings.ContainsRune(name, 0) {
+		return nil, fmt.Errorf("download file name contains a null byte")
+	}
+	// Torrent names may contain directories, but every component must be a filename.
+	for _, component := range strings.Split(name, fs.Separator) {
+		if component == "" || component == "." || component == ".." {
+			return nil, fmt.Errorf("download file name is not a relative file path")
+		}
+	}
+
+	dst := base.JoinRaw(sanitizeFileName(name))
+	if !dst.EqualOrIsDescendantOf(base, "") || dst.IsSame(base, "") {
+		return nil, fmt.Errorf("download destination is outside the target directory")
+	}
+	return dst, nil
 }

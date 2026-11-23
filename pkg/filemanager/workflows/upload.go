@@ -32,6 +32,7 @@ type (
 	SlaveUploadTaskState struct {
 		MaxParallel          int                 `json:"max_parallel"`
 		Files                []SlaveUploadEntity `json:"files"`
+		SourceRoot           string              `json:"source_root,omitempty"`
 		Transferred          map[int]interface{} `json:"transferred"`
 		UserID               int                 `json:"user_id"`
 		First5TransferErrors string              `json:"first_5_transfer_errors,omitempty"`
@@ -131,7 +132,13 @@ func (t *SlaveUploadTask) Do(ctx context.Context) (task.Status, error) {
 			wg.Done()
 		}()
 
-		handle, err := os.Open(filepath.FromSlash(file.Src))
+		var handle *os.File
+		var err error
+		if t.state.SourceRoot != "" {
+			handle, err = openFileInRoot(t.state.SourceRoot, file.Src)
+		} else {
+			handle, err = os.Open(filepath.FromSlash(file.Src))
+		}
 		if err != nil {
 			t.l.Warning("Failed to open file %s: %s", file.Src, err.Error())
 			atomic.AddInt64(&fileProgress.Current, file.Size)
@@ -220,6 +227,21 @@ func (t *SlaveUploadTask) Do(ctx context.Context) (task.Status, error) {
 	}
 
 	return task.StatusCompleted, nil
+}
+
+func openFileInRoot(root, src string) (*os.File, error) {
+	if root == "" {
+		return nil, fmt.Errorf("source root is empty")
+	}
+	root = filepath.FromSlash(root)
+	relative, err := filepath.Rel(root, filepath.FromSlash(src))
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve source path: %w", err)
+	}
+	if relative == "." || !filepath.IsLocal(relative) {
+		return nil, fmt.Errorf("source path is outside the source root")
+	}
+	return os.OpenInRoot(root, relative)
 }
 
 func (m *SlaveUploadTask) Progress(ctx context.Context) queue.Progresses {
