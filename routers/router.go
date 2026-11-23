@@ -773,7 +773,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 			)
 
 			// 取得文件外链
-			source := file.Group("source")
+			source := file.Group("source", middleware.RequiredScopes(types.ScopeFilesWrite))
 			{
 				source.PUT("",
 					controllers.FromJSON[explorer.GetDirectLinkService](explorer.GetDirectLinkParamCtx{}),
