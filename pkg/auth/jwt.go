@@ -222,7 +222,11 @@ func (t *tokenAuth) VerifyAndRetrieveUser(c *gin.Context) (bool, error) {
 
 	uid, err := t.idEncoder.Decode(claims.Subject, hashid.UserID)
 	if err != nil {
-		return false, serializer.NewError(serializer.CodeNotFound, "User not found", err)
+		// A subject that cannot be decoded means the token is not usable with
+		// the current hash ID salt. Treat it like any other invalid token and
+		// continue as anonymous; returning an error here makes every endpoint
+		// (including public ones) fail with a "404" response.
+		return false, nil
 	}
 
 	util.WithValue(c, inventory.UserIDCtx{}, uid)
