@@ -98,7 +98,7 @@ func (s *FinishPasskeyLoginService) FinishPasskeyLogin(c *gin.Context) (*ent.Use
 		return nil, serializer.NewError(serializer.CodeNotFound, "Session not found", nil)
 	}
 
-	_ = kv.Delete(authnSessionKey, s.Response)
+	_ = kv.Delete(authnSessionKey, s.SessionID)
 
 	webAuthn, err := dep.WebAuthn(c)
 	if err != nil {
