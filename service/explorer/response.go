@@ -397,7 +397,7 @@ func BuildListResponse(ctx context.Context, u *ent.User, parent fs.File, res *fs
 		View:                  res.View,
 	}
 
-	if !res.Parent.IsNil() {
+	if !res.SingleFileView && !res.Parent.IsNil() {
 		r.Parent = *BuildFileResponse(ctx, u, res.Parent, hasher, res.Props.Capability)
 	}
 
