@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/cloudreve/Cloudreve/v4/application/constants"
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
@@ -37,8 +38,9 @@ const (
 var (
 	validate = validator.New()
 
-	lastEmojiHash = ""
-	emojiPresets  = map[string]struct{}{}
+	emojiPresetsMu sync.Mutex
+	lastEmojiHash  = ""
+	emojiPresets   = map[string]struct{}{}
 
 	// validateColor validates a color value
 	validateColor = func(optional bool) metadataValidator {
@@ -118,18 +120,23 @@ var (
 				// Validate if patched emoji is within preset list.
 				emojis := m.settings.EmojiPresets(ctx)
 				current := fmt.Sprintf("%x", (sha1.Sum([]byte(emojis))))
+				emojiPresetsMu.Lock()
+				defer emojiPresetsMu.Unlock()
+
 				if current != lastEmojiHash {
 					presets := make(map[string][]string)
 					if err := json.Unmarshal([]byte(emojis), &presets); err != nil {
 						return fmt.Errorf("failed to read emoji setting: %w", err)
 					}
 
-					emojiPresets = make(map[string]struct{})
+					nextPresets := make(map[string]struct{})
 					for _, v := range presets {
 						for _, emoji := range v {
-							emojiPresets[emoji] = struct{}{}
+							nextPresets[emoji] = struct{}{}
 						}
 					}
+					emojiPresets = nextPresets
+					lastEmojiHash = current
 				}
 
 				if _, ok := emojiPresets[patch.Value]; !ok {
