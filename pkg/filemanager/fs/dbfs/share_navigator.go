@@ -188,23 +188,31 @@ func (n *shareNavigator) To(ctx context.Context, path *fs.URI) (*File, error) {
 		n.shareRoot = root
 	}
 
-	current, lastAncestor := n.shareRoot, n.shareRoot
 	elements := path.Elements()
 
-	// If target is root of single file share, the root itself is the target.
-	if len(elements) == 1 && n.singleFileShare {
+	if n.singleFileShare {
+		if len(elements) == 0 {
+			return n.shareRoot, nil
+		}
+
+		// The root is the owner's parent folder, not an authorized subtree.
+		if len(elements) != 1 {
+			return nil, fs.ErrPathNotExist
+		}
+
 		file, err := n.latestSharedSingleFile(ctx)
 		if err != nil {
 			return nil, err
 		}
 
-		if len(elements) == 1 && file.Name() != elements[0] {
+		if file.Name() != elements[0] {
 			return nil, fs.ErrPathNotExist
 		}
 
 		return file, nil
 	}
 
+	current, lastAncestor := n.shareRoot, n.shareRoot
 	var err error
 	for index, element := range elements {
 		lastAncestor = current
