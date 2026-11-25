@@ -101,6 +101,18 @@ func LoginRequired() gin.HandlerFunc {
 	}
 }
 
+func FirstPartyRequired() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if err := auth.CheckFirstParty(c); err != nil {
+			c.JSON(200, serializer.Err(c, err))
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}
+
 // WebDAVAuth 验证WebDAV登录及权限
 func WebDAVAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {

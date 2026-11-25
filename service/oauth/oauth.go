@@ -58,6 +58,10 @@ type (
 )
 
 func (s *GrantService) Get(c *gin.Context) (*GrantResponse, error) {
+	if err := auth.CheckFirstParty(c); err != nil {
+		return nil, err
+	}
+
 	dep := dependency.FromContext(c)
 	user := inventory.UserFromContext(c)
 	kv := dep.KV()

@@ -53,9 +53,10 @@ type Token struct {
 }
 
 type (
-	TokenType         string
-	TokenIDContextKey struct{}
-	ScopeContextKey   struct{}
+	TokenType                        string
+	TokenIDContextKey                struct{}
+	ScopeContextKey                  struct{}
+	verifiedAccessClientIDContextKey struct{}
 )
 
 var (
@@ -226,6 +227,7 @@ func (t *tokenAuth) VerifyAndRetrieveUser(c *gin.Context) (bool, error) {
 	}
 
 	util.WithValue(c, inventory.UserIDCtx{}, uid)
+	util.WithValue(c, verifiedAccessClientIDContextKey{}, claims.ClientID)
 
 	if claims.ClientID != "" {
 		util.WithValue(c, ScopeContextKey{}, claims.Scopes)
@@ -317,6 +319,15 @@ func GetScopesFromContext(ctx context.Context) (bool, []string) {
 		return false, nil
 	}
 	return true, scopes
+}
+
+// CheckFirstParty requires a verified first-party access token, not an OAuth client token.
+func CheckFirstParty(ctx context.Context) error {
+	clientID, ok := ctx.Value(verifiedAccessClientIDContextKey{}).(string)
+	if !ok || clientID != "" {
+		return serializer.NewError(serializer.CodeNoPermissionErr, "First-party authentication required", nil)
+	}
+	return nil
 }
 
 func CheckScope(c *gin.Context, requiredScopes ...string) error {
