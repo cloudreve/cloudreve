@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"crypto/subtle"
+	"errors"
 	"net/http"
 
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
@@ -271,7 +272,13 @@ func OSSCallbackAuth() gin.HandlerFunc {
 		))
 		if err != nil {
 			dep.Logger().Debug("Failed to verify callback request: %s", err)
-			c.JSON(401, serializer.GeneralUploadCallbackFailed{Error: "Failed to verify callback request."})
+			status := http.StatusUnauthorized
+			message := "Failed to verify callback request."
+			if errors.Is(err, oss.ErrCallbackBodyTooLarge) {
+				status = http.StatusRequestEntityTooLarge
+				message = "Callback request body too large."
+			}
+			c.JSON(status, serializer.GeneralUploadCallbackFailed{Error: message})
 			c.Abort()
 			return
 		}

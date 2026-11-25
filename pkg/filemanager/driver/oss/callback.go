@@ -26,6 +26,11 @@ const (
 	pubKeyCacheKey    = "oss_public_key"
 )
 
+// MaxCallbackBodySize limits callback metadata, not uploaded file contents.
+const MaxCallbackBodySize = 64 << 10
+
+var ErrCallbackBodyTooLarge = errors.New("callback request body too large")
+
 // GetPublicKey 从回调请求或缓存中获取OSS的回调签名公钥
 func GetPublicKey(r *http.Request, kv cache.Driver, client request.Client) ([]byte, error) {
 	var pubKey []byte
@@ -66,10 +71,13 @@ func getRequestMD5(r *http.Request) ([]byte, error) {
 	var byteMD5 []byte
 
 	// 获取请求正文
-	body, err := io.ReadAll(r.Body)
+	body, err := io.ReadAll(io.LimitReader(r.Body, MaxCallbackBodySize+1))
 	r.Body.Close()
 	if err != nil {
 		return byteMD5, err
+	}
+	if len(body) > MaxCallbackBodySize {
+		return byteMD5, ErrCallbackBodyTooLarge
 	}
 	r.Body = io.NopCloser(bytes.NewReader(body))
 
