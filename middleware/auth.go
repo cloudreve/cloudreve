@@ -163,7 +163,9 @@ func WebDAVAuth() gin.HandlerFunc {
 		// 检查是否只读
 		if expectedUser.Edges.DavAccounts[0].Options.Enabled(int(types.DavAccountReadOnly)) {
 			switch c.Request.Method {
-			case http.MethodDelete, http.MethodPut, "MKCOL", "COPY", "MOVE", "LOCK", "UNLOCK":
+			case http.MethodGet, http.MethodHead, http.MethodPost, http.MethodOptions, "PROPFIND":
+				// POST is a read alias handled by WebDAV's handleGetHeadPost.
+			default:
 				c.Status(http.StatusForbidden)
 				c.Abort()
 				return
