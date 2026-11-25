@@ -403,7 +403,6 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 			)
 			// 邮件激活 Done
 			user.GET("activate/:id",
-				middleware.SignRequired(dep.GeneralAuth()),
 				middleware.HashID(hashid.UserID),
 				controllers.UserActivate,
 			)

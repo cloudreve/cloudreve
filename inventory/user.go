@@ -61,6 +61,8 @@ type (
 		GetActiveByID(ctx context.Context, id int) (*ent.User, error)
 		// SetStatus Set user to given status
 		SetStatus(ctx context.Context, u *ent.User, status user.Status) (*ent.User, error)
+		// Activate activates an unchanged pending registration.
+		Activate(ctx context.Context, u *ent.User) (*ent.User, error)
 		// AnonymousUser returns the anonymous user.
 		AnonymousUser(ctx context.Context) (*ent.User, error)
 		// GetLoginUserByID returns the login user by its ID. It emits some errors and fallback to anonymous user.
@@ -88,6 +90,8 @@ type (
 		UpdateNickname(ctx context.Context, u *ent.User, name string) (*ent.User, error)
 		// UpdatePassword updates user password.
 		UpdatePassword(ctx context.Context, u *ent.User, newPassword string) (*ent.User, error)
+		// UpdateInactivePassword renews an unchanged pending registration.
+		UpdateInactivePassword(ctx context.Context, u *ent.User, newPassword string) (*ent.User, error)
 		// UpdateTwoFASecret updates user two factor secret.
 		UpdateTwoFASecret(ctx context.Context, u *ent.User, secret string) (*ent.User, error)
 		// ListPasskeys list user's passkeys.
@@ -178,6 +182,18 @@ func (c *userClient) UpdatePassword(ctx context.Context, u *ent.User, newPasswor
 	}
 
 	return c.client.User.UpdateOne(u).SetPassword(digest).Save(ctx)
+}
+
+func (c *userClient) UpdateInactivePassword(ctx context.Context, u *ent.User, newPassword string) (*ent.User, error) {
+	digest, err := digestPassword(newPassword)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.client.User.UpdateOneID(u.ID).
+		Where(user.StatusEQ(user.StatusInactive), user.EmailEQ(u.Email), user.PasswordEQ(u.Password)).
+		SetPassword(digest).
+		Save(ctx)
 }
 
 func (c *userClient) SetClient(newClient *ent.Client) TxOperator {
@@ -362,6 +378,13 @@ func (c *userClient) CalculateStorage(ctx context.Context, uid int) (int64, erro
 
 func (c *userClient) SetStatus(ctx context.Context, u *ent.User, status user.Status) (*ent.User, error) {
 	return c.client.User.UpdateOne(u).SetStatus(status).Save(ctx)
+}
+
+func (c *userClient) Activate(ctx context.Context, u *ent.User) (*ent.User, error) {
+	return c.client.User.UpdateOneID(u.ID).
+		Where(user.StatusEQ(user.StatusInactive), user.EmailEQ(u.Email), user.PasswordEQ(u.Password)).
+		SetStatus(user.StatusActive).
+		Save(ctx)
 }
 
 func (c *userClient) Create(ctx context.Context, args *NewUserArgs) (*ent.User, error) {

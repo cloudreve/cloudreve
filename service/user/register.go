@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/user"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
-	"github.com/cloudreve/Cloudreve/v4/pkg/auth"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cluster/routes"
 	"github.com/cloudreve/Cloudreve/v4/pkg/email"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
@@ -53,6 +53,11 @@ func (service *UserRegisterService) Register(c *gin.Context) serializer.Response
 	}
 
 	expectedUser, err := uc.Create(c, args)
+	isReRegistration := errors.Is(err, inventory.ErrInactiveUserExisted)
+	if isReRegistration {
+		expectedUser, err = uc.UpdateInactivePassword(c, expectedUser, service.Password)
+		isEmailRequired = true
+	}
 	if expectedUser != nil {
 		util.WithValue(c, inventory.UserCtx{}, expectedUser)
 	}
@@ -63,12 +68,8 @@ func (service *UserRegisterService) Register(c *gin.Context) serializer.Response
 			return serializer.ErrWithDetails(c, serializer.CodeEmailExisted, "Email already in use", err)
 		}
 
-		if errors.Is(err, inventory.ErrInactiveUserExisted) {
-			if err := sendActivationEmail(c, dep, expectedUser); err != nil {
-				return serializer.ErrWithDetails(c, serializer.CodeNotSet, "", err)
-			}
-
-			return serializer.ErrWithDetails(c, serializer.CodeEmailSent, "User is not activated, activation email has been resent", nil)
+		if isReRegistration && ent.IsNotFound(err) {
+			return serializer.ErrWithDetails(c, serializer.CodeConflict, "Registration has changed, please try again", nil)
 		}
 
 		return serializer.DBErr(c, "Failed to insert user row", err)
@@ -92,13 +93,10 @@ func sendActivationEmail(ctx context.Context, dep dependency.Dep, newUser *ent.U
 	base := dep.SettingProvider().SiteURL(ctx)
 	userID := hashid.EncodeUserID(dep.HashIDEncoder(), newUser.ID)
 	ttl := time.Now().Add(time.Duration(24) * time.Hour)
-	activateURL, err := auth.SignURI(ctx, dep.GeneralAuth(), routes.MasterUserActivateAPIUrl(base, userID).String(), &ttl)
-	if err != nil {
-		return serializer.NewError(serializer.CodeEncryptError, "Failed to sign the activation link", err)
+	credential := dep.GeneralAuth().Sign(activationSignContent(newUser), ttl.Unix())
+	if credential == "" {
+		return serializer.NewError(serializer.CodeEncryptError, "Failed to sign the activation link", nil)
 	}
-
-	// 取得签名
-	credential := activateURL.Query().Get("sign")
 
 	// 生成对用户访问的激活地址
 	finalURL := routes.MasterUserActivateUrl(base)
@@ -120,8 +118,15 @@ func sendActivationEmail(ctx context.Context, dep dependency.Dep, newUser *ent.U
 	return nil
 }
 
+func activationSignContent(u *ent.User) string {
+	// The salted password digest is the registration revision and never leaves the server.
+	return fmt.Sprintf("user-activation-v2:%d:%q:%q", u.ID, u.Email, u.Password)
+}
+
 // ActivateUser 激活用户
 func ActivateUser(c *gin.Context) serializer.Response {
+	const invalidLinkMessage = "Activation link is invalid or expired, please register again to request a new link"
+
 	uid := hashid.FromContext(c)
 	dep := dependency.FromContext(c)
 	userClient := dep.UserClient()
@@ -129,7 +134,14 @@ func ActivateUser(c *gin.Context) serializer.Response {
 	// 查找待激活用户
 	inactiveUser, err := userClient.GetByID(c, uid)
 	if err != nil {
-		return serializer.ErrWithDetails(c, serializer.CodeUserNotFound, "User not fount", err)
+		if ent.IsNotFound(err) {
+			return serializer.ErrWithDetails(c, serializer.CodeInvalidSign, invalidLinkMessage, nil)
+		}
+		return serializer.DBErr(c, "Failed to get user", err)
+	}
+
+	if err := dep.GeneralAuth().Check(activationSignContent(inactiveUser), c.Query("sign")); err != nil {
+		return serializer.Err(c, serializer.NewError(serializer.CodeInvalidSign, invalidLinkMessage, err))
 	}
 
 	// 检查状态
@@ -138,8 +150,11 @@ func ActivateUser(c *gin.Context) serializer.Response {
 	}
 
 	// 激活用户
-	activeUser, err := userClient.SetStatus(c, inactiveUser, user.StatusActive)
+	activeUser, err := userClient.Activate(c, inactiveUser)
 	if err != nil {
+		if ent.IsNotFound(err) {
+			return serializer.ErrWithDetails(c, serializer.CodeInvalidSign, invalidLinkMessage, nil)
+		}
 		return serializer.DBErr(c, "Failed to update user", err)
 	}
 
