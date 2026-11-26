@@ -698,6 +698,12 @@ func (f *DBFS) GetFileFromDirectLink(ctx context.Context, dl *ent.DirectLink) (f
 		return nil, fs.ErrDirectLinkInvalid.WithError(fmt.Errorf("file owner is not active"))
 	}
 
+	// Check the owner's current direct-link permission.
+	group, err := owner.Edges.GroupOrErr()
+	if err != nil || group.Settings == nil || group.Settings.SourceBatchSize <= 0 {
+		return nil, fs.ErrDirectLinkInvalid
+	}
+
 	file := newFile(nil, fileModel)
 
 	// Traverse to the root file
