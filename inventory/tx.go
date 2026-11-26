@@ -19,7 +19,9 @@ type (
 		parent      *Tx
 		inherited   bool
 		finished    bool
+		committed   bool
 		storageDiff StorageDiff
+		afterCommit []func()
 	}
 
 	// TxCtx is the context key for inherited transaction
@@ -76,12 +78,47 @@ func (t *Tx) AppendStorageDiff(diff StorageDiff) {
 	}
 }
 
+// AfterCommit runs fn after the outermost transaction commits, or immediately
+// when there is no transaction. A rollback or failed commit discards fn.
+func AfterCommit(ctx context.Context, fn func()) {
+	tx := txFromContext(ctx)
+	if tx == nil {
+		fn()
+		return
+	}
+	if tx.finished {
+		if tx.committed {
+			fn()
+		}
+		return
+	}
+	tx.afterCommit = append(tx.afterCommit, fn)
+}
+
+func txFromContext(ctx context.Context) *Tx {
+	tx, _ := ctx.Value(TxCtx{}).(*Tx)
+	if tx != nil {
+		for tx.inherited {
+			tx = tx.parent
+		}
+	}
+	return tx
+}
+
+func (t *Tx) runAfterCommit() {
+	callbacks := t.afterCommit
+	t.afterCommit = nil
+	for _, callback := range callbacks {
+		callback()
+	}
+}
+
 // WithTx wraps the given inventory client with a transaction.
 func WithTx[T TxOperator](ctx context.Context, c T) (T, *Tx, context.Context, error) {
 	var txClient *ent.Client
 	var txWrapper *Tx
 
-	if txInherited, ok := ctx.Value(TxCtx{}).(*Tx); ok && !txInherited.finished {
+	if txInherited := txFromContext(ctx); txInherited != nil && !txInherited.finished {
 		txWrapper = &Tx{inherited: true, tx: txInherited.tx, parent: txInherited}
 	} else {
 		tx, err := c.GetClient().Tx(ctx)
@@ -104,7 +141,7 @@ func InheritTx[T TxOperator](ctx context.Context, c T) (T, *Tx) {
 	var txClient *ent.Client
 	var txWrapper *Tx
 
-	if txInherited, ok := ctx.Value(TxCtx{}).(*Tx); ok && !txInherited.finished {
+	if txInherited := txFromContext(ctx); txInherited != nil && !txInherited.finished {
 		txWrapper = &Tx{inherited: true, tx: txInherited.tx, parent: txInherited}
 		txClient = txWrapper.tx.Client()
 		return c.SetClient(txClient).(T), txWrapper
@@ -116,6 +153,7 @@ func InheritTx[T TxOperator](ctx context.Context, c T) (T, *Tx) {
 func Rollback(tx *Tx) error {
 	if !tx.inherited {
 		tx.finished = true
+		tx.afterCommit = nil
 		return tx.tx.Rollback()
 	}
 
@@ -125,13 +163,21 @@ func Rollback(tx *Tx) error {
 func commit(tx *Tx) (bool, error) {
 	if !tx.inherited {
 		tx.finished = true
-		return true, tx.tx.Commit()
+		if err := tx.tx.Commit(); err != nil {
+			tx.afterCommit = nil
+			return true, err
+		}
+		tx.committed = true
+		return true, nil
 	}
 	return false, nil
 }
 
 func Commit(tx *Tx) error {
-	_, err := commit(tx)
+	committed, err := commit(tx)
+	if err == nil && committed {
+		tx.runAfterCommit()
+	}
 	return err
 }
 
@@ -160,5 +206,6 @@ func CommitWithStorageDiff(ctx context.Context, tx *Tx, l logging.Logger, uc Use
 		l.Error("Failed to apply storage diff", "error", err)
 	}
 
+	tx.runAfterCommit()
 	return nil
 }

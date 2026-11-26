@@ -22,7 +22,7 @@ type Subscriber interface {
 	Stop()
 	Buffer() []*Event
 	// Owner returns the owner of the subscriber.
-	Owner() (*ent.User, error)
+	Owner(ctx context.Context) (*ent.User, error)
 	// Online returns whether the subscriber is online.
 	Online() bool
 	// OfflineSince returns when the subscriber went offline.
@@ -31,7 +31,8 @@ type Subscriber interface {
 }
 
 const (
-	userCacheTTL = 1 * time.Hour
+	userCacheTTL        = 1 * time.Hour
+	subscriberIOTimeout = 30 * time.Second
 )
 
 type subscriber struct {
@@ -54,8 +55,9 @@ type subscriber struct {
 	debounceDelay time.Duration
 
 	// Owner info
-	ownerCached *ent.User
-	cachedAt    time.Time
+	ownerCached  *ent.User
+	cachedAt     time.Time
+	ownerVersion uint64
 
 	// Close signal
 	closed   bool
@@ -104,25 +106,39 @@ func (s *subscriber) OfflineSince() time.Time {
 	return s.offlineSince
 }
 
-func (s *subscriber) Owner() (*ent.User, error) {
+func (s *subscriber) Owner(ctx context.Context) (*ent.User, error) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
+	if s.closed {
+		s.mu.Unlock()
+		return nil, ErrEventHubClosed
+	}
+	if s.ownerCached != nil && time.Since(s.cachedAt) <= userCacheTTL {
+		owner := s.ownerCached
+		s.mu.Unlock()
+		return owner, nil
+	}
+	version := s.ownerVersion
+	s.mu.Unlock()
 
-	return s.ownerLocked()
-}
-
-func (s *subscriber) ownerLocked() (*ent.User, error) {
-	if time.Since(s.cachedAt) > userCacheTTL || s.ownerCached == nil {
-		user, err := s.userClient.GetLoginUserByID(context.Background(), s.uid)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get login user: %w", err)
-		}
-
-		s.ownerCached = user
-		s.cachedAt = time.Now()
+	ctx, cancel := context.WithTimeout(ctx, subscriberIOTimeout)
+	defer cancel()
+	users, tx := inventory.InheritTx(ctx, s.userClient)
+	owner, err := users.GetLoginUserByID(ctx, s.uid)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get login user: %w", err)
 	}
 
-	return s.ownerCached, nil
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return nil, ErrEventHubClosed
+	}
+	// Do not retain transaction-local data or undo a concurrent reconnect's invalidation.
+	if tx == nil && version == s.ownerVersion && (s.ownerCached == nil || time.Since(s.cachedAt) > userCacheTTL) {
+		s.ownerCached = owner
+		s.cachedAt = time.Now()
+	}
+	return owner, nil
 }
 
 // Publish adds an event to the buffer and starts/resets the debounce timer.
@@ -169,14 +185,16 @@ func (s *subscriber) flushLocked(ctx context.Context) {
 	}
 
 	if !s.online {
-		owner, err := s.ownerLocked()
-		if err != nil {
-			return
-		}
-		_ = s.fsEventClient.Create(ctx, owner.ID, uuid.FromStringOrNil(s.id), lo.Map(s.buffer, func(item *Event, index int) string {
+		ctx, cancel := context.WithTimeout(ctx, subscriberIOTimeout)
+		defer cancel()
+		// The subscriber ID is already bound to this immutable user ID.
+		if err := s.fsEventClient.Create(ctx, s.uid, uuid.FromStringOrNil(s.id), lo.Map(s.buffer, func(item *Event, index int) string {
 			res, _ := json.Marshal(item)
 			return string(res)
-		})...)
+		})...); err != nil {
+			logging.FromContext(ctx).Error("Failed to persist subscriber events: %s", err)
+			return
+		}
 	} else {
 		// TODO: implement event merging logic here
 		// For now, send all buffered events individually
@@ -222,9 +240,12 @@ func (s *subscriber) setOnline(ctx context.Context) {
 
 	s.online = true
 	s.ownerCached = nil
+	s.ownerVersion++
 	s.offlineSince = time.Time{}
 
 	// Retrieve events from inventory
+	ctx, cancel := context.WithTimeout(ctx, subscriberIOTimeout)
+	defer cancel()
 	events, err := s.fsEventClient.TakeBySubscriber(ctx, uuid.FromStringOrNil(s.id), s.uid)
 	if err != nil {
 		l.Error("Failed to get events from inventory: %s", err)
@@ -289,7 +310,11 @@ func (s *subscriber) close() {
 	}
 
 	// Delete the FsEvent
-	s.fsEventClient.DeleteBySubscriber(context.Background(), uuid.FromStringOrNil(s.id))
+	ctx, cancel := context.WithTimeout(context.Background(), subscriberIOTimeout)
+	defer cancel()
+	if err := s.fsEventClient.DeleteBySubscriber(ctx, uuid.FromStringOrNil(s.id)); err != nil {
+		logging.FromContext(ctx).Error("Failed to delete subscriber events: %s", err)
+	}
 
 	// Signal close and close the channel
 	close(s.closedCh)
