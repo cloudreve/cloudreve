@@ -3,7 +3,7 @@ package inventory
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -19,7 +19,7 @@ import (
 func TestAfterCommitUsesOutermostTransaction(t *testing.T) {
 	for _, outcome := range []string{"commit", "storage diff", "rollback", "failed commit"} {
 		t.Run(outcome, func(t *testing.T) {
-			db, err := sql.Open("sqlite3", fmt.Sprintf("file:after-commit-%d?mode=memory&cache=shared", time.Now().UnixNano()))
+			db, err := sql.Open("sqlite3", filepath.Join(t.TempDir(), "transactions.db"))
 			require.NoError(t, err)
 			db.SetMaxOpenConns(1)
 			client := ent.NewClient(ent.Driver(entsql.OpenDB(dialect.SQLite, db)))
@@ -39,8 +39,22 @@ func TestAfterCommitUsesOutermostTransaction(t *testing.T) {
 			_, err = txUsers.UpdateNickname(txCtx, u, "committed")
 			require.NoError(t, err)
 
-			var calls []string
+			var calls, completions []string
+			AfterCompletion(txCtx, func() {
+				require.False(t, InTransaction(txCtx))
+				readCtx, cancel := context.WithTimeout(context.Background(), time.Second)
+				defer cancel()
+				stored, err := users.GetByID(readCtx, u.ID)
+				require.NoError(t, err, "completion callbacks must run after the connection is released")
+				if outcome == "commit" || outcome == "storage diff" {
+					require.Equal(t, "committed", stored.Nick)
+				} else {
+					require.Equal(t, "before", stored.Nick)
+				}
+				completions = append(completions, "outer")
+			})
 			AfterCommit(txCtx, func() {
+				require.Equal(t, []string{"outer", "nested"}, completions)
 				calls = append(calls, "outer")
 				readCtx, cancel := context.WithTimeout(context.Background(), time.Second)
 				defer cancel()
@@ -54,6 +68,10 @@ func TestAfterCommitUsesOutermostTransaction(t *testing.T) {
 			_, nested, _, err := WithTx(txCtx, users)
 			require.NoError(t, err)
 			nestedCtx := context.WithValue(txCtx, TxCtx{}, nested)
+			require.True(t, InTransaction(nestedCtx))
+			AfterCompletion(nestedCtx, func() {
+				completions = append(completions, "nested")
+			})
 			AfterCommit(nestedCtx, func() {
 				_, inherited := InheritTx(nestedCtx, users)
 				require.Nil(t, inherited, "completed parent transactions must not be inherited")
@@ -61,6 +79,7 @@ func TestAfterCommitUsesOutermostTransaction(t *testing.T) {
 			})
 			require.NoError(t, Commit(nested))
 			require.Empty(t, calls)
+			require.Empty(t, completions)
 
 			switch outcome {
 			case "commit":
@@ -75,16 +94,23 @@ func TestAfterCommitUsesOutermostTransaction(t *testing.T) {
 				require.Error(t, Commit(outer))
 			}
 			AfterCommit(txCtx, func() { calls = append(calls, "late") })
+			AfterCompletion(txCtx, func() { completions = append(completions, "late") })
+			require.Equal(t, []string{"outer", "nested", "late"}, completions)
+			require.False(t, InTransaction(nestedCtx))
 			if outcome == "commit" || outcome == "storage diff" {
 				require.Equal(t, []string{"outer", "nested", "late"}, calls)
 			} else {
 				require.Empty(t, calls)
 			}
 			require.Empty(t, outer.afterCommit)
+			require.Empty(t, outer.afterCompletion)
 		})
 	}
 
 	called := false
 	AfterCommit(context.Background(), func() { called = true })
 	require.True(t, called)
+	completed := false
+	AfterCompletion(context.Background(), func() { completed = true })
+	require.True(t, completed)
 }

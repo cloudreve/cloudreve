@@ -85,7 +85,8 @@ type dbSettingStore struct {
 }
 
 func (s *dbSettingStore) Get(ctx context.Context, name string, defaultVal any) any {
-	if val, err := s.c.Get(ctx, name); err == nil {
+	client, _ := inventory.InheritTx(ctx, s.c)
+	if val, err := client.Get(ctx, name); err == nil {
 		return val
 	}
 
@@ -102,6 +103,11 @@ type kvSettingStore struct {
 }
 
 func (s *kvSettingStore) Get(ctx context.Context, name string, defaultVal any) any {
+	// Read the transaction's values without publishing them to the shared cache.
+	if inventory.InTransaction(ctx) && s.next != nil {
+		return s.next.Get(ctx, name, defaultVal)
+	}
+
 	if val, exist := s.kv.Get(KvSettingPrefix + name); exist {
 		return val
 	}

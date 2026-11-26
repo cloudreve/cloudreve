@@ -182,6 +182,7 @@ type dependency struct {
 	entityRecycleQueue    queue.Queue
 	slaveQueue            queue.Queue
 	remoteDownloadQueue   queue.Queue
+	queueReloadLocks      map[setting.QueueType]*sync.Mutex
 	ioIntenseQueueTask    queue.Task
 	mediaMeta             mediameta.Extractor
 	thumbPipeline         thumb.Generator
@@ -586,192 +587,157 @@ func (d *dependency) MediaMetaExtractor(ctx context.Context) mediameta.Extractor
 	return d.mediaMeta
 }
 
-func (d *dependency) ThumbQueue(ctx context.Context) queue.Queue {
+func (d *dependency) queueWithReload(ctx context.Context, kind setting.QueueType, slot *queue.Queue, create func() queue.Queue) queue.Queue {
+	_, reload := ctx.Value(ReloadCtx{}).(bool)
+	d.mu.Lock()
+	if *slot != nil && !reload {
+		current := *slot
+		d.mu.Unlock()
+		return current
+	}
+	if d.queueReloadLocks == nil {
+		d.queueReloadLocks = make(map[setting.QueueType]*sync.Mutex)
+	}
+	if d.queueReloadLocks[kind] == nil {
+		d.queueReloadLocks[kind] = &sync.Mutex{}
+	}
+	reloadLock := d.queueReloadLocks[kind]
+	d.mu.Unlock()
+
+	reloadLock.Lock()
+	defer reloadLock.Unlock()
+	d.mu.Lock()
+	current := *slot
+	if current != nil && !reload {
+		d.mu.Unlock()
+		return current
+	}
+	d.mu.Unlock()
+
+	// Cleanup may call dependency getters, so never wait for workers with d.mu held.
+	// Ordinary lookups above must also bypass the per-queue reload lock.
+	if current != nil {
+		current.Shutdown()
+	}
+
 	d.mu.Lock()
 	defer d.mu.Unlock()
+	*slot = create()
+	return *slot
+}
 
-	_, reload := ctx.Value(ReloadCtx{}).(bool)
-	if d.thumbQueue != nil && !reload {
-		return d.thumbQueue
-	}
-
-	if d.thumbQueue != nil {
-		d.thumbQueue.Shutdown()
-	}
-
-	settings := d.SettingProvider()
-	queueSetting := settings.Queue(context.Background(), setting.QueueTypeThumb)
-	var (
-		t inventory.TaskClient
-	)
-	if d.ConfigProvider().System().Mode == conf.MasterMode {
-		t = d.TaskClient()
-	}
-
-	d.thumbQueue = queue.New(d.Logger(), t, nil, d,
-		queue.WithBackoffFactor(queueSetting.BackoffFactor),
-		queue.WithMaxRetry(queueSetting.MaxRetry),
-		queue.WithBackoffMaxDuration(queueSetting.BackoffMaxDuration),
-		queue.WithRetryDelay(queueSetting.RetryDelay),
-		queue.WithWorkerCount(queueSetting.WorkerNum),
-		queue.WithName("ThumbQueue"),
-		queue.WithMaxTaskExecution(queueSetting.MaxExecution),
-	)
-	return d.thumbQueue
+func (d *dependency) ThumbQueue(ctx context.Context) queue.Queue {
+	return d.queueWithReload(ctx, setting.QueueTypeThumb, &d.thumbQueue, func() queue.Queue {
+		settings := d.SettingProvider()
+		queueSetting := settings.Queue(ctx, setting.QueueTypeThumb)
+		var t inventory.TaskClient
+		if d.ConfigProvider().System().Mode == conf.MasterMode {
+			t = d.TaskClient()
+		}
+		return queue.New(d.Logger(), t, nil, d,
+			queue.WithBackoffFactor(queueSetting.BackoffFactor),
+			queue.WithMaxRetry(queueSetting.MaxRetry),
+			queue.WithBackoffMaxDuration(queueSetting.BackoffMaxDuration),
+			queue.WithRetryDelay(queueSetting.RetryDelay),
+			queue.WithWorkerCount(queueSetting.WorkerNum),
+			queue.WithName("ThumbQueue"),
+			queue.WithMaxTaskExecution(queueSetting.MaxExecution),
+		)
+	})
 }
 
 func (d *dependency) MediaMetaQueue(ctx context.Context) queue.Queue {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
-	_, reload := ctx.Value(ReloadCtx{}).(bool)
-	if d.mediaMetaQueue != nil && !reload {
-		return d.mediaMetaQueue
-	}
-
-	if d.mediaMetaQueue != nil {
-		d.mediaMetaQueue.Shutdown()
-	}
-
-	settings := d.SettingProvider()
-	queueSetting := settings.Queue(context.Background(), setting.QueueTypeMediaMeta)
-
-	d.mediaMetaQueue = queue.New(d.Logger(), d.TaskClient(), nil, d,
-		queue.WithBackoffFactor(queueSetting.BackoffFactor),
-		queue.WithMaxRetry(queueSetting.MaxRetry),
-		queue.WithBackoffMaxDuration(queueSetting.BackoffMaxDuration),
-		queue.WithRetryDelay(queueSetting.RetryDelay),
-		queue.WithWorkerCount(queueSetting.WorkerNum),
-		queue.WithName("MediaMetadataQueue"),
-		queue.WithMaxTaskExecution(queueSetting.MaxExecution),
-		queue.WithResumeTaskType(
-			queue.MediaMetaTaskType,
-			queue.FullTextIndexTaskType,
-			queue.FullTextDeleteTaskType,
-			queue.FullTextRebuildTaskType,
-			queue.FullTextCopyTaskType,
-			queue.FullTextChangeOwnerTaskType,
-		),
-	)
-	return d.mediaMetaQueue
+	return d.queueWithReload(ctx, setting.QueueTypeMediaMeta, &d.mediaMetaQueue, func() queue.Queue {
+		settings := d.SettingProvider()
+		queueSetting := settings.Queue(ctx, setting.QueueTypeMediaMeta)
+		return queue.New(d.Logger(), d.TaskClient(), nil, d,
+			queue.WithBackoffFactor(queueSetting.BackoffFactor),
+			queue.WithMaxRetry(queueSetting.MaxRetry),
+			queue.WithBackoffMaxDuration(queueSetting.BackoffMaxDuration),
+			queue.WithRetryDelay(queueSetting.RetryDelay),
+			queue.WithWorkerCount(queueSetting.WorkerNum),
+			queue.WithName("MediaMetadataQueue"),
+			queue.WithMaxTaskExecution(queueSetting.MaxExecution),
+			queue.WithResumeTaskType(
+				queue.MediaMetaTaskType,
+				queue.FullTextIndexTaskType,
+				queue.FullTextDeleteTaskType,
+				queue.FullTextRebuildTaskType,
+				queue.FullTextCopyTaskType,
+				queue.FullTextChangeOwnerTaskType,
+			),
+		)
+	})
 }
 
 func (d *dependency) IoIntenseQueue(ctx context.Context) queue.Queue {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
-	_, reload := ctx.Value(ReloadCtx{}).(bool)
-	if d.ioIntenseQueue != nil && !reload {
-		return d.ioIntenseQueue
-	}
-
-	if d.ioIntenseQueue != nil {
-		d.ioIntenseQueue.Shutdown()
-	}
-
-	settings := d.SettingProvider()
-	queueSetting := settings.Queue(context.Background(), setting.QueueTypeIOIntense)
-
-	d.ioIntenseQueue = queue.New(d.Logger(), d.TaskClient(), d.TaskRegistry(), d,
-		queue.WithBackoffFactor(queueSetting.BackoffFactor),
-		queue.WithMaxRetry(queueSetting.MaxRetry),
-		queue.WithBackoffMaxDuration(queueSetting.BackoffMaxDuration),
-		queue.WithRetryDelay(queueSetting.RetryDelay),
-		queue.WithWorkerCount(queueSetting.WorkerNum),
-		queue.WithName("IoIntenseQueue"),
-		queue.WithMaxTaskExecution(queueSetting.MaxExecution),
-		queue.WithResumeTaskType(queue.CreateArchiveTaskType, queue.ExtractArchiveTaskType, queue.RelocateTaskType, queue.ImportTaskType),
-		queue.WithTaskPullInterval(10*time.Second),
-	)
-	return d.ioIntenseQueue
+	return d.queueWithReload(ctx, setting.QueueTypeIOIntense, &d.ioIntenseQueue, func() queue.Queue {
+		settings := d.SettingProvider()
+		queueSetting := settings.Queue(ctx, setting.QueueTypeIOIntense)
+		return queue.New(d.Logger(), d.TaskClient(), d.TaskRegistry(), d,
+			queue.WithBackoffFactor(queueSetting.BackoffFactor),
+			queue.WithMaxRetry(queueSetting.MaxRetry),
+			queue.WithBackoffMaxDuration(queueSetting.BackoffMaxDuration),
+			queue.WithRetryDelay(queueSetting.RetryDelay),
+			queue.WithWorkerCount(queueSetting.WorkerNum),
+			queue.WithName("IoIntenseQueue"),
+			queue.WithMaxTaskExecution(queueSetting.MaxExecution),
+			queue.WithResumeTaskType(queue.CreateArchiveTaskType, queue.ExtractArchiveTaskType, queue.RelocateTaskType, queue.ImportTaskType),
+			queue.WithTaskPullInterval(10*time.Second),
+		)
+	})
 }
 
 func (d *dependency) RemoteDownloadQueue(ctx context.Context) queue.Queue {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
-	_, reload := ctx.Value(ReloadCtx{}).(bool)
-	if d.remoteDownloadQueue != nil && !reload {
-		return d.remoteDownloadQueue
-	}
-
-	if d.remoteDownloadQueue != nil {
-		d.remoteDownloadQueue.Shutdown()
-	}
-
-	settings := d.SettingProvider()
-	queueSetting := settings.Queue(context.Background(), setting.QueueTypeRemoteDownload)
-
-	d.remoteDownloadQueue = queue.New(d.Logger(), d.TaskClient(), d.TaskRegistry(), d,
-		queue.WithBackoffFactor(queueSetting.BackoffFactor),
-		queue.WithMaxRetry(queueSetting.MaxRetry),
-		queue.WithBackoffMaxDuration(queueSetting.BackoffMaxDuration),
-		queue.WithRetryDelay(queueSetting.RetryDelay),
-		queue.WithWorkerCount(queueSetting.WorkerNum),
-		queue.WithName("RemoteDownloadQueue"),
-		queue.WithMaxTaskExecution(queueSetting.MaxExecution),
-		queue.WithResumeTaskType(queue.RemoteDownloadTaskType),
-		queue.WithTaskPullInterval(10*time.Second),
-	)
-	return d.remoteDownloadQueue
+	return d.queueWithReload(ctx, setting.QueueTypeRemoteDownload, &d.remoteDownloadQueue, func() queue.Queue {
+		settings := d.SettingProvider()
+		queueSetting := settings.Queue(ctx, setting.QueueTypeRemoteDownload)
+		return queue.New(d.Logger(), d.TaskClient(), d.TaskRegistry(), d,
+			queue.WithBackoffFactor(queueSetting.BackoffFactor),
+			queue.WithMaxRetry(queueSetting.MaxRetry),
+			queue.WithBackoffMaxDuration(queueSetting.BackoffMaxDuration),
+			queue.WithRetryDelay(queueSetting.RetryDelay),
+			queue.WithWorkerCount(queueSetting.WorkerNum),
+			queue.WithName("RemoteDownloadQueue"),
+			queue.WithMaxTaskExecution(queueSetting.MaxExecution),
+			queue.WithResumeTaskType(queue.RemoteDownloadTaskType),
+			queue.WithTaskPullInterval(10*time.Second),
+		)
+	})
 }
 
 func (d *dependency) EntityRecycleQueue(ctx context.Context) queue.Queue {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
-	_, reload := ctx.Value(ReloadCtx{}).(bool)
-	if d.entityRecycleQueue != nil && !reload {
-		return d.entityRecycleQueue
-	}
-
-	if d.entityRecycleQueue != nil {
-		d.entityRecycleQueue.Shutdown()
-	}
-
-	settings := d.SettingProvider()
-	queueSetting := settings.Queue(context.Background(), setting.QueueTypeEntityRecycle)
-
-	d.entityRecycleQueue = queue.New(d.Logger(), d.TaskClient(), nil, d,
-		queue.WithBackoffFactor(queueSetting.BackoffFactor),
-		queue.WithMaxRetry(queueSetting.MaxRetry),
-		queue.WithBackoffMaxDuration(queueSetting.BackoffMaxDuration),
-		queue.WithRetryDelay(queueSetting.RetryDelay),
-		queue.WithWorkerCount(queueSetting.WorkerNum),
-		queue.WithName("EntityRecycleQueue"),
-		queue.WithMaxTaskExecution(queueSetting.MaxExecution),
-		queue.WithResumeTaskType(queue.EntityRecycleRoutineTaskType, queue.ExplicitEntityRecycleTaskType, queue.UploadSentinelCheckTaskType),
-		queue.WithTaskPullInterval(10*time.Second),
-	)
-	return d.entityRecycleQueue
+	return d.queueWithReload(ctx, setting.QueueTypeEntityRecycle, &d.entityRecycleQueue, func() queue.Queue {
+		settings := d.SettingProvider()
+		queueSetting := settings.Queue(ctx, setting.QueueTypeEntityRecycle)
+		return queue.New(d.Logger(), d.TaskClient(), nil, d,
+			queue.WithBackoffFactor(queueSetting.BackoffFactor),
+			queue.WithMaxRetry(queueSetting.MaxRetry),
+			queue.WithBackoffMaxDuration(queueSetting.BackoffMaxDuration),
+			queue.WithRetryDelay(queueSetting.RetryDelay),
+			queue.WithWorkerCount(queueSetting.WorkerNum),
+			queue.WithName("EntityRecycleQueue"),
+			queue.WithMaxTaskExecution(queueSetting.MaxExecution),
+			queue.WithResumeTaskType(queue.EntityRecycleRoutineTaskType, queue.ExplicitEntityRecycleTaskType, queue.UploadSentinelCheckTaskType),
+			queue.WithTaskPullInterval(10*time.Second),
+		)
+	})
 }
 
 func (d *dependency) SlaveQueue(ctx context.Context) queue.Queue {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
-	_, reload := ctx.Value(ReloadCtx{}).(bool)
-	if d.slaveQueue != nil && !reload {
-		return d.slaveQueue
-	}
-
-	if d.slaveQueue != nil {
-		d.slaveQueue.Shutdown()
-	}
-
-	settings := d.SettingProvider()
-	queueSetting := settings.Queue(context.Background(), setting.QueueTypeSlave)
-
-	d.slaveQueue = queue.New(d.Logger(), nil, nil, d,
-		queue.WithBackoffFactor(queueSetting.BackoffFactor),
-		queue.WithMaxRetry(queueSetting.MaxRetry),
-		queue.WithBackoffMaxDuration(queueSetting.BackoffMaxDuration),
-		queue.WithRetryDelay(queueSetting.RetryDelay),
-		queue.WithWorkerCount(queueSetting.WorkerNum),
-		queue.WithName("SlaveQueue"),
-		queue.WithMaxTaskExecution(queueSetting.MaxExecution),
-	)
-	return d.slaveQueue
+	return d.queueWithReload(ctx, setting.QueueTypeSlave, &d.slaveQueue, func() queue.Queue {
+		settings := d.SettingProvider()
+		queueSetting := settings.Queue(ctx, setting.QueueTypeSlave)
+		return queue.New(d.Logger(), nil, nil, d,
+			queue.WithBackoffFactor(queueSetting.BackoffFactor),
+			queue.WithMaxRetry(queueSetting.MaxRetry),
+			queue.WithBackoffMaxDuration(queueSetting.BackoffMaxDuration),
+			queue.WithRetryDelay(queueSetting.RetryDelay),
+			queue.WithWorkerCount(queueSetting.WorkerNum),
+			queue.WithName("SlaveQueue"),
+			queue.WithMaxTaskExecution(queueSetting.MaxExecution),
+		)
+	})
 }
 
 func (d *dependency) GeneralAuth() auth.Auth {

@@ -15,13 +15,14 @@ type TxOperator interface {
 
 type (
 	Tx struct {
-		tx          *ent.Tx
-		parent      *Tx
-		inherited   bool
-		finished    bool
-		committed   bool
-		storageDiff StorageDiff
-		afterCommit []func()
+		tx              *ent.Tx
+		parent          *Tx
+		inherited       bool
+		finished        bool
+		committed       bool
+		storageDiff     StorageDiff
+		afterCommit     []func()
+		afterCompletion []func()
 	}
 
 	// TxCtx is the context key for inherited transaction
@@ -95,6 +96,23 @@ func AfterCommit(ctx context.Context, fn func()) {
 	tx.afterCommit = append(tx.afterCommit, fn)
 }
 
+// InTransaction reports whether ctx carries an unfinished outer transaction.
+func InTransaction(ctx context.Context) bool {
+	tx := txFromContext(ctx)
+	return tx != nil && !tx.finished
+}
+
+// AfterCompletion runs fn after the outer transaction finishes, including
+// rollback and failed commit. Without an active transaction it runs immediately.
+func AfterCompletion(ctx context.Context, fn func()) {
+	tx := txFromContext(ctx)
+	if tx == nil || tx.finished {
+		fn()
+		return
+	}
+	tx.afterCompletion = append(tx.afterCompletion, fn)
+}
+
 func txFromContext(ctx context.Context) *Tx {
 	tx, _ := ctx.Value(TxCtx{}).(*Tx)
 	if tx != nil {
@@ -108,6 +126,14 @@ func txFromContext(ctx context.Context) *Tx {
 func (t *Tx) runAfterCommit() {
 	callbacks := t.afterCommit
 	t.afterCommit = nil
+	for _, callback := range callbacks {
+		callback()
+	}
+}
+
+func (t *Tx) runAfterCompletion() {
+	callbacks := t.afterCompletion
+	t.afterCompletion = nil
 	for _, callback := range callbacks {
 		callback()
 	}
@@ -152,9 +178,11 @@ func InheritTx[T TxOperator](ctx context.Context, c T) (T, *Tx) {
 
 func Rollback(tx *Tx) error {
 	if !tx.inherited {
+		err := tx.tx.Rollback()
 		tx.finished = true
 		tx.afterCommit = nil
-		return tx.tx.Rollback()
+		tx.runAfterCompletion()
+		return err
 	}
 
 	return nil
@@ -162,8 +190,9 @@ func Rollback(tx *Tx) error {
 
 func commit(tx *Tx) (bool, error) {
 	if !tx.inherited {
+		err := tx.tx.Commit()
 		tx.finished = true
-		if err := tx.tx.Commit(); err != nil {
+		if err != nil {
 			tx.afterCommit = nil
 			return true, err
 		}
@@ -175,8 +204,11 @@ func commit(tx *Tx) (bool, error) {
 
 func Commit(tx *Tx) error {
 	committed, err := commit(tx)
-	if err == nil && committed {
-		tx.runAfterCommit()
+	if committed {
+		tx.runAfterCompletion()
+		if err == nil {
+			tx.runAfterCommit()
+		}
 	}
 	return err
 }
@@ -195,6 +227,9 @@ func Commit(tx *Tx) error {
 func CommitWithStorageDiff(ctx context.Context, tx *Tx, l logging.Logger, uc UserClient) error {
 	committed, err := commit(tx)
 	if err != nil {
+		if committed {
+			tx.runAfterCompletion()
+		}
 		return err
 	}
 
@@ -206,6 +241,7 @@ func CommitWithStorageDiff(ctx context.Context, tx *Tx, l logging.Logger, uc Use
 		l.Error("Failed to apply storage diff", "error", err)
 	}
 
+	tx.runAfterCompletion()
 	tx.runAfterCommit()
 	return nil
 }
