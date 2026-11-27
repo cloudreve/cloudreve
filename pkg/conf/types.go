@@ -31,6 +31,14 @@ type Database struct {
 	SSLMode string
 }
 
+// PostgresSSLMode 返回 Postgres 连接使用的 sslmode，未配置时保持 disable
+func (d *Database) PostgresSSLMode() string {
+	if d.SSLMode == "" {
+		return "disable"
+	}
+	return d.SSLMode
+}
+
 type SysMode string
 
 var (
