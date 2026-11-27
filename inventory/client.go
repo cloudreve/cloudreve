@@ -114,7 +114,7 @@ func NewRawEntClient(l logging.Logger, config conf.ConfigProvider) (*ent.Client,
 	// Set connection pool
 	db := client.DB()
 	db.SetMaxIdleConns(50)
-	if confDBType == "sqlite" || confDBType == "UNSET" {
+	if confDBType == "sqlite" || confDBType == "sqlite3" || confDBType == "UNSET" {
 		db.SetMaxOpenConns(1)
 	} else {
 		db.SetMaxOpenConns(100)
@@ -149,9 +149,18 @@ func (d sqlite3Driver) Open(name string) (conn driver.Conn, err error) {
 	if err != nil {
 		return
 	}
-	_, err = conn.(sqlite3DriverConn).Exec("PRAGMA foreign_keys = ON;", nil)
-	if err != nil {
+	c := conn.(sqlite3DriverConn)
+	if _, err = c.Exec("PRAGMA foreign_keys = ON;", nil); err != nil {
 		_ = conn.Close()
+		return nil, err
+	}
+	if _, err = c.Exec("PRAGMA journal_mode = WAL;", nil); err != nil {
+		_ = conn.Close()
+		return nil, err
+	}
+	if _, err = c.Exec("PRAGMA busy_timeout = 5000;", nil); err != nil {
+		_ = conn.Close()
+		return nil, err
 	}
 	return
 }
