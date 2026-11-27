@@ -23,15 +23,6 @@ const (
 func (f *fileClient) searchQuery(q *ent.FileQuery, args *SearchFileParameters, parents []*ent.File, ownerId int) *ent.FileQuery {
 	if len(parents) == 1 && parents[0] == nil {
 		q = q.Where(file.OwnerID(ownerId))
-	} else {
-		q = q.Where(
-			file.HasParentWith(
-				file.IDIn(lo.Map(parents, func(item *ent.File, index int) int {
-					return item.ID
-				})...,
-				),
-			),
-		)
 	}
 
 	if len(args.Name) > 0 {
@@ -114,6 +105,14 @@ func (f *fileClient) searchQuery(q *ent.FileQuery, args *SearchFileParameters, p
 	return q
 }
 
+func (f *fileClient) scopedChildFileQuery(ctx context.Context, args *ListFileParameters, ownerID int, roots ...*ent.File) *ent.FileQuery {
+	query := withFileEagerLoading(ctx, f.childFileQuery(ownerID, args.SharedWithMe, roots...))
+	if args.Search != nil {
+		query = f.searchQuery(query, args.Search, roots, ownerID)
+	}
+	return query
+}
+
 // ChildFileQuery generates query for child file(s) of a given set of root
 func (f *fileClient) childFileQuery(ownerID int, isSymbolic bool, root ...*ent.File) *ent.FileQuery {
 	rawQuery := f.client.File.Query()
@@ -184,17 +183,7 @@ func (f *fileClient) batchInConditionEntityID(pageSize, margin int, multiply int
 func (f *fileClient) cursorPagination(ctx context.Context, query *ent.FileQuery,
 	args *ListFileParameters, paramMargin int) ([]*ent.File, *PaginationResults, error) {
 	pageSize := capPageSize(f.maxSQlParam, args.PageSize, paramMargin)
-	query.Order(getFileOrderOption(args)...)
 	currentPage := 0
-	// Three types of query option
-	queryPaged := []*ent.FileQuery{
-		query.Clone().
-			Where(file.TypeEQ(int(types.FileTypeFolder))),
-		query.Clone().
-			Where(file.TypeEQ(int(types.FileTypeFile))),
-		query.Clone().
-			Where(file.TypeIn(int(types.FileTypeFolder), int(types.FileTypeFile))),
-	}
 
 	var (
 		pageToken *PageToken
@@ -206,7 +195,7 @@ func (f *fileClient) cursorPagination(ctx context.Context, query *ent.FileQuery,
 			return nil, nil, fmt.Errorf("invalid page token %q: %w", args.PageToken, err)
 		}
 	}
-	queryPaged = getFileCursorQuery(args, pageToken, queryPaged)
+	queryPaged := fileCursorQueries(query, args, pageToken)
 
 	// Use page size + 1 to determine if there are more items to come
 	queryPaged[0].Limit(pageSize + 1)
@@ -471,6 +460,15 @@ var fileCursorQuery = map[string]map[bool]func(token *PageToken) predicate.File{
 			return file.IDGT(token.ID)
 		},
 	},
+}
+
+func fileCursorQueries(query *ent.FileQuery, args *ListFileParameters, token *PageToken) []*ent.FileQuery {
+	query.Order(getFileOrderOption(args)...)
+	return getFileCursorQuery(args, token, []*ent.FileQuery{
+		query.Clone().Where(file.TypeEQ(int(types.FileTypeFolder))),
+		query.Clone().Where(file.TypeEQ(int(types.FileTypeFile))),
+		query.Clone().Where(file.TypeIn(int(types.FileTypeFolder), int(types.FileTypeFile))),
+	})
 }
 
 func getFileCursorQuery(args *ListFileParameters, token *PageToken, query []*ent.FileQuery) []*ent.FileQuery {

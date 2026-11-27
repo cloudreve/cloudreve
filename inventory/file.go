@@ -1024,10 +1024,22 @@ func (f *fileClient) GetChildFile(ctx context.Context, root *ent.File, ownerID i
 }
 
 func (f *fileClient) GetChildFiles(ctx context.Context, args *ListFileParameters, ownerID int, roots ...*ent.File) (*ListFileResult, error) {
-	rawQuery := f.childFileQuery(ownerID, args.SharedWithMe, roots...)
-	query := withFileEagerLoading(ctx, rawQuery)
-	if args.Search != nil {
-		query = f.searchQuery(query, args.Search, roots, ownerID)
+	if len(roots) == 0 {
+		return nil, fmt.Errorf("at least one parent is required")
+	}
+	if len(roots) > 1 {
+		unique := make([]*ent.File, 0, len(roots))
+		seen := make(map[int]struct{}, len(roots))
+		for _, root := range roots {
+			if root == nil {
+				return nil, fmt.Errorf("a nil parent must be the only parent")
+			}
+			if _, ok := seen[root.ID]; !ok {
+				seen[root.ID] = struct{}{}
+				unique = append(unique, root)
+			}
+		}
+		roots = unique
 	}
 
 	var (
@@ -1037,9 +1049,17 @@ func (f *fileClient) GetChildFiles(ctx context.Context, args *ListFileParameters
 	)
 
 	if args.UseCursorPagination || args.Search != nil {
-		files, paginationRes, err = f.cursorPagination(ctx, query, args, 10)
+		batchSize, budgetErr := f.childFileParentBatchSize(args.Search)
+		if budgetErr != nil {
+			return nil, budgetErr
+		}
+		if len(roots) > batchSize {
+			files, paginationRes, err = f.batchedChildFileCursor(ctx, args, ownerID, roots, batchSize)
+		} else {
+			files, paginationRes, err = f.cursorPagination(ctx, f.scopedChildFileQuery(ctx, args, ownerID, roots...), args, childFileParamMargin)
+		}
 	} else {
-		files, paginationRes, err = f.offsetPagination(ctx, query, args, 10)
+		files, paginationRes, err = f.offsetPagination(ctx, f.scopedChildFileQuery(ctx, args, ownerID, roots...), args, childFileParamMargin)
 	}
 
 	if err != nil {

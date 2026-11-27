@@ -309,8 +309,8 @@ func (b *baseNavigator) walk(ctx context.Context, levelFiles []*File, limit, dep
 		parents := lo.SliceToMap(folders, func(file *File) (int, *File) {
 			return file.Model.ID, file
 		})
+		token := ""
 		for leftCredit > 0 {
-			token := ""
 			res, err := b.fileClient.GetChildFiles(ctx,
 				&inventory.ListFileParameters{
 					PaginationArgs: &inventory.PaginationArgs{
@@ -376,6 +376,7 @@ func (b *baseNavigator) search(ctx context.Context, parent *File, args *ListArgs
 	}
 	// Performs recursive search for all files under the given folder.
 	walkedFolder := 1
+	recursionLimitReached := walkedFolder > b.config.MaxRecursiveSearchedFolder
 	parents := []map[int]*File{{parent.Model.ID: parent}}
 	startLevel, innerPageToken, err := parseSearchPageToken(args.Page.PageToken)
 	if err != nil {
@@ -384,16 +385,22 @@ func (b *baseNavigator) search(ctx context.Context, parent *File, args *ListArgs
 	args.Page.PageToken = innerPageToken
 
 	stepLevel := func(level int) (bool, error) {
+		if recursionLimitReached {
+			return true, nil
+		}
 		token := ""
+		nextLevel := make(map[int]*File)
 		// We don't need metadata in level search.
 		listCtx := context.WithValue(ctx, inventory.LoadFilePublicMetadata{}, nil)
-		for walkedFolder <= b.config.MaxRecursiveSearchedFolder {
-			// TODO: chunk parents into 30000 per group
+		for {
+			// Fetch past the remaining budget to detect truncation.
+			pageSize := max(defaultPageSize, b.config.MaxRecursiveSearchedFolder-walkedFolder+1)
 			res, err := b.fileClient.GetChildFiles(listCtx,
 				&inventory.ListFileParameters{
 					PaginationArgs: &inventory.PaginationArgs{
 						UseCursorPagination: true,
 						PageToken:           token,
+						PageSize:            pageSize,
 					},
 					FolderOnly: true,
 				},
@@ -405,26 +412,29 @@ func (b *baseNavigator) search(ctx context.Context, parent *File, args *ListArgs
 				return false, serializer.NewError(serializer.CodeDBError, "Failed to list children", err)
 			}
 
-			parents = append(parents, lo.SliceToMap(
-				lo.FilterMap(res.Files, func(model *ent.File, index int) (*File, bool) {
-					p := parents[level][model.FileChildren]
-					f := newFile(p, model)
-					f.Path[pathIndexUser] = p.Uri(false).Join(model.Name)
-					return f, true
-				}),
-				func(f *File) (int, *File) {
-					return f.Model.ID, f
-				}))
-
-			walkedFolder += len(parents[level+1])
-			if res.NextPageToken == "" {
+			for _, model := range res.Files {
+				if _, exists := nextLevel[model.ID]; exists {
+					continue
+				}
+				p := parents[level][model.FileChildren]
+				f := newFile(p, model)
+				f.Path[pathIndexUser] = p.Uri(false).Join(model.Name)
+				if walkedFolder >= b.config.MaxRecursiveSearchedFolder {
+					recursionLimitReached = true
+					break
+				}
+				nextLevel[model.ID] = f
+				walkedFolder++
+			}
+			if recursionLimitReached || res.NextPageToken == "" {
 				break
 			}
 
 			token = res.NextPageToken
 		}
+		parents = append(parents, nextLevel)
 
-		if len(parents) <= level+1 || len(parents[level+1]) == 0 {
+		if len(nextLevel) == 0 {
 			// All possible folders is searched
 			return true, nil
 		}
@@ -440,7 +450,11 @@ func (b *baseNavigator) search(ctx context.Context, parent *File, args *ListArgs
 		}
 
 		if stop {
-			return &ListResult{}, nil
+			return &ListResult{
+				MixedType:             true,
+				Pagination:            &inventory.PaginationResults{IsCursor: true},
+				RecursionLimitReached: recursionLimitReached,
+			}, nil
 		}
 	}
 
@@ -483,7 +497,11 @@ func (b *baseNavigator) search(ctx context.Context, parent *File, args *ListArgs
 		if args.Page.PageToken == "" {
 			if len(res) == originalPageSize {
 				// Current page is full, no need to search more
-				startLevel++
+				if recursionLimitReached {
+					stop = true
+				} else {
+					startLevel++
+				}
 				break
 			}
 
@@ -511,7 +529,7 @@ func (b *baseNavigator) search(ctx context.Context, parent *File, args *ListArgs
 		Files:                 res,
 		MixedType:             true,
 		Pagination:            &inventory.PaginationResults{IsCursor: true},
-		RecursionLimitReached: walkedFolder > b.config.MaxRecursiveSearchedFolder,
+		RecursionLimitReached: recursionLimitReached,
 	}
 
 	if walkedFolder <= b.config.MaxRecursiveSearchedFolder && !stop {
